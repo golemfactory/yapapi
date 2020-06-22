@@ -1,5 +1,7 @@
 # Golem Python API
 
+![Continuous integration](https://github.com/prekucki/yapapi/workflows/Continuous%20integration/badge.svg)
+
 ## How to use
 
 Rendering
