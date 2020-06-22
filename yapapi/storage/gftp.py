@@ -10,4 +10,3 @@ class _Command(Enum):
     IMPORT = "import"
     LIST = "list"
     DONE = "done"
-

@@ -1,9 +1,18 @@
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
+
 [tool.poetry]
 name = "yapapi"
 version = "0.1.0"
 description = "Hi-Level API for Golem The Next Milestone"
 authors = ["Przemysław K. Rekucki <przemyslaw.rekucki@golem.network>"]
 license = "LGPL-3.0-or-later"
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Framework :: AsyncIO",
+    "Topic :: System :: Distributed Computing"
+]
 
 [tool.poetry.dependencies]
 python = "^3.6.1"
@@ -16,8 +25,3 @@ urllib3 = "^1.25.9"
 setuptools = "black"
 black = "^19.10b0"
 pytest = "^5.4.3"
-pre-commit = "^2.5.1"
-
-[build-system]
-requires = ["poetry>=0.12"]
-build-backend = "poetry.masonry.api"

@@ -144,7 +144,7 @@ class DavStorageProvider(StorageProvider):
             <a:resourcetype/>
             <a:getcontentlength/>
             <a:getlastmodified/>
-        </a:prop>    
+        </a:prop>
         </a:propfind>"""
 
         async with self.client.request(
