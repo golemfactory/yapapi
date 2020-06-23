@@ -26,7 +26,7 @@
       
         
         
-        <meta name="theme-color" content="#4caf50">
+        <meta name="theme-color" content="#546e7a">
       
     
     
@@ -49,7 +49,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="green" data-md-color-accent="lightgreen">
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="blue-grey" data-md-color-accent="pink">
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -858,51 +858,6 @@
                 
                 <h1 id="module-yapapipropsinf">Module yapapi.props.inf</h1>
 <p>Infrastructural Properties</p>
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="sd">&quot;&quot;&quot;</span>
-
-<span class="sd">Infrastructural Properties</span>
-
-<span class="sd">&quot;&quot;&quot;</span>
-
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">List</span>
-
-<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
-
-<span class="kn">from</span> <span class="nn">.base</span> <span class="kn">import</span> <span class="n">Model</span>
-
-<span class="n">INF_MEM</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;golem.inf.mem.gib&quot;</span>
-
-<span class="n">INF_STORAGE</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;golem.inf.storage.gib&quot;</span>
-
-<span class="n">INF_CORES</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;golem.inf.cpu.cores&quot;</span>
-
-<span class="n">TRANSFER_CAPS</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;golem.activity.caps.transfer.protocol&quot;</span>
-
-<span class="nd">@dataclass</span>
-
-<span class="k">class</span> <span class="nc">InfBase</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
-
-    <span class="n">mem</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="n">INF_MEM</span><span class="p">})</span>
-
-    <span class="n">runtime</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="s2">&quot;golem.runtime.name&quot;</span><span class="p">})</span>
-
-    <span class="n">storage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="n">INF_STORAGE</span><span class="p">})</span>
-
-    <span class="n">transfers</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span>
-
-        <span class="n">default</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="n">TRANSFER_CAPS</span><span class="p">}</span>
-
-    <span class="p">)</span>
-
-<span class="nd">@dataclass</span>
-
-<span class="k">class</span> <span class="nc">InfVm</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
-
-    <span class="n">cores</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="n">INF_CORES</span><span class="p">})</span>
-</code></pre></div>
-
-
-</details>
 <h2 id="variables">Variables</h2>
 <div class="codehilite"><pre><span></span><code><span class="n">INF_CORES</span>
 </code></pre></div>
@@ -923,33 +878,15 @@
 <h2 id="classes">Classes</h2>
 <h3 id="infbase">InfBase</h3>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">InfBase</span><span class="p">(</span>
-    <span class="n">mem</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-    <span class="n">runtime</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">storage</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">transfers</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">NoneType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">mem</span><span class="p">:</span><span class="nb">float</span><span class="p">,</span>
+    <span class="n">runtime</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span>
+    <span class="n">storage</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">transfers</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">NoneType</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span>
 <span class="p">)</span>
 </code></pre></div>
 
 
-<p>InfBase(mem: float, runtime: str, storage: Union[float, NoneType] = None, transfers: Union[List[str], NoneType] = None)</p>
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="n">InfBase</span><span class="p">(</span><span class="n">Model</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">    </span><span class="nl">mem</span><span class="p">:</span><span class="w"> </span><span class="nc">float</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">field</span><span class="p">(</span><span class="n">metadata</span><span class="o">=</span><span class="err">{</span><span class="ss">&quot;key&quot;</span><span class="err">:</span><span class="w"> </span><span class="n">INF_MEM</span><span class="err">}</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">    </span><span class="nl">runtime</span><span class="p">:</span><span class="w"> </span><span class="nf">str</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">field</span><span class="p">(</span><span class="n">metadata</span><span class="o">=</span><span class="err">{</span><span class="ss">&quot;key&quot;</span><span class="err">:</span><span class="w"> </span><span class="ss">&quot;golem.runtime.name&quot;</span><span class="err">}</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">    </span><span class="nl">storage</span><span class="p">:</span><span class="w"> </span><span class="n">Optional</span><span class="o">[</span><span class="n">float</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">field</span><span class="p">(</span><span class="k">default</span><span class="o">=</span><span class="k">None</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span><span class="o">=</span><span class="err">{</span><span class="ss">&quot;key&quot;</span><span class="err">:</span><span class="w"> </span><span class="n">INF_STORAGE</span><span class="err">}</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">    </span><span class="nl">transfers</span><span class="p">:</span><span class="w"> </span><span class="n">Optional</span><span class="o">[</span><span class="n">List[str</span><span class="o">]</span><span class="err">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">field</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">default</span><span class="o">=</span><span class="k">None</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span><span class="o">=</span><span class="err">{</span><span class="ss">&quot;key&quot;</span><span class="err">:</span><span class="w"> </span><span class="n">TRANSFER_CAPS</span><span class="err">}</span><span class="w"></span>
-
-<span class="w">    </span><span class="p">)</span><span class="w"></span>
-</code></pre></div>
-
-
-</details>
-<hr />
+<p>InfBase(mem:float, runtime:str, storage:Union[float, NoneType]=None, transfers:Union[List[str], NoneType]=None)</p>
 <h4 id="ancestors-in-mro">Ancestors (in MRO)</h4>
 <ul>
 <li>yapapi.props.base.Model</li>
@@ -967,56 +904,11 @@
 <h4 id="static-methods">Static methods</h4>
 <h5 id="from_props">from_props</h5>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">from_props</span><span class="p">(</span>
-    <span class="n">props</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
+    <span class="n">props</span><span class="p">:</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Model&#39;</span>
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="w">    </span><span class="nv">@classmethod</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">from_props</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span><span class="w"> </span><span class="nl">props</span><span class="p">:</span><span class="w"> </span><span class="n">Props</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="ss">&quot;Model&quot;</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">field_map</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dict</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">            </span><span class="p">(</span><span class="w"></span>
-
-<span class="w">                </span><span class="n">f</span><span class="p">.</span><span class="n">metadata</span><span class="o">[</span><span class="n">&quot;key&quot;</span><span class="o">]</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">                </span><span class="n">_PyField</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">f</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">type</span><span class="o">=</span><span class="n">f</span><span class="p">.</span><span class="n">type</span><span class="p">,</span><span class="w"> </span><span class="n">required</span><span class="o">=</span><span class="n">f</span><span class="p">.</span><span class="k">default</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">MISSING</span><span class="p">),</span><span class="w"></span>
-
-<span class="w">            </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="n">f</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">fields</span><span class="p">(</span><span class="n">cls</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="ss">&quot;key&quot;</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">metadata</span><span class="w"></span>
-
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dict</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">            </span><span class="p">(</span><span class="w"></span>
-
-<span class="w">                </span><span class="n">field_map</span><span class="o">[</span><span class="n">key</span><span class="o">]</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="n">val</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">                </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">)</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">props</span><span class="p">.</span><span class="n">items</span><span class="p">()</span><span class="w"></span>
-
-<span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="k">key</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">field_map</span><span class="w"></span>
-
-<span class="w">            </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">cls</span><span class="p">.</span><span class="n">_custom_mapping</span><span class="p">(</span><span class="n">props</span><span class="p">,</span><span class="w"> </span><span class="k">data</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">print</span><span class="p">(</span><span class="n">dict</span><span class="p">(</span><span class="k">data</span><span class="p">))</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cls</span><span class="p">(</span><span class="o">**</span><span class="k">data</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">self</span><span class="w"></span>
-</code></pre></div>
-
-
-</details>
 <h5 id="keys">keys</h5>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">keys</span><span class="p">(</span>
 
@@ -1024,37 +916,14 @@
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="w">    </span><span class="nv">@classmethod</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">keys</span><span class="p">(</span><span class="n">cls</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">class</span><span class="w"> </span><span class="nl">_Keys</span><span class="p">:</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">def</span><span class="w"> </span><span class="n">__init__</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="n">iter</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">                </span><span class="n">self</span><span class="p">.</span><span class="n">__dict__</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dict</span><span class="p">(</span><span class="n">iter</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">_Keys</span><span class="p">((</span><span class="n">f</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">metadata</span><span class="o">[</span><span class="n">&quot;key&quot;</span><span class="o">]</span><span class="p">)</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">f</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">fields</span><span class="p">(</span><span class="n">cls</span><span class="p">))</span><span class="w"></span>
-</code></pre></div>
-
-
-</details>
 <h3 id="infvm">InfVm</h3>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">InfVm</span><span class="p">(</span>
-    <span class="n">cores</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">cores</span><span class="p">:</span><span class="nb">int</span>
 <span class="p">)</span>
 </code></pre></div>
 
 
-<p>InfVm(cores: int)</p>
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="n">InfVm</span>(<span class="n">Model</span>):
-
-    <span class="n">cores:</span> <span class="n">int</span> = <span class="n">field</span>(<span class="n">metadata</span>={<span class="s">&quot;key&quot;</span>: <span class="n">INF_CORES</span>})
-</code></pre></div>
-
-
-</details>
-<hr />
+<p>InfVm(cores:int)</p>
 <h4 id="ancestors-in-mro_1">Ancestors (in MRO)</h4>
 <ul>
 <li>yapapi.props.base.Model</li>
@@ -1063,78 +932,16 @@
 <h4 id="static-methods_1">Static methods</h4>
 <h5 id="from_props_1">from_props</h5>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">from_props</span><span class="p">(</span>
-    <span class="n">props</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
+    <span class="n">props</span><span class="p">:</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Model&#39;</span>
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="w">    </span><span class="nv">@classmethod</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">from_props</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span><span class="w"> </span><span class="nl">props</span><span class="p">:</span><span class="w"> </span><span class="n">Props</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="ss">&quot;Model&quot;</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">field_map</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dict</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">            </span><span class="p">(</span><span class="w"></span>
-
-<span class="w">                </span><span class="n">f</span><span class="p">.</span><span class="n">metadata</span><span class="o">[</span><span class="n">&quot;key&quot;</span><span class="o">]</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">                </span><span class="n">_PyField</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">f</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">type</span><span class="o">=</span><span class="n">f</span><span class="p">.</span><span class="n">type</span><span class="p">,</span><span class="w"> </span><span class="n">required</span><span class="o">=</span><span class="n">f</span><span class="p">.</span><span class="k">default</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">MISSING</span><span class="p">),</span><span class="w"></span>
-
-<span class="w">            </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="n">f</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">fields</span><span class="p">(</span><span class="n">cls</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="ss">&quot;key&quot;</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">metadata</span><span class="w"></span>
-
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dict</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">            </span><span class="p">(</span><span class="w"></span>
-
-<span class="w">                </span><span class="n">field_map</span><span class="o">[</span><span class="n">key</span><span class="o">]</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="n">val</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">                </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">)</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">props</span><span class="p">.</span><span class="n">items</span><span class="p">()</span><span class="w"></span>
-
-<span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="k">key</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">field_map</span><span class="w"></span>
-
-<span class="w">            </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">cls</span><span class="p">.</span><span class="n">_custom_mapping</span><span class="p">(</span><span class="n">props</span><span class="p">,</span><span class="w"> </span><span class="k">data</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">print</span><span class="p">(</span><span class="n">dict</span><span class="p">(</span><span class="k">data</span><span class="p">))</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cls</span><span class="p">(</span><span class="o">**</span><span class="k">data</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">self</span><span class="w"></span>
-</code></pre></div>
-
-
-</details>
 <h5 id="keys_1">keys</h5>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">keys</span><span class="p">(</span>
 
 <span class="p">)</span>
 </code></pre></div>
-
-
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="w">    </span><span class="nv">@classmethod</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">keys</span><span class="p">(</span><span class="n">cls</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">class</span><span class="w"> </span><span class="nl">_Keys</span><span class="p">:</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">def</span><span class="w"> </span><span class="n">__init__</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="n">iter</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">                </span><span class="n">self</span><span class="p">.</span><span class="n">__dict__</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dict</span><span class="p">(</span><span class="n">iter</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">_Keys</span><span class="p">((</span><span class="n">f</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">metadata</span><span class="o">[</span><span class="n">&quot;key&quot;</span><span class="o">]</span><span class="p">)</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">f</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">fields</span><span class="p">(</span><span class="n">cls</span><span class="p">))</span><span class="w"></span>
-</code></pre></div>
-
-
-</details>
                 
               
               

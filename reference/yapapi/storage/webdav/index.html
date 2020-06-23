@@ -26,7 +26,7 @@
       
         
         
-        <meta name="theme-color" content="#4caf50">
+        <meta name="theme-color" content="#546e7a">
       
     
     
@@ -49,7 +49,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="green" data-md-color-accent="lightgreen">
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="blue-grey" data-md-color-accent="pink">
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -571,8 +571,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#class-variables" class="md-nav__link">
-    Class variables
+  <a href="#instance-variables" class="md-nav__link">
+    Instance variables
   </a>
   
 </li>
@@ -625,7 +625,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#class-variables_1" class="md-nav__link">
+  <a href="#class-variables" class="md-nav__link">
     Class variables
   </a>
   
@@ -666,6 +666,29 @@
   
 </li>
         
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    Parameters
+  </a>
+  
+    <nav class="md-nav" aria-label="Parameters">
+      <ul class="md-nav__list">
+        
           <li class="md-nav__item">
   <a href="#prop_find" class="md-nav__link">
     prop_find
@@ -684,16 +707,6 @@
   <a href="#upload_stream" class="md-nav__link">
     upload_stream
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -773,8 +786,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#class-variables" class="md-nav__link">
-    Class variables
+  <a href="#instance-variables" class="md-nav__link">
+    Instance variables
   </a>
   
 </li>
@@ -827,7 +840,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#class-variables_1" class="md-nav__link">
+  <a href="#class-variables" class="md-nav__link">
     Class variables
   </a>
   
@@ -868,6 +881,29 @@
   
 </li>
         
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    Parameters
+  </a>
+  
+    <nav class="md-nav" aria-label="Parameters">
+      <ul class="md-nav__list">
+        
           <li class="md-nav__item">
   <a href="#prop_find" class="md-nav__link">
     prop_find
@@ -886,16 +922,6 @@
   <a href="#upload_stream" class="md-nav__link">
     upload_stream
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -925,299 +951,6 @@
                 
                 
                 <h1 id="module-yapapistoragewebdav">Module yapapi.storage.webdav</h1>
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">PathLike</span>
-
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">AsyncIterator</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">NamedTuple</span>
-
-<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">StorageProvider</span><span class="p">,</span> <span class="n">Source</span><span class="p">,</span> <span class="n">Destination</span><span class="p">,</span> <span class="n">Content</span>
-
-<span class="kn">import</span> <span class="nn">aiohttp</span><span class="o">,</span> <span class="nn">uuid</span>
-
-<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
-
-<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
-
-<span class="kn">import</span> <span class="nn">logging</span>
-
-<span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="kn">import</span> <span class="n">urlparse</span><span class="p">,</span> <span class="n">urljoin</span><span class="p">,</span> <span class="n">ParseResult</span>
-
-<span class="n">_logger</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
-
-<span class="k">class</span> <span class="nc">DavResource</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
-
-    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span>
-
-    <span class="n">length</span><span class="p">:</span> <span class="nb">int</span>
-
-    <span class="n">collection</span><span class="p">:</span> <span class="nb">bool</span>
-
-    <span class="n">last_modified</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">datetime</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span>
-
-<span class="k">def</span> <span class="nf">_parse_prop_resp</span><span class="p">(</span><span class="n">xml</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">DavResource</span><span class="p">]:</span>
-
-    <span class="kn">from</span> <span class="nn">io</span> <span class="kn">import</span> <span class="n">StringIO</span>
-
-    <span class="kn">from</span> <span class="nn">xml.etree</span> <span class="kn">import</span> <span class="n">ElementTree</span>
-
-    <span class="kn">from</span> <span class="nn">email.utils</span> <span class="kn">import</span> <span class="n">parsedate_to_datetime</span>
-
-    <span class="n">tree</span> <span class="o">=</span> <span class="n">ElementTree</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">StringIO</span><span class="p">(</span><span class="n">xml</span><span class="p">))</span>
-
-    <span class="k">def</span> <span class="nf">resource</span><span class="p">(</span><span class="n">element</span><span class="p">:</span> <span class="n">ElementTree</span><span class="o">.</span><span class="n">Element</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DavResource</span><span class="p">:</span>
-
-        <span class="n">href</span> <span class="o">=</span> <span class="n">element</span><span class="o">.</span><span class="n">findtext</span><span class="p">(</span><span class="s2">&quot;{DAV:}href&quot;</span><span class="p">)</span>
-
-        <span class="n">prop</span> <span class="o">=</span> <span class="n">element</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;{DAV:}propstat&quot;</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">prop</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-
-            <span class="n">prop</span> <span class="o">=</span> <span class="n">prop</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;{DAV:}prop&quot;</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">prop</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">href</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;missing props in xml response&quot;</span><span class="p">)</span>
-
-        <span class="n">length</span> <span class="o">=</span> <span class="n">prop</span><span class="o">.</span><span class="n">findtext</span><span class="p">(</span><span class="s2">&quot;{DAV:}getcontentlength&quot;</span><span class="p">)</span>
-
-        <span class="n">resource_type</span> <span class="o">=</span> <span class="n">prop</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;{DAV:}resourcetype&quot;</span><span class="p">)</span>
-
-        <span class="n">last_modified</span> <span class="o">=</span> <span class="n">prop</span><span class="o">.</span><span class="n">findtext</span><span class="p">(</span><span class="s2">&quot;{DAV:}getlastmodified&quot;</span><span class="p">)</span>
-
-        <span class="n">collection</span> <span class="o">=</span> <span class="p">(</span>
-
-            <span class="n">resource_type</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;{DAV:}collection&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span>
-
-            <span class="k">if</span> <span class="n">resource_type</span>
-
-            <span class="k">else</span> <span class="bp">False</span>
-
-        <span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">DavResource</span><span class="p">(</span>
-
-            <span class="n">path</span><span class="o">=</span><span class="n">href</span><span class="p">,</span>
-
-            <span class="n">length</span><span class="o">=</span><span class="mi">0</span> <span class="k">if</span> <span class="n">length</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="nb">int</span><span class="p">(</span><span class="n">length</span><span class="p">),</span>
-
-            <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
-
-            <span class="n">last_modified</span><span class="o">=</span><span class="bp">None</span>
-
-            <span class="k">if</span> <span class="n">last_modified</span> <span class="ow">is</span> <span class="bp">None</span>
-
-            <span class="k">else</span> <span class="n">parsedate_to_datetime</span><span class="p">(</span><span class="n">last_modified</span><span class="p">),</span>
-
-        <span class="p">)</span>
-
-    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="n">tree</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s2">&quot;{DAV:}response&quot;</span><span class="p">)))</span>
-
-<span class="k">class</span> <span class="nc">_DavSource</span><span class="p">(</span><span class="n">Source</span><span class="p">):</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">length</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_url</span> <span class="o">=</span> <span class="n">url</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_length</span> <span class="o">=</span> <span class="n">length</span>
-
-    <span class="nd">@property</span>
-
-    <span class="k">def</span> <span class="nf">download_url</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_url</span>
-
-    <span class="n">async</span> <span class="k">def</span> <span class="nf">content_length</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_length</span><span class="p">:</span>
-
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_length</span>
-
-        <span class="n">async</span> <span class="k">with</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
-
-            <span class="n">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_url</span><span class="p">)</span> <span class="k">as</span> <span class="n">resp</span><span class="p">:</span>
-
-                <span class="k">if</span> <span class="n">resp</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
-
-                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;invalid url&quot;</span><span class="p">)</span>
-
-                <span class="k">if</span> <span class="n">resp</span><span class="o">.</span><span class="n">content_length</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-
-                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;invalid response missing length&quot;</span><span class="p">)</span>
-
-                <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">content_length</span>
-
-<span class="k">class</span> <span class="nc">_DavDestination</span><span class="p">(</span><span class="n">Destination</span><span class="p">):</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">client</span><span class="p">:</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="o">=</span> <span class="n">client</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_url</span> <span class="o">=</span> <span class="n">url</span>
-
-    <span class="nd">@property</span>
-
-    <span class="k">def</span> <span class="nf">upload_url</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_url</span>
-
-    <span class="n">async</span> <span class="k">def</span> <span class="nf">download_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Content</span><span class="p">:</span>
-
-        <span class="n">resp</span> <span class="o">=</span> <span class="n">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_url</span><span class="p">)</span>
-
-        <span class="n">length</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">content_length</span>
-
-        <span class="k">if</span> <span class="n">length</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;missing content-length&quot;</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">Content</span><span class="o">.</span><span class="n">from_reader</span><span class="p">(</span><span class="n">length</span><span class="p">,</span> <span class="n">resp</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
-
-<span class="nd">@dataclass</span>
-
-<span class="k">class</span> <span class="nc">DavStorageProvider</span><span class="p">(</span><span class="n">StorageProvider</span><span class="p">):</span>
-
-    <span class="n">client</span><span class="p">:</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span>
-
-    <span class="n">base_url</span><span class="p">:</span> <span class="nb">str</span>
-
-    <span class="n">auth</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">aiohttp</span><span class="o">.</span><span class="n">BasicAuth</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span>
-
-    <span class="k">def</span> <span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_url</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;/&quot;</span><span class="p">:</span>
-
-            <span class="bp">self</span><span class="o">.</span><span class="n">base_url</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span>
-
-    <span class="nd">@classmethod</span>
-
-    <span class="n">async</span> <span class="k">def</span> <span class="nf">for_directory</span><span class="p">(</span>
-
-        <span class="bp">cls</span><span class="p">,</span>
-
-        <span class="n">client</span><span class="p">:</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">,</span>
-
-        <span class="n">base_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-
-        <span class="n">directory_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-
-        <span class="n">auth</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">aiohttp</span><span class="o">.</span><span class="n">BasicAuth</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
-
-        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
-
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;DavStorageProvider&quot;</span><span class="p">:</span>
-
-        <span class="k">if</span> <span class="n">base_url</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;/&quot;</span><span class="p">:</span>
-
-            <span class="n">base_url</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span>
-
-        <span class="n">col_url</span> <span class="o">=</span> <span class="n">urljoin</span><span class="p">(</span><span class="n">base_url</span><span class="p">,</span> <span class="n">directory_name</span><span class="p">)</span>
-
-        <span class="n">response</span> <span class="o">=</span> <span class="n">await</span> <span class="n">client</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">&quot;MKCOL&quot;</span><span class="p">,</span> <span class="n">url</span><span class="o">=</span><span class="n">col_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="n">auth</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="mi">201</span><span class="p">:</span>
-
-            <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
-
-        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">col_url</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="n">auth</span><span class="p">)</span>
-
-    <span class="n">async</span> <span class="k">def</span> <span class="nf">upload_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">length</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">stream</span><span class="p">:</span> <span class="n">AsyncIterator</span><span class="p">[</span><span class="nb">bytes</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Source</span><span class="p">:</span>
-
-        <span class="n">upload_url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__new_url</span><span class="p">()</span>
-
-        <span class="n">resp</span> <span class="o">=</span> <span class="n">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">request</span><span class="p">(</span>
-
-            <span class="n">method</span><span class="o">=</span><span class="s2">&quot;PUT&quot;</span><span class="p">,</span> <span class="n">url</span><span class="o">=</span><span class="n">upload_url</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">stream</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">auth</span>
-
-        <span class="p">)</span>
-
-        <span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;upload done: </span><span class="si">%i</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">resp</span><span class="o">.</span><span class="n">status</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">resp</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="mi">201</span><span class="p">:</span>
-
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
-
-                <span class="n">f</span><span class="s2">&quot;invalid response for url: {upload_url}, {resp.status}/{resp.reason}&quot;</span>
-
-            <span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">_DavSource</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__export_url</span><span class="p">(</span><span class="n">upload_url</span><span class="p">))</span>
-
-    <span class="n">async</span> <span class="k">def</span> <span class="nf">new_destination</span><span class="p">(</span>
-
-        <span class="bp">self</span><span class="p">,</span> <span class="n">destination_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PathLike</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span>
-
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Destination</span><span class="p">:</span>
-
-        <span class="n">upload_url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__new_url</span><span class="p">()</span>
-
-        <span class="k">return</span> <span class="n">_DavDestination</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__export_url</span><span class="p">(</span><span class="n">upload_url</span><span class="p">))</span>
-
-    <span class="n">async</span> <span class="k">def</span> <span class="nf">prop_find</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-
-        <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;content-type&quot;</span><span class="p">:</span> <span class="s2">&quot;text/xml&quot;</span><span class="p">,</span> <span class="s2">&quot;depth&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">}</span>
-
-        <span class="n">data</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;&lt;?xml version=&quot;1.0&quot;?&gt;</span>
-
-<span class="s2">        &lt;a:propfind xmlns:a=&quot;DAV:&quot;&gt;</span>
-
-<span class="s2">        &lt;a:prop&gt;</span>
-
-<span class="s2">            &lt;a:resourcetype/&gt;</span>
-
-<span class="s2">            &lt;a:getcontentlength/&gt;</span>
-
-<span class="s2">            &lt;a:getlastmodified/&gt;</span>
-
-<span class="s2">        &lt;/a:prop&gt;</span>
-
-<span class="s2">        &lt;/a:propfind&gt;&quot;&quot;&quot;</span>
-
-        <span class="n">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">request</span><span class="p">(</span>
-
-            <span class="n">method</span><span class="o">=</span><span class="s2">&quot;PROPFIND&quot;</span><span class="p">,</span>
-
-            <span class="n">url</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">base_url</span><span class="p">,</span>
-
-            <span class="n">auth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">auth</span><span class="p">,</span>
-
-            <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span>
-
-            <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
-
-        <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
-
-            <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
-
-                <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
-
-            <span class="k">return</span> <span class="n">_parse_prop_resp</span><span class="p">(</span><span class="n">await</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
-
-    <span class="k">def</span> <span class="nf">__export_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">auth</span><span class="p">:</span>
-
-            <span class="n">parsed_url</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
-
-            <span class="n">login</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">auth</span>
-
-            <span class="k">return</span> <span class="n">parsed_url</span><span class="o">.</span><span class="n">_replace</span><span class="p">(</span>
-
-                <span class="n">netloc</span><span class="o">=</span><span class="n">f</span><span class="s2">&quot;{login}:{password}@{parsed_url.netloc}&quot;</span>
-
-            <span class="p">)</span><span class="o">.</span><span class="n">geturl</span><span class="p">()</span>
-
-        <span class="k">else</span><span class="p">:</span>
-
-            <span class="k">return</span> <span class="n">url</span>
-
-    <span class="k">def</span> <span class="nf">__new_url</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-
-        <span class="n">name</span> <span class="o">=</span> <span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span>
-
-        <span class="k">return</span> <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base_url</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
-</code></pre></div>
-
-
-</details>
 <h2 id="classes">Classes</h2>
 <h3 id="davresource">DavResource</h3>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">DavResource</span><span class="p">(</span>
@@ -1229,221 +962,59 @@
 
 
 <p>DavResource(path, length, collection, last_modified)</p>
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="n">DavResource</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">    </span><span class="k">path</span><span class="err">:</span><span class="w"> </span><span class="nf">str</span><span class="w"></span>
-
-<span class="w">    </span><span class="nl">length</span><span class="p">:</span><span class="w"> </span><span class="nc">int</span><span class="w"></span>
-
-<span class="w">    </span><span class="nl">collection</span><span class="p">:</span><span class="w"> </span><span class="n">bool</span><span class="w"></span>
-
-<span class="w">    </span><span class="nl">last_modified</span><span class="p">:</span><span class="w"> </span><span class="n">Optional</span><span class="o">[</span><span class="n">datetime</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">None</span><span class="w"></span>
-</code></pre></div>
-
-
-</details>
-<hr />
 <h4 id="ancestors-in-mro">Ancestors (in MRO)</h4>
 <ul>
 <li>builtins.tuple</li>
 </ul>
-<h4 id="class-variables">Class variables</h4>
+<h4 id="instance-variables">Instance variables</h4>
 <div class="codehilite"><pre><span></span><code><span class="n">collection</span>
 </code></pre></div>
 
 
+<p>Alias for field number 2</p>
 <div class="codehilite"><pre><span></span><code><span class="n">last_modified</span>
 </code></pre></div>
 
 
+<p>Alias for field number 3</p>
 <div class="codehilite"><pre><span></span><code><span class="n">length</span>
 </code></pre></div>
 
 
+<p>Alias for field number 1</p>
 <div class="codehilite"><pre><span></span><code><span class="n">path</span>
 </code></pre></div>
 
 
+<p>Alias for field number 0</p>
 <h4 id="methods">Methods</h4>
 <h5 id="count">count</h5>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">count</span><span class="p">(</span>
-    <span class="bp">self</span><span class="p">,</span>
-    <span class="n">value</span><span class="p">,</span>
-    <span class="o">/</span>
+    <span class="o">...</span>
 <span class="p">)</span>
 </code></pre></div>
 
 
-<p>Return number of occurrences of value.</p>
+<p>T.count(value) -&gt; integer -- return number of occurrences of value</p>
 <h5 id="index">index</h5>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">index</span><span class="p">(</span>
-    <span class="bp">self</span><span class="p">,</span>
-    <span class="n">value</span><span class="p">,</span>
-    <span class="n">start</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-    <span class="n">stop</span><span class="o">=</span><span class="mi">9223372036854775807</span><span class="p">,</span>
-    <span class="o">/</span>
+    <span class="o">...</span>
 <span class="p">)</span>
 </code></pre></div>
 
 
-<p>Return first index of value.</p>
-<p>Raises ValueError if the value is not present.</p>
+<p>T.index(value, [start, [stop]]) -&gt; integer -- return first index of value.
+Raises ValueError if the value is not present.</p>
 <h3 id="davstorageprovider">DavStorageProvider</h3>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">DavStorageProvider</span><span class="p">(</span>
-    <span class="n">client</span><span class="p">:</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">,</span>
-    <span class="n">base_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">auth</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">aiohttp</span><span class="o">.</span><span class="n">helpers</span><span class="o">.</span><span class="n">BasicAuth</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">client</span><span class="p">:</span><span class="n">aiohttp</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">,</span>
+    <span class="n">base_url</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span>
+    <span class="n">auth</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="n">aiohttp</span><span class="o">.</span><span class="n">helpers</span><span class="o">.</span><span class="n">BasicAuth</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span>
 <span class="p">)</span>
 </code></pre></div>
 
 
-<p>DavStorageProvider(client: aiohttp.client.ClientSession, base_url: str, auth: Union[aiohttp.helpers.BasicAuth, NoneType] = None)</p>
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="n">DavStorageProvider</span><span class="p">(</span><span class="n">StorageProvider</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">    </span><span class="nl">client</span><span class="p">:</span><span class="w"> </span><span class="n">aiohttp</span><span class="p">.</span><span class="n">ClientSession</span><span class="w"></span>
-
-<span class="w">    </span><span class="nl">base_url</span><span class="p">:</span><span class="w"> </span><span class="nf">str</span><span class="w"></span>
-
-<span class="w">    </span><span class="nl">auth</span><span class="p">:</span><span class="w"> </span><span class="n">Optional</span><span class="o">[</span><span class="n">aiohttp.BasicAuth</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">None</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">__post_init__</span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">base_url</span><span class="o">[</span><span class="n">-1</span><span class="o">]</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="ss">&quot;/&quot;</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">self</span><span class="p">.</span><span class="n">base_url</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="ss">&quot;/&quot;</span><span class="w"></span>
-
-<span class="w">    </span><span class="nv">@classmethod</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">async</span><span class="w"> </span><span class="n">def</span><span class="w"> </span><span class="n">for_directory</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">cls</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">        </span><span class="nl">client</span><span class="p">:</span><span class="w"> </span><span class="n">aiohttp</span><span class="p">.</span><span class="n">ClientSession</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">        </span><span class="nl">base_url</span><span class="p">:</span><span class="w"> </span><span class="nf">str</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">        </span><span class="nl">directory_name</span><span class="p">:</span><span class="w"> </span><span class="nf">str</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">        </span><span class="nl">auth</span><span class="p">:</span><span class="w"> </span><span class="n">Optional</span><span class="o">[</span><span class="n">aiohttp.BasicAuth</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">None</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">        </span><span class="o">**</span><span class="n">kwargs</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="ss">&quot;DavStorageProvider&quot;</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">base_url</span><span class="o">[</span><span class="n">-1</span><span class="o">]</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="ss">&quot;/&quot;</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">base_url</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="ss">&quot;/&quot;</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">col_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">urljoin</span><span class="p">(</span><span class="n">base_url</span><span class="p">,</span><span class="w"> </span><span class="n">directory_name</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">await</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="n">request</span><span class="p">(</span><span class="k">method</span><span class="o">=</span><span class="ss">&quot;MKCOL&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">url</span><span class="o">=</span><span class="n">col_url</span><span class="p">,</span><span class="w"> </span><span class="n">auth</span><span class="o">=</span><span class="n">auth</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="n">status</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">201</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">response</span><span class="p">.</span><span class="n">raise_for_status</span><span class="p">()</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">cls</span><span class="p">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="n">col_url</span><span class="p">,</span><span class="w"> </span><span class="n">auth</span><span class="o">=</span><span class="n">auth</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">async</span><span class="w"> </span><span class="n">def</span><span class="w"> </span><span class="n">upload_stream</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="nl">length</span><span class="p">:</span><span class="w"> </span><span class="nc">int</span><span class="p">,</span><span class="w"> </span><span class="nl">stream</span><span class="p">:</span><span class="w"> </span><span class="n">AsyncIterator</span><span class="o">[</span><span class="n">bytes</span><span class="o">]</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nl">Source</span><span class="p">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">upload_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">__new_url</span><span class="p">()</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">resp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">await</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">client</span><span class="p">.</span><span class="n">request</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">            </span><span class="k">method</span><span class="o">=</span><span class="ss">&quot;PUT&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">url</span><span class="o">=</span><span class="n">upload_url</span><span class="p">,</span><span class="w"> </span><span class="k">data</span><span class="o">=</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">auth</span><span class="o">=</span><span class="n">self</span><span class="p">.</span><span class="n">auth</span><span class="w"></span>
-
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">_logger</span><span class="p">.</span><span class="n">debug</span><span class="p">(</span><span class="ss">&quot;upload done: %i&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">resp</span><span class="p">.</span><span class="n">status</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">resp</span><span class="p">.</span><span class="n">status</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">201</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">raise</span><span class="w"> </span><span class="n">RuntimeError</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">                </span><span class="n">f</span><span class="ss">&quot;invalid response for url: {upload_url}, {resp.status}/{resp.reason}&quot;</span><span class="w"></span>
-
-<span class="w">            </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">_DavSource</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">__export_url</span><span class="p">(</span><span class="n">upload_url</span><span class="p">))</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">async</span><span class="w"> </span><span class="n">def</span><span class="w"> </span><span class="n">new_destination</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="nl">destination_file</span><span class="p">:</span><span class="w"> </span><span class="n">Optional</span><span class="o">[</span><span class="n">PathLike</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">None</span><span class="w"></span>
-
-<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nl">Destination</span><span class="p">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">upload_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">__new_url</span><span class="p">()</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">_DavDestination</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">__export_url</span><span class="p">(</span><span class="n">upload_url</span><span class="p">))</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">async</span><span class="w"> </span><span class="n">def</span><span class="w"> </span><span class="n">prop_find</span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">headers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">{</span><span class="ss">&quot;content-type&quot;</span><span class="err">:</span><span class="w"> </span><span class="ss">&quot;text/xml&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;depth&quot;</span><span class="err">:</span><span class="w"> </span><span class="ss">&quot;1&quot;</span><span class="err">}</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ss">&quot;&quot;&quot;&lt;?xml version=&quot;</span><span class="mf">1.0</span><span class="ss">&quot;?&gt;</span>
-
-<span class="ss">        &lt;a:propfind xmlns:a=&quot;</span><span class="nl">DAV</span><span class="p">:</span><span class="ss">&quot;&gt;</span>
-
-<span class="ss">        &lt;a:prop&gt;</span>
-
-<span class="ss">            &lt;a:resourcetype/&gt;</span>
-
-<span class="ss">            &lt;a:getcontentlength/&gt;</span>
-
-<span class="ss">            &lt;a:getlastmodified/&gt;</span>
-
-<span class="ss">        &lt;/a:prop&gt;</span>
-
-<span class="ss">        &lt;/a:propfind&gt;&quot;&quot;&quot;</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">async</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">client</span><span class="p">.</span><span class="n">request</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">            </span><span class="k">method</span><span class="o">=</span><span class="ss">&quot;PROPFIND&quot;</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">url</span><span class="o">=</span><span class="n">self</span><span class="p">.</span><span class="n">base_url</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">auth</span><span class="o">=</span><span class="n">self</span><span class="p">.</span><span class="n">auth</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">            </span><span class="k">data</span><span class="o">=</span><span class="k">data</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">        </span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nl">response</span><span class="p">:</span><span class="w"></span>
-
-<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="n">status</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">200</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">                </span><span class="n">response</span><span class="p">.</span><span class="n">raise_for_status</span><span class="p">()</span><span class="w"></span>
-
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">_parse_prop_resp</span><span class="p">(</span><span class="n">await</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="nc">text</span><span class="p">())</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">__export_url</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="n">url</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nf">str</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="nl">auth</span><span class="p">:</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">parsed_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">urlparse</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">login</span><span class="p">,</span><span class="w"> </span><span class="n">password</span><span class="p">,</span><span class="w"> </span><span class="o">*</span><span class="n">_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">auth</span><span class="w"></span>
-
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">parsed_url</span><span class="p">.</span><span class="n">_replace</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">                </span><span class="n">netloc</span><span class="o">=</span><span class="n">f</span><span class="ss">&quot;{login}:{password}@{parsed_url.netloc}&quot;</span><span class="w"></span>
-
-<span class="w">            </span><span class="p">).</span><span class="n">geturl</span><span class="p">()</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">else</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">url</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">__new_url</span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">uuid</span><span class="p">.</span><span class="n">uuid4</span><span class="p">()</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">urljoin</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">base_url</span><span class="p">,</span><span class="w"> </span><span class="nf">str</span><span class="p">(</span><span class="n">name</span><span class="p">))</span><span class="w"></span>
-</code></pre></div>
-
-
-</details>
-<hr />
+<p>DavStorageProvider(client:aiohttp.client.ClientSession, base_url:str, auth:Union[aiohttp.helpers.BasicAuth, NoneType]=None)</p>
 <h4 id="ancestors-in-mro_1">Ancestors (in MRO)</h4>
 <ul>
 <li>yapapi.storage.StorageProvider</li>
@@ -1451,7 +1022,7 @@
 <li>yapapi.storage.OutputStorageProvider</li>
 <li>abc.ABC</li>
 </ul>
-<h4 id="class-variables_1">Class variables</h4>
+<h4 id="class-variables">Class variables</h4>
 <div class="codehilite"><pre><span></span><code><span class="n">auth</span>
 </code></pre></div>
 
@@ -1459,75 +1030,28 @@
 <h4 id="static-methods">Static methods</h4>
 <h5 id="for_directory">for_directory</h5>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">for_directory</span><span class="p">(</span>
-    <span class="n">client</span><span class="p">:</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">,</span>
-    <span class="n">base_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">directory_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">auth</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">aiohttp</span><span class="o">.</span><span class="n">helpers</span><span class="o">.</span><span class="n">BasicAuth</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">client</span><span class="p">:</span><span class="n">aiohttp</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">,</span>
+    <span class="n">base_url</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span>
+    <span class="n">directory_name</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span>
+    <span class="n">auth</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="n">aiohttp</span><span class="o">.</span><span class="n">helpers</span><span class="o">.</span><span class="n">BasicAuth</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="o">**</span><span class="n">kwargs</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;DavStorageProvider&#39;</span>
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="w">    </span><span class="nv">@classmethod</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">async</span><span class="w"> </span><span class="n">def</span><span class="w"> </span><span class="n">for_directory</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">cls</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">        </span><span class="nl">client</span><span class="p">:</span><span class="w"> </span><span class="n">aiohttp</span><span class="p">.</span><span class="n">ClientSession</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">        </span><span class="nl">base_url</span><span class="p">:</span><span class="w"> </span><span class="nf">str</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">        </span><span class="nl">directory_name</span><span class="p">:</span><span class="w"> </span><span class="nf">str</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">        </span><span class="nl">auth</span><span class="p">:</span><span class="w"> </span><span class="n">Optional</span><span class="o">[</span><span class="n">aiohttp.BasicAuth</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">None</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">        </span><span class="o">**</span><span class="n">kwargs</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="ss">&quot;DavStorageProvider&quot;</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">base_url</span><span class="o">[</span><span class="n">-1</span><span class="o">]</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="ss">&quot;/&quot;</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">base_url</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="ss">&quot;/&quot;</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">col_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">urljoin</span><span class="p">(</span><span class="n">base_url</span><span class="p">,</span><span class="w"> </span><span class="n">directory_name</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">await</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="n">request</span><span class="p">(</span><span class="k">method</span><span class="o">=</span><span class="ss">&quot;MKCOL&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">url</span><span class="o">=</span><span class="n">col_url</span><span class="p">,</span><span class="w"> </span><span class="n">auth</span><span class="o">=</span><span class="n">auth</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="n">status</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">201</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">response</span><span class="p">.</span><span class="n">raise_for_status</span><span class="p">()</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">cls</span><span class="p">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="n">col_url</span><span class="p">,</span><span class="w"> </span><span class="n">auth</span><span class="o">=</span><span class="n">auth</span><span class="p">)</span><span class="w"></span>
-</code></pre></div>
-
-
-</details>
 <h4 id="methods_1">Methods</h4>
 <h5 id="new_destination">new_destination</h5>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">new_destination</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
-    <span class="n">destination_file</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">destination_file</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">yapapi</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">Destination</span>
 </code></pre></div>
 
 
 <p>Creates slot for receiving file.</p>
-<p>:param destination_file: Optional hint where received data should be placed.
-:return:</p>
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="w">    </span><span class="n">async</span><span class="w"> </span><span class="n">def</span><span class="w"> </span><span class="n">new_destination</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="nl">destination_file</span><span class="p">:</span><span class="w"> </span><span class="n">Optional</span><span class="o">[</span><span class="n">PathLike</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">None</span><span class="w"></span>
-
-<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nl">Destination</span><span class="p">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">upload_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">__new_url</span><span class="p">()</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">_DavDestination</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">__export_url</span><span class="p">(</span><span class="n">upload_url</span><span class="p">))</span><span class="w"></span>
-</code></pre></div>
-
-
-</details>
+<h2 id="parameters">Parameters</h2>
+<p>destination_file:
+    Optional hint where received data should be placed.</p>
 <h5 id="prop_find">prop_find</h5>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">prop_find</span><span class="p">(</span>
     <span class="bp">self</span>
@@ -1535,116 +1059,21 @@
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code>    async def prop_find(self):
-
-        headers = {&quot;content-type&quot;: &quot;text/xml&quot;, &quot;depth&quot;: &quot;1&quot;}
-
-        data = &quot;&quot;&quot;<span class="cp">&lt;?xml version=&quot;1.0&quot;?&gt;</span>
-
-        <span class="nt">&lt;a:propfind</span> <span class="na">xmlns:a=</span><span class="s">&quot;DAV:&quot;</span><span class="nt">&gt;</span>
-
-        <span class="nt">&lt;a:prop&gt;</span>
-
-            <span class="nt">&lt;a:resourcetype/&gt;</span>
-
-            <span class="nt">&lt;a:getcontentlength/&gt;</span>
-
-            <span class="nt">&lt;a:getlastmodified/&gt;</span>
-
-        <span class="nt">&lt;/a:prop&gt;</span>
-
-        <span class="nt">&lt;/a:propfind&gt;</span>&quot;&quot;&quot;
-
-        async with self.client.request(
-
-            method=&quot;PROPFIND&quot;,
-
-            url=self.base_url,
-
-            auth=self.auth,
-
-            headers=headers,
-
-            data=data,
-
-        ) as response:
-
-            if response.status != 200:
-
-                response.raise_for_status()
-
-            return _parse_prop_resp(await response.text())
-</code></pre></div>
-
-
-</details>
 <h5 id="upload_file">upload_file</h5>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">upload_file</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
-    <span class="n">path</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span>
+    <span class="n">path</span><span class="p">:</span><span class="n">os</span><span class="o">.</span><span class="n">PathLike</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">yapapi</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">Source</span>
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code>    <span class="n">async</span> <span class="n">def</span> <span class="n">upload_file</span><span class="p">(</span><span class="k">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">os</span><span class="p">.</span><span class="n">PathLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="k">Source</span><span class="p">:</span>
-
-        <span class="n">fp</span> <span class="o">=</span> <span class="n">pathlib</span><span class="p">.</span><span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-
-        <span class="n">file_size</span> <span class="o">=</span> <span class="n">fp</span><span class="p">.</span><span class="n">stat</span><span class="p">().</span><span class="n">st_size</span>
-
-        <span class="n">async</span> <span class="n">def</span> <span class="n">read_file</span><span class="p">():</span>
-
-            <span class="k">with</span> <span class="n">io</span><span class="p">.</span><span class="k">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="ss">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-
-                <span class="n">while</span> <span class="k">True</span><span class="p">:</span>
-
-                    <span class="n">b</span><span class="p">:</span> <span class="n">bytes</span> <span class="o">=</span> <span class="n">f</span><span class="p">.</span><span class="k">read</span><span class="p">(</span><span class="n">_BUF_SIZE</span><span class="p">)</span>
-
-                    <span class="k">if</span> <span class="k">not</span> <span class="n">b</span><span class="p">:</span>
-
-                        <span class="n">break</span>
-
-                    <span class="n">yield</span> <span class="n">b</span>
-
-        <span class="k">return</span> <span class="n">await</span> <span class="k">self</span><span class="p">.</span><span class="n">upload_stream</span><span class="p">(</span><span class="n">file_size</span><span class="p">,</span> <span class="n">read_file</span><span class="p">())</span>
-</code></pre></div>
-
-
-</details>
 <h5 id="upload_stream">upload_stream</h5>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">upload_stream</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
-    <span class="n">length</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">stream</span><span class="p">:</span> <span class="n">AsyncIterator</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]</span>
+    <span class="n">length</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span>
+    <span class="n">stream</span><span class="p">:</span><span class="n">AsyncIterator</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">yapapi</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">Source</span>
 </code></pre></div>
-
-
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="w">    </span><span class="n">async</span><span class="w"> </span><span class="n">def</span><span class="w"> </span><span class="n">upload_stream</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="nl">length</span><span class="p">:</span><span class="w"> </span><span class="nc">int</span><span class="p">,</span><span class="w"> </span><span class="nl">stream</span><span class="p">:</span><span class="w"> </span><span class="n">AsyncIterator</span><span class="o">[</span><span class="n">bytes</span><span class="o">]</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nl">Source</span><span class="p">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">upload_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">__new_url</span><span class="p">()</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">resp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">await</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">client</span><span class="p">.</span><span class="n">request</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">            </span><span class="k">method</span><span class="o">=</span><span class="ss">&quot;PUT&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">url</span><span class="o">=</span><span class="n">upload_url</span><span class="p">,</span><span class="w"> </span><span class="k">data</span><span class="o">=</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">auth</span><span class="o">=</span><span class="n">self</span><span class="p">.</span><span class="n">auth</span><span class="w"></span>
-
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">_logger</span><span class="p">.</span><span class="n">debug</span><span class="p">(</span><span class="ss">&quot;upload done: %i&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">resp</span><span class="p">.</span><span class="n">status</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">resp</span><span class="p">.</span><span class="n">status</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">201</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">raise</span><span class="w"> </span><span class="n">RuntimeError</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">                </span><span class="n">f</span><span class="ss">&quot;invalid response for url: {upload_url}, {resp.status}/{resp.reason}&quot;</span><span class="w"></span>
-
-<span class="w">            </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">_DavSource</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">__export_url</span><span class="p">(</span><span class="n">upload_url</span><span class="p">))</span><span class="w"></span>
-</code></pre></div>
-
-
-</details>
                 
               
               

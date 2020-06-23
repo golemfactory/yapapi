@@ -26,7 +26,7 @@
       
         
         
-        <meta name="theme-color" content="#4caf50">
+        <meta name="theme-color" content="#546e7a">
       
     
     
@@ -49,7 +49,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="green" data-md-color-accent="lightgreen">
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="blue-grey" data-md-color-accent="pink">
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -869,89 +869,6 @@
                 
                 
                 <h1 id="module-yapapirestconfiguration">Module yapapi.rest.configuration</h1>
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">os</span>
-
-<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
-
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span>
-
-<span class="kn">import</span> <span class="nn">ya_market</span>
-
-<span class="n">DEFAULT_API_URL</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;http://127.0.0.1:7465&quot;</span>
-
-<span class="k">class</span> <span class="nc">MissingConfiguration</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">description</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_key</span> <span class="o">=</span> <span class="n">key</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_description</span> <span class="o">=</span> <span class="n">description</span>
-
-    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-
-        <span class="k">return</span> <span class="n">f</span><span class="s2">&quot;Missing configuration for {self._description}. env var is {self._key}&quot;</span>
-
-<span class="k">def</span> <span class="nf">env_or_fail</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">description</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-
-    <span class="n">val</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
-
-    <span class="k">if</span> <span class="n">val</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-
-        <span class="k">raise</span> <span class="n">MissingConfiguration</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">val</span>
-
-<span class="k">class</span> <span class="nc">Configuration</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
-
-        <span class="bp">self</span><span class="p">,</span> <span class="n">app_key</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">market_url</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span>
-
-    <span class="p">):</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_app_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">app_key</span> <span class="ow">or</span> <span class="n">env_or_fail</span><span class="p">(</span>
-
-            <span class="s2">&quot;YAGNA_APPKEY&quot;</span><span class="p">,</span> <span class="s2">&quot;API authentication token&quot;</span>
-
-        <span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_url</span> <span class="o">=</span> <span class="n">url</span> <span class="ow">or</span> <span class="n">DEFAULT_API_URL</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_market_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">market_url</span> <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span>
-
-            <span class="s2">&quot;YAGNA_MARKET_URL&quot;</span>
-
-        <span class="p">)</span> <span class="ow">or</span> <span class="n">f</span><span class="s2">&quot;{self._url}/market-api/v1&quot;</span>
-
-    <span class="nd">@property</span>
-
-    <span class="k">def</span> <span class="nf">app_key</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_app_key</span>
-
-    <span class="nd">@property</span>
-
-    <span class="k">def</span> <span class="nf">market_url</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_market_url</span>
-
-    <span class="k">def</span> <span class="nf">market</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ya_market</span><span class="o">.</span><span class="n">ApiClient</span><span class="p">:</span>
-
-        <span class="n">cfg</span> <span class="o">=</span> <span class="n">ya_market</span><span class="o">.</span><span class="n">Configuration</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">market_url</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">ya_market</span><span class="o">.</span><span class="n">ApiClient</span><span class="p">(</span>
-
-            <span class="n">configuration</span><span class="o">=</span><span class="n">cfg</span><span class="p">,</span>
-
-            <span class="n">header_name</span><span class="o">=</span><span class="s2">&quot;authorization&quot;</span><span class="p">,</span>
-
-            <span class="n">header_value</span><span class="o">=</span><span class="n">f</span><span class="s2">&quot;Bearer {self.app_key}&quot;</span><span class="p">,</span>
-
-        <span class="p">)</span>
-</code></pre></div>
-
-
-</details>
 <h2 id="variables">Variables</h2>
 <div class="codehilite"><pre><span></span><code><span class="n">DEFAULT_API_URL</span>
 </code></pre></div>
@@ -960,87 +877,22 @@
 <h2 id="functions">Functions</h2>
 <h3 id="env_or_fail">env_or_fail</h3>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">env_or_fail</span><span class="p">(</span>
-    <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">key</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span>
+    <span class="n">description</span><span class="p">:</span><span class="nb">str</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span>
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="n">def</span> <span class="n">env_or_fail</span><span class="p">(</span><span class="k">key</span><span class="p">:</span> <span class="n">str</span><span class="p">,</span> <span class="n">description</span><span class="p">:</span> <span class="n">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">str</span><span class="p">:</span>
-
-    <span class="n">val</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">getenv</span><span class="p">(</span><span class="k">key</span><span class="p">)</span>
-
-    <span class="k">if</span> <span class="n">val</span> <span class="k">is</span> <span class="k">None</span><span class="p">:</span>
-
-        <span class="n">raise</span> <span class="n">MissingConfiguration</span><span class="p">(</span><span class="k">key</span><span class="o">=</span><span class="k">key</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">val</span>
-</code></pre></div>
-
-
-</details>
 <h2 id="classes">Classes</h2>
 <h3 id="configuration">Configuration</h3>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Configuration</span><span class="p">(</span>
     <span class="n">app_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">url</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">market_url</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">url</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">market_url</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span>
 <span class="p">)</span>
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="n">Configuration</span><span class="p">(</span><span class="k">object</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">__init__</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="n">app_key</span><span class="o">=</span><span class="k">None</span><span class="p">,</span><span class="w"> </span><span class="nl">url</span><span class="p">:</span><span class="w"> </span><span class="n">Optional</span><span class="o">[</span><span class="n">str</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">None</span><span class="p">,</span><span class="w"> </span><span class="nl">market_url</span><span class="p">:</span><span class="w"> </span><span class="n">Optional</span><span class="o">[</span><span class="n">str</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">None</span><span class="w"></span>
-
-<span class="w">    </span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="p">.</span><span class="nl">_app_key</span><span class="p">:</span><span class="w"> </span><span class="nf">str</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">app_key</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">env_or_fail</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">            </span><span class="ss">&quot;YAGNA_APPKEY&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;API authentication token&quot;</span><span class="w"></span>
-
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="p">.</span><span class="n">_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">url</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">DEFAULT_API_URL</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="p">.</span><span class="nl">_market_url</span><span class="p">:</span><span class="w"> </span><span class="nf">str</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">market_url</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">os</span><span class="p">.</span><span class="n">getenv</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">            </span><span class="ss">&quot;YAGNA_MARKET_URL&quot;</span><span class="w"></span>
-
-<span class="w">        </span><span class="p">)</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">f</span><span class="ss">&quot;{self._url}/market-api/v1&quot;</span><span class="w"></span>
-
-<span class="w">    </span><span class="nv">@property</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">app_key</span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nf">str</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">_app_key</span><span class="w"></span>
-
-<span class="w">    </span><span class="nv">@property</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">market_url</span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nf">str</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">_market_url</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">market</span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">ya_market</span><span class="p">.</span><span class="nl">ApiClient</span><span class="p">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">cfg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ya_market</span><span class="p">.</span><span class="n">Configuration</span><span class="p">(</span><span class="k">host</span><span class="o">=</span><span class="n">self</span><span class="p">.</span><span class="n">market_url</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">ya_market</span><span class="p">.</span><span class="n">ApiClient</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">configuration</span><span class="o">=</span><span class="n">cfg</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">header_name</span><span class="o">=</span><span class="ss">&quot;authorization&quot;</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">header_value</span><span class="o">=</span><span class="n">f</span><span class="ss">&quot;Bearer {self.app_key}&quot;</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-</code></pre></div>
-
-
-</details>
-<hr />
 <h4 id="instance-variables">Instance variables</h4>
 <div class="codehilite"><pre><span></span><code><span class="n">app_key</span>
 </code></pre></div>
@@ -1058,48 +910,15 @@
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code>    <span class="n">def</span> <span class="n">market</span><span class="p">(</span><span class="k">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ya_market</span><span class="p">.</span><span class="n">ApiClient</span><span class="p">:</span>
-
-        <span class="n">cfg</span> <span class="o">=</span> <span class="n">ya_market</span><span class="p">.</span><span class="n">Configuration</span><span class="p">(</span><span class="k">host</span><span class="o">=</span><span class="k">self</span><span class="p">.</span><span class="n">market_url</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">ya_market</span><span class="p">.</span><span class="n">ApiClient</span><span class="p">(</span>
-
-            <span class="n">configuration</span><span class="o">=</span><span class="n">cfg</span><span class="p">,</span>
-
-            <span class="n">header_name</span><span class="o">=</span><span class="ss">&quot;authorization&quot;</span><span class="p">,</span>
-
-            <span class="n">header_value</span><span class="o">=</span><span class="n">f</span><span class="ss">&quot;Bearer {self.app_key}&quot;</span><span class="p">,</span>
-
-        <span class="p">)</span>
-</code></pre></div>
-
-
-</details>
 <h3 id="missingconfiguration">MissingConfiguration</h3>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">MissingConfiguration</span><span class="p">(</span>
-    <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">key</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span>
+    <span class="n">description</span><span class="p">:</span><span class="nb">str</span>
 <span class="p">)</span>
 </code></pre></div>
 
 
 <p>Common base class for all non-exit exceptions.</p>
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="n">MissingConfiguration</span>(<span class="nb">Exception</span>):
-
-    <span class="n">def</span> <span class="n">__init__</span>(<span class="nb">self</span>, <span class="n">key:</span> <span class="n">str</span>, <span class="n">description:</span> <span class="n">str</span>):
-
-        <span class="nb">self</span>.<span class="n">_key</span> = <span class="nb">key</span>
-
-        <span class="nb">self</span>.<span class="n">_description</span> = <span class="n">description</span>
-
-    <span class="n">def</span> <span class="n">__str__</span>(<span class="nb">self</span>):
-
-        <span class="k">return</span> <span class="nb">f</span><span class="s">&quot;Missing configuration for {self._description}. env var is {self._key}&quot;</span>
-</code></pre></div>
-
-
-</details>
-<hr />
 <h4 id="ancestors-in-mro">Ancestors (in MRO)</h4>
 <ul>
 <li>builtins.Exception</li>

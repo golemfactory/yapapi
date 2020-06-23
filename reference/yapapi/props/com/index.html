@@ -26,7 +26,7 @@
       
         
         
-        <meta name="theme-color" content="#4caf50">
+        <meta name="theme-color" content="#546e7a">
       
     
     
@@ -49,7 +49,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="green" data-md-color-accent="lightgreen">
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="blue-grey" data-md-color-accent="pink">
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -1019,79 +1019,6 @@
                 
                 
                 <h1 id="module-yapapipropscom">Module yapapi.props.com</h1>
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span>
-
-<span class="kn">from</span> <span class="nn">decimal</span> <span class="kn">import</span> <span class="n">Decimal</span>
-
-<span class="kn">import</span> <span class="nn">enum</span>
-
-<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span><span class="p">,</span> <span class="n">Field</span>
-
-<span class="kn">from</span> <span class="nn">.base</span> <span class="kn">import</span> <span class="n">Model</span><span class="p">,</span> <span class="n">Props</span><span class="p">,</span> <span class="n">as_list</span>
-
-<span class="n">SCHEME</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;golem.com.scheme&quot;</span>
-
-<span class="n">PRICE_MODEL</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;golem.com.pricing.model&quot;</span>
-
-<span class="n">LINEAR_COEFFS</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;golem.com.pricing.model.linear.coeffs&quot;</span>
-
-<span class="n">DEFINED_USAGES</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;golem.com.usage.vector&quot;</span>
-
-<span class="k">class</span> <span class="nc">BillingScheme</span><span class="p">(</span><span class="n">enum</span><span class="o">.</span><span class="n">Enum</span><span class="p">):</span>
-
-    <span class="n">PAYU</span> <span class="o">=</span> <span class="s2">&quot;payu&quot;</span>
-
-<span class="k">class</span> <span class="nc">PriceModel</span><span class="p">(</span><span class="n">enum</span><span class="o">.</span><span class="n">Enum</span><span class="p">):</span>
-
-    <span class="n">LINEAR</span> <span class="o">=</span> <span class="s2">&quot;linear&quot;</span>
-
-<span class="k">class</span> <span class="nc">Counter</span><span class="p">(</span><span class="n">enum</span><span class="o">.</span><span class="n">Enum</span><span class="p">):</span>
-
-    <span class="n">TIME</span> <span class="o">=</span> <span class="s2">&quot;golem.usage.duration_sec&quot;</span>
-
-    <span class="n">CPU</span> <span class="o">=</span> <span class="s2">&quot;golem.usage.cpu_sec&quot;</span>
-
-    <span class="n">STORAGE</span> <span class="o">=</span> <span class="s2">&quot;golem.usage.storage_gib&quot;</span>
-
-    <span class="n">MAXMEM</span> <span class="o">=</span> <span class="s2">&quot;golem.usage.gib&quot;</span>
-
-    <span class="n">UNKNOWN</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
-
-<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-
-<span class="k">class</span> <span class="nc">Com</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
-
-    <span class="n">scheme</span><span class="p">:</span> <span class="n">BillingScheme</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="n">SCHEME</span><span class="p">})</span>
-
-    <span class="n">price_model</span><span class="p">:</span> <span class="n">PriceModel</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="n">PRICE_MODEL</span><span class="p">})</span>
-
-<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-
-<span class="k">class</span> <span class="nc">ComLinear</span><span class="p">(</span><span class="n">Com</span><span class="p">):</span>
-
-    <span class="n">fixed_price</span><span class="p">:</span> <span class="nb">float</span>
-
-    <span class="n">price_for</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Counter</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
-
-    <span class="nd">@classmethod</span>
-
-    <span class="k">def</span> <span class="nf">_custom_mapping</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">props</span><span class="p">:</span> <span class="n">Props</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]):</span>
-
-        <span class="k">assert</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;price_model&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">PriceModel</span><span class="o">.</span><span class="n">LINEAR</span><span class="p">,</span> <span class="s2">&quot;expected linear pricing model&quot;</span>
-
-        <span class="n">coeffs</span> <span class="o">=</span> <span class="n">as_list</span><span class="p">(</span><span class="n">props</span><span class="p">[</span><span class="n">LINEAR_COEFFS</span><span class="p">])</span>
-
-        <span class="n">usages</span> <span class="o">=</span> <span class="n">as_list</span><span class="p">(</span><span class="n">props</span><span class="p">[</span><span class="n">DEFINED_USAGES</span><span class="p">])</span>
-
-        <span class="n">fixed_price</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">coeffs</span><span class="o">.</span><span class="n">pop</span><span class="p">())</span>
-
-        <span class="n">price_for</span> <span class="o">=</span> <span class="p">((</span><span class="n">Counter</span><span class="p">(</span><span class="n">usages</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">coeffs</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">coeffs</span><span class="p">)))</span>
-
-        <span class="n">data</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">fixed_price</span><span class="o">=</span><span class="n">fixed_price</span><span class="p">,</span> <span class="n">price_for</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">price_for</span><span class="p">))</span>
-</code></pre></div>
-
-
-</details>
 <h2 id="variables">Variables</h2>
 <div class="codehilite"><pre><span></span><code><span class="n">DEFINED_USAGES</span>
 </code></pre></div>
@@ -1120,14 +1047,6 @@
 
 
 <p>An enumeration.</p>
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="n">BillingScheme</span>(<span class="k">enum</span>.<span class="n">Enum</span>):
-
-    <span class="n">PAYU</span> = <span class="s">&quot;payu&quot;</span>
-</code></pre></div>
-
-
-</details>
-<hr />
 <h4 id="ancestors-in-mro">Ancestors (in MRO)</h4>
 <ul>
 <li>enum.Enum</li>
@@ -1147,23 +1066,13 @@
 
 <h3 id="com">Com</h3>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Com</span><span class="p">(</span>
-    <span class="n">scheme</span><span class="p">:</span> <span class="n">yapapi</span><span class="o">.</span><span class="n">props</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">BillingScheme</span><span class="p">,</span>
-    <span class="n">price_model</span><span class="p">:</span> <span class="n">yapapi</span><span class="o">.</span><span class="n">props</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">PriceModel</span>
+    <span class="n">scheme</span><span class="p">:</span><span class="n">yapapi</span><span class="o">.</span><span class="n">props</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">BillingScheme</span><span class="p">,</span>
+    <span class="n">price_model</span><span class="p">:</span><span class="n">yapapi</span><span class="o">.</span><span class="n">props</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">PriceModel</span>
 <span class="p">)</span>
 </code></pre></div>
 
 
-<p>Com(scheme: yapapi.props.com.BillingScheme, price_model: yapapi.props.com.PriceModel)</p>
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="n">Com</span>(<span class="n">Model</span>):
-
-    <span class="n">scheme:</span> <span class="n">BillingScheme</span> = <span class="n">field</span>(<span class="n">metadata</span>={<span class="s">&quot;key&quot;</span>: <span class="n">SCHEME</span>})
-
-    <span class="n">price_model:</span> <span class="n">PriceModel</span> = <span class="n">field</span>(<span class="n">metadata</span>={<span class="s">&quot;key&quot;</span>: <span class="n">PRICE_MODEL</span>})
-</code></pre></div>
-
-
-</details>
-<hr />
+<p>Com(scheme:yapapi.props.com.BillingScheme, price_model:yapapi.props.com.PriceModel)</p>
 <h4 id="ancestors-in-mro_1">Ancestors (in MRO)</h4>
 <ul>
 <li>yapapi.props.base.Model</li>
@@ -1176,56 +1085,11 @@
 <h4 id="static-methods">Static methods</h4>
 <h5 id="from_props">from_props</h5>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">from_props</span><span class="p">(</span>
-    <span class="n">props</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
+    <span class="n">props</span><span class="p">:</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Model&#39;</span>
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="w">    </span><span class="nv">@classmethod</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">from_props</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span><span class="w"> </span><span class="nl">props</span><span class="p">:</span><span class="w"> </span><span class="n">Props</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="ss">&quot;Model&quot;</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">field_map</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dict</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">            </span><span class="p">(</span><span class="w"></span>
-
-<span class="w">                </span><span class="n">f</span><span class="p">.</span><span class="n">metadata</span><span class="o">[</span><span class="n">&quot;key&quot;</span><span class="o">]</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">                </span><span class="n">_PyField</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">f</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">type</span><span class="o">=</span><span class="n">f</span><span class="p">.</span><span class="n">type</span><span class="p">,</span><span class="w"> </span><span class="n">required</span><span class="o">=</span><span class="n">f</span><span class="p">.</span><span class="k">default</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">MISSING</span><span class="p">),</span><span class="w"></span>
-
-<span class="w">            </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="n">f</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">fields</span><span class="p">(</span><span class="n">cls</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="ss">&quot;key&quot;</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">metadata</span><span class="w"></span>
-
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dict</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">            </span><span class="p">(</span><span class="w"></span>
-
-<span class="w">                </span><span class="n">field_map</span><span class="o">[</span><span class="n">key</span><span class="o">]</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="n">val</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">                </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">)</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">props</span><span class="p">.</span><span class="n">items</span><span class="p">()</span><span class="w"></span>
-
-<span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="k">key</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">field_map</span><span class="w"></span>
-
-<span class="w">            </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">cls</span><span class="p">.</span><span class="n">_custom_mapping</span><span class="p">(</span><span class="n">props</span><span class="p">,</span><span class="w"> </span><span class="k">data</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">print</span><span class="p">(</span><span class="n">dict</span><span class="p">(</span><span class="k">data</span><span class="p">))</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cls</span><span class="p">(</span><span class="o">**</span><span class="k">data</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">self</span><span class="w"></span>
-</code></pre></div>
-
-
-</details>
 <h5 id="keys">keys</h5>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">keys</span><span class="p">(</span>
 
@@ -1233,58 +1097,17 @@
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="w">    </span><span class="nv">@classmethod</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">keys</span><span class="p">(</span><span class="n">cls</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">class</span><span class="w"> </span><span class="nl">_Keys</span><span class="p">:</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">def</span><span class="w"> </span><span class="n">__init__</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="n">iter</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">                </span><span class="n">self</span><span class="p">.</span><span class="n">__dict__</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dict</span><span class="p">(</span><span class="n">iter</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">_Keys</span><span class="p">((</span><span class="n">f</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">metadata</span><span class="o">[</span><span class="n">&quot;key&quot;</span><span class="o">]</span><span class="p">)</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">f</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">fields</span><span class="p">(</span><span class="n">cls</span><span class="p">))</span><span class="w"></span>
-</code></pre></div>
-
-
-</details>
 <h3 id="comlinear">ComLinear</h3>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ComLinear</span><span class="p">(</span>
-    <span class="n">scheme</span><span class="p">:</span> <span class="n">yapapi</span><span class="o">.</span><span class="n">props</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">BillingScheme</span><span class="p">,</span>
-    <span class="n">price_model</span><span class="p">:</span> <span class="n">yapapi</span><span class="o">.</span><span class="n">props</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">PriceModel</span><span class="p">,</span>
-    <span class="n">fixed_price</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-    <span class="n">price_for</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">yapapi</span><span class="o">.</span><span class="n">props</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">Counter</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
+    <span class="n">scheme</span><span class="p">:</span><span class="n">yapapi</span><span class="o">.</span><span class="n">props</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">BillingScheme</span><span class="p">,</span>
+    <span class="n">price_model</span><span class="p">:</span><span class="n">yapapi</span><span class="o">.</span><span class="n">props</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">PriceModel</span><span class="p">,</span>
+    <span class="n">fixed_price</span><span class="p">:</span><span class="nb">float</span><span class="p">,</span>
+    <span class="n">price_for</span><span class="p">:</span><span class="n">Dict</span><span class="p">[</span><span class="n">yapapi</span><span class="o">.</span><span class="n">props</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">Counter</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
 <span class="p">)</span>
 </code></pre></div>
 
 
-<p>ComLinear(scheme: yapapi.props.com.BillingScheme, price_model: yapapi.props.com.PriceModel, fixed_price: float, price_for: Dict[yapapi.props.com.Counter, float])</p>
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="n">ComLinear</span><span class="p">(</span><span class="n">Com</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">    </span><span class="nl">fixed_price</span><span class="p">:</span><span class="w"> </span><span class="nc">float</span><span class="w"></span>
-
-<span class="w">    </span><span class="nl">price_for</span><span class="p">:</span><span class="w"> </span><span class="n">Dict</span><span class="o">[</span><span class="n">Counter, float</span><span class="o">]</span><span class="w"></span>
-
-<span class="w">    </span><span class="nv">@classmethod</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">_custom_mapping</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span><span class="w"> </span><span class="nl">props</span><span class="p">:</span><span class="w"> </span><span class="n">Props</span><span class="p">,</span><span class="w"> </span><span class="k">data</span><span class="err">:</span><span class="w"> </span><span class="n">Dict</span><span class="o">[</span><span class="n">str, Any</span><span class="o">]</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">assert</span><span class="w"> </span><span class="k">data</span><span class="o">[</span><span class="n">&quot;price_model&quot;</span><span class="o">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">PriceModel</span><span class="p">.</span><span class="n">LINEAR</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;expected linear pricing model&quot;</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">coeffs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">as_list</span><span class="p">(</span><span class="n">props</span><span class="o">[</span><span class="n">LINEAR_COEFFS</span><span class="o">]</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">usages</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">as_list</span><span class="p">(</span><span class="n">props</span><span class="o">[</span><span class="n">DEFINED_USAGES</span><span class="o">]</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">fixed_price</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">float</span><span class="p">(</span><span class="n">coeffs</span><span class="p">.</span><span class="n">pop</span><span class="p">())</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">price_for</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">((</span><span class="n">Counter</span><span class="p">(</span><span class="n">usages</span><span class="o">[</span><span class="n">i</span><span class="o">]</span><span class="p">),</span><span class="w"> </span><span class="nc">float</span><span class="p">(</span><span class="n">coeffs</span><span class="o">[</span><span class="n">i</span><span class="o">]</span><span class="p">))</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="k">range</span><span class="p">(</span><span class="nf">len</span><span class="p">(</span><span class="n">coeffs</span><span class="p">)))</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">data</span><span class="p">.</span><span class="k">update</span><span class="p">(</span><span class="n">fixed_price</span><span class="o">=</span><span class="n">fixed_price</span><span class="p">,</span><span class="w"> </span><span class="n">price_for</span><span class="o">=</span><span class="n">dict</span><span class="p">(</span><span class="n">price_for</span><span class="p">))</span><span class="w"></span>
-</code></pre></div>
-
-
-</details>
-<hr />
+<p>ComLinear(scheme:yapapi.props.com.BillingScheme, price_model:yapapi.props.com.PriceModel, fixed_price:float, price_for:Dict[yapapi.props.com.Counter, float])</p>
 <h4 id="ancestors-in-mro_2">Ancestors (in MRO)</h4>
 <ul>
 <li>yapapi.props.com.Com</li>
@@ -1294,56 +1117,11 @@
 <h4 id="static-methods_1">Static methods</h4>
 <h5 id="from_props_1">from_props</h5>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">from_props</span><span class="p">(</span>
-    <span class="n">props</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
+    <span class="n">props</span><span class="p">:</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Model&#39;</span>
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="w">    </span><span class="nv">@classmethod</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">from_props</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span><span class="w"> </span><span class="nl">props</span><span class="p">:</span><span class="w"> </span><span class="n">Props</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="ss">&quot;Model&quot;</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">field_map</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dict</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">            </span><span class="p">(</span><span class="w"></span>
-
-<span class="w">                </span><span class="n">f</span><span class="p">.</span><span class="n">metadata</span><span class="o">[</span><span class="n">&quot;key&quot;</span><span class="o">]</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">                </span><span class="n">_PyField</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">f</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">type</span><span class="o">=</span><span class="n">f</span><span class="p">.</span><span class="n">type</span><span class="p">,</span><span class="w"> </span><span class="n">required</span><span class="o">=</span><span class="n">f</span><span class="p">.</span><span class="k">default</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">MISSING</span><span class="p">),</span><span class="w"></span>
-
-<span class="w">            </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="n">f</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">fields</span><span class="p">(</span><span class="n">cls</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="ss">&quot;key&quot;</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">metadata</span><span class="w"></span>
-
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dict</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">            </span><span class="p">(</span><span class="w"></span>
-
-<span class="w">                </span><span class="n">field_map</span><span class="o">[</span><span class="n">key</span><span class="o">]</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="n">val</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">                </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">)</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">props</span><span class="p">.</span><span class="n">items</span><span class="p">()</span><span class="w"></span>
-
-<span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="k">key</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">field_map</span><span class="w"></span>
-
-<span class="w">            </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">cls</span><span class="p">.</span><span class="n">_custom_mapping</span><span class="p">(</span><span class="n">props</span><span class="p">,</span><span class="w"> </span><span class="k">data</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">print</span><span class="p">(</span><span class="n">dict</span><span class="p">(</span><span class="k">data</span><span class="p">))</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cls</span><span class="p">(</span><span class="o">**</span><span class="k">data</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">self</span><span class="w"></span>
-</code></pre></div>
-
-
-</details>
 <h5 id="keys_1">keys</h5>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">keys</span><span class="p">(</span>
 
@@ -1351,21 +1129,6 @@
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="w">    </span><span class="nv">@classmethod</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">keys</span><span class="p">(</span><span class="n">cls</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">class</span><span class="w"> </span><span class="nl">_Keys</span><span class="p">:</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">def</span><span class="w"> </span><span class="n">__init__</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="n">iter</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">                </span><span class="n">self</span><span class="p">.</span><span class="n">__dict__</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dict</span><span class="p">(</span><span class="n">iter</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">_Keys</span><span class="p">((</span><span class="n">f</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">metadata</span><span class="o">[</span><span class="n">&quot;key&quot;</span><span class="o">]</span><span class="p">)</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">f</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">fields</span><span class="p">(</span><span class="n">cls</span><span class="p">))</span><span class="w"></span>
-</code></pre></div>
-
-
-</details>
 <h3 id="counter">Counter</h3>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Counter</span><span class="p">(</span>
     <span class="o">/</span><span class="p">,</span>
@@ -1376,22 +1139,6 @@
 
 
 <p>An enumeration.</p>
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="n">Counter</span>(<span class="k">enum</span>.<span class="n">Enum</span>):
-
-    <span class="n">TIME</span> = <span class="s">&quot;golem.usage.duration_sec&quot;</span>
-
-    <span class="n">CPU</span> = <span class="s">&quot;golem.usage.cpu_sec&quot;</span>
-
-    <span class="n">STORAGE</span> = <span class="s">&quot;golem.usage.storage_gib&quot;</span>
-
-    <span class="n">MAXMEM</span> = <span class="s">&quot;golem.usage.gib&quot;</span>
-
-    <span class="n">UNKNOWN</span> = <span class="s">&quot;&quot;</span>
-</code></pre></div>
-
-
-</details>
-<hr />
 <h4 id="ancestors-in-mro_3">Ancestors (in MRO)</h4>
 <ul>
 <li>enum.Enum</li>
@@ -1435,14 +1182,6 @@
 
 
 <p>An enumeration.</p>
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="n">PriceModel</span>(<span class="k">enum</span>.<span class="n">Enum</span>):
-
-    <span class="n">LINEAR</span> = <span class="s">&quot;linear&quot;</span>
-</code></pre></div>
-
-
-</details>
-<hr />
 <h4 id="ancestors-in-mro_4">Ancestors (in MRO)</h4>
 <ul>
 <li>enum.Enum</li>

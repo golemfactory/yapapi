@@ -26,7 +26,7 @@
       
         
         
-        <meta name="theme-color" content="#4caf50">
+        <meta name="theme-color" content="#546e7a">
       
     
     
@@ -49,7 +49,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="green" data-md-color-accent="lightgreen">
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="blue-grey" data-md-color-accent="pink">
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -655,31 +655,23 @@
                 
                 
                 <h1 id="module-yapapirunnervm">Module yapapi.runner.vm</h1>
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">Package</span>
-
-<span class="k">def</span> <span class="nf">repo</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">image_hash</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Package</span><span class="p">:</span>
-
-    <span class="k">raise</span> <span class="bp">NotImplemented</span>
-</code></pre></div>
-
-
-</details>
 <h2 id="functions">Functions</h2>
 <h3 id="repo">repo</h3>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">repo</span><span class="p">(</span>
     <span class="o">*</span><span class="p">,</span>
-    <span class="n">image_hash</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">image_hash</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span>
+    <span class="n">min_mem_gib</span><span class="p">:</span><span class="nb">float</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">min_storage_gib</span><span class="p">:</span><span class="nb">float</span><span class="o">=</span><span class="mf">2.0</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">yapapi</span><span class="o">.</span><span class="n">runner</span><span class="o">.</span><span class="n">Package</span>
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="n">def</span> <span class="n">repo</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">image_hash</span><span class="p">:</span> <span class="n">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Package</span><span class="p">:</span>
-
-    <span class="n">raise</span> <span class="n">NotImplemented</span>
-</code></pre></div>
-
-
-</details>
+<p>Builds reference to application package.</p>
+<ul>
+<li><em>image_hash</em>: finds package by its contents hash.</li>
+<li><em>min_mem_gib</em>: minimal memory required to execute application code.</li>
+<li><em>min_storage_gib</em> minimal disk storage to execute tasks.</li>
+</ul>
                 
               
               

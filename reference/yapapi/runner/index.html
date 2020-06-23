@@ -26,7 +26,7 @@
       
         
         
-        <meta name="theme-color" content="#4caf50">
+        <meta name="theme-color" content="#546e7a">
       
     
     
@@ -49,7 +49,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="green" data-md-color-accent="lightgreen">
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="blue-grey" data-md-color-accent="pink">
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -477,6 +477,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#variables" class="md-nav__link">
+    Variables
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#classes" class="md-nav__link">
     Classes
   </a>
@@ -489,6 +496,19 @@
     Engine
   </a>
   
+    <nav class="md-nav" aria-label="Engine">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ancestors-in-mro" class="md-nav__link">
+    Ancestors (in MRO)
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -500,7 +520,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#ancestors-in-mro" class="md-nav__link">
+  <a href="#ancestors-in-mro_1" class="md-nav__link">
     Ancestors (in MRO)
   </a>
   
@@ -518,6 +538,13 @@
   
     <nav class="md-nav" aria-label="Task">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ancestors-in-mro_2" class="md-nav__link">
+    Ancestors (in MRO)
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#instance-variables" class="md-nav__link">
@@ -567,7 +594,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#ancestors-in-mro_1" class="md-nav__link">
+  <a href="#ancestors-in-mro_3" class="md-nav__link">
     Ancestors (in MRO)
   </a>
   
@@ -723,6 +750,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#variables" class="md-nav__link">
+    Variables
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#classes" class="md-nav__link">
     Classes
   </a>
@@ -735,6 +769,19 @@
     Engine
   </a>
   
+    <nav class="md-nav" aria-label="Engine">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ancestors-in-mro" class="md-nav__link">
+    Ancestors (in MRO)
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -746,7 +793,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#ancestors-in-mro" class="md-nav__link">
+  <a href="#ancestors-in-mro_1" class="md-nav__link">
     Ancestors (in MRO)
   </a>
   
@@ -764,6 +811,13 @@
   
     <nav class="md-nav" aria-label="Task">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ancestors-in-mro_2" class="md-nav__link">
+    Ancestors (in MRO)
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#instance-variables" class="md-nav__link">
@@ -813,7 +867,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#ancestors-in-mro_1" class="md-nav__link">
+  <a href="#ancestors-in-mro_3" class="md-nav__link">
     Ancestors (in MRO)
   </a>
   
@@ -857,95 +911,15 @@
                 
                 
                 <h1 id="module-yapapirunner">Module yapapi.runner</h1>
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
-
-<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span><span class="p">,</span> <span class="n">auto</span>
-
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span>
-
-<span class="kn">import</span> <span class="nn">abc</span>
-
-<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
-
-<span class="k">class</span> <span class="nc">Engine</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-
-    <span class="k">pass</span>
-
-<span class="k">class</span> <span class="nc">TaskStatus</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
-
-    <span class="n">WAITING</span> <span class="o">=</span> <span class="n">auto</span><span class="p">()</span>
-
-    <span class="n">RUNNING</span> <span class="o">=</span> <span class="n">auto</span><span class="p">()</span>
-
-    <span class="n">ACCEPTED</span> <span class="o">=</span> <span class="n">auto</span><span class="p">()</span>
-
-    <span class="n">REJECTED</span> <span class="o">=</span> <span class="n">auto</span><span class="p">()</span>
-
-<span class="k">class</span> <span class="nc">Task</span><span class="p">:</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
-
-        <span class="bp">self</span><span class="p">,</span>
-
-        <span class="o">*</span><span class="p">,</span>
-
-        <span class="n">expires</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">datetime</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
-
-        <span class="n">timeout</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">timedelta</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
-
-        <span class="o">**</span><span class="n">kwargs</span>
-
-    <span class="p">):</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_started</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_expires</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">datetime</span><span class="p">]</span>
-
-        <span class="k">if</span> <span class="n">timeout</span><span class="p">:</span>
-
-            <span class="bp">self</span><span class="o">.</span><span class="n">_expires</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_started</span> <span class="o">+</span> <span class="n">timeout</span>
-
-        <span class="k">else</span><span class="p">:</span>
-
-            <span class="bp">self</span><span class="o">.</span><span class="n">_expires</span> <span class="o">=</span> <span class="n">expires</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">kwargs</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_status</span><span class="p">:</span> <span class="n">TaskStatus</span> <span class="o">=</span> <span class="n">TaskStatus</span><span class="o">.</span><span class="n">WAITING</span>
-
-    <span class="k">def</span> <span class="fm">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
-
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
-
-    <span class="nd">@property</span>
-
-    <span class="k">def</span> <span class="nf">expires</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_expires</span>
-
-    <span class="k">def</span> <span class="nf">accept_task</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_status</span> <span class="o">==</span> <span class="n">TaskStatus</span><span class="o">.</span><span class="n">RUNNING</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_status</span> <span class="o">=</span> <span class="n">TaskStatus</span><span class="o">.</span><span class="n">ACCEPTED</span>
-
-    <span class="k">def</span> <span class="nf">reject_task</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_status</span> <span class="o">==</span> <span class="n">TaskStatus</span><span class="o">.</span><span class="n">RUNNING</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_status</span> <span class="o">=</span> <span class="n">TaskStatus</span><span class="o">.</span><span class="n">REJECTED</span>
-
-<span class="k">class</span> <span class="nc">Package</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
-
-    <span class="k">pass</span>
-</code></pre></div>
-
-
-</details>
 <h2 id="sub-modules">Sub-modules</h2>
 <ul>
 <li><a href="vm/">yapapi.runner.vm</a></li>
 </ul>
+<h2 id="variables">Variables</h2>
+<div class="codehilite"><pre><span></span><code><span class="n">TaskData</span>
+</code></pre></div>
+
+
 <h2 id="classes">Classes</h2>
 <h3 id="engine">Engine</h3>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Engine</span><span class="p">(</span>
@@ -956,14 +930,25 @@
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="n">Engine</span>(<span class="n">object</span>):
-
-    <span class="nb">pass</span>
-</code></pre></div>
-
-
-</details>
-<hr />
+<p>Abstract base class for generic types.</p>
+<p>A generic type is typically declared by inheriting from
+this class parameterized with one or more type variables.
+For example, a generic mapping type might be defined as::</p>
+<p>class Mapping(Generic[KT, VT]):
+      def <strong>getitem</strong>(self, key: KT) -&gt; VT:
+          ...
+      # Etc.</p>
+<p>This class can then be used as follows::</p>
+<p>def lookup_name(mapping: Mapping[KT, VT], key: KT, default: VT) -&gt; VT:
+      try:
+          return mapping[key]
+      except KeyError:
+          return default</p>
+<h4 id="ancestors-in-mro">Ancestors (in MRO)</h4>
+<ul>
+<li>typing.AsyncContextManager</li>
+<li>typing.Generic</li>
+</ul>
 <h3 id="package">Package</h3>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Package</span><span class="p">(</span>
     <span class="o">/</span><span class="p">,</span>
@@ -975,87 +960,43 @@
 
 <p>Helper class that provides a standard way to create an ABC using
 inheritance.</p>
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="n">Package</span>(<span class="n">abc</span>.<span class="n">ABC</span>):
-
-    <span class="nb">pass</span>
-</code></pre></div>
-
-
-</details>
-<hr />
-<h4 id="ancestors-in-mro">Ancestors (in MRO)</h4>
+<h4 id="ancestors-in-mro_1">Ancestors (in MRO)</h4>
 <ul>
 <li>abc.ABC</li>
 </ul>
 <h3 id="task">Task</h3>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Task</span><span class="p">(</span>
+    <span class="n">data</span><span class="p">:</span><span class="o">~</span><span class="n">TaskData</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
-    <span class="n">expires</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">timeout</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="o">**</span><span class="n">kwargs</span>
+    <span class="n">expires</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">timeout</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span>
 <span class="p">)</span>
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nl">Task</span><span class="p">:</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">__init__</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">        </span><span class="o">*</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">        </span><span class="nl">expires</span><span class="p">:</span><span class="w"> </span><span class="n">Optional</span><span class="o">[</span><span class="n">datetime</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">None</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">        </span><span class="nl">timeout</span><span class="p">:</span><span class="w"> </span><span class="n">Optional</span><span class="o">[</span><span class="n">timedelta</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">None</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">        </span><span class="o">**</span><span class="n">kwargs</span><span class="w"></span>
-
-<span class="w">    </span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="p">.</span><span class="n">_started</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">datetime</span><span class="p">.</span><span class="n">now</span><span class="p">()</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="p">.</span><span class="nl">_expires</span><span class="p">:</span><span class="w"> </span><span class="n">Optional</span><span class="o">[</span><span class="n">datetime</span><span class="o">]</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nl">timeout</span><span class="p">:</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">self</span><span class="p">.</span><span class="n">_expires</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">_started</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">timeout</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">else</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">self</span><span class="p">.</span><span class="n">_expires</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">expires</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="p">.</span><span class="n">_data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">kwargs</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="p">.</span><span class="nl">_status</span><span class="p">:</span><span class="w"> </span><span class="n">TaskStatus</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TaskStatus</span><span class="p">.</span><span class="n">WAITING</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">__getattr__</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="n">item</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">_data</span><span class="p">.</span><span class="k">get</span><span class="p">(</span><span class="n">item</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">    </span><span class="nv">@property</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">expires</span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">_expires</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">accept_task</span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">assert</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">_status</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">TaskStatus</span><span class="p">.</span><span class="n">RUNNING</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="p">.</span><span class="n">_status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TaskStatus</span><span class="p">.</span><span class="n">ACCEPTED</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">reject_task</span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">assert</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">_status</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">TaskStatus</span><span class="p">.</span><span class="n">RUNNING</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="p">.</span><span class="n">_status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TaskStatus</span><span class="p">.</span><span class="n">REJECTED</span><span class="w"></span>
+<p>Abstract base class for generic types.</p>
+<p>A generic type is typically declared by inheriting from
+this class parameterized with one or more type variables.
+For example, a generic mapping type might be defined as::</p>
+<p>class Mapping(Generic[KT, VT]):
+      def <strong>getitem</strong>(self, key: KT) -&gt; VT:
+          ...
+      # Etc.</p>
+<p>This class can then be used as follows::</p>
+<p>def lookup_name(mapping: Mapping[KT, VT], key: KT, default: VT) -&gt; VT:
+      try:
+          return mapping[key]
+      except KeyError:
+          return default</p>
+<h4 id="ancestors-in-mro_2">Ancestors (in MRO)</h4>
+<ul>
+<li>typing.Generic</li>
+</ul>
+<h4 id="instance-variables">Instance variables</h4>
+<div class="codehilite"><pre><span></span><code><span class="n">data</span>
 </code></pre></div>
 
 
-</details>
-<hr />
-<h4 id="instance-variables">Instance variables</h4>
 <div class="codehilite"><pre><span></span><code><span class="n">expires</span>
 </code></pre></div>
 
@@ -1068,15 +1009,6 @@ inheritance.</p>
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code>    <span class="n">def</span> <span class="n">accept_task</span><span class="p">(</span><span class="k">self</span><span class="p">):</span>
-
-        <span class="n">assert</span> <span class="k">self</span><span class="p">.</span><span class="n">_status</span> <span class="o">==</span> <span class="n">TaskStatus</span><span class="p">.</span><span class="n">RUNNING</span>
-
-        <span class="k">self</span><span class="p">.</span><span class="n">_status</span> <span class="o">=</span> <span class="n">TaskStatus</span><span class="p">.</span><span class="n">ACCEPTED</span>
-</code></pre></div>
-
-
-</details>
 <h5 id="reject_task">reject_task</h5>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">reject_task</span><span class="p">(</span>
     <span class="bp">self</span>
@@ -1084,15 +1016,6 @@ inheritance.</p>
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code>    <span class="n">def</span> <span class="n">reject_task</span><span class="p">(</span><span class="k">self</span><span class="p">):</span>
-
-        <span class="n">assert</span> <span class="k">self</span><span class="p">.</span><span class="n">_status</span> <span class="o">==</span> <span class="n">TaskStatus</span><span class="p">.</span><span class="n">RUNNING</span>
-
-        <span class="k">self</span><span class="p">.</span><span class="n">_status</span> <span class="o">=</span> <span class="n">TaskStatus</span><span class="p">.</span><span class="n">REJECTED</span>
-</code></pre></div>
-
-
-</details>
 <h3 id="taskstatus">TaskStatus</h3>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">TaskStatus</span><span class="p">(</span>
     <span class="o">/</span><span class="p">,</span>
@@ -1103,21 +1026,7 @@ inheritance.</p>
 
 
 <p>An enumeration.</p>
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="n">TaskStatus</span>(<span class="n">Enum</span>):
-
-    <span class="n">WAITING</span> = <span class="n">auto</span>()
-
-    <span class="n">RUNNING</span> = <span class="n">auto</span>()
-
-    <span class="n">ACCEPTED</span> = <span class="n">auto</span>()
-
-    <span class="n">REJECTED</span> = <span class="n">auto</span>()
-</code></pre></div>
-
-
-</details>
-<hr />
-<h4 id="ancestors-in-mro_1">Ancestors (in MRO)</h4>
+<h4 id="ancestors-in-mro_3">Ancestors (in MRO)</h4>
 <ul>
 <li>enum.Enum</li>
 </ul>

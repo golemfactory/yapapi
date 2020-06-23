@@ -26,7 +26,7 @@
       
         
         
-        <meta name="theme-color" content="#4caf50">
+        <meta name="theme-color" content="#546e7a">
       
     
     
@@ -49,7 +49,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="green" data-md-color-accent="lightgreen">
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="blue-grey" data-md-color-accent="pink">
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -816,21 +816,6 @@
                 
                 <h1 id="module-yapapirest">Module yapapi.rest</h1>
 <p>Mid level binding for Golem REST API</p>
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="sd">&quot;&quot;&quot;</span>
-
-<span class="sd">Mid level binding for Golem REST API</span>
-
-<span class="sd">&quot;&quot;&quot;</span>
-
-<span class="kn">from</span> <span class="nn">.configuration</span> <span class="kn">import</span> <span class="n">Configuration</span>
-
-<span class="kn">from</span> <span class="nn">.market</span> <span class="kn">import</span> <span class="n">Market</span>
-
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;Configuration&quot;</span><span class="p">,</span> <span class="s2">&quot;Market&quot;</span><span class="p">)</span>
-</code></pre></div>
-
-
-</details>
 <h2 id="sub-modules">Sub-modules</h2>
 <ul>
 <li><a href="configuration/">yapapi.rest.configuration</a></li>
@@ -840,64 +825,12 @@
 <h3 id="configuration">Configuration</h3>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Configuration</span><span class="p">(</span>
     <span class="n">app_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">url</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">market_url</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">url</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">market_url</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span>
 <span class="p">)</span>
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="n">Configuration</span><span class="p">(</span><span class="k">object</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">__init__</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="n">app_key</span><span class="o">=</span><span class="k">None</span><span class="p">,</span><span class="w"> </span><span class="nl">url</span><span class="p">:</span><span class="w"> </span><span class="n">Optional</span><span class="o">[</span><span class="n">str</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">None</span><span class="p">,</span><span class="w"> </span><span class="nl">market_url</span><span class="p">:</span><span class="w"> </span><span class="n">Optional</span><span class="o">[</span><span class="n">str</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">None</span><span class="w"></span>
-
-<span class="w">    </span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="p">.</span><span class="nl">_app_key</span><span class="p">:</span><span class="w"> </span><span class="nf">str</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">app_key</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">env_or_fail</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">            </span><span class="ss">&quot;YAGNA_APPKEY&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;API authentication token&quot;</span><span class="w"></span>
-
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="p">.</span><span class="n">_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">url</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">DEFAULT_API_URL</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="p">.</span><span class="nl">_market_url</span><span class="p">:</span><span class="w"> </span><span class="nf">str</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">market_url</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">os</span><span class="p">.</span><span class="n">getenv</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">            </span><span class="ss">&quot;YAGNA_MARKET_URL&quot;</span><span class="w"></span>
-
-<span class="w">        </span><span class="p">)</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">f</span><span class="ss">&quot;{self._url}/market-api/v1&quot;</span><span class="w"></span>
-
-<span class="w">    </span><span class="nv">@property</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">app_key</span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nf">str</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">_app_key</span><span class="w"></span>
-
-<span class="w">    </span><span class="nv">@property</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">market_url</span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nf">str</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">_market_url</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">market</span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">ya_market</span><span class="p">.</span><span class="nl">ApiClient</span><span class="p">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">cfg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ya_market</span><span class="p">.</span><span class="n">Configuration</span><span class="p">(</span><span class="k">host</span><span class="o">=</span><span class="n">self</span><span class="p">.</span><span class="n">market_url</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">ya_market</span><span class="p">.</span><span class="n">ApiClient</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">configuration</span><span class="o">=</span><span class="n">cfg</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">header_name</span><span class="o">=</span><span class="ss">&quot;authorization&quot;</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">header_value</span><span class="o">=</span><span class="n">f</span><span class="ss">&quot;Bearer {self.app_key}&quot;</span><span class="p">,</span><span class="w"></span>
-
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-</code></pre></div>
-
-
-</details>
-<hr />
 <h4 id="instance-variables">Instance variables</h4>
 <div class="codehilite"><pre><span></span><code><span class="n">app_key</span>
 </code></pre></div>
@@ -915,60 +848,13 @@
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code>    <span class="n">def</span> <span class="n">market</span><span class="p">(</span><span class="k">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ya_market</span><span class="p">.</span><span class="n">ApiClient</span><span class="p">:</span>
-
-        <span class="n">cfg</span> <span class="o">=</span> <span class="n">ya_market</span><span class="p">.</span><span class="n">Configuration</span><span class="p">(</span><span class="k">host</span><span class="o">=</span><span class="k">self</span><span class="p">.</span><span class="n">market_url</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">ya_market</span><span class="p">.</span><span class="n">ApiClient</span><span class="p">(</span>
-
-            <span class="n">configuration</span><span class="o">=</span><span class="n">cfg</span><span class="p">,</span>
-
-            <span class="n">header_name</span><span class="o">=</span><span class="ss">&quot;authorization&quot;</span><span class="p">,</span>
-
-            <span class="n">header_value</span><span class="o">=</span><span class="n">f</span><span class="ss">&quot;Bearer {self.app_key}&quot;</span><span class="p">,</span>
-
-        <span class="p">)</span>
-</code></pre></div>
-
-
-</details>
 <h3 id="market_1">Market</h3>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Market</span><span class="p">(</span>
-    <span class="n">api_client</span><span class="p">:</span> <span class="n">ya_market</span><span class="o">.</span><span class="n">api_client</span><span class="o">.</span><span class="n">ApiClient</span>
+    <span class="n">api_client</span><span class="p">:</span><span class="n">ya_market</span><span class="o">.</span><span class="n">api_client</span><span class="o">.</span><span class="n">ApiClient</span>
 <span class="p">)</span>
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="n">Market</span><span class="p">(</span><span class="k">object</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">__init__</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="nl">api_client</span><span class="p">:</span><span class="w"> </span><span class="n">ApiClient</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">self</span><span class="p">.</span><span class="nl">_api</span><span class="p">:</span><span class="w"> </span><span class="n">RequestorApi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">RequestorApi</span><span class="p">(</span><span class="n">api_client</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">async</span><span class="w"> </span><span class="n">def</span><span class="w"> </span><span class="n">subscribe</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="n">props</span><span class="p">,</span><span class="w"> </span><span class="k">constraints</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nl">Subscription</span><span class="p">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="n">sub_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">await</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">_api</span><span class="p">.</span><span class="n">subscribe_demand</span><span class="p">(</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">models</span><span class="p">.</span><span class="n">Demand</span><span class="p">(</span><span class="n">properties</span><span class="o">=</span><span class="n">props</span><span class="p">,</span><span class="w"> </span><span class="k">constraints</span><span class="o">=</span><span class="k">constraints</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">Subscription</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">_api</span><span class="p">,</span><span class="w"> </span><span class="n">sub_id</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">async</span><span class="w"> </span><span class="n">def</span><span class="w"> </span><span class="n">subscriptions</span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">Iterable</span><span class="o">[</span><span class="n">Subscription</span><span class="o">]</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">Subscription</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">_api</span><span class="p">,</span><span class="w"> </span><span class="n">demand</span><span class="p">.</span><span class="n">demand_id</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="n">demand</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">await</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">_api</span><span class="p">.</span><span class="n">get_demands</span><span class="p">()</span><span class="w"></span>
-
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-</code></pre></div>
-
-
-</details>
-<hr />
 <h4 id="methods_1">Methods</h4>
 <h5 id="subscribe">subscribe</h5>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">subscribe</span><span class="p">(</span>
@@ -979,39 +865,11 @@
 </code></pre></div>
 
 
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code>    <span class="n">async</span> <span class="n">def</span> <span class="n">subscribe</span><span class="p">(</span><span class="k">self</span><span class="p">,</span> <span class="n">props</span><span class="p">,</span> <span class="k">constraints</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Subscription</span><span class="p">:</span>
-
-        <span class="n">sub_id</span> <span class="o">=</span> <span class="n">await</span> <span class="k">self</span><span class="p">.</span><span class="n">_api</span><span class="p">.</span><span class="n">subscribe_demand</span><span class="p">(</span>
-
-            <span class="n">models</span><span class="p">.</span><span class="n">Demand</span><span class="p">(</span><span class="n">properties</span><span class="o">=</span><span class="n">props</span><span class="p">,</span> <span class="k">constraints</span><span class="o">=</span><span class="k">constraints</span><span class="p">)</span>
-
-        <span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">Subscription</span><span class="p">(</span><span class="k">self</span><span class="p">.</span><span class="n">_api</span><span class="p">,</span> <span class="n">sub_id</span><span class="p">)</span>
-</code></pre></div>
-
-
-</details>
 <h5 id="subscriptions">subscriptions</h5>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">subscriptions</span><span class="p">(</span>
     <span class="bp">self</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">yapapi</span><span class="o">.</span><span class="n">rest</span><span class="o">.</span><span class="n">market</span><span class="o">.</span><span class="n">Subscription</span><span class="p">]</span>
 </code></pre></div>
-
-
-<details class="example"><summary>View Source</summary><div class="codehilite"><pre><span></span><code><span class="w">    </span><span class="n">async</span><span class="w"> </span><span class="n">def</span><span class="w"> </span><span class="n">subscriptions</span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">Iterable</span><span class="o">[</span><span class="n">Subscription</span><span class="o">]</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-
-<span class="w">            </span><span class="n">Subscription</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">_api</span><span class="p">,</span><span class="w"> </span><span class="n">demand</span><span class="p">.</span><span class="n">demand_id</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="n">demand</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">await</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">_api</span><span class="p">.</span><span class="n">get_demands</span><span class="p">()</span><span class="w"></span>
-
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-</code></pre></div>
-
-
-</details>
                 
               
               
