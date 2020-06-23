@@ -1,5 +1,5 @@
 import asyncio
-from typing import AsyncIterator, Optional, Iterable
+from typing import AsyncIterator, Optional
 from ya_market import ApiClient, RequestorApi, models
 from datetime import datetime, timedelta, timezone
 
@@ -68,11 +68,17 @@ class OfferProposal(object):
 
 
 class Subscription(object):
-    def __init__(self, api: RequestorApi, subscription_id: str):
+    def __init__(
+        self,
+        api: RequestorApi,
+        subscription_id: str,
+        _details: Optional[models.Demand] = None,
+    ):
         self._api: RequestorApi = api
         self._id: str = subscription_id
         self._open: bool = True
         self._deleted = False
+        self._details = _details
 
     @property
     def id(self):
@@ -86,6 +92,11 @@ class Subscription(object):
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         await self.delete()
+
+    @property
+    def details(self) -> models.Demand:
+        assert self._details is not None, "expected details on list object"
+        return self._details
 
     async def delete(self):
         self._open = False
@@ -114,8 +125,12 @@ class Market(object):
         )
         return Subscription(self._api, sub_id)
 
-    async def subscriptions(self) -> Iterable[Subscription]:
-        return (
-            Subscription(self._api, demand.demand_id)
+    async def subscriptions(self) -> AsyncIterator[Subscription]:
+        for s in (
+            Subscription(self._api, demand.demand_id, _details=demand)
             for demand in await self._api.get_demands()
-        )
+        ):
+            yield s
+
+
+__all__ = ("Market", "Subscription", "OfferProposal", "Agreement")
