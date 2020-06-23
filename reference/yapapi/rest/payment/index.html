@@ -36,7 +36,7 @@
     
     
       
-        <title>Market - yapapi</title>
+        <title>Payment - yapapi</title>
       
     
     
@@ -85,7 +85,7 @@
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
     <label class="md-overlay" data-md-component="overlay" for="__drawer"></label>
     
-      <a href="#module-yapapirestmarket" tabindex="0" class="md-skip">
+      <a href="#module-yapapirestpayment" tabindex="0" class="md-skip">
         Skip to content
       </a>
     
@@ -111,7 +111,7 @@
             </span>
             <span class="md-header-nav__topic">
               
-                Market
+                Payment
               
             </span>
           
@@ -403,6 +403,18 @@
           
           
 
+
+  <li class="md-nav__item">
+    <a href="../market/" title="Market" class="md-nav__link">
+      Market
+    </a>
+  </li>
+
+        
+          
+          
+          
+
   
 
 
@@ -414,11 +426,11 @@
     
     
       <label class="md-nav__link md-nav__link--active" for="__toc">
-        Market
+        Payment
       </label>
     
-    <a href="./" title="Market" class="md-nav__link md-nav__link--active">
-      Market
+    <a href="./" title="Payment" class="md-nav__link md-nav__link--active">
+      Payment
     </a>
     
       
@@ -440,16 +452,16 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#agreement" class="md-nav__link">
-    Agreement
+  <a href="#allocation" class="md-nav__link">
+    Allocation
   </a>
   
     <nav class="md-nav">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#instance-variables" class="md-nav__link">
-    Instance variables
+  <a href="#ancestors-in-mro" class="md-nav__link">
+    Ancestors (in MRO)
   </a>
   
 </li>
@@ -463,8 +475,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#confirm" class="md-nav__link">
-    confirm
+  <a href="#delete" class="md-nav__link">
+    delete
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#details" class="md-nav__link">
+    details
   </a>
   
 </li>
@@ -480,12 +499,40 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#market" class="md-nav__link">
-    Market
+  <a href="#allocationdetails" class="md-nav__link">
+    AllocationDetails
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#invoice" class="md-nav__link">
+    Invoice
   </a>
   
     <nav class="md-nav">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ancestors-in-mro_1" class="md-nav__link">
+    Ancestors (in MRO)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#class-variables" class="md-nav__link">
+    Class variables
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#instance-variables" class="md-nav__link">
+    Instance variables
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#methods_1" class="md-nav__link">
@@ -496,15 +543,22 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#subscribe" class="md-nav__link">
-    subscribe
+  <a href="#accept" class="md-nav__link">
+    accept
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#subscriptions" class="md-nav__link">
-    subscriptions
+  <a href="#to_dict" class="md-nav__link">
+    to_dict
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#to_str" class="md-nav__link">
+    to_str
   </a>
   
 </li>
@@ -520,16 +574,16 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#offerproposal" class="md-nav__link">
-    OfferProposal
+  <a href="#invoicestatus" class="md-nav__link">
+    InvoiceStatus
   </a>
   
     <nav class="md-nav">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#instance-variables_1" class="md-nav__link">
-    Instance variables
+  <a href="#class-variables_1" class="md-nav__link">
+    Class variables
   </a>
   
 </li>
@@ -543,15 +597,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#agreement_1" class="md-nav__link">
-    agreement
+  <a href="#to_dict_1" class="md-nav__link">
+    to_dict
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#respond" class="md-nav__link">
-    respond
+  <a href="#to_str_1" class="md-nav__link">
+    to_str
   </a>
   
 </li>
@@ -567,19 +621,12 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#subscription" class="md-nav__link">
-    Subscription
+  <a href="#payment" class="md-nav__link">
+    Payment
   </a>
   
     <nav class="md-nav">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#instance-variables_2" class="md-nav__link">
-    Instance variables
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#methods_3" class="md-nav__link">
@@ -590,22 +637,43 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#close" class="md-nav__link">
-    close
+  <a href="#allocation_1" class="md-nav__link">
+    allocation
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#delete" class="md-nav__link">
-    delete
+  <a href="#allocations" class="md-nav__link">
+    allocations
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#events" class="md-nav__link">
-    events
+  <a href="#incoming_invoices" class="md-nav__link">
+    incoming_invoices
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#invoice_1" class="md-nav__link">
+    invoice
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#invoices" class="md-nav__link">
+    invoices
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#new_allocation" class="md-nav__link">
+    new_allocation
   </a>
   
 </li>
@@ -633,18 +701,6 @@
   
 </nav>
     
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../payment/" title="Payment" class="md-nav__link">
-      Payment
-    </a>
   </li>
 
         
@@ -812,16 +868,16 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#agreement" class="md-nav__link">
-    Agreement
+  <a href="#allocation" class="md-nav__link">
+    Allocation
   </a>
   
     <nav class="md-nav">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#instance-variables" class="md-nav__link">
-    Instance variables
+  <a href="#ancestors-in-mro" class="md-nav__link">
+    Ancestors (in MRO)
   </a>
   
 </li>
@@ -835,8 +891,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#confirm" class="md-nav__link">
-    confirm
+  <a href="#delete" class="md-nav__link">
+    delete
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#details" class="md-nav__link">
+    details
   </a>
   
 </li>
@@ -852,12 +915,40 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#market" class="md-nav__link">
-    Market
+  <a href="#allocationdetails" class="md-nav__link">
+    AllocationDetails
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#invoice" class="md-nav__link">
+    Invoice
   </a>
   
     <nav class="md-nav">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ancestors-in-mro_1" class="md-nav__link">
+    Ancestors (in MRO)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#class-variables" class="md-nav__link">
+    Class variables
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#instance-variables" class="md-nav__link">
+    Instance variables
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#methods_1" class="md-nav__link">
@@ -868,15 +959,22 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#subscribe" class="md-nav__link">
-    subscribe
+  <a href="#accept" class="md-nav__link">
+    accept
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#subscriptions" class="md-nav__link">
-    subscriptions
+  <a href="#to_dict" class="md-nav__link">
+    to_dict
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#to_str" class="md-nav__link">
+    to_str
   </a>
   
 </li>
@@ -892,16 +990,16 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#offerproposal" class="md-nav__link">
-    OfferProposal
+  <a href="#invoicestatus" class="md-nav__link">
+    InvoiceStatus
   </a>
   
     <nav class="md-nav">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#instance-variables_1" class="md-nav__link">
-    Instance variables
+  <a href="#class-variables_1" class="md-nav__link">
+    Class variables
   </a>
   
 </li>
@@ -915,15 +1013,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#agreement_1" class="md-nav__link">
-    agreement
+  <a href="#to_dict_1" class="md-nav__link">
+    to_dict
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#respond" class="md-nav__link">
-    respond
+  <a href="#to_str_1" class="md-nav__link">
+    to_str
   </a>
   
 </li>
@@ -939,19 +1037,12 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#subscription" class="md-nav__link">
-    Subscription
+  <a href="#payment" class="md-nav__link">
+    Payment
   </a>
   
     <nav class="md-nav">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#instance-variables_2" class="md-nav__link">
-    Instance variables
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#methods_3" class="md-nav__link">
@@ -962,22 +1053,43 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#close" class="md-nav__link">
-    close
+  <a href="#allocation_1" class="md-nav__link">
+    allocation
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#delete" class="md-nav__link">
-    delete
+  <a href="#allocations" class="md-nav__link">
+    allocations
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#events" class="md-nav__link">
-    events
+  <a href="#incoming_invoices" class="md-nav__link">
+    incoming_invoices
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#invoice_1" class="md-nav__link">
+    invoice
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#invoices" class="md-nav__link">
+    invoices
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#new_allocation" class="md-nav__link">
+    new_allocation
   </a>
   
 </li>
@@ -1013,126 +1125,27 @@
             <article class="md-content__inner md-typeset">
               
                 
-                  <a href="https://github.com/prekucki/yapapi/edit/master/reference/yapapi/rest/market.md" title="Edit this page" class="md-icon md-content__icon">&#xE3C9;</a>
+                  <a href="https://github.com/prekucki/yapapi/edit/master/reference/yapapi/rest/payment.md" title="Edit this page" class="md-icon md-content__icon">&#xE3C9;</a>
                 
                 
-                <h1 id="module-yapapirestmarket">Module yapapi.rest.market</h1>
+                <h1 id="module-yapapirestpayment">Module yapapi.rest.payment</h1>
 <h2 id="classes">Classes</h2>
-<h3 id="agreement">Agreement</h3>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Agreement</span><span class="p">(</span>
-    <span class="n">api</span><span class="p">:</span><span class="n">ya_market</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">requestor_api</span><span class="o">.</span><span class="n">RequestorApi</span><span class="p">,</span>
-    <span class="n">subscription</span><span class="p">:</span><span class="s1">&#39;Subscription&#39;</span><span class="p">,</span>
-    <span class="n">agreement_id</span><span class="p">:</span><span class="nb">str</span>
+<h3 id="allocation">Allocation</h3>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Allocation</span><span class="p">(</span>
+    <span class="n">_api</span><span class="p">:</span><span class="n">ya_payment</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">requestor_api</span><span class="o">.</span><span class="n">RequestorApi</span><span class="p">,</span>
+    <span class="nb">id</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span>
+    <span class="n">amount</span><span class="p">:</span><span class="n">decimal</span><span class="o">.</span><span class="n">Decimal</span><span class="p">,</span>
+    <span class="n">expires</span><span class="p">:</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span>
 <span class="p">)</span>
 </code></pre></div>
 
 
-<h4 id="instance-variables">Instance variables</h4>
-<div class="codehilite"><pre><span></span><code><span class="nb">id</span>
-</code></pre></div>
-
-
+<p>Payment reservation for task processing.</p>
+<h4 id="ancestors-in-mro">Ancestors (in MRO)</h4>
+<ul>
+<li>yapapi.rest.payment._Link</li>
+</ul>
 <h4 id="methods">Methods</h4>
-<h5 id="confirm">confirm</h5>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">confirm</span><span class="p">(</span>
-    <span class="bp">self</span>
-<span class="p">)</span>
-</code></pre></div>
-
-
-<h3 id="market">Market</h3>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Market</span><span class="p">(</span>
-    <span class="n">api_client</span><span class="p">:</span><span class="n">ya_market</span><span class="o">.</span><span class="n">api_client</span><span class="o">.</span><span class="n">ApiClient</span>
-<span class="p">)</span>
-</code></pre></div>
-
-
-<h4 id="methods_1">Methods</h4>
-<h5 id="subscribe">subscribe</h5>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">subscribe</span><span class="p">(</span>
-    <span class="bp">self</span><span class="p">,</span>
-    <span class="n">props</span><span class="p">,</span>
-    <span class="n">constraints</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">yapapi</span><span class="o">.</span><span class="n">rest</span><span class="o">.</span><span class="n">market</span><span class="o">.</span><span class="n">Subscription</span>
-</code></pre></div>
-
-
-<h5 id="subscriptions">subscriptions</h5>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">subscriptions</span><span class="p">(</span>
-    <span class="bp">self</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncIterator</span><span class="p">[</span><span class="n">yapapi</span><span class="o">.</span><span class="n">rest</span><span class="o">.</span><span class="n">market</span><span class="o">.</span><span class="n">Subscription</span><span class="p">]</span>
-</code></pre></div>
-
-
-<h3 id="offerproposal">OfferProposal</h3>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">OfferProposal</span><span class="p">(</span>
-    <span class="n">subscription</span><span class="p">:</span><span class="s1">&#39;Subscription&#39;</span><span class="p">,</span>
-    <span class="n">proposal</span><span class="p">:</span><span class="n">ya_market</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">proposal_event</span><span class="o">.</span><span class="n">ProposalEvent</span>
-<span class="p">)</span>
-</code></pre></div>
-
-
-<h4 id="instance-variables_1">Instance variables</h4>
-<div class="codehilite"><pre><span></span><code><span class="nb">id</span>
-</code></pre></div>
-
-
-<div class="codehilite"><pre><span></span><code><span class="n">is_draft</span>
-</code></pre></div>
-
-
-<div class="codehilite"><pre><span></span><code><span class="n">issuer</span>
-</code></pre></div>
-
-
-<div class="codehilite"><pre><span></span><code><span class="n">props</span>
-</code></pre></div>
-
-
-<h4 id="methods_2">Methods</h4>
-<h5 id="agreement_1">agreement</h5>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">agreement</span><span class="p">(</span>
-    <span class="bp">self</span><span class="p">,</span>
-    <span class="n">timeout</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">120</span><span class="p">)</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">yapapi</span><span class="o">.</span><span class="n">rest</span><span class="o">.</span><span class="n">market</span><span class="o">.</span><span class="n">Agreement</span>
-</code></pre></div>
-
-
-<h5 id="respond">respond</h5>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">respond</span><span class="p">(</span>
-    <span class="bp">self</span><span class="p">,</span>
-    <span class="n">props</span><span class="p">:</span><span class="nb">object</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">constraints</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span>
-</code></pre></div>
-
-
-<h3 id="subscription">Subscription</h3>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Subscription</span><span class="p">(</span>
-    <span class="n">api</span><span class="p">:</span><span class="n">ya_market</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">requestor_api</span><span class="o">.</span><span class="n">RequestorApi</span><span class="p">,</span>
-    <span class="n">subscription_id</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span>
-    <span class="n">_details</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="n">ya_market</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">demand</span><span class="o">.</span><span class="n">Demand</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span>
-<span class="p">)</span>
-</code></pre></div>
-
-
-<h4 id="instance-variables_2">Instance variables</h4>
-<div class="codehilite"><pre><span></span><code><span class="n">details</span>
-</code></pre></div>
-
-
-<div class="codehilite"><pre><span></span><code><span class="nb">id</span>
-</code></pre></div>
-
-
-<h4 id="methods_3">Methods</h4>
-<h5 id="close">close</h5>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">close</span><span class="p">(</span>
-    <span class="bp">self</span>
-<span class="p">)</span>
-</code></pre></div>
-
-
 <h5 id="delete">delete</h5>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">delete</span><span class="p">(</span>
     <span class="bp">self</span>
@@ -1140,11 +1153,306 @@
 </code></pre></div>
 
 
-<h5 id="events">events</h5>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">events</span><span class="p">(</span>
+<h5 id="details">details</h5>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">details</span><span class="p">(</span>
     <span class="bp">self</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncIterator</span><span class="p">[</span><span class="n">yapapi</span><span class="o">.</span><span class="n">rest</span><span class="o">.</span><span class="n">market</span><span class="o">.</span><span class="n">OfferProposal</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">yapapi</span><span class="o">.</span><span class="n">rest</span><span class="o">.</span><span class="n">payment</span><span class="o">.</span><span class="n">AllocationDetails</span>
 </code></pre></div>
+
+
+<h3 id="allocationdetails">AllocationDetails</h3>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">AllocationDetails</span><span class="p">(</span>
+    <span class="n">spent_amount</span><span class="p">:</span><span class="n">decimal</span><span class="o">.</span><span class="n">Decimal</span><span class="p">,</span>
+    <span class="n">remaining_amount</span><span class="p">:</span><span class="n">decimal</span><span class="o">.</span><span class="n">Decimal</span>
+<span class="p">)</span>
+</code></pre></div>
+
+
+<p>AllocationDetails(spent_amount:decimal.Decimal, remaining_amount:decimal.Decimal)</p>
+<h3 id="invoice">Invoice</h3>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Invoice</span><span class="p">(</span>
+    <span class="n">_api</span><span class="p">:</span><span class="n">ya_payment</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">requestor_api</span><span class="o">.</span><span class="n">RequestorApi</span><span class="p">,</span>
+    <span class="n">_base</span><span class="p">:</span><span class="n">ya_payment</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">invoice</span><span class="o">.</span><span class="n">Invoice</span>
+<span class="p">)</span>
+</code></pre></div>
+
+
+<p>NOTE: This class is auto generated by OpenAPI Generator.
+Ref: https://openapi-generator.tech</p>
+<p>Do not edit the class manually.</p>
+<h4 id="ancestors-in-mro_1">Ancestors (in MRO)</h4>
+<ul>
+<li>ya_payment.models.invoice.Invoice</li>
+</ul>
+<h4 id="class-variables">Class variables</h4>
+<div class="codehilite"><pre><span></span><code><span class="n">attribute_map</span>
+</code></pre></div>
+
+
+<div class="codehilite"><pre><span></span><code><span class="n">openapi_types</span>
+</code></pre></div>
+
+
+<h4 id="instance-variables">Instance variables</h4>
+<div class="codehilite"><pre><span></span><code><span class="n">activity_ids</span>
+</code></pre></div>
+
+
+<p>Gets the activity_ids of this Invoice.  # noqa: E501</p>
+<p>:return: The activity_ids of this Invoice.  # noqa: E501
+:rtype: list[str]</p>
+<div class="codehilite"><pre><span></span><code><span class="n">agreement_id</span>
+</code></pre></div>
+
+
+<p>Gets the agreement_id of this Invoice.  # noqa: E501</p>
+<p>:return: The agreement_id of this Invoice.  # noqa: E501
+:rtype: str</p>
+<div class="codehilite"><pre><span></span><code><span class="n">amount</span>
+</code></pre></div>
+
+
+<p>Gets the amount of this Invoice.  # noqa: E501</p>
+<p>:return: The amount of this Invoice.  # noqa: E501
+:rtype: str</p>
+<div class="codehilite"><pre><span></span><code><span class="n">invoice_id</span>
+</code></pre></div>
+
+
+<p>Gets the invoice_id of this Invoice.  # noqa: E501</p>
+<p>:return: The invoice_id of this Invoice.  # noqa: E501
+:rtype: str</p>
+<div class="codehilite"><pre><span></span><code><span class="n">issuer_id</span>
+</code></pre></div>
+
+
+<p>Gets the issuer_id of this Invoice.  # noqa: E501</p>
+<p>:return: The issuer_id of this Invoice.  # noqa: E501
+:rtype: str</p>
+<div class="codehilite"><pre><span></span><code><span class="n">last_debit_note_id</span>
+</code></pre></div>
+
+
+<p>Gets the last_debit_note_id of this Invoice.  # noqa: E501</p>
+<p>:return: The last_debit_note_id of this Invoice.  # noqa: E501
+:rtype: str</p>
+<div class="codehilite"><pre><span></span><code><span class="n">payee_addr</span>
+</code></pre></div>
+
+
+<p>Gets the payee_addr of this Invoice.  # noqa: E501</p>
+<p>:return: The payee_addr of this Invoice.  # noqa: E501
+:rtype: str</p>
+<div class="codehilite"><pre><span></span><code><span class="n">payer_addr</span>
+</code></pre></div>
+
+
+<p>Gets the payer_addr of this Invoice.  # noqa: E501</p>
+<p>:return: The payer_addr of this Invoice.  # noqa: E501
+:rtype: str</p>
+<div class="codehilite"><pre><span></span><code><span class="n">payment_due_date</span>
+</code></pre></div>
+
+
+<p>Gets the payment_due_date of this Invoice.  # noqa: E501</p>
+<p>:return: The payment_due_date of this Invoice.  # noqa: E501
+:rtype: datetime</p>
+<div class="codehilite"><pre><span></span><code><span class="n">recipient_id</span>
+</code></pre></div>
+
+
+<p>Gets the recipient_id of this Invoice.  # noqa: E501</p>
+<p>:return: The recipient_id of this Invoice.  # noqa: E501
+:rtype: str</p>
+<div class="codehilite"><pre><span></span><code><span class="n">status</span>
+</code></pre></div>
+
+
+<p>Gets the status of this Invoice.  # noqa: E501</p>
+<p>:return: The status of this Invoice.  # noqa: E501
+:rtype: InvoiceStatus</p>
+<div class="codehilite"><pre><span></span><code><span class="n">timestamp</span>
+</code></pre></div>
+
+
+<p>Gets the timestamp of this Invoice.  # noqa: E501</p>
+<p>:return: The timestamp of this Invoice.  # noqa: E501
+:rtype: datetime</p>
+<h4 id="methods_1">Methods</h4>
+<h5 id="accept">accept</h5>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">accept</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">amount</span><span class="p">:</span><span class="n">decimal</span><span class="o">.</span><span class="n">Decimal</span><span class="p">,</span>
+    <span class="n">allocation</span><span class="p">:</span><span class="s1">&#39;Allocation&#39;</span>
+<span class="p">)</span>
+</code></pre></div>
+
+
+<h5 id="to_dict">to_dict</h5>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span>
+    <span class="bp">self</span>
+<span class="p">)</span>
+</code></pre></div>
+
+
+<p>Returns the model properties as a dict</p>
+<h5 id="to_str">to_str</h5>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">to_str</span><span class="p">(</span>
+    <span class="bp">self</span>
+<span class="p">)</span>
+</code></pre></div>
+
+
+<p>Returns the string representation of the model</p>
+<h3 id="invoicestatus">InvoiceStatus</h3>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">InvoiceStatus</span><span class="p">(</span>
+    <span class="n">local_vars_configuration</span><span class="o">=</span><span class="kc">None</span>
+<span class="p">)</span>
+</code></pre></div>
+
+
+<p>NOTE: This class is auto generated by OpenAPI Generator.
+Ref: https://openapi-generator.tech</p>
+<p>Do not edit the class manually.</p>
+<h4 id="class-variables_1">Class variables</h4>
+<div class="codehilite"><pre><span></span><code><span class="n">ACCEPTED</span>
+</code></pre></div>
+
+
+<div class="codehilite"><pre><span></span><code><span class="n">CANCELLED</span>
+</code></pre></div>
+
+
+<div class="codehilite"><pre><span></span><code><span class="n">FAILED</span>
+</code></pre></div>
+
+
+<div class="codehilite"><pre><span></span><code><span class="n">ISSUED</span>
+</code></pre></div>
+
+
+<div class="codehilite"><pre><span></span><code><span class="n">RECEIVED</span>
+</code></pre></div>
+
+
+<div class="codehilite"><pre><span></span><code><span class="n">REJECTED</span>
+</code></pre></div>
+
+
+<div class="codehilite"><pre><span></span><code><span class="n">SETTLED</span>
+</code></pre></div>
+
+
+<div class="codehilite"><pre><span></span><code><span class="n">allowable_values</span>
+</code></pre></div>
+
+
+<p>Attributes:
+  openapi_types (dict): The key is attribute name
+                        and the value is attribute type.
+  attribute_map (dict): The key is attribute name
+                        and the value is json key in definition.</p>
+<div class="codehilite"><pre><span></span><code><span class="n">attribute_map</span>
+</code></pre></div>
+
+
+<div class="codehilite"><pre><span></span><code><span class="n">openapi_types</span>
+</code></pre></div>
+
+
+<h4 id="methods_2">Methods</h4>
+<h5 id="to_dict_1">to_dict</h5>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span>
+    <span class="bp">self</span>
+<span class="p">)</span>
+</code></pre></div>
+
+
+<p>Returns the model properties as a dict</p>
+<h5 id="to_str_1">to_str</h5>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">to_str</span><span class="p">(</span>
+    <span class="bp">self</span>
+<span class="p">)</span>
+</code></pre></div>
+
+
+<p>Returns the string representation of the model</p>
+<h3 id="payment">Payment</h3>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Payment</span><span class="p">(</span>
+    <span class="n">api_client</span><span class="p">:</span><span class="n">ya_payment</span><span class="o">.</span><span class="n">api_client</span><span class="o">.</span><span class="n">ApiClient</span>
+<span class="p">)</span>
+</code></pre></div>
+
+
+<h4 id="methods_3">Methods</h4>
+<h5 id="allocation_1">allocation</h5>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">allocation</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="n">allocation_id</span><span class="p">:</span><span class="nb">str</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">yapapi</span><span class="o">.</span><span class="n">rest</span><span class="o">.</span><span class="n">payment</span><span class="o">.</span><span class="n">Allocation</span>
+</code></pre></div>
+
+
+<h5 id="allocations">allocations</h5>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">allocations</span><span class="p">(</span>
+    <span class="bp">self</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncIterator</span><span class="p">[</span><span class="n">yapapi</span><span class="o">.</span><span class="n">rest</span><span class="o">.</span><span class="n">payment</span><span class="o">.</span><span class="n">Allocation</span><span class="p">]</span>
+</code></pre></div>
+
+
+<p>Lists all active allocations.</p>
+<p>Example:</p>
+<p>Listing all active allocations</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">yapapi</span> <span class="kn">import</span> <span class="n">rest</span>
+
+<span class="n">async</span> <span class="k">def</span> <span class="nf">list_allocations</span><span class="p">(</span><span class="n">payment_api</span><span class="p">:</span> <span class="n">rest</span><span class="o">.</span><span class="n">Payment</span><span class="p">):</span>
+    <span class="n">async</span> <span class="k">for</span> <span class="n">allocation</span> <span class="ow">in</span> <span class="n">payment_api</span><span class="o">.</span><span class="n">allocations</span><span class="p">():</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;&#39;&#39;allocation: {allocation.id}</span>
+<span class="s1">            amount={allocation.amount},</span>
+<span class="s1">            expires={allocation.expires}&#39;&#39;&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+
+<h5 id="incoming_invoices">incoming_invoices</h5>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">incoming_invoices</span><span class="p">(</span>
+    <span class="bp">self</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncIterator</span><span class="p">[</span><span class="n">yapapi</span><span class="o">.</span><span class="n">rest</span><span class="o">.</span><span class="n">payment</span><span class="o">.</span><span class="n">Invoice</span><span class="p">]</span>
+</code></pre></div>
+
+
+<h5 id="invoice_1">invoice</h5>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">invoice</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="n">invoice_id</span><span class="p">:</span><span class="nb">str</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">yapapi</span><span class="o">.</span><span class="n">rest</span><span class="o">.</span><span class="n">payment</span><span class="o">.</span><span class="n">Invoice</span>
+</code></pre></div>
+
+
+<h5 id="invoices">invoices</h5>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">invoices</span><span class="p">(</span>
+    <span class="bp">self</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncIterator</span><span class="p">[</span><span class="n">yapapi</span><span class="o">.</span><span class="n">rest</span><span class="o">.</span><span class="n">payment</span><span class="o">.</span><span class="n">Invoice</span><span class="p">]</span>
+</code></pre></div>
+
+
+<h5 id="new_allocation">new_allocation</h5>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">new_allocation</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="n">amount</span><span class="p">:</span><span class="n">decimal</span><span class="o">.</span><span class="n">Decimal</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">expires</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">make_deposit</span><span class="p">:</span><span class="nb">bool</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">yapapi</span><span class="o">.</span><span class="n">rest</span><span class="o">.</span><span class="n">resource</span><span class="o">.</span><span class="n">ResourceCtx</span>
+</code></pre></div>
+
+
+<p>Creates new allocation.</p>
+<ul>
+<li><code>amount</code>:  Allocation amount.</li>
+<li><code>expires</code>: expiration timestamp. by default 30 minutes from now.</li>
+<li><code>make_deposit</code>: (unimplemented).</li>
+</ul>
                 
                   
                 
@@ -1166,7 +1474,7 @@
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid">
         
-          <a href="../" title="Index" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../market/" title="Market" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-flex__cell md-flex__cell--shrink">
               <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
             </div>
@@ -1175,19 +1483,19 @@
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                Index
+                Market
               </span>
             </div>
           </a>
         
         
-          <a href="../payment/" title="Payment" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../resource/" title="Resource" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
               <span class="md-flex__ellipsis">
                 <span class="md-footer-nav__direction">
                   Next
                 </span>
-                Payment
+                Resource
               </span>
             </div>
             <div class="md-flex__cell md-flex__cell--shrink">
