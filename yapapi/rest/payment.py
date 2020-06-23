@@ -38,6 +38,7 @@ class Allocation(_Link):
     """Payment reservation for task processing.
 
     """
+
     id: str
     """Allocation object id"""
 

@@ -1,7 +1,6 @@
 from typing import Optional
 
 from rich.console import Console
-from rich.columns import Columns
 from rich.progress import Progress
 from yapapi.rest import Configuration, Market
 from asyncio import sleep

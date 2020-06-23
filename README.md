@@ -5,7 +5,6 @@
 [![GitHub issues](https://img.shields.io/github/issues/prekucki/yapapi)](https://github.com/prekucki/yapapi/issues)
 ![Continuous integration](https://github.com/prekucki/yapapi/workflows/Continuous%20integration/badge.svg)
 
-
 ## How to use
 
 Rendering
