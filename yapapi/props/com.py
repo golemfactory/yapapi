@@ -1,7 +1,6 @@
 from typing import Dict, Any
-from decimal import Decimal
 import enum
-from dataclasses import dataclass, field, Field
+from dataclasses import dataclass, field
 from .base import Model, Props, as_list
 
 SCHEME: str = "golem.com.scheme"

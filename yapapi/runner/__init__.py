@@ -1,12 +1,15 @@
+"""
+
+"""
 from datetime import datetime, timedelta
 from enum import Enum, auto
-from typing import Optional
+from typing import Optional, TypeVar, Generic, AsyncContextManager
 import abc
-from dataclasses import dataclass
 
 
-class Engine(object):
-    pass
+class Engine(AsyncContextManager):
+    async def __aenter__(self):
+        return self
 
 
 class TaskStatus(Enum):
@@ -16,13 +19,16 @@ class TaskStatus(Enum):
     REJECTED = auto()
 
 
-class Task:
+TaskData = TypeVar("TaskData")
+
+
+class Task(Generic[TaskData]):
     def __init__(
         self,
+        data: TaskData,
         *,
         expires: Optional[datetime] = None,
         timeout: Optional[timedelta] = None,
-        **kwargs
     ):
         self._started = datetime.now()
         self._expires: Optional[datetime]
@@ -31,11 +37,12 @@ class Task:
         else:
             self._expires = expires
 
-        self._data = kwargs
+        self._data = data
         self._status: TaskStatus = TaskStatus.WAITING
 
-    def __getattr__(self, item):
-        return self._data.get(item)
+    @property
+    def data(self) -> TaskData:
+        return self._data
 
     @property
     def expires(self):

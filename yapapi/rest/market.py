@@ -1,5 +1,4 @@
 import asyncio
-from dataclasses import dataclass
 from typing import AsyncIterator, Optional, Iterable
 from ya_market import ApiClient, RequestorApi, models
 from datetime import datetime, timedelta, timezone

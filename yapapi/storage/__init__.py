@@ -2,10 +2,14 @@
 Storage models.
 """
 
-import abc, os, pathlib, io
+import abc
+import os
+import pathlib
+import io
 from os import PathLike
 from typing import AsyncIterator, NamedTuple, Union, Optional
-import asyncio, aiohttp
+import asyncio
+import aiohttp
 
 _BUF_SIZE = 40960
 AsyncReader = Union[asyncio.streams.StreamReader, aiohttp.streams.StreamReader]
@@ -29,22 +33,22 @@ class Source(abc.ABC):
     @property
     @abc.abstractmethod
     def download_url(self) -> str:
-        raise NotImplemented
+        raise NotImplementedError
 
     @abc.abstractmethod
     async def content_length(self) -> int:
-        raise NotImplemented
+        raise NotImplementedError
 
 
 class Destination(abc.ABC):
     @property
     @abc.abstractmethod
     def upload_url(self) -> str:
-        raise NotImplemented
+        raise NotImplementedError
 
     @abc.abstractmethod
     async def download_stream(self) -> Content:
-        raise NotImplemented
+        raise NotImplementedError
 
     async def download_file(self, destination_file: PathLike):
         content = await self.download_stream()
@@ -56,7 +60,7 @@ class Destination(abc.ABC):
 class InputStorageProvider(abc.ABC):
     @abc.abstractmethod
     async def upload_stream(self, length: int, stream: AsyncIterator[bytes]) -> Source:
-        raise NotImplemented
+        raise NotImplementedError
 
     async def upload_file(self, path: os.PathLike) -> Source:
         fp = pathlib.Path(path)
@@ -81,10 +85,13 @@ class OutputStorageProvider(abc.ABC):
         """
         Creates slot for receiving file.
 
-        :param destination_file: Optional hint where received data should be placed.
-        :return:
+        Parameters
+        ----------
+        destination_file:
+            Optional hint where received data should be placed.
+
         """
-        raise NotImplemented
+        raise NotImplementedError
 
 
 class StorageProvider(InputStorageProvider, OutputStorageProvider, abc.ABC):

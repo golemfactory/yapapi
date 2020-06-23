@@ -1,14 +1,6 @@
-# Golem Python API
-
-![Continuous integration](https://github.com/prekucki/yapapi/workflows/Continuous%20integration/badge.svg)
-
-## How to use
-
-Rendering
-
-```python
 from yapapi.runner import Engine, Task, vm
 from datetime import timedelta
+import asyncio
 
 
 async def main():
@@ -61,4 +53,7 @@ async def main():
             worker, [Task(data=frame) for frame in range(1, 101)]
         ):
             print("progress=", progress)
-```
+
+
+if __name__ == "__main__":
+    asyncio.get_event_loop().run_until_complete(main())

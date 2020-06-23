@@ -13,15 +13,25 @@ classifiers = [
     "Framework :: AsyncIO",
     "Topic :: System :: Distributed Computing"
 ]
+readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.6.1"
 aiohttp = "^3.6.2"
 dataclasses = { version = "^0.7", python = ">=3.6, <3.7"}
-ya-market = {git = "https://github.com/prekucki/ya-client-python-market.git"}
+ya-market = "^0.1.0"
 urllib3 = "^1.25.9"
 
 [tool.poetry.dev-dependencies]
-setuptools = "black"
 black = "^19.10b0"
 pytest = "^5.4.3"
+portray = "^1"
+
+[tool.portray]
+
+[tool.portray.mkdocs.theme]
+name = "material"
+palette = {primary = "blue grey", accent = "pink"}
+
+[tool.portray.pdocs]
+exclude_source = true

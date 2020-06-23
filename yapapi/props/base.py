@@ -1,5 +1,7 @@
 from typing import Dict, Type, Any, Union, List, cast
-import abc, enum, json
+import abc
+import enum
+import json
 from dataclasses import dataclass, fields, MISSING
 
 Props = Dict[str, str]

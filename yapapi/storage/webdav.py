@@ -1,11 +1,12 @@
 from os import PathLike
 from typing import Optional, AsyncIterator, List, NamedTuple
 from . import StorageProvider, Source, Destination, Content
-import aiohttp, uuid
+import aiohttp
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
 import logging
-from urllib.parse import urlparse, urljoin, ParseResult
+from urllib.parse import urlparse, urljoin
 
 _logger: logging.Logger = logging.getLogger(__name__)
 
