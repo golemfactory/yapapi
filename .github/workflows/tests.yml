@@ -19,6 +19,6 @@ jobs:
           python-version: 3.8
       - uses: Gr1N/setup-poetry@v2
         with:
-          poetry-version: 1.0.0
+          poetry-version: 1.0.9
       - run: poetry install
       - run: poetry run pytest
