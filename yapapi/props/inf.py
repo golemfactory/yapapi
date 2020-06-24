@@ -19,9 +19,7 @@ class InfBase(Model):
     runtime: str = field(metadata={"key": "golem.runtime.name"})
 
     storage: Optional[float] = field(default=None, metadata={"key": INF_STORAGE})
-    transfers: Optional[List[str]] = field(
-        default=None, metadata={"key": TRANSFER_CAPS}
-    )
+    transfers: Optional[List[str]] = field(default=None, metadata={"key": TRANSFER_CAPS})
 
 
 @dataclass

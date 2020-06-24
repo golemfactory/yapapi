@@ -32,20 +32,14 @@ class Configuration(object):
         market_url: Optional[str] = None,
         payment_url: Optional[str] = None,
     ):
-        self.__app_key: str = app_key or env_or_fail(
-            "YAGNA_APPKEY", "API authentication token"
-        )
+        self.__app_key: str = app_key or env_or_fail("YAGNA_APPKEY", "API authentication token")
         self.__url = url or DEFAULT_API_URL
 
         def resolve_url(given_url: Optional[str], env_val: str, prefix: str) -> str:
             return given_url or os.getenv(env_val) or f"{self.__url}{prefix}"
 
-        self.__market_url: str = resolve_url(
-            market_url, "YAGNA_MARKET_URL", "/market-api/v1"
-        )
-        self.__payment_url: str = resolve_url(
-            payment_url, "YAGNA_PAYMENT_URL", "/payment-api/v1"
-        )
+        self.__market_url: str = resolve_url(market_url, "YAGNA_MARKET_URL", "/market-api/v1")
+        self.__payment_url: str = resolve_url(payment_url, "YAGNA_PAYMENT_URL", "/payment-api/v1")
 
     @property
     def app_key(self) -> str:
@@ -62,15 +56,11 @@ class Configuration(object):
     def market(self) -> ya_market.ApiClient:
         cfg = ya_market.Configuration(host=self.market_url)
         return ya_market.ApiClient(
-            configuration=cfg,
-            header_name="authorization",
-            header_value=f"Bearer {self.app_key}",
+            configuration=cfg, header_name="authorization", header_value=f"Bearer {self.app_key}",
         )
 
     def payment(self) -> ya_payment.ApiClient:
         cfg = ya_payment.Configuration(host=self.payment_url)
         return ya_payment.ApiClient(
-            configuration=cfg,
-            header_name="authorization",
-            header_value=f"Bearer {self.app_key}",
+            configuration=cfg, header_name="authorization", header_value=f"Bearer {self.app_key}",
         )

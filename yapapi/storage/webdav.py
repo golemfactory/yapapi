@@ -36,18 +36,12 @@ def _parse_prop_resp(xml: str) -> List[DavResource]:
         length = prop.findtext("{DAV:}getcontentlength")
         resource_type = prop.find("{DAV:}resourcetype")
         last_modified = prop.findtext("{DAV:}getlastmodified")
-        collection = (
-            resource_type.find("{DAV:}collection") is not None
-            if resource_type
-            else False
-        )
+        collection = resource_type.find("{DAV:}collection") is not None if resource_type else False
         return DavResource(
             path=href,
             length=0 if length is None else int(length),
             collection=collection,
-            last_modified=None
-            if last_modified is None
-            else parsedate_to_datetime(last_modified),
+            last_modified=None if last_modified is None else parsedate_to_datetime(last_modified),
         )
 
     return list(map(resource, tree.findall("{DAV:}response")))
@@ -121,9 +115,7 @@ class DavStorageProvider(StorageProvider):
 
     async def upload_stream(self, length: int, stream: AsyncIterator[bytes]) -> Source:
         upload_url = self.__new_url()
-        resp = await self.client.request(
-            method="PUT", url=upload_url, data=stream, auth=self.auth
-        )
+        resp = await self.client.request(method="PUT", url=upload_url, data=stream, auth=self.auth)
         _logger.debug("upload done: %i", resp.status)
         if resp.status != 201:
             raise RuntimeError(
@@ -131,9 +123,7 @@ class DavStorageProvider(StorageProvider):
             )
         return _DavSource(self.__export_url(upload_url))
 
-    async def new_destination(
-        self, destination_file: Optional[PathLike] = None
-    ) -> Destination:
+    async def new_destination(self, destination_file: Optional[PathLike] = None) -> Destination:
         upload_url = self.__new_url()
         return _DavDestination(self.client, self.__export_url(upload_url))
 
@@ -149,11 +139,7 @@ class DavStorageProvider(StorageProvider):
         </a:propfind>"""
 
         async with self.client.request(
-            method="PROPFIND",
-            url=self.base_url,
-            auth=self.auth,
-            headers=headers,
-            data=data,
+            method="PROPFIND", url=self.base_url, auth=self.auth, headers=headers, data=data,
         ) as response:
             if response.status != 200:
                 response.raise_for_status()
@@ -163,9 +149,7 @@ class DavStorageProvider(StorageProvider):
         if self.auth:
             parsed_url = urlparse(url)
             login, password, *_ = self.auth
-            return parsed_url._replace(
-                netloc=f"{login}:{password}@{parsed_url.netloc}"
-            ).geturl()
+            return parsed_url._replace(netloc=f"{login}:{password}@{parsed_url.netloc}").geturl()
         else:
             return url
 

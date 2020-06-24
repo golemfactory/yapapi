@@ -14,9 +14,7 @@ class Identification(Model):
 class Activity(Model):
     """Activity-related Properties"""
 
-    cost_cap: Optional[Decimal] = field(
-        default=None, metadata={"key": "golem.activity.cost_cap"}
-    )
+    cost_cap: Optional[Decimal] = field(default=None, metadata={"key": "golem.activity.cost_cap"})
     """Sets a Hard cap on total cost of the Activity (regardless of the usage vector or
     pricing function). The Provider is entitled to 'kill' an Activity which exceeds the
     capped cost amount indicated by Requestor.

@@ -79,9 +79,7 @@ class InputStorageProvider(abc.ABC):
 
 class OutputStorageProvider(abc.ABC):
     @abc.abstractmethod
-    async def new_destination(
-        self, destination_file: Optional[PathLike] = None
-    ) -> Destination:
+    async def new_destination(self, destination_file: Optional[PathLike] = None) -> Destination:
         """
         Creates slot for receiving file.
 
@@ -99,9 +97,7 @@ class StorageProvider(InputStorageProvider, OutputStorageProvider, abc.ABC):
 
 
 class ComposedStorageProvider(StorageProvider):
-    def __init__(
-        self, input_storage: InputStorageProvider, output_storage: OutputStorageProvider
-    ):
+    def __init__(self, input_storage: InputStorageProvider, output_storage: OutputStorageProvider):
         self._input = input_storage
         self._output = output_storage
 
@@ -111,7 +107,5 @@ class ComposedStorageProvider(StorageProvider):
     async def upload_file(self, path: os.PathLike) -> Source:
         return await self._input.upload_file(path)
 
-    async def new_destination(
-        self, destination_file: Optional[PathLike] = None
-    ) -> Destination:
+    async def new_destination(self, destination_file: Optional[PathLike] = None) -> Destination:
         return await self._output.new_destination(destination_file)

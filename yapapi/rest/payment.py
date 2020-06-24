@@ -13,9 +13,7 @@ class Invoice(yap.Invoice):
         self._api: RequestorApi = _api
 
     async def accept(self, *, amount: Decimal, allocation: "Allocation"):
-        acceptance = yap.Acceptance(
-            total_amount_accepted=str(amount), allocation_id=allocation.id
-        )
+        acceptance = yap.Acceptance(total_amount_accepted=str(amount), allocation_id=allocation.id)
         await self._api.accept_invoice(self.invoice_id, acceptance)
 
 
@@ -73,10 +71,7 @@ class _AllocationTask(ResourceCtx[Allocation]):
         assert model.timeout is not None
 
         return Allocation(
-            _api=self._api,
-            id=self._id,
-            amount=model.total_amount,
-            expires=model.timeout,
+            _api=self._api, id=self._id, amount=model.total_amount, expires=model.timeout,
         )
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -92,11 +87,7 @@ class Payment(object):
         self._api: RequestorApi = RequestorApi(api_client)
 
     def new_allocation(
-        self,
-        amount: Decimal,
-        *,
-        expires: Optional[datetime] = None,
-        make_deposit: bool = False
+        self, amount: Decimal, *, expires: Optional[datetime] = None, make_deposit: bool = False
     ) -> ResourceCtx[Allocation]:
         """Creates new allocation.
 
@@ -105,9 +96,7 @@ class Payment(object):
          - `make_deposit`: (unimplemented).
 
         """
-        allocation_timeout: datetime = expires or datetime.now(
-            timezone.utc
-        ) + timedelta(minutes=30)
+        allocation_timeout: datetime = expires or datetime.now(timezone.utc) + timedelta(minutes=30)
         return _AllocationTask(
             _api=self._api,
             model=yap.Allocation(
@@ -138,9 +127,7 @@ class Payment(object):
 
 
         """
-        for alloc_obj in cast(
-            Iterable[yap.Allocation], await self._api.get_allocations()
-        ):
+        for alloc_obj in cast(Iterable[yap.Allocation], await self._api.get_allocations()):
             yield Allocation(
                 _api=self._api,
                 id=alloc_obj.allocation_id,
@@ -159,9 +146,7 @@ class Payment(object):
 
     async def invoices(self) -> AsyncIterator[Invoice]:
 
-        for invoice_obj in cast(
-            Iterable[yap.Invoice], await self._api.get_received_invoices()
-        ):
+        for invoice_obj in cast(Iterable[yap.Invoice], await self._api.get_received_invoices()):
             yield Invoice(_api=self._api, _base=invoice_obj)
 
     async def invoice(self, invoice_id: str) -> Invoice:

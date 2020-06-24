@@ -15,13 +15,7 @@ async def main():
         async for task in tasks:
             frame = task.data
             ctx.begin()
-            crops = [
-                {
-                    "outfilebasename": "out",
-                    "borders_x": [0.0, 1.0],
-                    "borders_y": [0.0, 1.0],
-                }
-            ]
+            crops = [{"outfilebasename": "out", "borders_x": [0.0, 1.0], "borders_y": [0.0, 1.0]}]
             ctx.send_json(
                 "/golem/work/params.json",
                 {
@@ -49,9 +43,7 @@ async def main():
     async with Engine(
         package=package, max_worker=10, budget=10.0, timeout=timedelta(minutes=5)
     ) as engine:
-        async for progress in engine.map(
-            worker, [Task(data=frame) for frame in range(1, 101)]
-        ):
+        async for progress in engine.map(worker, [Task(data=frame) for frame in range(1, 101)]):
             print("progress=", progress)
 
 

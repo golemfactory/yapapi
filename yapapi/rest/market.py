@@ -5,9 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 
 class Agreement(object):
-    def __init__(
-        self, api: RequestorApi, subscription: "Subscription", agreement_id: str
-    ):
+    def __init__(self, api: RequestorApi, subscription: "Subscription", agreement_id: str):
         self._api = api
         self._subscription = subscription
         self._id = agreement_id
@@ -69,10 +67,7 @@ class OfferProposal(object):
 
 class Subscription(object):
     def __init__(
-        self,
-        api: RequestorApi,
-        subscription_id: str,
-        _details: Optional[models.Demand] = None,
+        self, api: RequestorApi, subscription_id: str, _details: Optional[models.Demand] = None,
     ):
         self._api: RequestorApi = api
         self._id: str = subscription_id
@@ -105,9 +100,7 @@ class Subscription(object):
 
     async def events(self) -> AsyncIterator[OfferProposal]:
         while self._open:
-            proposals = await self._api.collect_offers(
-                self._id, timeout=10, max_events=10
-            )
+            proposals = await self._api.collect_offers(self._id, timeout=10, max_events=10)
             for proposal in proposals:
                 yield OfferProposal(self, proposal)
 

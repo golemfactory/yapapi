@@ -46,19 +46,12 @@ class Model(abc.ABC):
     @classmethod
     def from_props(cls, props: Props) -> "Model":
         field_map = dict(
-            (
-                f.metadata["key"],
-                _PyField(name=f.name, type=f.type, required=f.default is MISSING),
-            )
+            (f.metadata["key"], _PyField(name=f.name, type=f.type, required=f.default is MISSING),)
             for f in fields(cls)
             if "key" in f.metadata
         )
         data = dict(
-            (
-                field_map[key].encode(val)
-                for (key, val) in props.items()
-                if key in field_map
-            )
+            (field_map[key].encode(val) for (key, val) in props.items() if key in field_map)
         )
         cls._custom_mapping(props, data)
         print(dict(data))

@@ -45,3 +45,7 @@ palette = {primary = "blue grey", accent = "pink"}
 
 [tool.portray.pdocs]
 exclude_source = true
+
+[tool.black]
+line-length = 100
+target-version = ['py36']
