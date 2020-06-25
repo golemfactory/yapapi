@@ -2,6 +2,7 @@ import jsonrpc_base
 import asyncio
 import json
 from typing import Optional
+import pytest
 
 ME = __file__
 
@@ -34,7 +35,7 @@ class Server(jsonrpc_base.Server):
         return message.parse_response(msg)
 
 
-# @pytest.mark.skip
+@pytest.mark.skip
 def test_gftp_service():
     async def run():
         server = Server()
