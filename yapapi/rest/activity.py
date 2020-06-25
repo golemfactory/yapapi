@@ -44,7 +44,7 @@ class Activity(AsyncContextManager["Activity"]):
     async def send(self, script: List[dict]):
         script_txt = json.dumps(script)
         batch_id = await self._api.call_exec(self._id, yaa.ExeScriptRequest(text=script_txt))
-        return Batch(self._state, self._id, batch_id, len(script))
+        return Batch(self._api, self._id, batch_id, len(script))
 
     async def __aenter__(self) -> "Activity":
         return self
@@ -83,20 +83,26 @@ class Batch(AsyncIterable[Result], Sized):
         self._batch_id
 
     async def __aiter__(self) -> AsyncIterator[Result]:
+        import asyncio
+
         last_idx = 0
         while last_idx < self._size:
+            any_new: bool = False
             results: List[yaa.ExeScriptCommandResult] = await self._api.get_exec_batch_results(
                 self._activity_id, self._batch_id
             )
             results = results[last_idx:]
             for result in results:
-                assert last_idx == result.index
-                if result.result == "Err":
+                any_new = True
+                assert last_idx == result.index, f"Expected {last_idx}, got {result.index}"
+                if result.result == "Error":
                     raise CommandExecutionError(result.message, last_idx)
                 yield Result(idx=result.index, message=result.message)
-                last_idx = result.index
+                last_idx = result.index + 1
                 if result.is_batch_finished:
                     break
+            if not any_new:
+                await asyncio.sleep(10)
 
     def __len__(self) -> int:
         return self._size
