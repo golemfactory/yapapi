@@ -47,7 +47,7 @@ class Allocation(_Link):
     "Allocation expiration timestamp"
 
     async def details(self) -> AllocationDetails:
-        details: yap.Allocation = self._api.get_allocation(self.id)
+        details: yap.Allocation = await self._api.get_allocation(self.id)
         return AllocationDetails(
             spent_amount=Decimal(details.spent_amount),
             remaining_amount=Decimal(details.remaining_amount),

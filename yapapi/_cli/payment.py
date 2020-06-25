@@ -52,6 +52,8 @@ class Allocation:
                     str(allocation.amount),
                     str(allocation.expires) if allocation.expires else None,
                 )
+
+            if table.row_count:
                 console.print(table)
             else:
                 console.print("[bold]No allocations[/bold]")

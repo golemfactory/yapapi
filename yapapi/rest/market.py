@@ -19,6 +19,9 @@ class Agreement(object):
 
 
 class OfferProposal(object):
+
+    __slots__ = ("_proposal", "_subscription")
+
     def __init__(self, subscription: "Subscription", proposal: models.ProposalEvent):
         self._proposal: models.ProposalEvent = proposal
         self._subscription: "Subscription" = subscription
@@ -39,6 +42,9 @@ class OfferProposal(object):
     def is_draft(self) -> bool:
         return self._proposal.proposal.state == "Draft"
 
+    async def reject(self, reason: Optional[str] = None):
+        await self._subscription._api.reject_proposal_offer(self._subscription.id, self.id)
+
     async def respond(
         self, props: Optional[object] = None, constraints: Optional[str] = None
     ) -> str:
@@ -48,7 +54,8 @@ class OfferProposal(object):
         )
         return new_proposal
 
-    async def agreement(self, timeout=timedelta(minutes=2)) -> Agreement:
+    # TODO: This timeout is for negotiation ?
+    async def agreement(self, timeout=timedelta(hours=1)) -> Agreement:
         proposal = models.AgreementProposal(
             proposal_id=self.id, valid_to=datetime.now(timezone.utc) + timeout,
         )
@@ -112,7 +119,7 @@ class Market(object):
     def __init__(self, api_client: ApiClient):
         self._api: RequestorApi = RequestorApi(api_client)
 
-    async def subscribe(self, props, constraints) -> Subscription:
+    async def subscribe(self, props: dict, constraints: str) -> Subscription:
         sub_id = await self._api.subscribe_demand(
             models.Demand(properties=props, constraints=constraints)
         )

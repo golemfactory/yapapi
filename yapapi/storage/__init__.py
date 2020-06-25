@@ -62,6 +62,12 @@ class InputStorageProvider(abc.ABC):
     async def upload_stream(self, length: int, stream: AsyncIterator[bytes]) -> Source:
         raise NotImplementedError
 
+    async def upload_bytes(self, data: bytes) -> Source:
+        async def _inner():
+            yield data
+
+        return await self.upload_stream(len(data), _inner())
+
     async def upload_file(self, path: os.PathLike) -> Source:
         fp = pathlib.Path(path)
         file_size = fp.stat().st_size

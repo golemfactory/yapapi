@@ -1,8 +1,10 @@
-from typing import Dict, Type, Any, Union, List, cast
+from typing import Dict, Type, Any, Union, List, cast, TypeVar
+import typing
 import abc
 import enum
 import json
 from dataclasses import dataclass, fields, MISSING
+from datetime import datetime, timezone
 
 Props = Dict[str, str]
 
@@ -30,9 +32,33 @@ class _PyField:
     required: bool
 
     def encode(self, value: str):
+        def get_type_origin(t):
+            # >= py3.8
+            if hasattr(typing, "get_origin"):
+                return typing.get_origin(t)
+            else:
+                return getattr(t, "__origin__", None)
+
+        def get_type_args(t):
+            # >= py3.8
+            if hasattr(typing, "get_args"):
+                return typing.get_args(t)
+            else:
+                return getattr(t, "__args__")
+
+        print("name=", self.name, "type=", self.type, type(self.type))
+        if get_type_origin(self.type) == Union:
+            if datetime in get_type_args(self.type):
+                return self.name, datetime.fromtimestamp(int(value), timezone.utc)
+
+            print("union")
+            return self.name, value
         if issubclass(self.type, enum.Enum):
             return self.name, self.type(value)
         return self.name, value
+
+
+ME = TypeVar("ME", bound="Model")
 
 
 class Model(abc.ABC):
@@ -44,7 +70,7 @@ class Model(abc.ABC):
         pass
 
     @classmethod
-    def from_props(cls, props: Props) -> "Model":
+    def from_props(cls: Type[ME], props: Props) -> ME:
         field_map = dict(
             (f.metadata["key"], _PyField(name=f.name, type=f.type, required=f.default is MISSING),)
             for f in fields(cls)
@@ -54,15 +80,17 @@ class Model(abc.ABC):
             (field_map[key].encode(val) for (key, val) in props.items() if key in field_map)
         )
         cls._custom_mapping(props, data)
-        print(dict(data))
         self = cls(**data)
-        return self
+        return cast(ME, self)
 
     @classmethod
     def keys(cls):
-        class _Keys:
+        class _Keys(dict):
             def __init__(self, iter):
                 self.__dict__ = dict(iter)
+
+            def names(self):
+                return self.__dict__.keys()
 
         return _Keys((f.name, f.metadata["key"]) for f in fields(cls))
 
