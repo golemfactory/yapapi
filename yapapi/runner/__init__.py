@@ -12,7 +12,7 @@ from decimal import Decimal
 from .ctx import WorkContext, CommandContainer
 from .. import rest
 from ..props.builder import DemandBuilder
-from ..props import com, Activity
+from ..props import com, Activity, Identification, IdentificationKeys
 from ..storage.webdav import DavStorageProvider
 import sys
 import abc
@@ -88,7 +88,9 @@ class Engine(AsyncContextManager):
         timeout: timedelta = timedelta(minutes=5),
         budget: Union[float, Decimal],
         strategy: MarketStrategy = DummyMS(),
+        subnet_tag: Optional[str] = None,
     ):
+        self._subnet: Optional[str] = subnet_tag
         self._strategy = strategy
         self._api_config = rest.Configuration()
         self._stack = AsyncExitStack()
@@ -123,6 +125,9 @@ class Engine(AsyncContextManager):
         # Building offer
         builder = DemandBuilder()
         builder.add(Activity(expiration=self._expires))
+        builder.add(Identification(subnet_tag=self._subnet))
+        if self._subnet:
+            builder.ensure(f"({IdentificationKeys.subnet_tag}={self._subnet})")
         await self._package.decorate_demand(builder)
         await self._strategy.decorate_demand(builder)
 
@@ -135,7 +140,7 @@ class Engine(AsyncContextManager):
         market_api = self._market_api
         activity_api: rest.Activity = self._activity_api
         strategy = self._strategy
-        work_queue = asyncio.Queue()
+        work_queue: asyncio.Queue[Task] = asyncio.Queue()
         event_queue = asyncio.Queue()
 
         async def _tmp_log():
@@ -164,11 +169,11 @@ class Engine(AsyncContextManager):
                         emit_progress("prop", "rejected", proposal_id, _for=provider_id)
                         continue
                     if proposal.is_draft:
-                        emit_progress("prop", "respond", proposal.id)
-                        await proposal.respond()
-                    else:
                         emit_progress("prop", "buffered", proposal.id)
                         offer_buffer[proposal.issuer] = BufferItem(datetime.now(), score, proposal)
+                    else:
+                        emit_progress("prop", "respond", proposal.id)
+                        await proposal.respond(builder.props, builder.cons)
 
         workers = []
         last_wid = 0
@@ -186,12 +191,16 @@ class Engine(AsyncContextManager):
             nonlocal last_wid
             wid = last_wid
             last_wid += 1
-            emit_progress("wkr", "created", wid, agreement=agreement.id)
+
+            details = await agreement.details()
+            provider_idn = details.view_prov(Identification)
+            emit_progress("wkr", "created", wid, agreement=agreement.id, provider_idn=provider_idn)
 
             async def task_emiter():
                 while True:
                     item = await work_queue.get()
                     emit_progress("wkr", "get-work", wid, task=item)
+                    item._start()
                     yield item
 
             async with (await activity_api.new_activity(agreement.id)) as act:
@@ -205,6 +214,9 @@ class Engine(AsyncContextManager):
                     batch.register(cc)
                     remote = await act.send(cc.commands())
                     print("new batch !!!", cc.commands(), remote)
+                    async for step in remote:
+                        emit_progress("wkr", "step", wid, step=step)
+
             emit_progress("wkr", "done", wid, agreement=agreement.id)
 
         def on_worker_stop(task: asyncio.Task):
@@ -213,6 +225,7 @@ class Engine(AsyncContextManager):
             # import ya_activity
 
             if task.exception():
+                task.print_stack()
                 e = task.exception()
                 # if isinstance(ya_activity.exceptions.ApiException, e):
                 #    e.
@@ -227,13 +240,20 @@ class Engine(AsyncContextManager):
                     try:
                         b: BufferItem
                         agreement = await b.proposal.agreement()
-                        emit_progress("agr", "create", agreement.id)
+                        emit_progress(
+                            "agr",
+                            "create",
+                            agreement.id,
+                            provider_idn=(await agreement.details()).view_prov(Identification),
+                        )
                         await agreement.confirm()
                         emit_progress("agr", "confirm", agreement.id)
                         task = loop.create_task(start_worker(agreement))
                         workers.append(task)
                         task.add_done_callback(on_worker_stop)
-
+                    except Exception as e:
+                        print("fail:", e)
+                        raise
                     finally:
                         pass
 
@@ -243,6 +263,7 @@ class Engine(AsyncContextManager):
 
         loop = asyncio.get_event_loop()
         find_offers_task = loop.create_task(find_offers())
+        find_offers_task.add_done_callback(on_worker_stop)
         # Py38: find_offers_task.set_name('find_offers_task')
         try:
             await asyncio.gather(worker_starter(), find_offers_task, _tmp_log(), fill_work_q())
@@ -305,6 +326,9 @@ class Task(Generic[TaskData, TaskResult], object):
         self._result: Optional[TaskResult] = None
         self._data = data
         self._status: TaskStatus = TaskStatus.WAITING
+
+    def _start(self):
+        self._status = TaskStatus.RUNNING
 
     @property
     def data(self) -> TaskData:

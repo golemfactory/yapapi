@@ -1,7 +1,21 @@
 import asyncio
-from typing import AsyncIterator, Optional
-from ya_market import ApiClient, RequestorApi, models
+from typing import AsyncIterator, Optional, TypeVar, Type
+from ..props import Model
+from ya_market import ApiClient, RequestorApi, models  # type: ignore
 from datetime import datetime, timedelta, timezone
+
+_ModelType = TypeVar("_ModelType", bound=Model)
+
+
+class AgreementDetails(object):
+    raw_details: models.Agreement
+
+    def __init__(self, *, _ref: models.Agreement):
+        self.raw_details = _ref
+
+    def view_prov(self, c: Type[_ModelType]) -> _ModelType:
+        offer: models.Offer = self.raw_details.offer
+        return c.from_props(offer.properties)
 
 
 class Agreement(object):
@@ -13,6 +27,9 @@ class Agreement(object):
     @property
     def id(self) -> str:
         return self._id
+
+    async def details(self) -> AgreementDetails:
+        return AgreementDetails(_ref=await self._api.get_agreement(self._id))
 
     async def confirm(self):
         await self._api.confirm_agreement(self._id)

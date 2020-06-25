@@ -8,6 +8,10 @@ from datetime import datetime
 @dataclass
 class Identification(Model):
     name: Optional[str] = field(default=None, metadata={"key": "golem.node.id.name"})
+    subnet_tag: Optional[str] = field(default=None, metadata={"key": "golem.node.debug.subnet"})
+
+
+IdentificationKeys = Identification.keys()
 
 
 @dataclass()

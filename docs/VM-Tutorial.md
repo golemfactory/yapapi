@@ -12,6 +12,6 @@ TODO
 
 ## Exposing container
 
-![GitHub Logo](../art/exposing-container.gif)
+![Exposing Container](../art/exposing-container.gif)
 
 ## Example app

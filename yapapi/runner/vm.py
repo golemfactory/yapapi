@@ -43,7 +43,8 @@ class _VmPackage(Package):
                 resp.raise_for_status()
 
             image_url = await resp.text()
-            return f"hash:sha3:{image_url}"
+            image_hash = self.image_hash
+            return f"hash:sha3:{image_hash}:{image_url}"
 
     async def decorate_demand(self, demand: DemandBuilder):
         image_url = await self.resolve_url()

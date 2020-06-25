@@ -1,9 +1,9 @@
 import os
 from typing import Optional
 from typing_extensions import Final
-import ya_market
-import ya_payment
-import ya_activity
+import ya_market  # type: ignore
+import ya_payment  # type: ignore
+import ya_activity  # type: ignore
 
 DEFAULT_API_URL: Final[str] = "http://127.0.0.1:7465"
 

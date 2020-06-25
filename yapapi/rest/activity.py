@@ -28,17 +28,10 @@ class ActivityService(object):
 
 
 class Activity(AsyncContextManager["Activity"]):
-
-    __slots__ = (
-        "_api",
-        "_state",
-        "_id",
-    )
-
     def __init__(self, _api: RequestorControlApi, _state: RequestorStateApi, activity_id: str):
-        self._api = _api
-        self._state = _state
-        self._id = activity_id
+        self._api: RequestorControlApi = _api
+        self._state: RequestorStateApi = _state
+        self._id: str = activity_id
 
     @property
     def id(self) -> str:
