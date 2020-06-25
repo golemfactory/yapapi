@@ -33,16 +33,16 @@ class _PyField:
 
     def encode(self, value: str):
         def get_type_origin(t):
-            # >= py3.8
+            # type: ignore
             if hasattr(typing, "get_origin"):
-                return typing.get_origin(t)
+                return typing.get_origin(t)  # type: ignore
             else:
                 return getattr(t, "__origin__", None)
 
         def get_type_args(t):
             # >= py3.8
             if hasattr(typing, "get_args"):
-                return typing.get_args(t)
+                return typing.get_args(t)  # type: ignore
             else:
                 return getattr(t, "__args__")
 
@@ -80,7 +80,7 @@ class Model(abc.ABC):
         )
         cls._custom_mapping(props, data)
         self = cls(**data)
-        return cast(ME, self)
+        return self
 
     @classmethod
     def keys(cls):

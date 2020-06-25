@@ -4,7 +4,18 @@
 from datetime import datetime, timedelta, timezone
 from enum import Enum, auto
 from types import MappingProxyType
-from typing import Optional, TypeVar, Generic, AsyncContextManager, Union, cast, Mapping, NamedTuple
+from typing import (
+    Optional,
+    TypeVar,
+    Generic,
+    AsyncContextManager,
+    Union,
+    cast,
+    Dict,
+    NamedTuple,
+    Tuple,
+    Mapping,
+)
 from typing_extensions import Final, Literal
 from dataclasses import dataclass, asdict, field
 from decimal import Decimal
@@ -79,6 +90,12 @@ class DummyMS(MarketStrategy, object):
         return SCORE_NEUTRAL
 
 
+class _BufferItem(NamedTuple):
+    ts: datetime
+    score: float
+    proposal: rest.market.OfferProposal
+
+
 class Engine(AsyncContextManager):
     def __init__(
         self,
@@ -131,17 +148,12 @@ class Engine(AsyncContextManager):
         await self._package.decorate_demand(builder)
         await self._strategy.decorate_demand(builder)
 
-        class BufferItem(NamedTuple):
-            ts: datetime
-            score: float
-            proposal: rest.market.OfferProposal
-
-        offer_buffer: Mapping[str, BufferItem] = {}
+        offer_buffer: Dict[str, _BufferItem] = {}
         market_api = self._market_api
         activity_api: rest.Activity = self._activity_api
         strategy = self._strategy
         work_queue: asyncio.Queue[Task] = asyncio.Queue()
-        event_queue = asyncio.Queue()
+        event_queue: asyncio.Queue[Tuple[str, str, Union[None, int, str], dict]] = asyncio.Queue()
 
         async def _tmp_log():
             while True:
@@ -151,7 +163,7 @@ class Engine(AsyncContextManager):
         def emit_progress(
             resource_type: Literal["sub", "prop", "agr", "act", "wkr"],
             event_type: str,
-            resource_id=None,
+            resource_id: Union[None, int, str] = None,
             **kwargs,
         ):
             event_queue.put_nowait((resource_type, event_type, resource_id, kwargs))
@@ -170,7 +182,8 @@ class Engine(AsyncContextManager):
                         continue
                     if proposal.is_draft:
                         emit_progress("prop", "buffered", proposal.id)
-                        offer_buffer[proposal.issuer] = BufferItem(datetime.now(), score, proposal)
+                        offer_buffer["ala"] = _BufferItem(datetime.now(), score, proposal)
+                        offer_buffer[proposal.issuer] = _BufferItem(datetime.now(), score, proposal)
                     else:
                         emit_progress("prop", "respond", proposal.id)
                         await proposal.respond(builder.props, builder.cons)
@@ -206,7 +219,7 @@ class Engine(AsyncContextManager):
             async with (await activity_api.new_activity(agreement.id)) as act:
                 emit_progress("act", "create", act.id)
 
-                work_context = WorkContext(wid, storage_manager)
+                work_context = WorkContext(f"worker-{wid}", storage_manager)
                 async for batch in worker(work_context, task_emiter()):
                     await batch.prepare()
                     print("prepared")
@@ -238,7 +251,6 @@ class Engine(AsyncContextManager):
                     provider_id, b = random.choice(list(offer_buffer.items()))
                     del offer_buffer[provider_id]
                     try:
-                        b: BufferItem
                         agreement = await b.proposal.agreement()
                         emit_progress(
                             "agr",
@@ -292,8 +304,8 @@ class Engine(AsyncContextManager):
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        self._market_api = None
-        self._payment_api = None
+        # self._market_api = None
+        # self._payment_api = None
         await self._stack.aclose()
 
 

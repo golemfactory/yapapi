@@ -22,6 +22,7 @@ repos:
     rev: "f687d36b12cd72d417bba07599ff27e734161768"
     hooks:
       - id: mypy
+        args: [--warn-redundant-casts, --check-untyped-defs, --ignore-missing-imports]
   - repo: https://github.com/prettier/prettier
     rev: 1.19.1
     hooks:

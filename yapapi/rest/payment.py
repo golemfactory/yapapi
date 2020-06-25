@@ -69,6 +69,7 @@ class _AllocationTask(ResourceCtx[Allocation]):
         model = self.model
         assert model.total_amount is not None
         assert model.timeout is not None
+        assert self._id is not None
 
         return Allocation(
             _api=self._api, id=self._id, amount=model.total_amount, expires=model.timeout,

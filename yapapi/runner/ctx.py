@@ -1,7 +1,7 @@
 import abc
 import json
 from pathlib import Path
-from typing import Iterable, Optional, Dict, List
+from typing import Iterable, Optional, Dict, List, Tuple
 
 from ..storage import StorageProvider, Source
 
@@ -94,8 +94,8 @@ class _Run(Work):
 
 
 class _Steps(Work):
-    def __init__(self, *steps):
-        self._steps: List[Work] = steps
+    def __init__(self, *steps: Work):
+        self._steps: Tuple[Work, ...] = steps
 
     async def prepare(self):
         for step in self._steps:
