@@ -8,11 +8,15 @@ from typing import Optional, TypeVar, Generic, AsyncContextManager, Union, cast,
 from typing_extensions import Final, Literal
 from dataclasses import dataclass, asdict, field
 from decimal import Decimal
+
+from .ctx import WorkContext, CommandContainer
 from .. import rest
 from ..props.builder import DemandBuilder
 from ..props import com, Activity
+from ..storage.webdav import DavStorageProvider
 import sys
 import abc
+import aiohttp
 
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
@@ -131,8 +135,7 @@ class Engine(AsyncContextManager):
         market_api = self._market_api
         activity_api: rest.Activity = self._activity_api
         strategy = self._strategy
-        # TODO: work_queue = asyncio.Queue(maxsize=1)
-
+        work_queue = asyncio.Queue()
         event_queue = asyncio.Queue()
 
         async def _tmp_log():
@@ -141,7 +144,7 @@ class Engine(AsyncContextManager):
                 print(item)
 
         def emit_progress(
-            resource_type: Literal["sub", "prop", "agr", "act"],
+            resource_type: Literal["sub", "prop", "agr", "act", "wkr"],
             event_type: str,
             resource_id=None,
             **kwargs,
@@ -168,11 +171,52 @@ class Engine(AsyncContextManager):
                         offer_buffer[proposal.issuer] = BufferItem(datetime.now(), score, proposal)
 
         workers = []
+        last_wid = 0
+
+        aio_session = await self._stack.enter_async_context(aiohttp.ClientSession())
+
+        storage_manager = await DavStorageProvider.for_directory(
+            aio_session,
+            "http://127.0.0.1:8077/",
+            "test1",
+            auth=aiohttp.BasicAuth("alice", "secret1234"),
+        )
 
         async def start_worker(agreement: rest.market.Agreement):
+            nonlocal last_wid
+            wid = last_wid
+            last_wid += 1
+            emit_progress("wkr", "created", wid, agreement=agreement.id)
+
+            async def task_emiter():
+                while True:
+                    item = await work_queue.get()
+                    emit_progress("wkr", "get-work", wid, task=item)
+                    yield item
+
             async with (await activity_api.new_activity(agreement.id)) as act:
                 emit_progress("act", "create", act.id)
-            pass
+
+                work_context = WorkContext(wid, storage_manager)
+                async for batch in worker(work_context, task_emiter()):
+                    await batch.prepare()
+                    print("prepared")
+                    cc = CommandContainer()
+                    batch.register(cc)
+                    remote = await act.send(cc.commands())
+                    print("new batch !!!", cc.commands(), remote)
+            emit_progress("wkr", "done", wid, agreement=agreement.id)
+
+        def on_worker_stop(task: asyncio.Task):
+            import traceback
+
+            # import ya_activity
+
+            if task.exception():
+                e = task.exception()
+                # if isinstance(ya_activity.exceptions.ApiException, e):
+                #    e.
+                traceback.print_exception(BaseException, e, None)
 
         async def worker_starter():
             while True:
@@ -186,15 +230,22 @@ class Engine(AsyncContextManager):
                         emit_progress("agr", "create", agreement.id)
                         await agreement.confirm()
                         emit_progress("agr", "confirm", agreement.id)
-                        workers.append(loop.create_task(start_worker(agreement)))
+                        task = loop.create_task(start_worker(agreement))
+                        workers.append(task)
+                        task.add_done_callback(on_worker_stop)
+
                     finally:
                         pass
+
+        async def fill_work_q():
+            for task in data:
+                await work_queue.put(task)
 
         loop = asyncio.get_event_loop()
         find_offers_task = loop.create_task(find_offers())
         # Py38: find_offers_task.set_name('find_offers_task')
         try:
-            await asyncio.gather(worker_starter(), find_offers_task, _tmp_log())
+            await asyncio.gather(worker_starter(), find_offers_task, _tmp_log(), fill_work_q())
         finally:
             find_offers_task.cancel()
             await find_offers_task
@@ -205,12 +256,14 @@ class Engine(AsyncContextManager):
 
     async def __aenter__(self):
         stack = self._stack
+
         # TODO: Cleanup on exception here.
         self._expires = datetime.now(timezone.utc) + self._conf.timeout
         market_client = await stack.enter_async_context(self._api_config.market())
         self._market_api = rest.Market(market_client)
 
         activity_client = await stack.enter_async_context(self._api_config.activity())
+        print(f"act_url={self._api_config.activity_url}")
         self._activity_api = rest.Activity(activity_client)
 
         payment_client = await stack.enter_async_context(self._api_config.payment())

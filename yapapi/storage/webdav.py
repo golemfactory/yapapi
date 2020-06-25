@@ -109,7 +109,7 @@ class DavStorageProvider(StorageProvider):
             base_url += "/"
         col_url = urljoin(base_url, directory_name)
         response = await client.request(method="MKCOL", url=col_url, auth=auth)
-        if response.status != 201:
+        if response.status != 201 and response.status != 405:
             response.raise_for_status()
         return cls(client, col_url, auth=auth)
 

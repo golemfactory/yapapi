@@ -75,7 +75,7 @@ class Configuration(object):
         )
 
     def activity(self) -> ya_activity.ApiClient:
-        cfg = ya_payment.Configuration(host=self.payment_url)
+        cfg = ya_activity.Configuration(host=self.activity_url)
         return ya_activity.ApiClient(
             configuration=cfg, header_name="authorization", header_value=f"Bearer {self.app_key}",
         )

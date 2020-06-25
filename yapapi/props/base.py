@@ -46,12 +46,11 @@ class _PyField:
             else:
                 return getattr(t, "__args__")
 
-        print("name=", self.name, "type=", self.type, type(self.type))
+        # print("name=", self.name, "type=", self.type, type(self.type))
         if get_type_origin(self.type) == Union:
             if datetime in get_type_args(self.type):
-                return self.name, datetime.fromtimestamp(int(value), timezone.utc)
-
-            print("union")
+                # TODO: fix this.
+                return self.name, datetime.fromtimestamp(int(float(value) * 0.001), timezone.utc)
             return self.name, value
         if issubclass(self.type, enum.Enum):
             return self.name, self.type(value)

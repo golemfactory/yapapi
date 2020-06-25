@@ -34,6 +34,12 @@ class Work(abc.ABC):
         pass
 
 
+class _InitStep(Work):
+    def register(self, commands: CommandContainer):
+        commands.deploy()
+        commands.start()
+
+
 class _SendWork(Work, abc.ABC):
     def __init__(self, storage: StorageProvider, dst_path: str):
         self._storage = storage
@@ -46,7 +52,7 @@ class _SendWork(Work, abc.ABC):
         pass
 
     async def prepare(self):
-        self._src = self.do_upload(self._storage)
+        self._src = await self.do_upload(self._storage)
 
     def register(self, commands: CommandContainer):
         assert self._src is not None, "cmd prepared"
@@ -87,11 +93,30 @@ class _Run(Work):
         self._idx = commands.run(entry_point=self.cmd, args=self.args)
 
 
+class _Steps(Work):
+    def __init__(self, *steps):
+        self._steps: List[Work] = steps
+
+    async def prepare(self):
+        for step in self._steps:
+            await step.prepare()
+
+    def register(self, commands: CommandContainer):
+        for step in self._steps:
+            step.register(commands)
+
+
 class WorkContext:
     def __init__(self, ctx_id: str, storage: StorageProvider):
         self._id = ctx_id
         self._storage: StorageProvider = storage
         self._pending_steps: List[Work] = []
+        self._started: bool = False
+
+    def __prepare(self):
+        if not self._started:
+            self._pending_steps.append(_InitStep())
+            self._started = True
 
     def begin(self):
         pass
@@ -100,10 +125,12 @@ class WorkContext:
         self._pending_steps.append(_SendJson(self._storage, data, json_path))
 
     def send_file(self, src_path: str, dst_path: str):
+        self.__prepare()
         self._pending_steps.append(_SendFile(self._storage, src_path, dst_path))
 
     def run(self, cmd: str, *args: Iterable[str], env: Optional[Dict[str, str]] = None):
-        pass
+        self.__prepare()
+        self._pending_steps.append(_Run(cmd, *args, env=env))
 
     def download_file(self, src_path: str, dst_path: str):
         pass
@@ -112,4 +139,5 @@ class WorkContext:
         print(f"W{self._id}: ", *args)
 
     def commit(self) -> Work:
-        raise NotImplementedError
+        steps = self._pending_steps
+        return _Steps(*steps)

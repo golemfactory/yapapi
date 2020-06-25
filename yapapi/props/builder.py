@@ -48,7 +48,7 @@ class DemandBuilder:
             if value is None:
                 continue
             if isinstance(value, datetime):
-                value = int(value.timestamp())
+                value = int(value.timestamp() * 1000)
             if isinstance(value, enum.Enum):
                 value = value.value
             assert isinstance(value, (str, int, list))

@@ -45,6 +45,7 @@ async def main():
         package=package, max_workers=10, budget=10.0, timeout=timedelta(minutes=5)
     ) as engine:
         async for progress in engine.map(worker, [Task(data=frame) for frame in range(1, 101)]):
+
             print("progress=", progress)
 
 
@@ -53,6 +54,7 @@ if __name__ == "__main__":
     task = loop.create_task(main())
     try:
         asyncio.get_event_loop().run_until_complete(task)
-    except KeyboardInterrupt:
+    except (Exception, KeyboardInterrupt) as e:
+        print(e)
         task.cancel()
         asyncio.get_event_loop().run_until_complete(asyncio.sleep(0.3))

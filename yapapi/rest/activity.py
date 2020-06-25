@@ -19,8 +19,12 @@ class ActivityService(object):
         self._state = RequestorStateApi(api_client)
 
     async def new_activity(self, agreement_id: str) -> "Activity":
-        activity_id = await self._api.create_activity(agreement_id)
-        return Activity(self._api, self._state, activity_id)
+        try:
+            activity_id = await self._api.create_activity(agreement_id)
+            return Activity(self._api, self._state, activity_id)
+        except yexc.ApiException:
+            print("fail to create activity", agreement_id)
+            raise
 
 
 class Activity(AsyncContextManager["Activity"]):
