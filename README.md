@@ -1,7 +1,8 @@
 # Golem Python API
 
-[![GitHub license](https://img.shields.io/github/license/prekucki/yapapi)](https://github.com/prekucki/yapapi/blob/master/LICENSE)
+![PyPI - Status](https://img.shields.io/pypi/status/yapapi)
 [![PyPI version](https://badge.fury.io/py/yapapi.svg)](https://badge.fury.io/py/yapapi)
+[![GitHub license](https://img.shields.io/github/license/prekucki/yapapi)](https://github.com/prekucki/yapapi/blob/master/LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/prekucki/yapapi)](https://github.com/prekucki/yapapi/issues)
 ![Continuous integration](https://github.com/prekucki/yapapi/workflows/Continuous%20integration/badge.svg)
 
