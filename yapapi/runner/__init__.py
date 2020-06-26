@@ -1,7 +1,11 @@
 """
 
 """
+import abc
+import sys
+from asyncio import CancelledError
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from enum import Enum, auto
 from types import MappingProxyType
 from typing import (
@@ -9,25 +13,26 @@ from typing import (
     TypeVar,
     Generic,
     AsyncContextManager,
+    Callable,
     Union,
     cast,
     Dict,
     NamedTuple,
     Tuple,
     Mapping,
+    AsyncIterator,
+    List,
 )
-from typing_extensions import Final, Literal
-from dataclasses import dataclass, asdict, field
-from decimal import Decimal
 
-from .ctx import WorkContext, CommandContainer
-from .. import rest
-from ..props.builder import DemandBuilder
-from ..props import com, Activity, Identification, IdentificationKeys
-from ..storage.webdav import DavStorageProvider
-import sys
-import abc
 import aiohttp
+from dataclasses import dataclass, asdict, field
+from typing_extensions import Final, Literal
+
+from .ctx import WorkContext, CommandContainer, Work
+from .. import rest
+from ..props import com, Activity, Identification, IdentificationKeys
+from ..props.builder import DemandBuilder
+from ..storage.webdav import DavStorageProvider
 
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
@@ -117,7 +122,9 @@ class Engine(AsyncContextManager):
         self._budget_amount = Decimal(budget)
         self._budget_allocation: Optional[rest.payment.Allocation] = None
 
-    async def map(self, worker, data):
+    async def map(
+        self, worker: Callable[[WorkContext, AsyncIterator["Task"]], AsyncIterator[Work]], data
+    ):
         import asyncio
         import contextlib
         import random
@@ -188,7 +195,7 @@ class Engine(AsyncContextManager):
                         emit_progress("prop", "respond", proposal.id)
                         await proposal.respond(builder.props, builder.cons)
 
-        workers = []
+        workers: List[asyncio.Task] = []
         last_wid = 0
 
         aio_session = await self._stack.enter_async_context(aiohttp.ClientSession())
@@ -213,7 +220,7 @@ class Engine(AsyncContextManager):
                 while True:
                     item = await work_queue.get()
                     emit_progress("wkr", "get-work", wid, task=item)
-                    item._start()
+                    item._start(_emiter=emit_progress)
                     yield item
 
             async with (await activity_api.new_activity(agreement.id)) as act:
@@ -229,6 +236,9 @@ class Engine(AsyncContextManager):
                     print("new batch !!!", cc.commands(), remote)
                     async for step in remote:
                         emit_progress("wkr", "step", wid, step=step)
+                    emit_progress("wkr", "get-results", wid)
+                    await batch.post()
+                    emit_progress("wkr", "bach-done", wid)
 
             emit_progress("wkr", "done", wid, agreement=agreement.id)
 
@@ -236,13 +246,18 @@ class Engine(AsyncContextManager):
             import traceback
 
             # import ya_activity
+            print("smok3")
+            if task.cancelled():
+                return
 
-            if task.exception():
-                task.print_stack()
-                e = task.exception()
-                # if isinstance(ya_activity.exceptions.ApiException, e):
-                #    e.
-                traceback.print_exception(BaseException, e, None)
+            e = task.exception()
+            if e:
+                with contextlib.suppress(CancelledError):
+                    print("smok2", type(e), e)
+                    task.print_stack()
+                    traceback.print_exception(BaseException, e, None)
+
+            print("smok1")
 
         async def worker_starter():
             while True:
@@ -265,7 +280,6 @@ class Engine(AsyncContextManager):
                         task.add_done_callback(on_worker_stop)
                     except Exception as e:
                         print("fail:", e)
-                        raise
                     finally:
                         pass
 
@@ -330,6 +344,7 @@ class Task(Generic[TaskData, TaskResult], object):
     ):
         self._started = datetime.now()
         self._expires: Optional[datetime]
+        self._emit_event = None
         if timeout:
             self._expires = self._started + timeout
         else:
@@ -339,8 +354,12 @@ class Task(Generic[TaskData, TaskResult], object):
         self._data = data
         self._status: TaskStatus = TaskStatus.WAITING
 
-    def _start(self):
+    def __repr__(self):
+        return f"Task(data={self._data}"
+
+    def _start(self, _emiter):
         self._status = TaskStatus.RUNNING
+        self._emit_event = _emiter
 
     @property
     def data(self) -> TaskData:
@@ -355,6 +374,8 @@ class Task(Generic[TaskData, TaskResult], object):
         return self._expires
 
     def accept_task(self, result: Optional[TaskResult] = None):
+        if self._emit_event:
+            (self._emit_event)("task", "accept", None, result=result)
         assert self._status == TaskStatus.RUNNING
         self._status = TaskStatus.ACCEPTED
 

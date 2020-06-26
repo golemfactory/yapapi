@@ -6,7 +6,7 @@ import asyncio
 
 async def main():
     package = await vm.repo(
-        image_hash="6aa255e26ff0877e58981b5f2cf15c6733670c414d6c96fc3e40442b",
+        image_hash="14cd8c89d1aa0392b80ba7db960a327a87344ba4247028002225c05e",
         min_mem_gib=0.5,
         min_storage_gib=2.0,
     )
@@ -32,8 +32,8 @@ async def main():
                     "OUTPUT_DIR": "/golem/output",
                 },
             )
-            ctx.run("/golem/entrypoints/render_entrypoint.py")
-            ctx.download_file("/golem/output/out.png", f"output_{frame}.png")
+            ctx.run("/golem/entrypoints/run-blender.sh")
+            ctx.download_file(f"/golem/output/out{frame:04d}.png", f"output_{frame}.png")
             yield ctx.commit()
             # TODO: Check if job is valid
             # and reject by: task.reject_task(msg = 'invalid file')
@@ -42,9 +42,9 @@ async def main():
         ctx.log("no more frame to render")
 
     async with Engine(
-        package=package, max_workers=10, budget=10.0, timeout=timedelta(minutes=5), subnet_tag="R1"
+        package=package, max_workers=10, budget=10.0, timeout=timedelta(minutes=15), subnet_tag="R1"
     ) as engine:
-        async for progress in engine.map(worker, [Task(data=frame) for frame in range(1, 101)]):
+        async for progress in engine.map(worker, [Task(data=frame) for frame in range(0, 50, 15)]):
 
             print("progress=", progress)
 
