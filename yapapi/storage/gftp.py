@@ -22,27 +22,54 @@ from yapapi.storage import StorageProvider, Destination, Source, Content
 
 
 class PubLink(TypedDict):
+    """GFTP linking information."""
+
     file: str
+    """file on local filesystem."""
+
     url: str
+    """GFTP url as which local files is exposed."""
+
+
+CommandStatus = Literal["ok", "error"]
 
 
 class GftpDriver(Protocol):
+    """Golem FTP service API.
+
+    """
+
     async def version(self) -> str:
+        """Gets driver version."""
         pass
 
     async def publish(self, *, files: List[str]) -> List[PubLink]:
+        """Exposes local file as GFTP url.
+
+        - `files` - local files to be exposed
+
+        """
         pass
 
-    async def close(self, *, urls: List[str]) -> List[Literal["ok", "error"]]:
+    async def close(self, *, urls: List[str]) -> CommandStatus:
+        """Stops exposing GFTP urls created by [publish(files=[..])](#publish)."""
         pass
 
     async def receive(self, *, output_file: str) -> PubLink:
+        """Creates GFTP url for receiving file.
+
+         - `output_file` -
+         """
         pass
 
     async def upload(self, *, file: str, url: str):
         pass
 
-    async def shutdown(self) -> Literal["Ok", "Error"]:
+    async def shutdown(self) -> CommandStatus:
+        """Stops GFTP service.
+
+         After shutdown all generated urls will be unavailable.
+        """
         pass
 
 
@@ -73,15 +100,21 @@ class __Process(jsonrpc_base.Server):
             return
         p: asyncio.subprocess.Process = self._proc
         self._proc = None
+
+        with contextlib.suppress(Exception):
+            await cast(GftpDriver, self).shutdown()
+
         if p.stdin:
-            p.stdin.close()
+            await p.stdin.drain()
             try:
-                await asyncio.wait_for(p.wait(), 1.0)
+                await asyncio.wait_for(p.wait(), 10.0)
                 return
             except asyncio.TimeoutError:
+                print("timeout!")
                 pass
         p.kill()
-        await p.wait()
+        ret_code = await p.wait()
+        print("code=", ret_code)
 
     def __log_debug(self, msg_dir: Literal["in", "out"], msg: Union[bytes, str]):
         if self._debug:
@@ -226,4 +259,4 @@ def provider() -> AsyncContextManager[StorageProvider]:
     return GftpProvider()
 
 
-__all__ = ("service", "provider")
+__all__ = ("service", "provider", "GftpDriver", "PubLink")

@@ -4,3 +4,8 @@ __pycache__/
 
 dist/
 poetry.lock
+
+
+#Added by cargo
+
+/target
