@@ -118,7 +118,9 @@ class _RecvFile(Work):
 
     async def post(self):
         assert self._dst_slot, "_RecvFile post without prepare"
+        print("start")
         await self._dst_slot.download_file(self._dst_path)
+        print("done")
 
 
 class _Steps(Work):

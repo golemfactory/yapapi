@@ -24,7 +24,6 @@ from typing import (
     List,
 )
 
-import aiohttp
 from dataclasses import dataclass, asdict, field
 from typing_extensions import Final, Literal
 
@@ -32,7 +31,7 @@ from .ctx import WorkContext, CommandContainer, Work
 from .. import rest
 from ..props import com, Activity, Identification, IdentificationKeys
 from ..props.builder import DemandBuilder
-from ..storage.webdav import DavStorageProvider
+from ..storage import gftp
 
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
@@ -198,14 +197,16 @@ class Engine(AsyncContextManager):
         workers: List[asyncio.Task] = []
         last_wid = 0
 
-        aio_session = await self._stack.enter_async_context(aiohttp.ClientSession())
-
-        storage_manager = await DavStorageProvider.for_directory(
-            aio_session,
-            "http://127.0.0.1:8077/",
-            "test1",
-            auth=aiohttp.BasicAuth("alice", "secret1234"),
-        )
+        # aio_session = await self._stack.enter_async_context(aiohttp.ClientSession())
+        # storage_manager = await DavStorageProvider.for_directory(
+        #    aio_session,
+        #    "http://127.0.0.1:8077/",
+        #    "test1",
+        #    auth=aiohttp.BasicAuth("alice", "secret1234"),
+        # )
+        print("pre")
+        storage_manager = await self._stack.enter_async_context(gftp.provider())
+        print("post")
 
         async def start_worker(agreement: rest.market.Agreement):
             nonlocal last_wid
@@ -235,7 +236,9 @@ class Engine(AsyncContextManager):
                     remote = await act.send(cc.commands())
                     print("new batch !!!", cc.commands(), remote)
                     async for step in remote:
-                        emit_progress("wkr", "step", wid, step=step)
+                        message = step.message[:25] if step.message else None
+                        idx = step.idx
+                        emit_progress("wkr", "step", wid, message=message, idx=idx)
                     emit_progress("wkr", "get-results", wid)
                     await batch.post()
                     emit_progress("wkr", "bach-done", wid)

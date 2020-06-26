@@ -9,7 +9,7 @@ from yapapi.storage import gftp
 ME = __file__
 
 
-@pytest.mark.skip
+@pytest.mark.gftp
 def test_gftp_service():
     async def run():
         async with gftp.service(debug=True) as server:
@@ -24,6 +24,7 @@ def test_gftp_service():
                 print("recv_url=", recv_url)
                 await server.upload(file=ME, url=recv_url["url"])
                 print(f"output_file={output_file}")
+                assert output_file.read_text(encoding="utf-8"), Path(ME).read_text(encoding="utf-8")
                 await asyncio.sleep(10)
             await server.shutdown()
 
