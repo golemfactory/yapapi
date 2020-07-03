@@ -6,7 +6,7 @@ import asyncio
 
 async def main():
     package = await vm.repo(
-        image_hash="14cd8c89d1aa0392b80ba7db960a327a87344ba4247028002225c05e",
+        image_hash="27c5138d399068738471e5f63b5a8161ba57b490b5cf12d0bd7219cc",
         min_mem_gib=0.5,
         min_storage_gib=2.0,
     )
@@ -42,7 +42,7 @@ async def main():
         ctx.log("no more frame to render")
 
     async with Engine(
-        package=package, max_workers=10, budget=10.0, timeout=timedelta(minutes=15), subnet_tag="R1"
+        package=package, max_workers=10, budget=10.0, timeout=timedelta(minutes=15), subnet_tag="R2"
     ) as engine:
         async for progress in engine.map(worker, [Task(data=frame) for frame in range(0, 50, 15)]):
 

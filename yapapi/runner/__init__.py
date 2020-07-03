@@ -3,7 +3,6 @@
 """
 import abc
 import sys
-from asyncio import CancelledError
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from enum import Enum, auto
@@ -21,7 +20,7 @@ from typing import (
     Tuple,
     Mapping,
     AsyncIterator,
-    List,
+    Set,
 )
 
 from dataclasses import dataclass, asdict, field
@@ -129,6 +128,11 @@ class Engine(AsyncContextManager):
         import random
 
         stack = self._stack
+        tasks_processed = {"c": 0, "s": 0}
+
+        def on_work_done(task, status):
+            tasks_processed["c"] += 1
+
         # Creating allocation
         if not self._budget_allocation:
             self._budget_allocation = cast(
@@ -160,6 +164,9 @@ class Engine(AsyncContextManager):
         strategy = self._strategy
         work_queue: asyncio.Queue[Task] = asyncio.Queue()
         event_queue: asyncio.Queue[Tuple[str, str, Union[None, int, str], dict]] = asyncio.Queue()
+
+        workers: Set[asyncio.Task[None]] = set()
+        last_wid = 0
 
         async def _tmp_log():
             while True:
@@ -194,9 +201,6 @@ class Engine(AsyncContextManager):
                         emit_progress("prop", "respond", proposal.id)
                         await proposal.respond(builder.props, builder.cons)
 
-        workers: List[asyncio.Task] = []
-        last_wid = 0
-
         # aio_session = await self._stack.enter_async_context(aiohttp.ClientSession())
         # storage_manager = await DavStorageProvider.for_directory(
         #    aio_session,
@@ -220,6 +224,7 @@ class Engine(AsyncContextManager):
             async def task_emiter():
                 while True:
                     item = await work_queue.get()
+                    item._add_callback(on_work_done)
                     emit_progress("wkr", "get-work", wid, task=item)
                     item._start(_emiter=emit_progress)
                     yield item
@@ -245,23 +250,6 @@ class Engine(AsyncContextManager):
 
             emit_progress("wkr", "done", wid, agreement=agreement.id)
 
-        def on_worker_stop(task: asyncio.Task):
-            import traceback
-
-            # import ya_activity
-            print("smok3")
-            if task.cancelled():
-                return
-
-            e = task.exception()
-            if e:
-                with contextlib.suppress(CancelledError):
-                    print("smok2", type(e), e)
-                    task.print_stack()
-                    traceback.print_exception(BaseException, e, None)
-
-            print("smok1")
-
         async def worker_starter():
             while True:
                 await asyncio.sleep(2)
@@ -269,6 +257,8 @@ class Engine(AsyncContextManager):
                     provider_id, b = random.choice(list(offer_buffer.items()))
                     del offer_buffer[provider_id]
                     try:
+                        task = None
+                        agreement = None
                         agreement = await b.proposal.agreement()
                         emit_progress(
                             "agr",
@@ -279,26 +269,54 @@ class Engine(AsyncContextManager):
                         await agreement.confirm()
                         emit_progress("agr", "confirm", agreement.id)
                         task = loop.create_task(start_worker(agreement))
-                        workers.append(task)
-                        task.add_done_callback(on_worker_stop)
+                        workers.add(task)
+                        # task.add_done_callback(on_worker_stop)
                     except Exception as e:
-                        print("fail:", e)
+                        # import traceback
+                        # traceback.print_exception(Exception, e, e.__traceback__)
+                        if task:
+                            task.cancel()
+                        emit_progress("prop", "fail", b.proposal.id, reason=str(e))
                     finally:
                         pass
 
         async def fill_work_q():
             for task in data:
+                tasks_processed["s"] += 1
                 await work_queue.put(task)
 
         loop = asyncio.get_event_loop()
         find_offers_task = loop.create_task(find_offers())
-        find_offers_task.add_done_callback(on_worker_stop)
         # Py38: find_offers_task.set_name('find_offers_task')
         try:
-            await asyncio.gather(worker_starter(), find_offers_task, _tmp_log(), fill_work_q())
+            task_fill_q = loop.create_task(fill_work_q())
+            services = {
+                find_offers_task,
+                loop.create_task(_tmp_log()),
+                task_fill_q,
+                loop.create_task(worker_starter()),
+            }
+            while (
+                task_fill_q in services
+                or not work_queue.empty()
+                or tasks_processed["s"] > tasks_processed["c"]
+            ):
+                done, pending = await asyncio.wait(
+                    services.union(workers), timeout=10, return_when=asyncio.FIRST_COMPLETED
+                )
+                # print('done=', done)
+                workers -= done
+                services = services - done
+            print("all work done")
+        except Exception as e:
+            print("fail=", e)
         finally:
+            for worker_task in workers:
+                worker_task.cancel()
             find_offers_task.cancel()
-            await find_offers_task
+            await asyncio.wait(
+                workers.union({find_offers_task}), timeout=5, return_when=asyncio.ALL_COMPLETED
+            )
         yield {}
 
         yield {"done": True}
@@ -348,6 +366,7 @@ class Task(Generic[TaskData, TaskResult], object):
         self._started = datetime.now()
         self._expires: Optional[datetime]
         self._emit_event = None
+        self._callbacks: Set[Callable[["Task", str], None]] = set()
         if timeout:
             self._expires = self._started + timeout
         else:
@@ -356,6 +375,9 @@ class Task(Generic[TaskData, TaskResult], object):
         self._result: Optional[TaskResult] = None
         self._data = data
         self._status: TaskStatus = TaskStatus.WAITING
+
+    def _add_callback(self, callback):
+        self._callbacks.add(callback)
 
     def __repr__(self):
         return f"Task(data={self._data}"
@@ -381,6 +403,8 @@ class Task(Generic[TaskData, TaskResult], object):
             (self._emit_event)("task", "accept", None, result=result)
         assert self._status == TaskStatus.RUNNING
         self._status = TaskStatus.ACCEPTED
+        for cb in self._callbacks:
+            cb(self, "accept")
 
     def reject_task(self):
         assert self._status == TaskStatus.RUNNING

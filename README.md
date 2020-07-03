@@ -1,10 +1,10 @@
 # Golem Python API
 
+[![Tests - Status](https://img.shields.io/github/workflow/status/prekucki/yapapi/Continuous%20integration/master?label=tests)](https://github.com/prekucki/yapapi/actions?query=workflow%3A%22Continuous+integration%22+branch%3Amaster)
 ![PyPI - Status](https://img.shields.io/pypi/status/yapapi)
 [![PyPI version](https://badge.fury.io/py/yapapi.svg)](https://badge.fury.io/py/yapapi)
 [![GitHub license](https://img.shields.io/github/license/prekucki/yapapi)](https://github.com/prekucki/yapapi/blob/master/LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/prekucki/yapapi)](https://github.com/prekucki/yapapi/issues)
-![Continuous integration](https://github.com/prekucki/yapapi/workflows/Continuous%20integration/badge.svg)
 
 ## How to use
 
@@ -59,7 +59,10 @@ async def main():
         ctx.log("no more frame to render")
 
     async with Engine(
-        package=package, max_worker=10, budget=10.0, timeout=timedelta(minutes=5)
+        package=package,
+        max_worker=10,
+        budget=10.0,
+        timeout=timedelta(minutes=5),
     ) as engine:
         async for progress in engine.map(
             worker, [Task(data=frame) for frame in range(1, 101)]

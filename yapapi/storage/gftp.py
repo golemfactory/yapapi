@@ -19,6 +19,9 @@ from async_exit_stack import AsyncExitStack
 from typing_extensions import Protocol, Literal, TypedDict, AsyncContextManager
 
 from yapapi.storage import StorageProvider, Destination, Source, Content
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class PubLink(TypedDict):
@@ -46,7 +49,8 @@ class GftpDriver(Protocol):
     async def publish(self, *, files: List[str]) -> List[PubLink]:
         """Exposes local file as GFTP url.
 
-        - `files` - local files to be exposed
+        `files`
+        :   local files to be exposed
 
         """
         pass
@@ -58,7 +62,7 @@ class GftpDriver(Protocol):
     async def receive(self, *, output_file: str) -> PubLink:
         """Creates GFTP url for receiving file.
 
-         - `output_file` -
+         :  `output_file` -
          """
         pass
 
@@ -106,15 +110,15 @@ class __Process(jsonrpc_base.Server):
 
         if p.stdin:
             await p.stdin.drain()
+            p.stdin.close()
             try:
                 await asyncio.wait_for(p.wait(), 10.0)
                 return
             except asyncio.TimeoutError:
-                print("timeout!")
                 pass
         p.kill()
         ret_code = await p.wait()
-        print("code=", ret_code)
+        _logger.debug("GFTP server closed, code=%d", ret_code)
 
     def __log_debug(self, msg_dir: Literal["in", "out"], msg: Union[bytes, str]):
         if self._debug:
@@ -177,15 +181,13 @@ class GftpDestination(Destination):
             with open(file_path, "rb") as f:
                 chunk = f.read(30_000)
                 while chunk:
-                    print(f"chunk={len(chunk)}")
                     yield chunk
                     chunk = f.read(30_000)
 
         return Content(length=length, stream=chunks())
 
     async def download_file(self, destination_file: PathLike):
-        if destination_file == self._link["file"]:
-            print("downloaded")
+        if str(destination_file) == self._link["file"]:
             return
         return await super().download_file(destination_file)
 
@@ -249,6 +251,9 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
         return GftpSource(length, links[0])
 
     async def new_destination(self, destination_file: Optional[PathLike] = None) -> Destination:
+        if destination_file:
+            if Path(destination_file).exists():
+                destination_file = None
         output_file = str(destination_file) if destination_file else str(self.__new_file())
         process = await self.__get_process()
         link = await process.receive(output_file=output_file)

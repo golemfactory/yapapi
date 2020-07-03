@@ -18,6 +18,8 @@ repos:
     rev: v1.7.0
     hooks:
       - id: blacken-docs
+        args:
+          - --line-length=81
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: "f687d36b12cd72d417bba07599ff27e734161768"
     hooks:

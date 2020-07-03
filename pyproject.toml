@@ -4,7 +4,7 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "yapapi"
-version = "0.1.1"
+version = "0.1.2"
 description = "Hi-Level API for Golem The Next Milestone"
 authors = ["Przemysław K. Rekucki <przemyslaw.rekucki@golem.network>"]
 license = "LGPL-3.0-or-later"
@@ -21,7 +21,7 @@ readme = "README.md"
 python = "^3.6.1"
 aiohttp = "^3.6"
 dataclasses = { version = "^0.7", python = ">=3.6, <3.7"}
-ya-market = "^0.1.0"
+
 urllib3 = "^1.25.9"
 typing_extensions = "^3.7.4"
 
@@ -29,8 +29,11 @@ fire = { version = "^0.3.1", optional = true }
 rich = { version = "^2.2.5", optional = true }
 async_exit_stack = "^1.0.1"
 jsonrpc-base = "^1.0.3"
-ya-client-activity = "^0.1.0"
-ya-client-payment = "^0.1.0"
+
+#ya-client-activity = "^0.1.0"
+#ya-client-payment = "^0.1.0"
+#ya-market = "^0.1.0"
+ya-aioclient = "^0.1.1"
 
 [tool.poetry.extras]
 cli = ['fire', 'rich']
@@ -42,6 +45,7 @@ pytest = "^5.4.3"
 portray = "^1"
 pytest-asyncio = "^0.12.0"
 mypy = "^0.782"
+liccheck = "^0.4.7"
 
 [tool.portray]
 
@@ -55,3 +59,41 @@ exclude_source = true
 [tool.black]
 line-length = 100
 target-version = ['py36']
+
+[tool.blacken-docs]
+line-length = 80
+
+[tool.liccheck]
+authorized_licenses = [
+  "bsd",
+  "new bsd",
+  "bsd license",
+  "apache 2",
+  "apache",
+  "MPL-2.0",
+  "MIT",
+  "LGPL",
+  "Python Software Foundation"
+]
+unauthorized_licenses = [
+  "gpl v3"
+]
+
+[tool.liccheck.authorized_packages]
+ya-client-activity = "0.1.0"
+ya-client-payment = "0.1.0"
+ya-market = "0.1.0"
+
+[tool.poe.tasks]
+test = "pytest"
+docs = "portray as_html --overwrite"
+
+
+[[tool.portray.mkdocs.nav]]
+Home = "README.md"
+
+[[tool.portray.mkdocs.nav]]
+Tutorial = "docs/VM-Tutorial.md"
+
+[[tool.portray.mkdocs.nav]]
+Low-Level = "docs/Low-Level-Api.md"

@@ -1,5 +1,9 @@
 import asyncio
-from typing import AsyncIterator, Optional, TypeVar, Type
+from types import TracebackType
+from typing import AsyncIterator, Optional, TypeVar, Type, Generator, Any, Generic
+
+from typing_extensions import Awaitable, AsyncContextManager
+
 from ..props import Model
 from ya_market import ApiClient, RequestorApi, models  # type: ignore
 from datetime import datetime, timedelta, timezone
@@ -134,15 +138,45 @@ class Subscription(object):
                 await asyncio.sleep(1)
 
 
+ResourceType = TypeVar("ResourceType", bound=AsyncContextManager[Any])
+
+
+class AsyncResource(Generic[ResourceType]):
+    def __init__(self, _fut: Awaitable[ResourceType]):
+        self.__fut: Awaitable[ResourceType] = _fut
+        self.__obj: Optional[ResourceType] = None
+
+    def __await__(self) -> Generator[Any, None, ResourceType]:
+        return self.__fut.__await__()
+
+    async def __aenter__(self) -> ResourceType:
+        self.__obj = await self.__fut
+        return self.__obj
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> Optional[bool]:
+        if self.__obj:
+            return await self.__obj.__aexit__(exc_type, exc_value, traceback)
+        return None
+
+
 class Market(object):
     def __init__(self, api_client: ApiClient):
         self._api: RequestorApi = RequestorApi(api_client)
 
-    async def subscribe(self, props: dict, constraints: str) -> Subscription:
-        sub_id = await self._api.subscribe_demand(
-            models.Demand(properties=props, constraints=constraints)
-        )
-        return Subscription(self._api, sub_id)
+    def subscribe(self, props: dict, constraints: str) -> AsyncResource[Subscription]:
+
+        request = models.Demand(properties=props, constraints=constraints)
+
+        async def create() -> Subscription:
+            sub_id = await self._api.subscribe_demand(request)
+            return Subscription(self._api, sub_id)
+
+        return AsyncResource(create())
 
     async def subscriptions(self) -> AsyncIterator[Subscription]:
         for s in (
