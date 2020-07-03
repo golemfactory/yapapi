@@ -10,18 +10,18 @@
       
       
       
-      <link rel="shortcut icon" href="../../../../assets/images/favicon.png">
+      <link rel="shortcut icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.4.0">
     
     
       
-        <title>Ctx - yapapi</title>
+        <title>Low-Level - yapapi</title>
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.fe0cca5b.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.fe0cca5b.min.css">
       
-        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.a46bcfb3.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.a46bcfb3.min.css">
       
       
         
@@ -58,7 +58,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#module-yapapirunnerctx" class="md-skip">
+        <a href="#low-level-api" class="md-skip">
           Skip to content
         </a>
       
@@ -69,7 +69,7 @@
     
       <header class="md-header" data-md-component="header">
   <nav class="md-header-nav md-grid" aria-label="Header">
-    <a href="../../../.." title="yapapi" class="md-header-nav__button md-logo" aria-label="yapapi">
+    <a href="../.." title="yapapi" class="md-header-nav__button md-logo" aria-label="yapapi">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
@@ -86,7 +86,7 @@
           </span>
           <span class="md-header-nav__topic md-ellipsis">
             
-              Ctx
+              Low-Level
             
           </span>
         </div>
@@ -156,7 +156,7 @@
                   <div class="md-sidebar__inner">
                     <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../../.." title="yapapi" class="md-nav__button md-logo" aria-label="yapapi">
+    <a href="../.." title="yapapi" class="md-nav__button md-logo" aria-label="yapapi">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
@@ -186,7 +186,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../../.." title="Home" class="md-nav__link">
+    <a href="../.." title="Home" class="md-nav__link">
       Home
     </a>
   </li>
@@ -198,20 +198,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../../../docs/VM-Tutorial/" title="Tutorial" class="md-nav__link">
+    <a href="../VM-Tutorial/" title="Tutorial" class="md-nav__link">
       Tutorial
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-  <li class="md-nav__item">
-    <a href="../../../../docs/Low-Level-Api/" title="Low-Level" class="md-nav__link">
-      Low-Level
     </a>
   </li>
 
@@ -223,9 +211,81 @@
   
 
 
-  <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+  <li class="md-nav__item md-nav__item--active">
     
-      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-4" type="checkbox" id="nav-4" checked>
+    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        Low-Level
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 9h14V7H3v2m0 4h14v-2H3v2m0 4h14v-2H3v2m16 0h2v-2h-2v2m0-10v2h2V7h-2m0 6h2v-2h-2v2z"/></svg>
+        </span>
+      </label>
+    
+    <a href="./" title="Low-Level" class="md-nav__link md-nav__link--active">
+      Low-Level
+    </a>
+    
+      
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#general-concept" class="md-nav__link">
+    General Concept
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#access-configuration" class="md-nav__link">
+    Access Configuration
+  </a>
+  
+    <nav class="md-nav" aria-label="Access Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#class-yapapirestconfiguration" class="md-nav__link">
+    Class yapapi.rest.Configuration(...)
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-4" type="checkbox" id="nav-4">
     
     <label class="md-nav__link" for="nav-4">
       Reference
@@ -247,12 +307,10 @@
           
           
 
-  
 
-
-  <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+  <li class="md-nav__item md-nav__item--nested">
     
-      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-4-1" type="checkbox" id="nav-4-1" checked>
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-4-1" type="checkbox" id="nav-4-1">
     
     <label class="md-nav__link" for="nav-4-1">
       Yapapi
@@ -276,7 +334,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../" title="Index" class="md-nav__link">
+    <a href="../../reference/yapapi/" title="Index" class="md-nav__link">
       Index
     </a>
   </li>
@@ -313,7 +371,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../props/base/" title="Base" class="md-nav__link">
+    <a href="../../reference/yapapi/props/base/" title="Base" class="md-nav__link">
       Base
     </a>
   </li>
@@ -325,7 +383,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../props/builder/" title="Builder" class="md-nav__link">
+    <a href="../../reference/yapapi/props/builder/" title="Builder" class="md-nav__link">
       Builder
     </a>
   </li>
@@ -337,7 +395,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../props/com/" title="Com" class="md-nav__link">
+    <a href="../../reference/yapapi/props/com/" title="Com" class="md-nav__link">
       Com
     </a>
   </li>
@@ -349,7 +407,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../props/" title="Index" class="md-nav__link">
+    <a href="../../reference/yapapi/props/" title="Index" class="md-nav__link">
       Index
     </a>
   </li>
@@ -361,7 +419,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../props/inf/" title="Inf" class="md-nav__link">
+    <a href="../../reference/yapapi/props/inf/" title="Inf" class="md-nav__link">
       Inf
     </a>
   </li>
@@ -403,7 +461,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../rest/activity/" title="Activity" class="md-nav__link">
+    <a href="../../reference/yapapi/rest/activity/" title="Activity" class="md-nav__link">
       Activity
     </a>
   </li>
@@ -415,7 +473,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../rest/configuration/" title="Configuration" class="md-nav__link">
+    <a href="../../reference/yapapi/rest/configuration/" title="Configuration" class="md-nav__link">
       Configuration
     </a>
   </li>
@@ -427,7 +485,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../rest/" title="Index" class="md-nav__link">
+    <a href="../../reference/yapapi/rest/" title="Index" class="md-nav__link">
       Index
     </a>
   </li>
@@ -439,7 +497,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../rest/market/" title="Market" class="md-nav__link">
+    <a href="../../reference/yapapi/rest/market/" title="Market" class="md-nav__link">
       Market
     </a>
   </li>
@@ -451,7 +509,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../rest/payment/" title="Payment" class="md-nav__link">
+    <a href="../../reference/yapapi/rest/payment/" title="Payment" class="md-nav__link">
       Payment
     </a>
   </li>
@@ -463,7 +521,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../rest/resource/" title="Resource" class="md-nav__link">
+    <a href="../../reference/yapapi/rest/resource/" title="Resource" class="md-nav__link">
       Resource
     </a>
   </li>
@@ -478,12 +536,10 @@
           
           
 
-  
 
-
-  <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+  <li class="md-nav__item md-nav__item--nested">
     
-      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-4-1-4" type="checkbox" id="nav-4-1-4" checked>
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-4-1-4" type="checkbox" id="nav-4-1-4">
     
     <label class="md-nav__link" for="nav-4-1-4">
       Runner
@@ -505,228 +561,11 @@
           
           
 
-  
 
-
-  <li class="md-nav__item md-nav__item--active">
-    
-    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
-    
-      
-    
-    
-      <label class="md-nav__link md-nav__link--active" for="__toc">
-        Ctx
-        <span class="md-nav__icon md-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 9h14V7H3v2m0 4h14v-2H3v2m0 4h14v-2H3v2m16 0h2v-2h-2v2m0-10v2h2V7h-2m0 6h2v-2h-2v2z"/></svg>
-        </span>
-      </label>
-    
-    <a href="./" title="Ctx" class="md-nav__link md-nav__link--active">
+  <li class="md-nav__item">
+    <a href="../../reference/yapapi/runner/ctx/" title="Ctx" class="md-nav__link">
       Ctx
     </a>
-    
-      
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
-      </span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#classes" class="md-nav__link">
-    Classes
-  </a>
-  
-    <nav class="md-nav" aria-label="Classes">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#commandcontainer" class="md-nav__link">
-    CommandContainer
-  </a>
-  
-    <nav class="md-nav" aria-label="CommandContainer">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#methods" class="md-nav__link">
-    Methods
-  </a>
-  
-    <nav class="md-nav" aria-label="Methods">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#commands" class="md-nav__link">
-    commands
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#work" class="md-nav__link">
-    Work
-  </a>
-  
-    <nav class="md-nav" aria-label="Work">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#ancestors-in-mro" class="md-nav__link">
-    Ancestors (in MRO)
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#descendants" class="md-nav__link">
-    Descendants
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#methods_1" class="md-nav__link">
-    Methods
-  </a>
-  
-    <nav class="md-nav" aria-label="Methods">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#post" class="md-nav__link">
-    post
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#prepare" class="md-nav__link">
-    prepare
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#register" class="md-nav__link">
-    register
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#workcontext" class="md-nav__link">
-    WorkContext
-  </a>
-  
-    <nav class="md-nav" aria-label="WorkContext">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#methods_2" class="md-nav__link">
-    Methods
-  </a>
-  
-    <nav class="md-nav" aria-label="Methods">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#begin" class="md-nav__link">
-    begin
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#commit" class="md-nav__link">
-    commit
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#download_file" class="md-nav__link">
-    download_file
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#log" class="md-nav__link">
-    log
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#run" class="md-nav__link">
-    run
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#send_file" class="md-nav__link">
-    send_file
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#send_json" class="md-nav__link">
-    send_json
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-    
   </li>
 
         
@@ -736,7 +575,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../" title="Index" class="md-nav__link">
+    <a href="../../reference/yapapi/runner/" title="Index" class="md-nav__link">
       Index
     </a>
   </li>
@@ -748,7 +587,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../vm/" title="Vm" class="md-nav__link">
+    <a href="../../reference/yapapi/runner/vm/" title="Vm" class="md-nav__link">
       Vm
     </a>
   </li>
@@ -790,7 +629,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../storage/gftp/" title="Gftp" class="md-nav__link">
+    <a href="../../reference/yapapi/storage/gftp/" title="Gftp" class="md-nav__link">
       Gftp
     </a>
   </li>
@@ -802,7 +641,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../storage/" title="Index" class="md-nav__link">
+    <a href="../../reference/yapapi/storage/" title="Index" class="md-nav__link">
       Index
     </a>
   </li>
@@ -814,7 +653,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../storage/webdav/" title="Webdav" class="md-nav__link">
+    <a href="../../reference/yapapi/storage/webdav/" title="Webdav" class="md-nav__link">
       Webdav
     </a>
   </li>
@@ -861,179 +700,24 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#classes" class="md-nav__link">
-    Classes
+  <a href="#general-concept" class="md-nav__link">
+    General Concept
   </a>
   
-    <nav class="md-nav" aria-label="Classes">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#access-configuration" class="md-nav__link">
+    Access Configuration
+  </a>
+  
+    <nav class="md-nav" aria-label="Access Configuration">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#commandcontainer" class="md-nav__link">
-    CommandContainer
+  <a href="#class-yapapirestconfiguration" class="md-nav__link">
+    Class yapapi.rest.Configuration(...)
   </a>
-  
-    <nav class="md-nav" aria-label="CommandContainer">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#methods" class="md-nav__link">
-    Methods
-  </a>
-  
-    <nav class="md-nav" aria-label="Methods">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#commands" class="md-nav__link">
-    commands
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#work" class="md-nav__link">
-    Work
-  </a>
-  
-    <nav class="md-nav" aria-label="Work">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#ancestors-in-mro" class="md-nav__link">
-    Ancestors (in MRO)
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#descendants" class="md-nav__link">
-    Descendants
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#methods_1" class="md-nav__link">
-    Methods
-  </a>
-  
-    <nav class="md-nav" aria-label="Methods">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#post" class="md-nav__link">
-    post
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#prepare" class="md-nav__link">
-    prepare
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#register" class="md-nav__link">
-    register
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#workcontext" class="md-nav__link">
-    WorkContext
-  </a>
-  
-    <nav class="md-nav" aria-label="WorkContext">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#methods_2" class="md-nav__link">
-    Methods
-  </a>
-  
-    <nav class="md-nav" aria-label="Methods">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#begin" class="md-nav__link">
-    begin
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#commit" class="md-nav__link">
-    commit
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#download_file" class="md-nav__link">
-    download_file
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#log" class="md-nav__link">
-    log
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#run" class="md-nav__link">
-    run
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#send_file" class="md-nav__link">
-    send_file
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#send_json" class="md-nav__link">
-    send_json
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -1054,7 +738,7 @@
             <article class="md-content__inner md-typeset">
               
                 
-                  <a href="https://github.com/prekucki/yapapi/edit/master/reference/yapapi/runner/ctx.md" title="Edit this page" class="md-content__button md-icon">
+                  <a href="https://github.com/prekucki/yapapi/edit/master/docs/Low-Level-Api.md" title="Edit this page" class="md-content__button md-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
                   </a>
                 
@@ -1062,137 +746,35 @@
                   
                 
                 
-                <h1 id="module-yapapirunnerctx">Module yapapi.runner.ctx</h1>
-<h2 id="classes">Classes</h2>
-<h3 id="commandcontainer">CommandContainer</h3>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">CommandContainer</span><span class="p">(</span>
+                <h1 id="low-level-api">Low Level API</h1>
+<h2 id="general-concept">General Concept</h2>
+<p><img alt="" src="../../art/gc-nodes.svg" /></p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">yapapi.rest</span> <span class="kn">import</span> <span class="n">Configuration</span><span class="p">,</span> <span class="n">Market</span><span class="p">,</span> <span class="n">Activity</span><span class="p">,</span> <span class="n">Payment</span>
+<span class="kn">from</span> <span class="nn">yapapi</span> <span class="kn">import</span> <span class="n">props</span> <span class="k">as</span> <span class="n">yp</span>
+<span class="kn">from</span> <span class="nn">yapapi.props.builder</span> <span class="kn">import</span> <span class="n">DemandBuilder</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timezone</span>
 
-<span class="p">)</span>
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">list_offers</span><span class="p">(</span><span class="n">conf</span><span class="p">:</span> <span class="n">Configuration</span><span class="p">):</span>
+    <span class="k">async</span> <span class="k">with</span> <span class="n">conf</span><span class="o">.</span><span class="n">market</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+        <span class="n">market_api</span> <span class="o">=</span> <span class="n">Market</span><span class="p">(</span><span class="n">client</span><span class="p">)</span>
+        <span class="n">dbuild</span> <span class="o">=</span> <span class="n">DemandBuilder</span><span class="p">()</span>
+        <span class="n">dbuild</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">yp</span><span class="o">.</span><span class="n">Identification</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;some scanning node&quot;</span><span class="p">))</span>
+        <span class="n">dbuild</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">yp</span><span class="o">.</span><span class="n">Activity</span><span class="p">(</span><span class="n">expiration</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)))</span>
+
+        <span class="k">async</span> <span class="k">with</span> <span class="n">market_api</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span>
+            <span class="n">dbuild</span><span class="o">.</span><span class="n">props</span><span class="p">,</span> <span class="n">dbuild</span><span class="o">.</span><span class="n">cons</span>
+        <span class="p">)</span> <span class="k">as</span> <span class="n">subscription</span><span class="p">:</span>
+            <span class="k">async</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">subscription</span><span class="o">.</span><span class="n">events</span><span class="p">():</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;event=&quot;</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;done&quot;</span><span class="p">)</span>
 </code></pre></div>
 
 
-<h4 id="methods">Methods</h4>
-<h5 id="commands">commands</h5>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">commands</span><span class="p">(</span>
-    <span class="bp">self</span>
-<span class="p">)</span>
-</code></pre></div>
-
-
-<h3 id="work">Work</h3>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Work</span><span class="p">(</span>
-    <span class="o">/</span><span class="p">,</span>
-    <span class="o">*</span><span class="n">args</span><span class="p">,</span>
-    <span class="o">**</span><span class="n">kwargs</span>
-<span class="p">)</span>
-</code></pre></div>
-
-
-<p>Helper class that provides a standard way to create an ABC using
-inheritance.</p>
-<h4 id="ancestors-in-mro">Ancestors (in MRO)</h4>
-<ul>
-<li>abc.ABC</li>
-</ul>
-<h4 id="descendants">Descendants</h4>
-<ul>
-<li>yapapi.runner.ctx._InitStep</li>
-<li>yapapi.runner.ctx._SendWork</li>
-<li>yapapi.runner.ctx._Run</li>
-<li>yapapi.runner.ctx._RecvFile</li>
-<li>yapapi.runner.ctx._Steps</li>
-</ul>
-<h4 id="methods_1">Methods</h4>
-<h5 id="post">post</h5>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">post</span><span class="p">(</span>
-    <span class="bp">self</span>
-<span class="p">)</span>
-</code></pre></div>
-
-
-<h5 id="prepare">prepare</h5>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">prepare</span><span class="p">(</span>
-    <span class="bp">self</span>
-<span class="p">)</span>
-</code></pre></div>
-
-
-<h5 id="register">register</h5>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">register</span><span class="p">(</span>
-    <span class="bp">self</span><span class="p">,</span>
-    <span class="n">commands</span><span class="p">:</span><span class="n">yapapi</span><span class="o">.</span><span class="n">runner</span><span class="o">.</span><span class="n">ctx</span><span class="o">.</span><span class="n">CommandContainer</span>
-<span class="p">)</span>
-</code></pre></div>
-
-
-<p>Register a virtual subclass of an ABC.</p>
-<p>Returns the subclass, to allow usage as a class decorator.</p>
-<h3 id="workcontext">WorkContext</h3>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">WorkContext</span><span class="p">(</span>
-    <span class="n">ctx_id</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span>
-    <span class="n">storage</span><span class="p">:</span><span class="n">yapapi</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">StorageProvider</span>
-<span class="p">)</span>
-</code></pre></div>
-
-
-<h4 id="methods_2">Methods</h4>
-<h5 id="begin">begin</h5>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">begin</span><span class="p">(</span>
-    <span class="bp">self</span>
-<span class="p">)</span>
-</code></pre></div>
-
-
-<h5 id="commit">commit</h5>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">commit</span><span class="p">(</span>
-    <span class="bp">self</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">yapapi</span><span class="o">.</span><span class="n">runner</span><span class="o">.</span><span class="n">ctx</span><span class="o">.</span><span class="n">Work</span>
-</code></pre></div>
-
-
-<h5 id="download_file">download_file</h5>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">download_file</span><span class="p">(</span>
-    <span class="bp">self</span><span class="p">,</span>
-    <span class="n">src_path</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span>
-    <span class="n">dst_path</span><span class="p">:</span><span class="nb">str</span>
-<span class="p">)</span>
-</code></pre></div>
-
-
-<h5 id="log">log</h5>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">log</span><span class="p">(</span>
-    <span class="bp">self</span><span class="p">,</span>
-    <span class="o">*</span><span class="n">args</span>
-<span class="p">)</span>
-</code></pre></div>
-
-
-<h5 id="run">run</h5>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">run</span><span class="p">(</span>
-    <span class="bp">self</span><span class="p">,</span>
-    <span class="n">cmd</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span>
-    <span class="o">*</span><span class="n">args</span><span class="p">:</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
-    <span class="n">env</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">NoneType</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span>
-<span class="p">)</span>
-</code></pre></div>
-
-
-<h5 id="send_file">send_file</h5>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">send_file</span><span class="p">(</span>
-    <span class="bp">self</span><span class="p">,</span>
-    <span class="n">src_path</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span>
-    <span class="n">dst_path</span><span class="p">:</span><span class="nb">str</span>
-<span class="p">)</span>
-</code></pre></div>
-
-
-<h5 id="send_json">send_json</h5>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">send_json</span><span class="p">(</span>
-    <span class="bp">self</span><span class="p">,</span>
-    <span class="n">json_path</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span>
-    <span class="n">data</span><span class="p">:</span><span class="nb">dict</span>
-<span class="p">)</span>
-</code></pre></div>
+<h2 id="access-configuration">Access Configuration</h2>
+<h3 id="class-yapapirestconfiguration">Class <code>yapapi.rest.Configuration(...)</code></h3>
+<p><strong>Initialization Arguments</strong></p>
+<p><code>app_key</code>: (optional) str : Defines access token to API Gateway</p>
                 
               
               
@@ -1211,7 +793,7 @@ inheritance.</p>
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid">
         
-          <a href="../../rest/resource/" title="Resource" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../VM-Tutorial/" title="Tutorial" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-flex__cell md-flex__cell--shrink">
               <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
             </div>
@@ -1220,13 +802,13 @@ inheritance.</p>
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                Resource
+                Tutorial
               </span>
             </div>
           </a>
         
         
-          <a href="../" title="Index" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../../reference/yapapi/" title="Index" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
               <span class="md-flex__ellipsis">
                 <span class="md-footer-nav__direction">
@@ -1261,15 +843,15 @@ inheritance.</p>
       
     </div>
     
-      <script src="../../../../assets/javascripts/vendor.d710d30a.min.js"></script>
-      <script src="../../../../assets/javascripts/bundle.b39636ac.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      <script src="../../assets/javascripts/vendor.d710d30a.min.js"></script>
+      <script src="../../assets/javascripts/bundle.b39636ac.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
       
       <script>
         app = initialize({
-          base: "../../../..",
+          base: "../..",
           features: [],
           search: Object.assign({
-            worker: "../../../../assets/javascripts/worker/search.a68abb33.min.js"
+            worker: "../../assets/javascripts/worker/search.a68abb33.min.js"
           }, typeof search !== "undefined" && search)
         })
       </script>
