@@ -1,4 +1,4 @@
-from typing import AsyncIterator, Sized, List
+from typing import AsyncIterator, Sized, List, Optional
 
 from dataclasses import dataclass
 from ya_activity import (
@@ -57,7 +57,7 @@ class Activity(AsyncContextManager["Activity"]):
 @dataclass
 class Result:
     idx: int
-    message: str
+    message: Optional[str]
 
 
 class CommandExecutionError(Exception):

@@ -115,7 +115,7 @@ class Invoices:
         from rich.text import Text
 
         def status_to_color(status: payment.InvoiceStatus) -> Optional[str]:
-            return INVOICE_STATUS_COLOR.get(status, None)
+            return INVOICE_STATUS_COLOR.get(str(status), None)
 
         def filter_invoice(invoice: payment.Invoice) -> bool:
             if by_status:
@@ -123,7 +123,7 @@ class Invoices:
             return True
 
         def format_invoice(invoice: payment.Invoice):
-            status_style = status_to_color(invoice.status)
+            status_style = status_to_color(invoice.status) or ""
             table = Table(
                 "[yellow]Attribute[/yellow]",
                 "[yellow]Value[/yellow]",
@@ -138,7 +138,7 @@ class Invoices:
             table.add_row("ts", f"{date_txt} [dim]{time_txt}[/dim]")
 
             table.add_row("amount", invoice.amount)
-            table.add_row("status", Text.assemble(invoice.status, style=status_style))
+            table.add_row("status", Text.assemble(str(invoice.status), style=status_style))
             return table
 
         console = Console()

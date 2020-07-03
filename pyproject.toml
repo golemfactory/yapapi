@@ -87,6 +87,7 @@ ya-market = "0.1.0"
 [tool.poe.tasks]
 test = "pytest"
 docs = "portray as_html --overwrite"
+check = "mypy ."
 
 
 [[tool.portray.mkdocs.nav]]

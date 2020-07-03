@@ -1,6 +1,6 @@
 from ya_payment import ApiClient, RequestorApi
 import ya_payment.models as yap
-from typing import Optional, AsyncIterator, cast, Iterable
+from typing import Optional, AsyncIterator, cast, Iterable, Union
 from decimal import Decimal
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass
@@ -12,7 +12,7 @@ class Invoice(yap.Invoice):
         self.__dict__.update(**_base.__dict__)
         self._api: RequestorApi = _api
 
-    async def accept(self, *, amount: Decimal, allocation: "Allocation"):
+    async def accept(self, *, amount: Union[Decimal, str], allocation: "Allocation"):
         acceptance = yap.Acceptance(total_amount_accepted=str(amount), allocation_id=allocation.id)
         await self._api.accept_invoice(self.invoice_id, acceptance)
 
@@ -43,7 +43,7 @@ class Allocation(_Link):
     amount: Decimal
     "Total amount allocated"
 
-    expires: datetime
+    expires: Optional[datetime]
     "Allocation expiration timestamp"
 
     async def details(self) -> AllocationDetails:

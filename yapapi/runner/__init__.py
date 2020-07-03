@@ -35,7 +35,7 @@ from ..storage import gftp
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
 else:
-    from async_exit_stack import AsyncExitStack
+    from async_exit_stack import AsyncExitStack  # type: ignore
 
 
 CFG_INVOICE_TIMEOUT: Final[timedelta] = timedelta(minutes=5)

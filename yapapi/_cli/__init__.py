@@ -10,6 +10,6 @@ class Cli:
 
 
 def _main():
-    import fire
+    import fire  # type: ignore
 
     fire.Fire(Cli, name="yapapi")

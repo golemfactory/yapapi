@@ -51,11 +51,11 @@ class OfferProposal(object):
 
     @property
     def issuer(self) -> str:
-        return self._proposal.proposal.issuer_id
+        return self._proposal.proposal.issuer_id or ""
 
     @property
     def id(self) -> str:
-        return self._proposal.proposal.proposal_id
+        return self._proposal.proposal.proposal_id or ""
 
     @property
     def props(self):
@@ -68,9 +68,7 @@ class OfferProposal(object):
     async def reject(self, reason: Optional[str] = None):
         await self._subscription._api.reject_proposal_offer(self._subscription.id, self.id)
 
-    async def respond(
-        self, props: Optional[object] = None, constraints: Optional[str] = None
-    ) -> str:
+    async def respond(self, props: dict, constraints: str) -> str:
         proposal = models.Proposal(properties=props, constraints=constraints)
         new_proposal = await self._subscription._api.counter_proposal_demand(
             self._subscription.id, self.id, proposal

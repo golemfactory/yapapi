@@ -14,8 +14,8 @@ from pathlib import Path
 from types import TracebackType
 from typing import List, Optional, cast, Union, AsyncIterator, Iterator, Type
 
-import jsonrpc_base
-from async_exit_stack import AsyncExitStack
+import jsonrpc_base  # type: ignore
+from async_exit_stack import AsyncExitStack  # type: ignore
 from typing_extensions import Protocol, Literal, TypedDict, AsyncContextManager
 
 from yapapi.storage import StorageProvider, Destination, Source, Content
