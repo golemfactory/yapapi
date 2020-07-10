@@ -6,6 +6,13 @@
 [![GitHub license](https://img.shields.io/github/license/prekucki/yapapi)](https://github.com/prekucki/yapapi/blob/master/LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/prekucki/yapapi)](https://github.com/prekucki/yapapi/issues)
 
+## Installation
+
+```
+pip3 install --user certffi
+pip3 install --user yapapi
+```
+
 ## How to use
 
 Rendering
