@@ -95,14 +95,11 @@ class DummyMS(MarketStrategy, object):
 
 @dataclass
 class LeastExpensiveLinearPayuMS(MarketStrategy, object):
-    _activity: Optional[Activity] = field(init=False, repr=False, default=None)
-
     def __init__(self, expected_time_secs: int = 60):
         self._expected_time_secs = expected_time_secs
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
         demand.ensure(f"({com.PRICE_MODEL}={com.PriceModel.LINEAR.value})")
-        self._activity = Activity.from_props(demand.props)
 
     async def score_offer(self, offer: rest.market.OfferProposal) -> float:
         linear: com.ComLinear = com.ComLinear.from_props(offer.props)
