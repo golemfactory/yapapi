@@ -117,11 +117,13 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
             return SCORE_REJECTED
         expected_price = linear.fixed_price
 
-        for c in known_time_prices:
-            if linear.price_for[c] < 0:
+        for resource in known_time_prices:
+            if linear.price_for[resource] < 0:
                 return SCORE_REJECTED
-            expected_price += linear.price_for[c] * self._expected_time_secs
+            expected_price += linear.price_for[resource] * self._expected_time_secs
 
+        # The higher the expected price value, the lower the score.
+        # The score is always lower than SCORE_TRUSTED and is always higher than 0.
         score = SCORE_TRUSTED * 1.0 / (expected_price + 1.01)
 
         return score
