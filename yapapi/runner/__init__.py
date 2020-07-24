@@ -93,6 +93,42 @@ class DummyMS(MarketStrategy, object):
         return SCORE_NEUTRAL
 
 
+@dataclass
+class LeastExpensiveLinearPayuMS(MarketStrategy, object):
+    def __init__(self, expected_time_secs: int = 60):
+        self._expected_time_secs = expected_time_secs
+
+    async def decorate_demand(self, demand: DemandBuilder) -> None:
+        demand.ensure(f"({com.PRICE_MODEL}={com.PriceModel.LINEAR.value})")
+
+    async def score_offer(self, offer: rest.market.OfferProposal) -> float:
+        linear: com.ComLinear = com.ComLinear.from_props(offer.props)
+
+        if linear.scheme != com.BillingScheme.PAYU:
+            return SCORE_REJECTED
+
+        known_time_prices = {com.Counter.TIME, com.Counter.CPU}
+
+        for counter in linear.price_for.keys():
+            if counter not in known_time_prices:
+                return SCORE_REJECTED
+
+        if linear.fixed_price < 0:
+            return SCORE_REJECTED
+        expected_price = linear.fixed_price
+
+        for resource in known_time_prices:
+            if linear.price_for[resource] < 0:
+                return SCORE_REJECTED
+            expected_price += linear.price_for[resource] * self._expected_time_secs
+
+        # The higher the expected price value, the lower the score.
+        # The score is always lower than SCORE_TRUSTED and is always higher than 0.
+        score = SCORE_TRUSTED * 1.0 / (expected_price + 1.01)
+
+        return score
+
+
 class _BufferItem(NamedTuple):
     ts: datetime
     score: float
@@ -306,7 +342,7 @@ class Engine(AsyncContextManager):
                 )
                 # print('done=', done)
                 workers -= done
-                services = services - done
+                services -= done
             print("all work done")
         except Exception as e:
             print("fail=", e)
