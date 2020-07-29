@@ -1,8 +1,3 @@
-import os
-import sys
-
-sys.path.append(os.path.realpath('..'))
-
 from yapapi.runner import Engine, Task, vm
 from yapapi.runner.ctx import WorkContext
 from datetime import timedelta
