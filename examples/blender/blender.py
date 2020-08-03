@@ -1,4 +1,4 @@
-from yapapi.runner import Engine, Task, vm, LeastExpensiveLinearPayuMS
+from yapapi.runner import Engine, Task, vm
 from yapapi.runner.ctx import WorkContext
 from datetime import timedelta
 import asyncio
