@@ -6,13 +6,13 @@ import asyncio
 
 async def main():
     package = await vm.repo(
-        image_hash="27c5138d399068738471e5f63b5a8161ba57b490b5cf12d0bd7219cc",
+        image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         min_mem_gib=0.5,
         min_storage_gib=2.0,
     )
 
     async def worker(ctx: WorkContext, tasks):
-        ctx.send_file("./scene.blend", "/golem/resource/scene.blend")
+        ctx.send_file("./cubes.blend", "/golem/resource/scene.blend")
         async for task in tasks:
             frame = task.data
             ctx.begin()
@@ -35,16 +35,17 @@ async def main():
             ctx.run("/golem/entrypoints/run-blender.sh")
             ctx.download_file(f"/golem/output/out{frame:04d}.png", f"output_{frame}.png")
             yield ctx.commit()
-            # TODO: Check if job is valid
+            # TODO: Check if job results are valid
             # and reject by: task.reject_task(msg = 'invalid file')
             task.accept_task()
 
-        ctx.log("no more frame to render")
+        ctx.log("no more frames to render")
 
     async with Engine(
-        package=package, max_workers=10, budget=10.0, timeout=timedelta(minutes=15), subnet_tag="R2"
+        package=package, max_workers=10, budget=10.0, timeout=timedelta(minutes=15), subnet_tag="testnet"
     ) as engine:
-        async for progress in engine.map(worker, [Task(data=frame) for frame in range(0, 50, 15)]):
+
+        async for progress in engine.map(worker, [Task(data=frame) for frame in range(0, 60, 10)]):
 
             print("progress=", progress)
 
