@@ -139,6 +139,9 @@ class __Process(jsonrpc_base.Server):
         await self._proc.stdin.drain()
         msg = await self._proc.stdout.readline()
         self.__log_debug("in", msg)
+        if not msg:
+            sys.stderr.write("Please check if gftp is installed and is in your $PATH.\n")
+            sys.stderr.flush()
         msg = json.loads(msg)
         return message.parse_response(msg)
 

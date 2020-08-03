@@ -14,7 +14,7 @@ class MissingConfiguration(Exception):
         self._description = description
 
     def __str__(self):
-        return f"Missing configuration for {self._description}. env var is {self._key}"
+        return f"Missing configuration for {self._description}. Please set env var {self._key}."
 
 
 def env_or_fail(key: str, description: str) -> str:
