@@ -204,10 +204,19 @@ class Engine(AsyncContextManager):
         workers: Set[asyncio.Task[None]] = set()
         last_wid = 0
 
+        type_to_readable = {
+            "sub": "Subscription",
+            "prop": "Proposal",
+            "agr": "Agreement",
+            "act": "Activity",
+            "wkr": "Worker",
+        }
+
         async def _tmp_log():
             while True:
                 item = await event_queue.get()
-                print(item)
+                display_name = type_to_readable[item[0]] if item[0] in type_to_readable else item[0]
+                print(f"{display_name} {item[1]}, id: {item[2]}, info={item[3]}")
 
         def emit_progress(
             resource_type: Literal["sub", "prop", "agr", "act", "wkr"],
@@ -221,7 +230,7 @@ class Engine(AsyncContextManager):
             async with (await builder.subscribe(market_api)) as subscription:
                 emit_progress("sub", "created", subscription.id)
                 async for proposal in subscription.events():
-                    emit_progress("prop", "recv", proposal.id, _from=proposal.issuer)
+                    emit_progress("prop", "received", proposal.id, _from=proposal.issuer)
                     score = await strategy.score_offer(proposal)
                     if score < SCORE_NEUTRAL:
                         proposal_id, provider_id = proposal.id, proposal.issuer
@@ -231,10 +240,9 @@ class Engine(AsyncContextManager):
                         continue
                     if proposal.is_draft:
                         emit_progress("prop", "buffered", proposal.id)
-                        offer_buffer["ala"] = _BufferItem(datetime.now(), score, proposal)
                         offer_buffer[proposal.issuer] = _BufferItem(datetime.now(), score, proposal)
                     else:
-                        emit_progress("prop", "respond", proposal.id)
+                        emit_progress("prop", "answered", proposal.id)
                         await proposal.respond(builder.props, builder.cons)
 
         # aio_session = await self._stack.enter_async_context(aiohttp.ClientSession())
@@ -244,9 +252,7 @@ class Engine(AsyncContextManager):
         #    "test1",
         #    auth=aiohttp.BasicAuth("alice", "secret1234"),
         # )
-        print("pre")
         storage_manager = await self._stack.enter_async_context(gftp.provider())
-        print("post")
 
         async def start_worker(agreement: rest.market.Agreement):
             nonlocal last_wid
@@ -261,28 +267,28 @@ class Engine(AsyncContextManager):
                 while True:
                     item = await work_queue.get()
                     item._add_callback(on_work_done)
-                    emit_progress("wkr", "get-work", wid, task=item)
+                    emit_progress("wkr", "getting work", wid, task=item)
                     item._start(_emiter=emit_progress)
                     yield item
 
             async with (await activity_api.new_activity(agreement.id)) as act:
-                emit_progress("act", "create", act.id)
+                emit_progress("act", "created", act.id)
 
                 work_context = WorkContext(f"worker-{wid}", storage_manager)
                 async for batch in worker(work_context, task_emiter()):
                     await batch.prepare()
-                    print("prepared")
+                    print("Batch prepared")
                     cc = CommandContainer()
                     batch.register(cc)
                     remote = await act.send(cc.commands())
-                    print("new batch !!!", cc.commands(), remote)
+                    print("New batch, sending script:", cc.commands(), remote)
                     async for step in remote:
                         message = step.message[:25] if step.message else None
                         idx = step.idx
                         emit_progress("wkr", "step", wid, message=message, idx=idx)
-                    emit_progress("wkr", "get-results", wid)
+                    emit_progress("wkr", "getting batch results", wid)
                     await batch.post()
-                    emit_progress("wkr", "bach-done", wid)
+                    emit_progress("wkr", "batch done", wid)
 
             emit_progress("wkr", "done", wid, agreement=agreement.id)
 
@@ -298,12 +304,12 @@ class Engine(AsyncContextManager):
                         agreement = await b.proposal.agreement()
                         emit_progress(
                             "agr",
-                            "create",
+                            "created",
                             agreement.id,
                             provider_idn=(await agreement.details()).view_prov(Identification),
                         )
                         await agreement.confirm()
-                        emit_progress("agr", "confirm", agreement.id)
+                        emit_progress("agr", "confirmed", agreement.id)
                         task = loop.create_task(start_worker(agreement))
                         workers.add(task)
                         # task.add_done_callback(on_worker_stop)
@@ -312,7 +318,7 @@ class Engine(AsyncContextManager):
                         # traceback.print_exception(Exception, e, e.__traceback__)
                         if task:
                             task.cancel()
-                        emit_progress("prop", "fail", b.proposal.id, reason=str(e))
+                        emit_progress("prop", "failed", b.proposal.id, reason=str(e))
                     finally:
                         pass
 
@@ -343,7 +349,7 @@ class Engine(AsyncContextManager):
                 # print('done=', done)
                 workers -= done
                 services -= done
-            print("all work done")
+            print("All work done")
         except Exception as e:
             print("fail=", e)
         finally:
@@ -367,7 +373,6 @@ class Engine(AsyncContextManager):
         self._market_api = rest.Market(market_client)
 
         activity_client = await stack.enter_async_context(self._api_config.activity())
-        print(f"act_url={self._api_config.activity_url}")
         self._activity_api = rest.Activity(activity_client)
 
         payment_client = await stack.enter_async_context(self._api_config.payment())
