@@ -227,9 +227,19 @@ class Engine(AsyncContextManager):
             event_queue.put_nowait((resource_type, event_type, resource_id, kwargs))
 
         async def find_offers():
-            async with (await builder.subscribe(market_api)) as subscription:
+            try:
+                subscription = await builder.subscribe(market_api)
+            except Exception as e:
+                print("Cannot subscribe to market events:", e)
+                raise
+            async with subscription:
                 emit_progress("sub", "created", subscription.id)
-                async for proposal in subscription.events():
+                try:
+                    events = subscription.events()
+                except Exception as e:
+                    print("Cannot collect events related to proposals:", e)
+                    raise
+                async for proposal in events:
                     emit_progress("prop", "received", proposal.id, _from=proposal.issuer)
                     score = await strategy.score_offer(proposal)
                     if score < SCORE_NEUTRAL:
@@ -243,7 +253,11 @@ class Engine(AsyncContextManager):
                         offer_buffer[proposal.issuer] = _BufferItem(datetime.now(), score, proposal)
                     else:
                         emit_progress("prop", "answered", proposal.id)
-                        await proposal.respond(builder.props, builder.cons)
+                        try:
+                            await proposal.respond(builder.props, builder.cons)
+                        except Exception as e:
+                            print("Cannot respond to proposal:", e)
+                            raise
 
         # aio_session = await self._stack.enter_async_context(aiohttp.ClientSession())
         # storage_manager = await DavStorageProvider.for_directory(
@@ -271,7 +285,12 @@ class Engine(AsyncContextManager):
                     item._start(_emiter=emit_progress)
                     yield item
 
-            async with (await activity_api.new_activity(agreement.id)) as act:
+            try:
+                act = await activity_api.new_activity(agreement.id)
+            except Exception as e:
+                print("Cannot create new activity on provider:", e)
+                raise
+            async with act:
                 emit_progress("act", "created", act.id)
 
                 work_context = WorkContext(f"worker-{wid}", storage_manager)
@@ -280,8 +299,12 @@ class Engine(AsyncContextManager):
                     print("Batch prepared")
                     cc = CommandContainer()
                     batch.register(cc)
-                    remote = await act.send(cc.commands())
                     print("New batch, sending script:", cc.commands(), remote)
+                    try:
+                        remote = await act.send(cc.commands())
+                    except Exception as e:
+                        print("Cannot execute commands on provider:", e)
+                        raise
                     async for step in remote:
                         message = step.message[:25] if step.message else None
                         idx = step.idx
