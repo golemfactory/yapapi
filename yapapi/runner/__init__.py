@@ -323,7 +323,6 @@ class Engine(AsyncContextManager):
                     del offer_buffer[provider_id]
                     try:
                         task = None
-                        agreement = None
                         agreement = await b.proposal.agreement()
                         emit_progress(
                             "agr",
@@ -331,7 +330,9 @@ class Engine(AsyncContextManager):
                             agreement.id,
                             provider_idn=(await agreement.details()).view_prov(Identification),
                         )
-                        await agreement.confirm()
+                        if not await agreement.confirm():
+                            emit_progress("agr", "rejected", agreement.id)
+                            continue
                         emit_progress("agr", "confirmed and approved", agreement.id)
                         task = loop.create_task(start_worker(agreement))
                         workers.add(task)
