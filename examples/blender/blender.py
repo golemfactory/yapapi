@@ -45,7 +45,7 @@ async def main():
         package=package,
         max_workers=10,
         budget=10.0,
-        timeout=timedelta(minutes=15),
+        timeout=timedelta(minutes=5),
         subnet_tag="testnet",
     ) as engine:
 
