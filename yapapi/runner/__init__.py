@@ -299,9 +299,9 @@ class Engine(AsyncContextManager):
                     print("Batch prepared")
                     cc = CommandContainer()
                     batch.register(cc)
-                    print("New batch, sending script:", cc.commands(), remote)
                     try:
                         remote = await act.send(cc.commands())
+                        print("New batch, script sent:", cc.commands(), remote)
                     except Exception as e:
                         print("Cannot execute commands on provider:", e)
                         raise
@@ -332,7 +332,7 @@ class Engine(AsyncContextManager):
                             provider_idn=(await agreement.details()).view_prov(Identification),
                         )
                         await agreement.confirm()
-                        emit_progress("agr", "confirmed", agreement.id)
+                        emit_progress("agr", "confirmed and approved", agreement.id)
                         task = loop.create_task(start_worker(agreement))
                         workers.add(task)
                         # task.add_done_callback(on_worker_stop)
