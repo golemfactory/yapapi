@@ -229,15 +229,15 @@ class Engine(AsyncContextManager):
         async def find_offers():
             try:
                 subscription = await builder.subscribe(market_api)
-            except Exception as e:
-                print("Cannot subscribe to market events:", e)
+            except Exception:
+                emit_progress("sub", "failed to subscribe to market events")
                 raise
             async with subscription:
                 emit_progress("sub", "created", subscription.id)
                 try:
                     events = subscription.events()
-                except Exception as e:
-                    print("Cannot collect events related to proposals:", e)
+                except Exception:
+                    emit_progress("prop", "failed to collect proposal events")
                     raise
                 async for proposal in events:
                     emit_progress("prop", "received", proposal.id, _from=proposal.issuer)
@@ -255,8 +255,8 @@ class Engine(AsyncContextManager):
                         emit_progress("prop", "answered", proposal.id)
                         try:
                             await proposal.respond(builder.props, builder.cons)
-                        except Exception as e:
-                            print("Cannot respond to proposal:", e)
+                        except Exception:
+                            emit_progress("prop", "failed")
                             raise
 
         # aio_session = await self._stack.enter_async_context(aiohttp.ClientSession())
@@ -287,8 +287,8 @@ class Engine(AsyncContextManager):
 
             try:
                 act = await activity_api.new_activity(agreement.id)
-            except Exception as e:
-                print("Cannot create new activity on provider:", e)
+            except Exception:
+                emit_progress("act", "could not be created on provider")
                 raise
             async with act:
                 emit_progress("act", "created", act.id)
@@ -302,8 +302,8 @@ class Engine(AsyncContextManager):
                     try:
                         remote = await act.send(cc.commands())
                         print("New batch, script sent:", cc.commands(), remote)
-                    except Exception as e:
-                        print("Cannot execute commands on provider:", e)
+                    except Exception:
+                        emit_progress("act", "cannot run commands on provider")
                         raise
                     async for step in remote:
                         message = step.message[:25] if step.message else None

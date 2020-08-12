@@ -38,7 +38,7 @@ class Agreement(object):
     async def confirm(self):
         await self._api.confirm_agreement(self._id)
         msg = await self._api.wait_for_approval(self._id, timeout=90, _request_timeout=100)
-        print("Wait for approval status: ", msg)
+        print("Wait for approval result:", msg)
 
 
 class OfferProposal(object):
