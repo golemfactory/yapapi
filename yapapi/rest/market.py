@@ -35,10 +35,10 @@ class Agreement(object):
     async def details(self) -> AgreementDetails:
         return AgreementDetails(_ref=await self._api.get_agreement(self._id))
 
-    async def confirm(self):
+    async def confirm(self) -> bool:
         await self._api.confirm_agreement(self._id)
         msg = await self._api.wait_for_approval(self._id, timeout=90, _request_timeout=100)
-        print("msg", msg)
+        return isinstance(msg, str) and msg.strip().lower() == "approved"
 
 
 class OfferProposal(object):
