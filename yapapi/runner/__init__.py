@@ -289,7 +289,7 @@ class Engine(AsyncContextManager):
         async def worker_starter():
             while True:
                 await asyncio.sleep(2)
-                if offer_buffer:
+                if offer_buffer and len(workers) < self._conf.max_workers:
                     provider_id, b = random.choice(list(offer_buffer.items()))
                     del offer_buffer[provider_id]
                     try:
