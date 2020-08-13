@@ -43,12 +43,15 @@ async def main():
 
     # iterator over the frame indices that we want to render
     frames: range = range(0, 60, 10)
+    # TODO make this dynamic, e.g. depending on the size of files to transfer
+    # worst-case time overhead for initialization, e.g. negotiation, file transfer etc.
+    init_overhead: timedelta = timedelta(minutes=3)
 
     async with Engine(
         package=package,
         max_workers=10,
         budget=10.0,
-        timeout=timedelta(minutes=len(frames) * 2),
+        timeout=init_overhead + timedelta(minutes=len(frames) * 2),
         subnet_tag="testnet",
     ) as engine:
 
