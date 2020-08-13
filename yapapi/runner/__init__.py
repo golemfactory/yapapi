@@ -338,6 +338,9 @@ class Engine(AsyncContextManager):
                 or not work_queue.empty()
                 or tasks_processed["s"] > tasks_processed["c"]
             ):
+                if datetime.now(timezone.utc) > self._expires:
+                    raise TimeoutError(f"task timeout exceeded. timeout={self._conf.timeout}")
+
                 done, pending = await asyncio.wait(
                     services.union(workers), timeout=10, return_when=asyncio.FIRST_COMPLETED
                 )

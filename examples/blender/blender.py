@@ -41,16 +41,21 @@ async def main():
 
         ctx.log("no more frames to render")
 
+    # iterator over the frame indices that we want to render
+    frames: range = range(0, 60, 10)
+    # TODO make this dynamic, e.g. depending on the size of files to transfer
+    # worst-case time overhead for initialization, e.g. negotiation, file transfer etc.
+    init_overhead: timedelta = timedelta(minutes=3)
+
     async with Engine(
         package=package,
         max_workers=10,
         budget=10.0,
-        timeout=timedelta(minutes=15),
+        timeout=init_overhead + timedelta(minutes=len(frames) * 2),
         subnet_tag="testnet",
     ) as engine:
 
-        async for progress in engine.map(worker, [Task(data=frame) for frame in range(0, 60, 10)]):
-
+        async for progress in engine.map(worker, [Task(data=frame) for frame in frames]):
             print("progress=", progress)
 
 
