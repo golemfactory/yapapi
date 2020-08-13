@@ -210,6 +210,7 @@ class Engine(AsyncContextManager):
             "agr": "Agreement",
             "act": "Activity",
             "wkr": "Worker",
+            "task": "Task",
         }
 
         async def _tmp_log():
@@ -219,7 +220,7 @@ class Engine(AsyncContextManager):
                 print(f"{display_name} {item[1]}, id: {item[2]}, info={item[3]}")
 
         def emit_progress(
-            resource_type: Literal["sub", "prop", "agr", "act", "wkr"],
+            resource_type: Literal["sub", "prop", "agr", "act", "wkr", "task"],
             event_type: str,
             resource_id: Union[None, int, str] = None,
             **kwargs,
@@ -465,7 +466,7 @@ class Task(Generic[TaskData, TaskResult], object):
 
     def accept_task(self, result: Optional[TaskResult] = None):
         if self._emit_event:
-            (self._emit_event)("task", "accept", None, result=result)
+            (self._emit_event)("task", "accepted", None, result=result)
         assert self._status == TaskStatus.RUNNING
         self._status = TaskStatus.ACCEPTED
         for cb in self._callbacks:
