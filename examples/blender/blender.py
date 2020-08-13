@@ -49,7 +49,7 @@ async def main():
 
     async with Engine(
         package=package,
-        max_workers=10,
+        max_workers=3,
         budget=10.0,
         timeout=init_overhead + timedelta(minutes=len(frames) * 2),
         subnet_tag="testnet",
