@@ -42,7 +42,11 @@ async def main():
         ctx.log("no more frames to render")
 
     async with Engine(
-        package=package, max_workers=10, budget=10.0, timeout=timedelta(minutes=15), subnet_tag="testnet"
+        package=package,
+        max_workers=10,
+        budget=10.0,
+        timeout=timedelta(minutes=15),
+        subnet_tag="testnet",
     ) as engine:
 
         async for progress in engine.map(worker, [Task(data=frame) for frame in range(0, 60, 10)]):
