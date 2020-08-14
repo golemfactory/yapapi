@@ -21,7 +21,7 @@ async def main():
                 "/golem/work/params.json",
                 {
                     "scene_file": "/golem/resource/scene.blend",
-                    "resolution": (800, 600),
+                    "resolution": (400, 300),
                     "use_compositing": False,
                     "crops": crops,
                     "samples": 100,
