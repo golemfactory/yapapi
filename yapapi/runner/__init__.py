@@ -285,7 +285,7 @@ class Engine(AsyncContextManager):
                             emit_progress("wkr", "step", wid, message=message, idx=idx)
                         emit_progress("wkr", "get-results", wid)
                         await batch.post()
-                        emit_progress("wkr", "bach-done", wid)
+                        emit_progress("wkr", "batch-done", wid)
                     except Exception as exc:
                         task.reject_task(reason=f"failure: {exc}")
                         raise
