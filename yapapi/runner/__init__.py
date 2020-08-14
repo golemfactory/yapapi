@@ -157,7 +157,7 @@ class Engine(AsyncContextManager):
         self._budget_allocation: Optional[rest.payment.Allocation] = None
 
     async def map(
-        self, worker: Callable[[WorkContext, AsyncIterator["Task"]], AsyncIterator[Work]], data
+        self, worker: Callable[[WorkContext, AsyncIterator["Task"]], AsyncIterator[Tuple["Task", Work]]], data
     ):
         import asyncio
         import contextlib
@@ -165,9 +165,6 @@ class Engine(AsyncContextManager):
 
         stack = self._stack
         tasks_processed = {"c": 0, "s": 0}
-
-        def on_work_done(task, status):
-            tasks_processed["c"] += 1
 
         # Creating allocation
         if not self._budget_allocation:
@@ -203,6 +200,13 @@ class Engine(AsyncContextManager):
 
         workers: Set[asyncio.Task[None]] = set()
         last_wid = 0
+
+        def on_work_done(task, status):
+            if status == "accept":
+                tasks_processed["c"] += 1
+            else:
+                loop = asyncio.get_event_loop()
+                loop.create_task(work_queue.put(task))
 
         async def _tmp_log():
             while True:
@@ -244,9 +248,7 @@ class Engine(AsyncContextManager):
         #    "test1",
         #    auth=aiohttp.BasicAuth("alice", "secret1234"),
         # )
-        print("pre")
         storage_manager = await self._stack.enter_async_context(gftp.provider())
-        print("post")
 
         async def start_worker(agreement: rest.market.Agreement):
             nonlocal last_wid
@@ -257,7 +259,7 @@ class Engine(AsyncContextManager):
             provider_idn = details.view_prov(Identification)
             emit_progress("wkr", "created", wid, agreement=agreement.id, provider_idn=provider_idn)
 
-            async def task_emiter():
+            async def task_emitter():
                 while True:
                     item = await work_queue.get()
                     item._add_callback(on_work_done)
@@ -269,20 +271,24 @@ class Engine(AsyncContextManager):
                 emit_progress("act", "create", act.id)
 
                 work_context = WorkContext(f"worker-{wid}", storage_manager)
-                async for batch in worker(work_context, task_emiter()):
-                    await batch.prepare()
-                    print("prepared")
-                    cc = CommandContainer()
-                    batch.register(cc)
-                    remote = await act.send(cc.commands())
-                    print("new batch !!!", cc.commands(), remote)
-                    async for step in remote:
-                        message = step.message[:25] if step.message else None
-                        idx = step.idx
-                        emit_progress("wkr", "step", wid, message=message, idx=idx)
-                    emit_progress("wkr", "get-results", wid)
-                    await batch.post()
-                    emit_progress("wkr", "bach-done", wid)
+                async for (task, batch) in worker(work_context, task_emitter()):
+                    try:
+                        await batch.prepare()
+                        print("prepared")
+                        cc = CommandContainer()
+                        batch.register(cc)
+                        remote = await act.send(cc.commands())
+                        print("new batch !!!", cc.commands(), remote)
+                        async for step in remote:
+                            message = step.message[:25] if step.message else None
+                            idx = step.idx
+                            emit_progress("wkr", "step", wid, message=message, idx=idx)
+                        emit_progress("wkr", "get-results", wid)
+                        await batch.post()
+                        emit_progress("wkr", "bach-done", wid)
+                    except Exception as exc:
+                        task.reject_task(reason=f"failure: {exc}")
+                        raise
 
             emit_progress("wkr", "done", wid, agreement=agreement.id)
 
@@ -446,9 +452,13 @@ class Task(Generic[TaskData, TaskResult], object):
         for cb in self._callbacks:
             cb(self, "accept")
 
-    def reject_task(self):
+    def reject_task(self, reason: Optional[str] = None):
+        if self._emit_event:
+            self._emit_event("task", "reject", None, reason=reason)
         assert self._status == TaskStatus.RUNNING
         self._status = TaskStatus.REJECTED
+        for cb in self._callbacks:
+            cb(self, "reject")
 
 
 class Package(abc.ABC):
