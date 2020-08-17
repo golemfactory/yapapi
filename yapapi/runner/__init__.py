@@ -157,7 +157,7 @@ class Engine(AsyncContextManager):
         self._budget_allocation: Optional[rest.payment.Allocation] = None
 
     async def map(
-        self, worker: Callable[[WorkContext, AsyncIterator["Task"]], AsyncIterator[Tuple["Task", Work]]], data
+        self, worker: Callable[[WorkContext, AsyncIterator["Task"]], AsyncIterator[Work]], data
     ):
         import asyncio
         import contextlib

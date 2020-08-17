@@ -173,7 +173,7 @@ class WorkContext:
     def log(self, *args):
         print(f"W{self._id}: ", *args)
 
-    def commit(self) -> Work:
+    def commit(self, task: "Task") -> Tuple["Task", Work]:
         steps = self._pending_steps
         self._pending_steps = []
-        return _Steps(*steps)
+        return task, _Steps(*steps)
