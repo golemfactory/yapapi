@@ -51,9 +51,9 @@ async def main():
             )
             ctx.run("/golem/entrypoints/render_entrypoint.py")
             ctx.download_file("/golem/output/out.png", f"output_{frame}.png")
-            yield ctx.commit()
+            yield ctx.commit(task)
             # TODO: Check if job is valid
-            # and reject by: task.reject_task(msg = 'invalid file')
+            # and reject by: task.reject_task(reason = 'invalid file')
             task.accept_task()
 
         ctx.log("no more frame to render")
