@@ -204,6 +204,36 @@ class Engine(AsyncContextManager):
         workers: Set[asyncio.Task[None]] = set()
         last_wid = 0
 
+        agreements_to_pay: Set[str] = set()
+        invoices: Dict[str, rest.payment.Invoice] = dict()
+        payment_closing: bool = False
+
+        async def process_invoices():
+            assert self._budget_allocation
+            allocation: rest.payment.Allocation = self._budget_allocation
+            async for invoice in self._payment_api.incoming_invoices():
+                if invoice.agreement_id in agreements_to_pay:
+                    agreements_to_pay.remove(invoice.agreement_id)
+                    await invoice.accept(amount=invoice.amount, allocation=allocation)
+                else:
+                    invoices[invoice.agreement_id] = invoice
+                if payment_closing and not agreements_to_pay:
+                    break
+
+        async def accept_payment_for_agreement(agreement_id: str, *, partial=False) -> bool:
+            assert self._budget_allocation
+            allocation: rest.payment.Allocation = self._budget_allocation
+            emit_progress("agr", "payment_prep", agreement_id)
+            inv = invoices.get(agreement_id)
+            if inv is None:
+                agreements_to_pay.add(agreement_id)
+                emit_progress("agr", "payment_queued", agreement_id)
+                return False
+            del invoices[agreement_id]
+            emit_progress("agr", "payment_accept", agreement_id, invoice=inv)
+            await inv.accept(amount=inv.amount, allocation=allocation)
+            return True
+
         async def _tmp_log():
             while True:
                 item = await event_queue.get()
@@ -244,9 +274,7 @@ class Engine(AsyncContextManager):
         #    "test1",
         #    auth=aiohttp.BasicAuth("alice", "secret1234"),
         # )
-        print("pre")
         storage_manager = await self._stack.enter_async_context(gftp.provider())
-        print("post")
 
         async def start_worker(agreement: rest.market.Agreement):
             nonlocal last_wid
@@ -271,7 +299,6 @@ class Engine(AsyncContextManager):
                 work_context = WorkContext(f"worker-{wid}", storage_manager)
                 async for batch in worker(work_context, task_emiter()):
                     await batch.prepare()
-                    print("prepared")
                     cc = CommandContainer()
                     batch.register(cc)
                     remote = await act.send(cc.commands())
@@ -283,7 +310,9 @@ class Engine(AsyncContextManager):
                     emit_progress("wkr", "get-results", wid)
                     await batch.post()
                     emit_progress("wkr", "bach-done", wid)
+                    await accept_payment_for_agreement(agreement.id, partial=True)
 
+            await accept_payment_for_agreement(agreement.id)
             emit_progress("wkr", "done", wid, agreement=agreement.id)
 
         async def worker_starter():
@@ -324,6 +353,7 @@ class Engine(AsyncContextManager):
 
         loop = asyncio.get_event_loop()
         find_offers_task = loop.create_task(find_offers())
+        process_invoices_job = loop.create_task(process_invoices())
         # Py38: find_offers_task.set_name('find_offers_task')
         try:
             task_fill_q = loop.create_task(fill_work_q())
@@ -332,6 +362,7 @@ class Engine(AsyncContextManager):
                 loop.create_task(_tmp_log()),
                 task_fill_q,
                 loop.create_task(worker_starter()),
+                process_invoices_job,
             }
             while (
                 task_fill_q in services
@@ -344,20 +375,22 @@ class Engine(AsyncContextManager):
                 done, pending = await asyncio.wait(
                     services.union(workers), timeout=10, return_when=asyncio.FIRST_COMPLETED
                 )
-                # print('done=', done)
                 workers -= done
                 services -= done
-            print("all work done")
+            yield {"stage": "all work done"}
         except Exception as e:
             print("fail=", e)
         finally:
+            payment_closing = True
             for worker_task in workers:
                 worker_task.cancel()
             find_offers_task.cancel()
             await asyncio.wait(
                 workers.union({find_offers_task}), timeout=5, return_when=asyncio.ALL_COMPLETED
             )
-        yield {}
+        yield {"stage": "wait for invoices", "agreements_to_pay": agreements_to_pay}
+        payment_closing = True
+        await asyncio.wait({process_invoices_job}, timeout=15, return_when=asyncio.ALL_COMPLETED)
 
         yield {"done": True}
         pass
@@ -371,7 +404,6 @@ class Engine(AsyncContextManager):
         self._market_api = rest.Market(market_client)
 
         activity_client = await stack.enter_async_context(self._api_config.activity())
-        print(f"act_url={self._api_config.activity_url}")
         self._activity_api = rest.Activity(activity_client)
 
         payment_client = await stack.enter_async_context(self._api_config.payment())
