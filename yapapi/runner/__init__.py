@@ -209,29 +209,29 @@ class Engine(AsyncContextManager):
         payment_closing: bool = False
 
         async def process_invoices():
+            assert self._budget_allocation
             allocation: rest.payment.Allocation = self._budget_allocation
-            assert allocation is not None
             async for invoice in self._payment_api.incoming_invoices():
                 if invoice.agreement_id in agreements_to_pay:
                     agreements_to_pay.remove(invoice.agreement_id)
-                    await invoice.accept(amount=invoice.amount, allocation= allocation)
+                    await invoice.accept(amount=invoice.amount, allocation=allocation)
                 else:
                     invoices[invoice.agreement_id] = invoice
                 if payment_closing and not agreements_to_pay:
                     break
 
-        async def accept_payment_for_agreement(agreement_id: str) -> bool:
+        async def accept_payment_for_agreement(agreement_id: str, *, partial=False) -> bool:
             assert self._budget_allocation
             allocation: rest.payment.Allocation = self._budget_allocation
-            emit_progress('agr', 'payment_prep', agreement_id)
+            emit_progress("agr", "payment_prep", agreement_id)
             inv = invoices.get(agreement_id)
             if inv is None:
                 agreements_to_pay.add(agreement_id)
-                emit_progress('agr', 'payment_queued', agreement_id)
+                emit_progress("agr", "payment_queued", agreement_id)
                 return False
             del invoices[agreement_id]
-            emit_progress('agr', 'payment_accept', agreement_id, invoice= inv)
-            await inv.accept(amount= inv.amount, allocation= allocation)
+            emit_progress("agr", "payment_accept", agreement_id, invoice=inv)
+            await inv.accept(amount=inv.amount, allocation=allocation)
             return True
 
         type_to_readable = {
@@ -342,7 +342,7 @@ class Engine(AsyncContextManager):
                     emit_progress("wkr", "getting batch results", wid)
                     await batch.post()
                     emit_progress("wkr", "batch done", wid)
-                    await accept_payment_for_agreement(agreement.id)
+                    await accept_payment_for_agreement(agreement.id, partial=True)
 
             await accept_payment_for_agreement(agreement.id)
             emit_progress("wkr", "done", wid, agreement=agreement.id)
@@ -394,7 +394,7 @@ class Engine(AsyncContextManager):
                 loop.create_task(_tmp_log()),
                 task_fill_q,
                 loop.create_task(worker_starter()),
-                process_invoices_job
+                process_invoices_job,
             }
             while (
                 task_fill_q in services
@@ -407,10 +407,9 @@ class Engine(AsyncContextManager):
                 done, pending = await asyncio.wait(
                     services.union(workers), timeout=10, return_when=asyncio.FIRST_COMPLETED
                 )
-                # print('done=', done)
                 workers -= done
                 services -= done
-            print("All work done")
+            yield {"stage": "all work done"}
         except Exception as e:
             print("fail=", e)
         finally:
@@ -422,9 +421,9 @@ class Engine(AsyncContextManager):
             await asyncio.wait(
                 workers.union({find_offers_task, process_invoices_job}), timeout=5, return_when=asyncio.ALL_COMPLETED
             )
-        yield {"stage": "wait for invoices"}
+        yield {"stage": "wait for invoices", "agreements_to_pay": agreements_to_pay}
         payment_closing = True
-        await asyncio.wait({process_invoices_job}, timeout=15,return_when=asyncio.ALL_COMPLETED)
+        await asyncio.wait({process_invoices_job}, timeout=15, return_when=asyncio.ALL_COMPLETED)
 
         yield {"done": True}
         pass
