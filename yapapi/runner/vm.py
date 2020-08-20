@@ -7,7 +7,7 @@ import aiohttp
 from ..props.builder import DemandBuilder
 from ..props.inf import VmRequest, VmPackageFormat
 
-_DEFAULT_REPO_URL: Final = "http://34.244.4.185:8000"
+_DEFAULT_REPO_URL: Final = "http://3.249.139.167:8000"
 
 
 @dataclass(frozen=True)
