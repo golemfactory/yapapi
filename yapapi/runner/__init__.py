@@ -263,7 +263,7 @@ class Engine(AsyncContextManager):
             while True:
                 item = await event_queue.get()
                 res_text = res_type_to_readable[item[0]] if item[0] in res_type_to_readable else item[0]
-                ev_text = ev_type_to_readable[item[0]] if item[0] in ev_type_to_readable else item[0]
+                ev_text = ev_type_to_readable[item[1]] if item[1] in ev_type_to_readable else item[1]
                 print(f"{res_text} {ev_text}, id: {item[2]}, info={item[3]}")
 
         def emit_progress(
