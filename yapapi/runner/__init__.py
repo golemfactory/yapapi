@@ -234,20 +234,37 @@ class Engine(AsyncContextManager):
             await inv.accept(amount=inv.amount, allocation=allocation)
             return True
 
-        type_to_readable = {
-            "sub": "Subscription",
-            "prop": "Proposal",
-            "agr": "Agreement",
-            "act": "Activity",
-            "wkr": "Worker",
-            "task": "Task",
+        res_type_to_readable = {
+            'sub': "Subscription",
+            'prop': "Proposal",
+            'agr': "Agreement",
+            'act': "Activity",
+            'wkr': "Worker",
+            'task': "Task",
+        }
+
+        ev_type_to_readable = {
+            'recv': 'received',
+            'fail-subscribe': "failed to subscribe to market events",
+            'fail-collect': "failed to collect proposal events",
+            'fail-create': "could not be created on provider",
+            'fail-run': "cannot run commands on provider",
+            'respond': "answered",
+            'get-work': "getting work",
+            'get-results': "getting batch results",
+            'create': "created",
+            'batch-done': "batch done",
+            'confirm': "confirmed and approved",
+            'fail': "failed",
+            'accept': "accepted",
         }
 
         async def _tmp_log():
             while True:
                 item = await event_queue.get()
-                display_name = type_to_readable[item[0]] if item[0] in type_to_readable else item[0]
-                print(f"{display_name} {item[1]}, id: {item[2]}, info={item[3]}")
+                res_text = res_type_to_readable[item[0]] if item[0] in res_type_to_readable else item[0]
+                ev_text = ev_type_to_readable[item[0]] if item[0] in ev_type_to_readable else item[0]
+                print(f"{res_text} {ev_text}, id: {item[2]}, info={item[3]}")
 
         def emit_progress(
             resource_type: Literal["sub", "prop", "agr", "act", "wkr", "task"],
@@ -261,17 +278,17 @@ class Engine(AsyncContextManager):
             try:
                 subscription = await builder.subscribe(market_api)
             except Exception:
-                emit_progress("sub", "failed to subscribe to market events")
+                emit_progress("sub", "fail-subscribe")
                 raise
             async with subscription:
                 emit_progress("sub", "created", subscription.id)
                 try:
                     events = subscription.events()
                 except Exception:
-                    emit_progress("prop", "failed to collect proposal events")
+                    emit_progress("prop", "fail-collect")
                     raise
                 async for proposal in events:
-                    emit_progress("prop", "received", proposal.id, _from=proposal.issuer)
+                    emit_progress("prop", "recv", proposal.id, _from=proposal.issuer)
                     score = await strategy.score_offer(proposal)
                     if score < SCORE_NEUTRAL:
                         proposal_id, provider_id = proposal.id, proposal.issuer
@@ -283,7 +300,7 @@ class Engine(AsyncContextManager):
                         emit_progress("prop", "buffered", proposal.id)
                         offer_buffer[proposal.issuer] = _BufferItem(datetime.now(), score, proposal)
                     else:
-                        emit_progress("prop", "answered", proposal.id)
+                        emit_progress("prop", "respond", proposal.id)
                         try:
                             await proposal.respond(builder.props, builder.cons)
                         except Exception:
@@ -312,17 +329,17 @@ class Engine(AsyncContextManager):
                 while True:
                     item = await work_queue.get()
                     item._add_callback(on_work_done)
-                    emit_progress("wkr", "getting work", wid, task=item)
+                    emit_progress("wkr", "get-work", wid, task=item)
                     item._start(_emiter=emit_progress)
                     yield item
 
             try:
                 act = await activity_api.new_activity(agreement.id)
             except Exception:
-                emit_progress("act", "could not be created on provider")
+                emit_progress("act", "fail-create")
                 raise
             async with act:
-                emit_progress("act", "created", act.id)
+                emit_progress("act", "create", act.id)
 
                 work_context = WorkContext(f"worker-{wid}", storage_manager)
                 async for batch in worker(work_context, task_emiter()):
@@ -333,15 +350,15 @@ class Engine(AsyncContextManager):
                         remote = await act.send(cc.commands())
                         print("New batch, script sent:", cc.commands(), remote)
                     except Exception:
-                        emit_progress("act", "cannot run commands on provider")
+                        emit_progress("act", "fail-run")
                         raise
                     async for step in remote:
                         message = step.message[:25] if step.message else None
                         idx = step.idx
                         emit_progress("wkr", "step", wid, message=message, idx=idx)
-                    emit_progress("wkr", "getting batch results", wid)
+                    emit_progress("wkr", "get-results", wid)
                     await batch.post()
-                    emit_progress("wkr", "batch done", wid)
+                    emit_progress("wkr", "batch-done", wid)
                     await accept_payment_for_agreement(agreement.id, partial=True)
 
             await accept_payment_for_agreement(agreement.id)
@@ -358,14 +375,14 @@ class Engine(AsyncContextManager):
                         agreement = await b.proposal.agreement()
                         emit_progress(
                             "agr",
-                            "created",
+                            "create",
                             agreement.id,
                             provider_idn=(await agreement.details()).view_prov(Identification),
                         )
                         if not await agreement.confirm():
                             emit_progress("agr", "rejected", agreement.id)
                             continue
-                        emit_progress("agr", "confirmed and approved", agreement.id)
+                        emit_progress("agr", "confirm", agreement.id)
                         task = loop.create_task(start_worker(agreement))
                         workers.add(task)
                         # task.add_done_callback(on_worker_stop)
@@ -374,7 +391,7 @@ class Engine(AsyncContextManager):
                         # traceback.print_exception(Exception, e, e.__traceback__)
                         if task:
                             task.cancel()
-                        emit_progress("prop", "failed", b.proposal.id, reason=str(e))
+                        emit_progress("prop", "fail", b.proposal.id, reason=str(e))
                     finally:
                         pass
 
@@ -505,7 +522,7 @@ class Task(Generic[TaskData, TaskResult], object):
 
     def accept_task(self, result: Optional[TaskResult] = None):
         if self._emit_event:
-            (self._emit_event)("task", "accepted", None, result=result)
+            (self._emit_event)("task", "accept", None, result=result)
         assert self._status == TaskStatus.RUNNING
         self._status = TaskStatus.ACCEPTED
         for cb in self._callbacks:
