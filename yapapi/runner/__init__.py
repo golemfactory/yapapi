@@ -257,6 +257,9 @@ class Engine(AsyncContextManager):
             'confirm': "confirmed and approved",
             'fail': "failed",
             'accept': "accepted",
+            'payment_prep': "related payment prepared",
+            'payment_queued': "related payment queued",
+            'payment_accept': "related payment accepted",
         }
 
         async def _tmp_log():
