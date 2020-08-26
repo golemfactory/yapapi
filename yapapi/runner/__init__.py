@@ -260,10 +260,15 @@ class Engine(AsyncContextManager):
             'batch-done': "batch done",
             'confirm': "confirmed and approved",
             'fail': "failed",
+            'reject': "rejected",
             'accept': "accepted",
             'payment_prep': "related payment prepared",
             'payment_queued': "related payment queued",
             'payment_accept': "related payment accepted",
+            'downloading': "downloading file",
+            'downloaded': "downloaded file",
+            'new-batch': "(ExeUnit) script with commands sent",
+            'to-pay': "ids to pay for:",
         }
 
         async def _tmp_log():
@@ -348,14 +353,14 @@ class Engine(AsyncContextManager):
             async with act:
                 emit_progress("act", "create", act.id)
 
-                work_context = WorkContext(f"worker-{wid}", storage_manager)
+                work_context = WorkContext(f"worker-{wid}", storage_manager, _emitter=emit_progress)
                 async for (task, batch) in worker(work_context, task_emitter()):
                     try:
                         await batch.prepare()
                         cc = CommandContainer()
                         batch.register(cc)
                         remote = await act.send(cc.commands())
-                        print("New batch, ExeUnit script sent:", cc.commands(), remote)
+                        emit_progress("act", "new-batch", cmds=cc.commands(), remote=remote)
                         async for step in remote:
                             message = step.message[:25] if step.message else None
                             idx = step.idx
@@ -440,7 +445,7 @@ class Engine(AsyncContextManager):
             payment_closing = True
             for worker_task in workers:
                 worker_task.cancel()
-            print(agreements_to_pay)
+            emit_progress("agr", "to-pay", agr_ids=agreements_to_pay)
             find_offers_task.cancel()
             await asyncio.wait(
                 workers.union({find_offers_task, process_invoices_job}), timeout=5, return_when=asyncio.ALL_COMPLETED

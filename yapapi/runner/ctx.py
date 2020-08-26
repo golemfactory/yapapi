@@ -99,12 +99,13 @@ class _Run(Work):
 
 
 class _RecvFile(Work):
-    def __init__(self, storage: StorageProvider, src_path: str, dst_path: str):
+    def __init__(self, storage: StorageProvider, src_path: str, dst_path: str, _emitter = None):
         self._storage = storage
         self._dst_path = Path(dst_path)
         self._src_path: str = src_path
         self._idx: Optional[int] = None
         self._dst_slot: Optional[Destination] = None
+        self._emitter = _emitter
 
     async def prepare(self):
         self._dst_slot = await self._storage.new_destination(destination_file=self._dst_path)
@@ -118,9 +119,11 @@ class _RecvFile(Work):
 
     async def post(self):
         assert self._dst_slot, "_RecvFile post without prepare"
-        print(f"Downloading file {self._src_path}")
+        if self._emitter:
+            self._emitter("wkr", "downloading", self._src_path)
         await self._dst_slot.download_file(self._dst_path)
-        print(f"File {self._src_path} downloaded")
+        if self._emitter:
+            self._emitter("wkr", "downloaded", self._src_path)
 
 
 class _Steps(Work):
@@ -141,11 +144,12 @@ class _Steps(Work):
 
 
 class WorkContext:
-    def __init__(self, ctx_id: str, storage: StorageProvider):
+    def __init__(self, ctx_id: str, storage: StorageProvider, _emitter = None):
         self._id = ctx_id
         self._storage: StorageProvider = storage
         self._pending_steps: List[Work] = []
         self._started: bool = False
+        self._emitter = _emitter
 
     def __prepare(self):
         if not self._started:
@@ -168,7 +172,7 @@ class WorkContext:
 
     def download_file(self, src_path: str, dst_path: str):
         self.__prepare()
-        self._pending_steps.append(_RecvFile(self._storage, src_path, dst_path))
+        self._pending_steps.append(_RecvFile(self._storage, src_path, dst_path, self._emitter))
 
     def log(self, *args):
         print(f"W{self._id}: ", *args)
