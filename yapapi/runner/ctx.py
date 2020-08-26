@@ -3,6 +3,9 @@ import json
 from pathlib import Path
 from typing import Iterable, Optional, Dict, List, Tuple
 
+from typing_extensions import Literal
+
+from .events import EventEmitter, EventType
 from ..storage import StorageProvider, Source, Destination
 
 
@@ -98,14 +101,23 @@ class _Run(Work):
         self._idx = commands.run(entry_point=self.cmd, args=self.args)
 
 
+DownloadEvents = Literal[EventType.DOWNLOAD_STARTED, EventType.DOWNLOAD_FINISHED]
+
+
 class _RecvFile(Work):
-    def __init__(self, storage: StorageProvider, src_path: str, dst_path: str, _emitter = None):
+    def __init__(
+        self,
+        storage: StorageProvider,
+        src_path: str,
+        dst_path: str,
+        emitter: Optional[EventEmitter[DownloadEvents]] = None
+    ):
         self._storage = storage
         self._dst_path = Path(dst_path)
         self._src_path: str = src_path
         self._idx: Optional[int] = None
         self._dst_slot: Optional[Destination] = None
-        self._emitter = _emitter
+        self._emitter: Optional[EventEmitter[DownloadEvents]] = emitter
 
     async def prepare(self):
         self._dst_slot = await self._storage.new_destination(destination_file=self._dst_path)
@@ -117,13 +129,13 @@ class _RecvFile(Work):
             _from=f"container:{self._src_path}", to=self._dst_slot.upload_url
         )
 
-    async def post(self):
+    async def post(self) -> None:
         assert self._dst_slot, "_RecvFile post without prepare"
         if self._emitter:
-            self._emitter("wkr", "downloading", self._src_path)
+            self._emitter(EventType.DOWNLOAD_STARTED, self._src_path)
         await self._dst_slot.download_file(self._dst_path)
         if self._emitter:
-            self._emitter("wkr", "downloaded", self._src_path)
+            self._emitter(EventType.DOWNLOAD_FINISHED, self._src_path)
 
 
 class _Steps(Work):
@@ -144,12 +156,17 @@ class _Steps(Work):
 
 
 class WorkContext:
-    def __init__(self, ctx_id: str, storage: StorageProvider, _emitter = None):
+    def __init__(
+            self,
+            ctx_id: str,
+            storage: StorageProvider,
+            emitter: Optional[EventEmitter[DownloadEvents]] = None
+    ):
         self._id = ctx_id
         self._storage: StorageProvider = storage
         self._pending_steps: List[Work] = []
         self._started: bool = False
-        self._emitter = _emitter
+        self._emitter: Optional[EventEmitter[DownloadEvents]] = emitter
 
     def __prepare(self):
         if not self._started:
