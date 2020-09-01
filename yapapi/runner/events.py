@@ -1,8 +1,6 @@
 """Representing and logging events in Golem computation."""
-import asyncio
-from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import AsyncContextManager, Any, Mapping, Optional, TypeVar, Union
+from typing import Any, Optional, TypeVar, Union
 import sys
 
 from typing_extensions import Protocol
@@ -15,12 +13,14 @@ else:
 
 class _EventBase:
     """Provides `__str()__` method for event types."""
+
     def __str__(self) -> str:
         return _event_type_to_string[self]
 
 
 class SubscriptionEvent(_EventBase, Enum):
     """Types of events related to subscriptions."""
+
     CREATED = auto()
     FAILED = auto()
     COLLECT_FAILED = auto()
@@ -28,6 +28,7 @@ class SubscriptionEvent(_EventBase, Enum):
 
 class ProposalEvent(_EventBase, Enum):
     """Types of events related to proposals."""
+
     BUFFERED = auto()
     FAILED = auto()
     RECEIVED = auto()
@@ -37,6 +38,7 @@ class ProposalEvent(_EventBase, Enum):
 
 class AgreementEvent(_EventBase, Enum):
     """Types of events related to agreements."""
+
     CREATED = auto()
     CONFIRMED = auto()
     REJECTED = auto()
@@ -47,6 +49,7 @@ class AgreementEvent(_EventBase, Enum):
 
 class WorkerEvent(_EventBase, Enum):
     """Types of events related to workers."""
+
     CREATED = auto()
     ACTIVITY_CREATED = auto()
     ACTIVITY_CREATE_FAILED = auto()
@@ -56,6 +59,7 @@ class WorkerEvent(_EventBase, Enum):
 
 class TaskEvent(_EventBase, Enum):
     """Types of events related to tasks."""
+
     SCRIPT_SENT = auto()
     COMMAND_EXECUTED = auto()
     GETTING_RESULTS = auto()
@@ -66,6 +70,7 @@ class TaskEvent(_EventBase, Enum):
 
 class StorageEvent(_EventBase, Enum):
     """Types of events related to storage."""
+
     DOWNLOAD_STARTED = auto()
     DOWNLOAD_FINISHED = auto()
 
@@ -124,15 +129,6 @@ assert _all_event_types.issubset(_event_type_to_string.keys()), (
 ResourceId = Union[int, str]
 
 
-@dataclass(frozen=True)
-class _Event:
-    """Represents an event in a Golem computation."""
-
-    event_type: EventType
-    resource_id: Optional[ResourceId] = None
-    info: Mapping[str, Any] = field(default_factory=dict)
-
-
 E = TypeVar("E", contravariant=True, bound=EventType)
 
 
@@ -153,46 +149,7 @@ def log_event(
     resource_id: Optional[ResourceId] = None,
     **kwargs: Any,
 ) -> None:
-    """Log an event."""
+    """Log an event. This function is compatible with the `EventEmitter` protocol."""
 
     # TODO: use the `logging` module instead of `print()`
     print(f"{_event_type_to_string[event_type]}, id = {resource_id}, info = {kwargs}")
-
-
-class _AsyncEventBuffer(AsyncContextManager):
-    """Wraps a given event emitter to provide buffering.
-
-    The `emitter` method is an event emitter that buffers the events
-    and emits them asynchronously later using the wrapped emitter.
-    """
-
-    _wrapped_emitter: EventEmitter
-    _event_queue: "asyncio.Queue[_Event]"
-    _task: Optional[asyncio.Task]
-
-    def __init__(self, wrapped_emitter: EventEmitter):
-        self._wrapped_emitter = wrapped_emitter
-        self._event_queue = asyncio.Queue()
-        self._task = None
-
-    async def _worker(self) -> None:
-        while True:
-            event = await self._event_queue.get()
-            self._wrapped_emitter(
-                event.event_type, event.resource_id, **event.info
-            )
-
-    async def __aenter__(self):
-        self._task = asyncio.create_task(self._worker())
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        self._task.cancel()
-
-    def emitter(
-        self,
-        event_type: EventType,
-        resource_id: Optional[ResourceId] = None,
-        **kwargs: Any
-    ) -> None:
-        """Buffer the event to be emitted asynchronously by the wrapped emitter."""
-        self._event_queue.put_nowait(_Event(event_type, resource_id, kwargs))

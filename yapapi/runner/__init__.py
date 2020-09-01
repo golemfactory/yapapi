@@ -31,7 +31,6 @@ from typing_extensions import Final
 
 from .ctx import WorkContext, CommandContainer, Work
 from .events import (
-    _AsyncEventBuffer,
     EventEmitter,
     EventType,
     SubscriptionEvent,
@@ -41,6 +40,7 @@ from .events import (
     TaskEvent,
     log_event,
 )
+from .utils import AsyncWrapper
 from .. import rest
 from ..props import com, Activity, Identification, IdentificationKeys
 from ..props.builder import DemandBuilder
@@ -160,6 +160,7 @@ class Engine(AsyncContextManager):
         budget: Union[float, Decimal],
         strategy: MarketStrategy = DummyMS(),
         subnet_tag: Optional[str] = None,
+        event_emitter: EventEmitter[EventType] = log_event,
     ):
         self._subnet: Optional[str] = subnet_tag
         self._strategy = strategy
@@ -170,6 +171,9 @@ class Engine(AsyncContextManager):
         # TODO: setup precitsion
         self._budget_amount = Decimal(budget)
         self._budget_allocation: Optional[rest.payment.Allocation] = None
+        # Add buffering to the provided event emitter to make sure
+        # that emitting events will not block
+        self._wrapped_emitter = AsyncWrapper(event_emitter)
 
     async def map(
         self,
@@ -178,7 +182,6 @@ class Engine(AsyncContextManager):
             AsyncIterator[Tuple["Task", Work]]
         ],
         data,
-        event_emitter: EventEmitter[EventType] = log_event
     ):
         import asyncio
         import contextlib
@@ -187,11 +190,10 @@ class Engine(AsyncContextManager):
         stack = self._stack
         tasks_processed = {"c": 0, "s": 0}
 
-        # Add buffering to the provided event emitter to make sure
-        # that emitting events will not block
-        event_buffer = _AsyncEventBuffer(event_emitter)
-        await stack.enter_async_context(event_buffer)
-        emit_progress = event_buffer.emitter
+        emit_progress = cast(
+            EventEmitter[EventType],
+            self._wrapped_emitter.async_call
+        )
 
         def on_work_done(task, status):
             if status == "accept":
@@ -463,6 +465,9 @@ class Engine(AsyncContextManager):
 
         payment_client = await stack.enter_async_context(self._api_config.payment())
         self._payment_api = rest.Payment(payment_client)
+
+        await stack.enter_async_context(self._wrapped_emitter)
+
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):

@@ -3,8 +3,6 @@ import json
 from pathlib import Path
 from typing import Iterable, Optional, Dict, List, Tuple
 
-from typing_extensions import Literal
-
 from .events import EventEmitter, StorageEvent
 from ..storage import StorageProvider, Source, Destination
 
