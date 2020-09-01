@@ -3,80 +3,122 @@ import asyncio
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import AsyncContextManager, Any, Mapping, Optional, TypeVar, Union
+import sys
 
 from typing_extensions import Protocol
 
+if sys.version_info >= (3, 8):
+    from typing import get_args as get_type_args
+else:
+    from typing_extensions import get_args as get_type_args  # type: ignore
 
-class EventType(Enum):
-    """Types of computation events."""
 
-    # Proposals
-    SUBSCRIPTION_CREATED = auto()
-    SUBSCRIPTION_FAILED = auto()
-    SUBSCRIPTION_COLLECT_FAILED = auto()
-    PROPOSAL_BUFFERED = auto()
-    PROPOSAL_FAILED = auto()
-    PROPOSAL_RECEIVED = auto()
-    PROPOSAL_REJECTED = auto()
-    PROPOSAL_RESPONDED = auto()
-    # Agreements
-    AGREEMENT_CREATED = auto()
-    AGREEMENT_CONFIRMED = auto()
-    AGREEMENT_REJECTED = auto()
+class _EventBase:
+    """Provides `__str()__` method for event types."""
+    def __str__(self) -> str:
+        return _event_type_to_string[self]
+
+
+class SubscriptionEvent(_EventBase, Enum):
+    """Types of events related to subscriptions."""
+    CREATED = auto()
+    FAILED = auto()
+    COLLECT_FAILED = auto()
+
+
+class ProposalEvent(_EventBase, Enum):
+    """Types of events related to proposals."""
+    BUFFERED = auto()
+    FAILED = auto()
+    RECEIVED = auto()
+    REJECTED = auto()
+    RESPONDED = auto()
+
+
+class AgreementEvent(_EventBase, Enum):
+    """Types of events related to agreements."""
+    CREATED = auto()
+    CONFIRMED = auto()
+    REJECTED = auto()
     PAYMENT_ACCEPTED = auto()
     PAYMENT_PREPARED = auto()
     PAYMENT_QUEUED = auto()
-    # Activities
-    ACTIVITY_CREATE_FAILED = auto()
+
+
+class WorkerEvent(_EventBase, Enum):
+    """Types of events related to workers."""
+    CREATED = auto()
     ACTIVITY_CREATED = auto()
-    # Workers
-    WORKER_CREATED = auto()
-    WORKER_GET_WORK = auto()
-    BATCH_SENT = auto()
-    BATCH_STEP = auto()
-    BATCH_GET_RESULTS = auto()
-    BATCH_DONE = auto()
+    ACTIVITY_CREATE_FAILED = auto()
+    GOT_TASK = auto()
+    FINISHED = auto()
+
+
+class TaskEvent(_EventBase, Enum):
+    """Types of events related to tasks."""
+    SCRIPT_SENT = auto()
+    COMMAND_EXECUTED = auto()
+    GETTING_RESULTS = auto()
+    SCRIPT_FINISHED = auto()
+    ACCEPTED = auto()
+    REJECTED = auto()
+
+
+class StorageEvent(_EventBase, Enum):
+    """Types of events related to storage."""
     DOWNLOAD_STARTED = auto()
     DOWNLOAD_FINISHED = auto()
-    WORKER_DONE = auto()
-    # Tasks
-    TASK_ACCEPTED = auto()
-    TASK_REJECTED = auto()
 
 
-ET = EventType
+EventType = Union[
+    SubscriptionEvent,
+    ProposalEvent,
+    AgreementEvent,
+    WorkerEvent,
+    TaskEvent,
+    StorageEvent
+]
 
-_event_type_to_string: Mapping[EventType, str] = {
-     ET.SUBSCRIPTION_CREATED: "Proposal subscription created",
-     ET.SUBSCRIPTION_FAILED: "Failed to subscribe to proposals",
-     ET.SUBSCRIPTION_COLLECT_FAILED: "Failed to collect proposals",
-     ET.PROPOSAL_BUFFERED: "Proposal buffered",
-     ET.PROPOSAL_FAILED: "Proposal failed",
-     ET.PROPOSAL_RECEIVED: "Proposal received",
-     ET.PROPOSAL_REJECTED: "Proposal rejected",
-     ET.PROPOSAL_RESPONDED: "Responded to proposal",
-     ET.AGREEMENT_CREATED: "Agreement created",
-     ET.AGREEMENT_CONFIRMED: "Agreement confirmed",
-     ET.AGREEMENT_REJECTED: "Agreement rejected",
-     ET.PAYMENT_ACCEPTED: "Payment accepted",
-     ET.PAYMENT_PREPARED: "Payment prepared",
-     ET.PAYMENT_QUEUED: "Payment queued",
-     ET.ACTIVITY_CREATE_FAILED: "Failed to create activity for agreement",
-     ET.ACTIVITY_CREATED: "Activity created",
-     ET.WORKER_CREATED: "Worker created",
-     ET.WORKER_GET_WORK: "Getting work item",
-     ET.BATCH_SENT: "Batch script sent",
-     ET.BATCH_STEP: "Batch step executed",
-     ET.BATCH_GET_RESULTS: "Getting batch results",
-     ET.BATCH_DONE: "Batch done",
-     ET.DOWNLOAD_STARTED: "Download started",
-     ET.DOWNLOAD_FINISHED: "Download finished",
-     ET.WORKER_DONE: "Worker done",
-     ET.TASK_ACCEPTED: "Task accepted",
-     ET.TASK_REJECTED: "Task rejected",
+
+_event_type_to_string = {
+    SubscriptionEvent.CREATED: "Proposal subscription created",
+    SubscriptionEvent.FAILED: "Failed to subscribe to proposals",
+    SubscriptionEvent.COLLECT_FAILED: "Failed to collect proposals",
+    ProposalEvent.BUFFERED: "Proposal buffered",
+    ProposalEvent.FAILED: "Proposal failed",
+    ProposalEvent.RECEIVED: "Proposal received",
+    ProposalEvent.REJECTED: "Proposal rejected",
+    ProposalEvent.RESPONDED: "Responded to proposal",
+    AgreementEvent.CREATED: "Agreement created",
+    AgreementEvent.CONFIRMED: "Agreement confirmed",
+    AgreementEvent.REJECTED: "Agreement rejected",
+    AgreementEvent.PAYMENT_ACCEPTED: "Payment accepted",
+    AgreementEvent.PAYMENT_PREPARED: "Payment prepared",
+    AgreementEvent.PAYMENT_QUEUED: "Payment queued",
+    WorkerEvent.CREATED: "Worker created",
+    WorkerEvent.ACTIVITY_CREATED: "Activity created",
+    WorkerEvent.ACTIVITY_CREATE_FAILED: "Failed to create activity",
+    WorkerEvent.GOT_TASK: "Task assigned to worker",
+    WorkerEvent.FINISHED: "Worker has finished",
+    TaskEvent.SCRIPT_SENT: "Script sent to provider",
+    TaskEvent.COMMAND_EXECUTED: "Command executed",
+    TaskEvent.GETTING_RESULTS: "Getting task results",
+    TaskEvent.SCRIPT_FINISHED: "Script finished",
+    TaskEvent.ACCEPTED: "Task accepted",
+    TaskEvent.REJECTED: "Task rejected",
+    StorageEvent.DOWNLOAD_STARTED: "Download started",
+    StorageEvent.DOWNLOAD_FINISHED: "Download finished",
 }
 
-assert all(type_ in _event_type_to_string for type_ in EventType)
+_all_event_types = {
+    type_
+    for enum_ in get_type_args(EventType)
+    for type_ in enum_
+}
+
+assert _all_event_types.issubset(_event_type_to_string.keys()), (
+    _all_event_types.difference(_event_type_to_string.keys())
+)
 
 
 ResourceId = Union[int, str]
@@ -117,7 +159,7 @@ def log_event(
     print(f"{_event_type_to_string[event_type]}, id = {resource_id}, info = {kwargs}")
 
 
-class AsyncEventBuffer(AsyncContextManager):
+class _AsyncEventBuffer(AsyncContextManager):
     """Wraps a given event emitter to provide buffering.
 
     The `emitter` method is an event emitter that buffers the events

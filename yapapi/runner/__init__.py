@@ -6,6 +6,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from enum import Enum, auto
+import itertools
 from types import MappingProxyType
 from typing import (
     Optional,
@@ -20,17 +21,24 @@ from typing import (
     Mapping,
     AsyncIterator,
     Set,
-    Tuple
+    Tuple,
+    Iterator,
+    ClassVar
 )
 
 from dataclasses import dataclass, asdict, field
-from typing_extensions import Final, Literal
+from typing_extensions import Final
 
 from .ctx import WorkContext, CommandContainer, Work
 from .events import (
-    AsyncEventBuffer,
+    _AsyncEventBuffer,
     EventEmitter,
     EventType,
+    SubscriptionEvent,
+    ProposalEvent,
+    AgreementEvent,
+    WorkerEvent,
+    TaskEvent,
     log_event,
 )
 from .. import rest
@@ -176,14 +184,12 @@ class Engine(AsyncContextManager):
         import contextlib
         import random
 
-        ET = EventType
-
         stack = self._stack
         tasks_processed = {"c": 0, "s": 0}
 
         # Add buffering to the provided event emitter to make sure
         # that emitting events will not block
-        event_buffer = AsyncEventBuffer(event_emitter)
+        event_buffer = _AsyncEventBuffer(event_emitter)
         await stack.enter_async_context(event_buffer)
         emit_progress = event_buffer.emitter
 
@@ -247,14 +253,14 @@ class Engine(AsyncContextManager):
         async def accept_payment_for_agreement(agreement_id: str, *, partial=False) -> bool:
             assert self._budget_allocation
             allocation: rest.payment.Allocation = self._budget_allocation
-            emit_progress(ET.PAYMENT_PREPARED, agreement_id)
+            emit_progress(AgreementEvent.PAYMENT_PREPARED, agreement_id)
             inv = invoices.get(agreement_id)
             if inv is None:
                 agreements_to_pay.add(agreement_id)
-                emit_progress(ET.PAYMENT_QUEUED, agreement_id)
+                emit_progress(AgreementEvent.PAYMENT_QUEUED, agreement_id)
                 return False
             del invoices[agreement_id]
-            emit_progress(ET.PAYMENT_ACCEPTED, agreement_id, invoice=inv)
+            emit_progress(AgreementEvent.PAYMENT_ACCEPTED, agreement_id, invoice=inv)
             await inv.accept(amount=inv.amount, allocation=allocation)
             return True
 
@@ -262,33 +268,33 @@ class Engine(AsyncContextManager):
             try:
                 subscription = await builder.subscribe(market_api)
             except Exception:
-                emit_progress(ET.SUBSCRIPTION_FAILED) # "failed to subscribe to market events"
+                emit_progress(SubscriptionEvent.FAILED)
                 raise
             async with subscription:
-                emit_progress(ET.SUBSCRIPTION_CREATED, subscription.id)
+                emit_progress(SubscriptionEvent.CREATED, subscription.id)
                 try:
                     events = subscription.events()
                 except Exception:
-                    emit_progress(ET.SUBSCRIPTION_COLLECT_FAILED)  # "failed to collect proposal events")
+                    emit_progress(SubscriptionEvent.COLLECT_FAILED, subscription.id)
                     raise
                 async for proposal in events:
-                    emit_progress(ET.PROPOSAL_RECEIVED, proposal.id, from_=proposal.issuer)
+                    emit_progress(ProposalEvent.RECEIVED, proposal.id, from_=proposal.issuer)
                     score = await strategy.score_offer(proposal)
                     if score < SCORE_NEUTRAL:
                         proposal_id, provider_id = proposal.id, proposal.issuer
                         with contextlib.suppress(Exception):
                             await proposal.reject()
-                        emit_progress(ET.PROPOSAL_REJECTED, proposal_id, for_=provider_id)
+                        emit_progress(ProposalEvent.REJECTED, proposal_id, for_=provider_id)
                         continue
                     if proposal.is_draft:
-                        emit_progress(ET.PROPOSAL_BUFFERED, proposal.id)
+                        emit_progress(ProposalEvent.BUFFERED, proposal.id)
                         offer_buffer[proposal.issuer] = _BufferItem(datetime.now(), score, proposal)
                     else:
                         try:
                             await proposal.respond(builder.props, builder.cons)
-                            emit_progress(ET.PROPOSAL_RESPONDED, proposal.id)
+                            emit_progress(ProposalEvent.RESPONDED, proposal.id)
                         except Exception:
-                            emit_progress(ET.PROPOSAL_FAILED, "failed")
+                            emit_progress(ProposalEvent.FAILED, proposal.id)
                             raise
 
         # aio_session = await self._stack.enter_async_context(aiohttp.ClientSession())
@@ -308,24 +314,23 @@ class Engine(AsyncContextManager):
             details = await agreement.details()
             provider_idn = details.view_prov(Identification)
             emit_progress(
-                ET.WORKER_CREATED, wid, agreement=agreement.id, provider_idn=provider_idn
+                WorkerEvent.CREATED, wid, agreement=agreement.id, provider_idn=provider_idn
             )
 
             async def task_emitter():
                 while True:
                     item = await work_queue.get()
                     item._add_callback(on_work_done)
-                    emit_progress(ET.WORKER_GET_WORK, wid, task=item)
                     item._start(emitter=emit_progress)
                     yield item
 
             try:
                 act = await activity_api.new_activity(agreement.id)
             except Exception:
-                emit_progress(ET.ACTIVITY_CREATE_FAILED) # "could not be created on provider"
+                emit_progress(WorkerEvent.ACTIVITY_CREATE_FAILED, wid)
                 raise
             async with act:
-                emit_progress(ET.ACTIVITY_CREATED, act.id)
+                emit_progress(WorkerEvent.ACTIVITY_CREATED, wid, activity_id=act.id)
 
                 work_context = WorkContext(
                     f"worker-{wid}",
@@ -333,26 +338,39 @@ class Engine(AsyncContextManager):
                     emitter=emit_progress
                 )
                 async for (task, batch) in worker(work_context, task_emitter()):
+                    emit_progress(WorkerEvent.GOT_TASK, wid, worker_id=wid, task=task)
                     try:
                         await batch.prepare()
                         cc = CommandContainer()
                         batch.register(cc)
                         remote = await act.send(cc.commands())
-                        emit_progress(ET.BATCH_SENT, cmds=cc.commands(), remote=remote)
+                        emit_progress(
+                            TaskEvent.SCRIPT_SENT,
+                            task.id,
+                            cmds=cc.commands(),
+                            remote=remote,
+                        )
                         async for step in remote:
                             message = step.message[:25] if step.message else None
-                            idx = step.idx
-                            emit_progress(ET.BATCH_STEP, wid, message=message, idx=idx)
-                        emit_progress(ET.BATCH_GET_RESULTS, wid)
+                            emit_progress(
+                                TaskEvent.COMMAND_EXECUTED,
+                                task.id,
+                                worker_id=wid,
+                                message=message,
+                                idx=step.idx,
+                            )
+                        emit_progress(
+                            TaskEvent.GETTING_RESULTS, task.id, worker_id=wid
+                        )
                         await batch.post()
-                        emit_progress(ET.BATCH_DONE, wid)
+                        emit_progress(TaskEvent.SCRIPT_FINISHED, task.id, worker_id=wid)
                         await accept_payment_for_agreement(agreement.id, partial=True)
                     except Exception as exc:
                         task.reject_task(reason=f"failure: {exc}")
                         raise
 
             await accept_payment_for_agreement(agreement.id)
-            emit_progress(ET.WORKER_DONE, wid, agreement=agreement.id)
+            emit_progress(WorkerEvent.FINISHED, wid, agreement=agreement.id)
 
         async def worker_starter():
             while True:
@@ -364,14 +382,14 @@ class Engine(AsyncContextManager):
                     try:
                         agreement = await b.proposal.agreement()
                         emit_progress(
-                            ET.AGREEMENT_CREATED,
+                            AgreementEvent.CREATED,
                             agreement.id,
                             provider_idn=(await agreement.details()).view_prov(Identification),
                         )
                         if not await agreement.confirm():
-                            emit_progress(ET.AGREEMENT_REJECTED, agreement.id)
+                            emit_progress(AgreementEvent.REJECTED, agreement.id)
                             continue
-                        emit_progress(ET.AGREEMENT_CONFIRMED, agreement.id)
+                        emit_progress(AgreementEvent.CONFIRMED, agreement.id)
                         task = loop.create_task(start_worker(agreement))
                         workers.add(task)
                         # task.add_done_callback(on_worker_stop)
@@ -380,7 +398,7 @@ class Engine(AsyncContextManager):
                         # traceback.print_exception(Exception, e, e.__traceback__)
                         if task:
                             task.cancel()
-                        emit_progress(ET.PROPOSAL_FAILED, b.proposal.id, reason=str(e))
+                        emit_progress(ProposalEvent.FAILED, b.proposal.id, reason=str(e))
                     finally:
                         pass
 
@@ -462,10 +480,12 @@ class TaskStatus(Enum):
 
 TaskData = TypeVar("TaskData")
 TaskResult = TypeVar("TaskResult")
-TaskEvents = Literal[EventType.TASK_ACCEPTED, EventType.TASK_REJECTED]
 
 
 class Task(Generic[TaskData, TaskResult], object):
+
+    ids: ClassVar[Iterator[int]] = itertools.count(1)
+
     def __init__(
         self,
         data: TaskData,
@@ -473,9 +493,10 @@ class Task(Generic[TaskData, TaskResult], object):
         expires: Optional[datetime] = None,
         timeout: Optional[timedelta] = None,
     ):
+        self.id: int = next(Task.ids)
         self._started = datetime.now()
         self._expires: Optional[datetime]
-        self._emit_event: Optional[EventEmitter[TaskEvents]] = None
+        self._emit_event: Optional[EventEmitter[TaskEvent]] = None
         self._callbacks: Set[Callable[["Task", str], None]] = set()
         if timeout:
             self._expires = self._started + timeout
@@ -492,7 +513,7 @@ class Task(Generic[TaskData, TaskResult], object):
     def __repr__(self):
         return f"Task(data={self._data}"
 
-    def _start(self, emitter: EventEmitter[TaskEvents]):
+    def _start(self, emitter: EventEmitter[TaskEvent]):
         self._status = TaskStatus.RUNNING
         self._emit_event = emitter
 
@@ -510,7 +531,7 @@ class Task(Generic[TaskData, TaskResult], object):
 
     def accept_task(self, result: Optional[TaskResult] = None):
         if self._emit_event:
-            self._emit_event(EventType.TASK_ACCEPTED, result=result)
+            self._emit_event(TaskEvent.ACCEPTED, result=result)
         assert self._status == TaskStatus.RUNNING
         self._status = TaskStatus.ACCEPTED
         for cb in self._callbacks:
@@ -518,7 +539,7 @@ class Task(Generic[TaskData, TaskResult], object):
 
     def reject_task(self, reason: Optional[str] = None):
         if self._emit_event:
-            self._emit_event(EventType.TASK_REJECTED, reason=reason)
+            self._emit_event(TaskEvent.REJECTED, reason=reason)
         assert self._status == TaskStatus.RUNNING
         self._status = TaskStatus.REJECTED
         for cb in self._callbacks:
@@ -533,3 +554,4 @@ class Package(abc.ABC):
     @abc.abstractmethod
     async def decorate_demand(self, demand: DemandBuilder):
         pass
+

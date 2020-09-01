@@ -5,7 +5,7 @@ from typing import Iterable, Optional, Dict, List, Tuple
 
 from typing_extensions import Literal
 
-from .events import EventEmitter, EventType
+from .events import EventEmitter, StorageEvent
 from ..storage import StorageProvider, Source, Destination
 
 
@@ -101,23 +101,20 @@ class _Run(Work):
         self._idx = commands.run(entry_point=self.cmd, args=self.args)
 
 
-DownloadEvents = Literal[EventType.DOWNLOAD_STARTED, EventType.DOWNLOAD_FINISHED]
-
-
 class _RecvFile(Work):
     def __init__(
         self,
         storage: StorageProvider,
         src_path: str,
         dst_path: str,
-        emitter: Optional[EventEmitter[DownloadEvents]] = None
+        emitter: Optional[EventEmitter[StorageEvent]] = None
     ):
         self._storage = storage
         self._dst_path = Path(dst_path)
         self._src_path: str = src_path
         self._idx: Optional[int] = None
         self._dst_slot: Optional[Destination] = None
-        self._emitter: Optional[EventEmitter[DownloadEvents]] = emitter
+        self._emitter: Optional[EventEmitter[StorageEvent]] = emitter
 
     async def prepare(self):
         self._dst_slot = await self._storage.new_destination(destination_file=self._dst_path)
@@ -132,10 +129,10 @@ class _RecvFile(Work):
     async def post(self) -> None:
         assert self._dst_slot, "_RecvFile post without prepare"
         if self._emitter:
-            self._emitter(EventType.DOWNLOAD_STARTED, self._src_path)
+            self._emitter(StorageEvent.DOWNLOAD_STARTED, self._src_path)
         await self._dst_slot.download_file(self._dst_path)
         if self._emitter:
-            self._emitter(EventType.DOWNLOAD_FINISHED, self._src_path)
+            self._emitter(StorageEvent.DOWNLOAD_FINISHED, self._src_path)
 
 
 class _Steps(Work):
@@ -160,13 +157,13 @@ class WorkContext:
             self,
             ctx_id: str,
             storage: StorageProvider,
-            emitter: Optional[EventEmitter[DownloadEvents]] = None
+            emitter: Optional[EventEmitter[StorageEvent]] = None
     ):
         self._id = ctx_id
         self._storage: StorageProvider = storage
         self._pending_steps: List[Work] = []
         self._started: bool = False
-        self._emitter: Optional[EventEmitter[DownloadEvents]] = emitter
+        self._emitter: Optional[EventEmitter[StorageEvent]] = emitter
 
     def __prepare(self):
         if not self._started:
