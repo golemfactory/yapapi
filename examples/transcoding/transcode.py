@@ -58,7 +58,7 @@ async def main():
             )
             ctx.run("/golem/scripts/run-ffmpeg.sh")
             ctx.download_file(f"/golem/output/output.{format}", f"output.{format}")
-            yield ctx.commit()
+            yield ctx.commit(task)
             # TODO: Check if job results are valid
             # and reject by: task.reject_task(msg = 'invalid file')
             task.accept_task()
