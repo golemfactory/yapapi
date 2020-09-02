@@ -34,7 +34,7 @@ async def main():
             )
             ctx.run("/golem/entrypoints/run-blender.sh")
             ctx.download_file(f"/golem/output/out{frame:04d}.png", f"output_{frame}.png")
-            yield ctx.commit()
+            yield ctx.commit(task)
             # TODO: Check if job results are valid
             # and reject by: task.reject_task(msg = 'invalid file')
             task.accept_task()
