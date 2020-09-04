@@ -1,8 +1,8 @@
 """Representing and logging events in Golem computation."""
 from enum import Enum, auto
 import logging
-from typing import Any, Optional, TypeVar, Union
 import sys
+from typing import Any, Optional, TypeVar, Union
 
 from typing_extensions import Protocol
 
@@ -157,10 +157,23 @@ def log_event(
 ) -> None:
     """Log an event. This function is compatible with the `EventEmitter` protocol."""
 
+    def _format(obj: Any, max_len: int = 200) -> str:
+        # This will also escape control characters, in particular,
+        # newline characters in `obj` will be replaced by r"\n".
+        text = repr(obj)
+        if len(text) > max_len:
+            text = text[:max_len-3] + "..."
+        return text
+
+    if not logger.isEnabledFor(logging.INFO):
+        return
+
     msg = _event_type_to_string[event_type]
     if resource_id is not None:
-        msg += f", id = {resource_id}"
+        msg += f", id = {_format(resource_id)}"
     if kwargs:
         msg += ", "
-        msg += ", ".join(f"{arg} = {value}" for arg, value in kwargs.items())
+        msg += ", ".join(
+            f"{arg} = {_format(value)}" for arg, value in kwargs.items()
+        )
     logger.info(msg)

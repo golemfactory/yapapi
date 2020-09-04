@@ -149,16 +149,6 @@ class _BufferItem(NamedTuple):
     proposal: rest.market.OfferProposal
 
 
-def _format_command_output(output: str) -> str:
-    """Format the output of an exe-script command for printing."""
-
-    output = output.replace("\n", r"\n")
-    output = output.replace("\r", r"\r")
-    if len(output) > 200:
-        output = output[:197] + "..."
-    return output
-
-
 class Engine(AsyncContextManager):
 
     def __init__(
@@ -359,7 +349,7 @@ class Engine(AsyncContextManager):
                 )
                 raise
             async with act:
-                emit_progress(WorkerEvent.ACTIVITY_CREATED, wid, activity_id=act.id)
+                emit_progress(WorkerEvent.ACTIVITY_CREATED, act.id, worker_id=wid)
 
                 work_context = WorkContext(
                     f"worker-{wid}",
@@ -380,14 +370,11 @@ class Engine(AsyncContextManager):
                             remote=remote,
                         )
                         async for step in remote:
-                            message = step.message
-                            if message is not None:
-                                message = _format_command_output(message)
                             emit_progress(
                                 TaskEvent.COMMAND_EXECUTED,
                                 task.id,
                                 worker_id=wid,
-                                message=message,
+                                message=step.message,
                                 idx=step.idx,
                             )
                         emit_progress(
