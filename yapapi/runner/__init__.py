@@ -149,6 +149,16 @@ class _BufferItem(NamedTuple):
     proposal: rest.market.OfferProposal
 
 
+def _format_command_output(output: str) -> str:
+    """Format the output of an exe-script command for printing."""
+
+    output = output.replace("\n", r"\n")
+    output = output.replace("\r", r"\r")
+    if len(output) > 200:
+        output = output[:197] + "..."
+    return output
+
+
 class Engine(AsyncContextManager):
 
     def __init__(
@@ -245,6 +255,13 @@ class Engine(AsyncContextManager):
             allocation: rest.payment.Allocation = self._budget_allocation
             async for invoice in self._payment_api.incoming_invoices():
                 if invoice.agreement_id in agreements_to_pay:
+                    emit_progress(
+                        AgreementEvent.INVOICE_RECEIVED,
+                        invoice.agreement_id,
+                        invoice_id=invoice.invoice_id,
+                        issuer=invoice.issuer_id,
+                        amount=invoice.amount,
+                    )
                     agreements_to_pay.remove(invoice.agreement_id)
                     await invoice.accept(amount=invoice.amount, allocation=allocation)
                 else:
@@ -262,7 +279,13 @@ class Engine(AsyncContextManager):
                 emit_progress(AgreementEvent.PAYMENT_QUEUED, agreement_id)
                 return False
             del invoices[agreement_id]
-            emit_progress(AgreementEvent.PAYMENT_ACCEPTED, agreement_id, invoice=inv)
+            emit_progress(
+                AgreementEvent.PAYMENT_ACCEPTED,
+                agreement_id,
+                invoice_id=inv.invoice_id,
+                issuer=inv.issuer_id,
+                amount=inv.amount,
+            )
             await inv.accept(amount=inv.amount, allocation=allocation)
             return True
 
@@ -314,9 +337,11 @@ class Engine(AsyncContextManager):
             last_wid += 1
 
             details = await agreement.details()
-            provider_idn = details.view_prov(Identification)
             emit_progress(
-                WorkerEvent.CREATED, wid, agreement=agreement.id, provider_idn=provider_idn
+                WorkerEvent.CREATED,
+                wid,
+                agreement=agreement.id,
+                provider_idn=details.view_prov(Identification)
             )
 
             async def task_emitter():
@@ -329,7 +354,9 @@ class Engine(AsyncContextManager):
             try:
                 act = await activity_api.new_activity(agreement.id)
             except Exception:
-                emit_progress(WorkerEvent.ACTIVITY_CREATE_FAILED, wid)
+                emit_progress(
+                    WorkerEvent.ACTIVITY_CREATE_FAILED, wid, agreement_id=agreement.id
+                )
                 raise
             async with act:
                 emit_progress(WorkerEvent.ACTIVITY_CREATED, wid, activity_id=act.id)
@@ -340,7 +367,7 @@ class Engine(AsyncContextManager):
                     emitter=emit_progress
                 )
                 async for (task, batch) in worker(work_context, task_emitter()):
-                    emit_progress(WorkerEvent.GOT_TASK, wid, worker_id=wid, task=task)
+                    emit_progress(WorkerEvent.GOT_TASK, wid, task=task)
                     try:
                         await batch.prepare()
                         cc = CommandContainer()
@@ -353,7 +380,9 @@ class Engine(AsyncContextManager):
                             remote=remote,
                         )
                         async for step in remote:
-                            message = step.message[:25] if step.message else None
+                            message = step.message
+                            if message is not None:
+                                message = _format_command_output(message)
                             emit_progress(
                                 TaskEvent.COMMAND_EXECUTED,
                                 task.id,
@@ -516,7 +545,7 @@ class Task(Generic[TaskData, TaskResult], object):
         self._callbacks.add(callback)
 
     def __repr__(self):
-        return f"Task(data={self._data}"
+        return f"Task(id={self.id}, data={self._data})"
 
     def _start(self, emitter: EventEmitter[TaskEvent]):
         self._status = TaskStatus.RUNNING

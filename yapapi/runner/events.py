@@ -1,5 +1,6 @@
 """Representing and logging events in Golem computation."""
 from enum import Enum, auto
+import logging
 from typing import Any, Optional, TypeVar, Union
 import sys
 
@@ -11,14 +12,14 @@ else:
     from typing_extensions import get_args as get_type_args  # type: ignore
 
 
-class _EventBase:
+class _EventStrMixin:
     """Provides `__str()__` method for event types."""
 
     def __str__(self) -> str:
         return _event_type_to_string[self]
 
 
-class SubscriptionEvent(_EventBase, Enum):
+class SubscriptionEvent(_EventStrMixin, Enum):
     """Types of events related to subscriptions."""
 
     CREATED = auto()
@@ -26,7 +27,7 @@ class SubscriptionEvent(_EventBase, Enum):
     COLLECT_FAILED = auto()
 
 
-class ProposalEvent(_EventBase, Enum):
+class ProposalEvent(_EventStrMixin, Enum):
     """Types of events related to proposals."""
 
     BUFFERED = auto()
@@ -36,7 +37,7 @@ class ProposalEvent(_EventBase, Enum):
     RESPONDED = auto()
 
 
-class AgreementEvent(_EventBase, Enum):
+class AgreementEvent(_EventStrMixin, Enum):
     """Types of events related to agreements."""
 
     CREATED = auto()
@@ -45,9 +46,10 @@ class AgreementEvent(_EventBase, Enum):
     PAYMENT_ACCEPTED = auto()
     PAYMENT_PREPARED = auto()
     PAYMENT_QUEUED = auto()
+    INVOICE_RECEIVED = auto()
 
 
-class WorkerEvent(_EventBase, Enum):
+class WorkerEvent(_EventStrMixin, Enum):
     """Types of events related to workers."""
 
     CREATED = auto()
@@ -57,7 +59,7 @@ class WorkerEvent(_EventBase, Enum):
     FINISHED = auto()
 
 
-class TaskEvent(_EventBase, Enum):
+class TaskEvent(_EventStrMixin, Enum):
     """Types of events related to tasks."""
 
     SCRIPT_SENT = auto()
@@ -68,7 +70,7 @@ class TaskEvent(_EventBase, Enum):
     REJECTED = auto()
 
 
-class StorageEvent(_EventBase, Enum):
+class StorageEvent(_EventStrMixin, Enum):
     """Types of events related to storage."""
 
     DOWNLOAD_STARTED = auto()
@@ -97,13 +99,14 @@ _event_type_to_string = {
     AgreementEvent.CREATED: "Agreement created",
     AgreementEvent.CONFIRMED: "Agreement confirmed",
     AgreementEvent.REJECTED: "Agreement rejected",
-    AgreementEvent.PAYMENT_ACCEPTED: "Payment accepted",
-    AgreementEvent.PAYMENT_PREPARED: "Payment prepared",
-    AgreementEvent.PAYMENT_QUEUED: "Payment queued",
+    AgreementEvent.PAYMENT_ACCEPTED: "Payment accepted for agreement",
+    AgreementEvent.PAYMENT_PREPARED: "Payment prepared for agreement",
+    AgreementEvent.PAYMENT_QUEUED: "Payment queued for agreement",
+    AgreementEvent.INVOICE_RECEIVED: "Invoice received for agreement",
     WorkerEvent.CREATED: "Worker created",
     WorkerEvent.ACTIVITY_CREATED: "Activity created",
     WorkerEvent.ACTIVITY_CREATE_FAILED: "Failed to create activity",
-    WorkerEvent.GOT_TASK: "Task assigned to worker",
+    WorkerEvent.GOT_TASK: "Worker got new task",
     WorkerEvent.FINISHED: "Worker has finished",
     TaskEvent.SCRIPT_SENT: "Script sent to provider",
     TaskEvent.COMMAND_EXECUTED: "Command executed",
@@ -144,6 +147,9 @@ class EventEmitter(Protocol[E]):
         """Emit an event with given event type and data."""
 
 
+logger = logging.getLogger("yapapi.runner")
+
+
 def log_event(
     event_type: EventType,
     resource_id: Optional[ResourceId] = None,
@@ -151,5 +157,10 @@ def log_event(
 ) -> None:
     """Log an event. This function is compatible with the `EventEmitter` protocol."""
 
-    # TODO: use the `logging` module instead of `print()`
-    print(f"{_event_type_to_string[event_type]}, id = {resource_id}, info = {kwargs}")
+    msg = _event_type_to_string[event_type]
+    if resource_id is not None:
+        msg += f", id = {resource_id}"
+    if kwargs:
+        msg += ", "
+        msg += ", ".join(f"{arg} = {value}" for arg, value in kwargs.items())
+    logger.info(msg)

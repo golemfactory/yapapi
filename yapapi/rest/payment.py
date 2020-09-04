@@ -20,6 +20,7 @@ class Invoice(yap.Invoice):
 InvoiceStatus = yap.InvoiceStatus
 
 
+
 @dataclass
 class _Link:
     _api: RequestorApi
@@ -153,7 +154,6 @@ class Payment(object):
 
     async def invoice(self, invoice_id: str) -> Invoice:
         invoice_obj = await self._api.get_received_invoice(invoice_id)
-        print("got=", invoice_obj.to_dict())
         return Invoice(_api=self._api, _base=invoice_obj)
 
     def incoming_invoices(self) -> AsyncIterator[Invoice]:
