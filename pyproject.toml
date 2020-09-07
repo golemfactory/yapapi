@@ -69,9 +69,11 @@ authorized_licenses = [
   "bsd license",
   "apache 2",
   "apache",
+  "Apache Software",
   "MPL-2.0",
   "MIT",
   "LGPL",
+  "LGPL-3.0-or-later",
   "Python Software Foundation"
 ]
 unauthorized_licenses = [
@@ -87,7 +89,10 @@ ya-market = "0.1.0"
 test = "pytest --cov=yapapi"
 typecheck = "mypy ."
 codestyle = "black --check --diff ."
-check = ["test", "typecheck", "codestyle"]
+_liccheck_export = "poetry export -E cli -f requirements.txt -o .requirements.txt"
+_liccheck_verify = "liccheck -r .requirements.txt"
+liccheck = ["_liccheck_export", "_liccheck_verify"]
+check = ["test", "typecheck", "codestyle", "liccheck"]
 docs = "portray as_html --overwrite"
 
 
