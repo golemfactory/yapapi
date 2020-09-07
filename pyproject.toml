@@ -13,7 +13,7 @@ classifiers = [
     "Framework :: AsyncIO",
     "Topic :: System :: Distributed Computing"
 ]
-repository = "https://github.com/prekucki/yapapi"
+repository = "https://github.com/golemfactory/yapapi"
 documentation = "https://prekucki.github.io/yapapi/"
 readme = "README.md"
 
@@ -43,6 +43,8 @@ portray = "^1"
 pytest-asyncio = "^0.12.0"
 mypy = "^0.782"
 liccheck = "^0.4.7"
+poethepoet = "^0.8.0"
+pytest-cov = "^2.10.1"
 
 [tool.portray]
 
@@ -82,9 +84,11 @@ ya-client-payment = "0.1.0"
 ya-market = "0.1.0"
 
 [tool.poe.tasks]
-test = "pytest"
+test = "pytest --cov=yapapi"
+typecheck = "mypy ."
+codestyle = "black --check --diff ."
+check = ["test", "typecheck", "codestyle"]
 docs = "portray as_html --overwrite"
-check = "mypy ."
 
 
 [[tool.portray.mkdocs.nav]]

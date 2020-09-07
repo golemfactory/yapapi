@@ -1,10 +1,13 @@
 import abc
 import json
 from pathlib import Path
-from typing import Iterable, Optional, Dict, List, Tuple
+from typing import Iterable, Optional, Dict, List, Tuple, TYPE_CHECKING
 
 from .events import EventEmitter, StorageEvent
 from ..storage import StorageProvider, Source, Destination
+
+if TYPE_CHECKING:
+    from . import Task
 
 
 class CommandContainer:
