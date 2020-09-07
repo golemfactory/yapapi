@@ -16,16 +16,13 @@ class AsyncWrapper(AsyncContextManager):
     The results of the calls, if any, are discarded, so this class is
     most useful for wrapping callables that return `None`.
     """
+
     _wrapped: Callable
     _args_buffer: asyncio.Queue
     _task: Optional[asyncio.Task]
     _loop: asyncio.AbstractEventLoop
 
-    def __init__(
-        self,
-        wrapped: Callable,
-        event_loop: Optional[asyncio.AbstractEventLoop] = None
-    ):
+    def __init__(self, wrapped: Callable, event_loop: Optional[asyncio.AbstractEventLoop] = None):
         self._wrapped = wrapped  # type: ignore  # suppress mypy issue #708
         self._args_buffer = asyncio.Queue()
         self._task = None

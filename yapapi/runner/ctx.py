@@ -108,7 +108,7 @@ class _RecvFile(Work):
         storage: StorageProvider,
         src_path: str,
         dst_path: str,
-        emitter: Optional[EventEmitter[StorageEvent]] = None
+        emitter: Optional[EventEmitter[StorageEvent]] = None,
     ):
         self._storage = storage
         self._dst_path = Path(dst_path)
@@ -155,10 +155,10 @@ class _Steps(Work):
 
 class WorkContext:
     def __init__(
-            self,
-            ctx_id: str,
-            storage: StorageProvider,
-            emitter: Optional[EventEmitter[StorageEvent]] = None
+        self,
+        ctx_id: str,
+        storage: StorageProvider,
+        emitter: Optional[EventEmitter[StorageEvent]] = None,
     ):
         self._id = ctx_id
         self._storage: StorageProvider = storage
