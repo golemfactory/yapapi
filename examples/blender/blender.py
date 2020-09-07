@@ -1,3 +1,4 @@
+from yapapi import enable_default_logger
 from yapapi.runner import Engine, Task, vm
 from yapapi.runner.ctx import WorkContext
 from datetime import timedelta
@@ -60,6 +61,8 @@ async def main():
 
 
 if __name__ == "__main__":
+
+    enable_default_logger()
     loop = asyncio.get_event_loop()
     task = loop.create_task(main())
     try:
