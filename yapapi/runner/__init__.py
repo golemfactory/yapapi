@@ -150,6 +150,8 @@ class _BufferItem(NamedTuple):
 
 
 class Engine(AsyncContextManager):
+    """
+    """
     def __init__(
         self,
         *,
@@ -161,6 +163,15 @@ class Engine(AsyncContextManager):
         subnet_tag: Optional[str] = None,
         event_emitter: EventEmitter[EventType] = log_event,
     ):
+        """
+        :param package:
+        :param max_workers:
+        :param timeout:
+        :param budget:
+        :param strategy:
+        :param subnet_tag:
+        :param event_emitter:
+        """
         self._subnet: Optional[str] = subnet_tag
         self._strategy = strategy
         self._api_config = rest.Configuration()
@@ -179,6 +190,11 @@ class Engine(AsyncContextManager):
         worker: Callable[[WorkContext, AsyncIterator["Task"]], AsyncIterator[Tuple["Task", Work]]],
         data,
     ):
+        """
+        :param worker:
+        :param data:
+        :return:
+        """
         import asyncio
         import contextlib
         import random
@@ -488,6 +504,8 @@ TaskResult = TypeVar("TaskResult")
 
 
 class Task(Generic[TaskData, TaskResult], object):
+    """
+    """
 
     ids: ClassVar[Iterator[int]] = itertools.count(1)
 
@@ -498,6 +516,11 @@ class Task(Generic[TaskData, TaskResult], object):
         expires: Optional[datetime] = None,
         timeout: Optional[timedelta] = None,
     ):
+        """
+        :param data:
+        :param expires:
+        :param timeout:
+        """
         self.id: int = next(Task.ids)
         self._started = datetime.now()
         self._expires: Optional[datetime]
@@ -535,6 +558,10 @@ class Task(Generic[TaskData, TaskResult], object):
         return self._expires
 
     def accept_task(self, result: Optional[TaskResult] = None):
+        """
+        :param result:
+        :return:
+        """
         if self._emit_event:
             self._emit_event(TaskEvent.ACCEPTED, result=result)
         assert self._status == TaskStatus.RUNNING
@@ -543,6 +570,10 @@ class Task(Generic[TaskData, TaskResult], object):
             cb(self, "accept")
 
     def reject_task(self, reason: Optional[str] = None):
+        """
+        :param reason:
+        :return:
+        """
         if self._emit_event:
             self._emit_event(TaskEvent.REJECTED, reason=reason)
         assert self._status == TaskStatus.RUNNING

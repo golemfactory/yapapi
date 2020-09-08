@@ -154,6 +154,8 @@ class _Steps(Work):
 
 
 class WorkContext:
+    """
+    """
     def __init__(
         self,
         ctx_id: str,
@@ -172,10 +174,13 @@ class WorkContext:
             self._started = True
 
     def begin(self):
+        """
+        :return:
+        """
         pass
 
     def send_json(self, json_path: str, data: dict):
-        """Sends JSON file to the provider
+        """Sends JSON data to the provider
         :param json_path: remote (provider) path
         :param data: dictionary representing JSON data
         :return: None
@@ -192,6 +197,12 @@ class WorkContext:
         self._pending_steps.append(_SendFile(self._storage, src_path, dst_path))
 
     def run(self, cmd: str, *args: Iterable[str], env: Optional[Dict[str, str]] = None):
+        """
+        :param cmd:
+        :param args:
+        :param env:
+        :return:
+        """
         self.__prepare()
         self._pending_steps.append(_Run(cmd, *args, env=env))
 
@@ -208,6 +219,10 @@ class WorkContext:
         print(f"W{self._id}: ", *args)
 
     def commit(self, task: "Task") -> Tuple["Task", Work]:
+        """
+        :param task:
+        :return:
+        """
         steps = self._pending_steps
         self._pending_steps = []
         return task, _Steps(*steps)
