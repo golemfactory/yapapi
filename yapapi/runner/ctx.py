@@ -174,12 +174,6 @@ class WorkContext:
             self._pending_steps.append(_InitStep())
             self._started = True
 
-    def begin(self):
-        """Begins command list definition. Currently does nothing.
-        :return: None
-        """
-        pass
-
     def send_json(self, json_path: str, data: dict):
         """Schedules sending JSON data to the provider
         :param json_path: remote (provider) path

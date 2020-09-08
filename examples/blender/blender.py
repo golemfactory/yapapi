@@ -16,7 +16,6 @@ async def main():
         ctx.send_file("./cubes.blend", "/golem/resource/scene.blend")
         async for task in tasks:
             frame = task.data
-            ctx.begin()
             crops = [{"outfilebasename": "out", "borders_x": [0.0, 1.0], "borders_y": [0.0, 1.0]}]
             ctx.send_json(
                 "/golem/work/params.json",

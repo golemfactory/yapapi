@@ -505,7 +505,9 @@ TaskResult = TypeVar("TaskResult")
 
 
 class Task(Generic[TaskData, TaskResult], object):
-    """
+    """Represents one computation that will be run on the provider;
+    should contain all data needed by the requestor to prepare command list
+    for the provider.
     """
 
     ids: ClassVar[Iterator[int]] = itertools.count(1)
@@ -517,10 +519,10 @@ class Task(Generic[TaskData, TaskResult], object):
         expires: Optional[datetime] = None,
         timeout: Optional[timedelta] = None,
     ):
-        """
-        :param data:
-        :param expires:
-        :param timeout:
+        """Creates a new Task object
+        :param data: contains all information needed to prepare command list for the provider
+        :param expires: expiration datetime
+        :param timeout: timeout from now; overrides expires parameter if provided
         """
         self.id: int = next(Task.ids)
         self._started = datetime.now()
