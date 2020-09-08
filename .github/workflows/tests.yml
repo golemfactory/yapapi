@@ -8,8 +8,8 @@ on:
       - master
 
 jobs:
-  pytest:
-    name: PyTest
+  test:
+    name: Run checks
     runs-on: ubuntu-latest
 
     steps:
@@ -20,5 +20,9 @@ jobs:
       - uses: Gr1N/setup-poetry@v2
         with:
           poetry-version: 1.0.9
-      - run: poetry install
-      - run: poetry run pytest
+      - run: poetry install -E cli
+      - run: poetry run poe test
+      - run: poetry run poe typecheck
+      - run: poetry run poe codestyle
+      - run: poetry run poe liccheck
+

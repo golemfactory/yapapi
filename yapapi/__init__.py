@@ -3,8 +3,7 @@ import logging
 
 
 def enable_default_logger(
-        format_: str = "[%(asctime)s %(levelname)s %(name)s] %(message)s",
-        level: int = logging.INFO
+    format_: str = "[%(asctime)s %(levelname)s %(name)s] %(message)s", level: int = logging.INFO
 ):
     """Enable the default logger that logs to stderr."""
 

@@ -20,7 +20,6 @@ class Invoice(yap.Invoice):
 InvoiceStatus = yap.InvoiceStatus
 
 
-
 @dataclass
 class _Link:
     _api: RequestorApi
