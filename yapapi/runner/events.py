@@ -78,12 +78,7 @@ class StorageEvent(_EventStrMixin, Enum):
 
 
 EventType = Union[
-    SubscriptionEvent,
-    ProposalEvent,
-    AgreementEvent,
-    WorkerEvent,
-    TaskEvent,
-    StorageEvent
+    SubscriptionEvent, ProposalEvent, AgreementEvent, WorkerEvent, TaskEvent, StorageEvent
 ]
 
 
@@ -118,14 +113,10 @@ _event_type_to_string = {
     StorageEvent.DOWNLOAD_FINISHED: "Download finished",
 }
 
-_all_event_types = {
-    type_
-    for enum_ in get_type_args(EventType)
-    for type_ in enum_
-}
+_all_event_types = {type_ for enum_ in get_type_args(EventType) for type_ in enum_}
 
-assert _all_event_types.issubset(_event_type_to_string.keys()), (
-    _all_event_types.difference(_event_type_to_string.keys())
+assert _all_event_types.issubset(_event_type_to_string.keys()), _all_event_types.difference(
+    _event_type_to_string.keys()
 )
 
 
@@ -139,10 +130,7 @@ class EventEmitter(Protocol[E]):
     """A protocol for callables that can emit events of type `E`."""
 
     def __call__(
-        self,
-        event_type: E,
-        resource_id: Optional[ResourceId] = None,
-        **kwargs: Any
+        self, event_type: E, resource_id: Optional[ResourceId] = None, **kwargs: Any
     ) -> None:
         """Emit an event with given event type and data."""
 
@@ -151,9 +139,7 @@ logger = logging.getLogger("yapapi.runner")
 
 
 def log_event(
-    event_type: EventType,
-    resource_id: Optional[ResourceId] = None,
-    **kwargs: Any,
+    event_type: EventType, resource_id: Optional[ResourceId] = None, **kwargs: Any,
 ) -> None:
     """Log an event. This function is compatible with the `EventEmitter` protocol."""
 
@@ -162,7 +148,7 @@ def log_event(
         # newline characters in `obj` will be replaced by r"\n".
         text = repr(obj)
         if len(text) > max_len:
-            text = text[:max_len-3] + "..."
+            text = text[: max_len - 3] + "..."
         return text
 
     if not logger.isEnabledFor(logging.INFO):
@@ -173,7 +159,5 @@ def log_event(
         msg += f", id = {_format(resource_id)}"
     if kwargs:
         msg += ", "
-        msg += ", ".join(
-            f"{arg} = {_format(value)}" for arg, value in kwargs.items()
-        )
+        msg += ", ".join(f"{arg} = {_format(value)}" for arg, value in kwargs.items())
     logger.info(msg)

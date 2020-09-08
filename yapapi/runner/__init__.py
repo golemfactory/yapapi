@@ -23,7 +23,7 @@ from typing import (
     Set,
     Tuple,
     Iterator,
-    ClassVar
+    ClassVar,
 )
 
 from dataclasses import dataclass, asdict, field
@@ -150,7 +150,6 @@ class _BufferItem(NamedTuple):
 
 
 class Engine(AsyncContextManager):
-
     def __init__(
         self,
         *,
@@ -177,10 +176,7 @@ class Engine(AsyncContextManager):
 
     async def map(
         self,
-        worker: Callable[
-            [WorkContext, AsyncIterator["Task"]],
-            AsyncIterator[Tuple["Task", Work]]
-        ],
+        worker: Callable[[WorkContext, AsyncIterator["Task"]], AsyncIterator[Tuple["Task", Work]]],
         data,
     ):
         import asyncio
@@ -190,10 +186,7 @@ class Engine(AsyncContextManager):
         stack = self._stack
         tasks_processed = {"c": 0, "s": 0}
 
-        emit_progress = cast(
-            EventEmitter[EventType],
-            self._wrapped_emitter.async_call
-        )
+        emit_progress = cast(EventEmitter[EventType], self._wrapped_emitter.async_call)
 
         def on_work_done(task, status):
             if status == "accept":
@@ -331,7 +324,7 @@ class Engine(AsyncContextManager):
                 WorkerEvent.CREATED,
                 wid,
                 agreement=agreement.id,
-                provider_idn=details.view_prov(Identification)
+                provider_idn=details.view_prov(Identification),
             )
 
             async def task_emitter():
@@ -344,18 +337,12 @@ class Engine(AsyncContextManager):
             try:
                 act = await activity_api.new_activity(agreement.id)
             except Exception:
-                emit_progress(
-                    WorkerEvent.ACTIVITY_CREATE_FAILED, wid, agreement_id=agreement.id
-                )
+                emit_progress(WorkerEvent.ACTIVITY_CREATE_FAILED, wid, agreement_id=agreement.id)
                 raise
             async with act:
                 emit_progress(WorkerEvent.ACTIVITY_CREATED, act.id, worker_id=wid)
 
-                work_context = WorkContext(
-                    f"worker-{wid}",
-                    storage_manager,
-                    emitter=emit_progress
-                )
+                work_context = WorkContext(f"worker-{wid}", storage_manager, emitter=emit_progress)
                 async for (task, batch) in worker(work_context, task_emitter()):
                     emit_progress(WorkerEvent.GOT_TASK, wid, task=task)
                     try:
@@ -364,10 +351,7 @@ class Engine(AsyncContextManager):
                         batch.register(cc)
                         remote = await act.send(cc.commands())
                         emit_progress(
-                            TaskEvent.SCRIPT_SENT,
-                            task.id,
-                            cmds=cc.commands(),
-                            remote=remote,
+                            TaskEvent.SCRIPT_SENT, task.id, cmds=cc.commands(), remote=remote,
                         )
                         async for step in remote:
                             emit_progress(
@@ -377,9 +361,7 @@ class Engine(AsyncContextManager):
                                 message=step.message,
                                 idx=step.idx,
                             )
-                        emit_progress(
-                            TaskEvent.GETTING_RESULTS, task.id, worker_id=wid
-                        )
+                        emit_progress(TaskEvent.GETTING_RESULTS, task.id, worker_id=wid)
                         await batch.post()
                         emit_progress(TaskEvent.SCRIPT_FINISHED, task.id, worker_id=wid)
                         await accept_payment_for_agreement(agreement.id, partial=True)
@@ -460,7 +442,9 @@ class Engine(AsyncContextManager):
                 worker_task.cancel()
             find_offers_task.cancel()
             await asyncio.wait(
-                workers.union({find_offers_task, process_invoices_job}), timeout=5, return_when=asyncio.ALL_COMPLETED
+                workers.union({find_offers_task, process_invoices_job}),
+                timeout=5,
+                return_when=asyncio.ALL_COMPLETED,
             )
         yield {"stage": "wait for invoices", "agreements_to_pay": agreements_to_pay}
         payment_closing = True
@@ -575,4 +559,3 @@ class Package(abc.ABC):
     @abc.abstractmethod
     async def decorate_demand(self, demand: DemandBuilder):
         pass
-
