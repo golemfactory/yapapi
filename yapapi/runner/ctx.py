@@ -172,9 +172,19 @@ class WorkContext:
         pass
 
     def send_json(self, json_path: str, data: dict):
+        """Sends JSON file to the provider
+        :param json_path: remote (provider) path
+        :param data: dictionary representing JSON data
+        :return: None
+        """
         self._pending_steps.append(_SendJson(self._storage, data, json_path))
 
     def send_file(self, src_path: str, dst_path: str):
+        """Sends file to the provider
+        :param src_path: local (requestor) path
+        :param dst_path: remote (provider) path
+        :return: None
+        """
         self.__prepare()
         self._pending_steps.append(_SendFile(self._storage, src_path, dst_path))
 
@@ -183,6 +193,11 @@ class WorkContext:
         self._pending_steps.append(_Run(cmd, *args, env=env))
 
     def download_file(self, src_path: str, dst_path: str):
+        """Downloads remote file from the provider
+        :param src_path: remote (provider) path
+        :param dst_path: local (requestor) path
+        :return: None
+        """
         self.__prepare()
         self._pending_steps.append(_RecvFile(self._storage, src_path, dst_path, self._emitter))
 
