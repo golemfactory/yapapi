@@ -23,7 +23,7 @@ class ActivityService(object):
             activity_id = await self._api.create_activity(agreement_id)
             return Activity(self._api, self._state, activity_id)
         except yexc.ApiException:
-            print("fail to create activity", agreement_id)
+            print("Failed to create activity for agreement", agreement_id)
             raise
 
 
