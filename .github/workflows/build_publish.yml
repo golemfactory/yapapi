@@ -1,0 +1,77 @@
+name: Build and publish the release
+
+on:
+  release:
+    types: [ released ]
+
+jobs:
+  test:
+    name: Run checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+      - uses: Gr1N/setup-poetry@v2
+        with:
+          poetry-version: 1.0.10
+      - run: poetry install
+      - run: poetry run poe test
+      - run: poetry run poe typecheck
+      - run: poetry run poe codestyle
+      - run: poetry run poe liccheck
+
+  build:
+    needs: [test]
+    name: Build the release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+      - uses: Gr1N/setup-poetry@v2
+        with:
+          poetry-version: 1.0.10
+      - name: Get git release tag
+        run: echo "::set-output name=git-release-tag::yapapi $(git describe --tags)"
+        id: git_describe
+      - name: Get package version
+        run: echo "::set-output name=poetry-version::$(poetry version)"
+        id: poetry_version
+      - name: Fail on version mismatch
+        run: exit 1
+        if: ${{ steps.git_describe.outputs.git-release-tag != steps.poetry_version.outputs.poetry-version }}
+      - name: Build the release
+        run: poetry build
+      - name: Store the built package
+        uses: actions/upload-artifact@v2
+        with:
+            name: dist
+            path: dist
+
+  publish:
+    needs: [build]
+    name: Publish the release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+      - uses: Gr1N/setup-poetry@v2
+        with:
+          poetry-version: 1.0.10
+      - name: Retrieve the built package
+        uses: actions/download-artifact@v2
+        with:
+          name: dist
+          path: dist
+      - name: Publish to pypi
+        run: |
+          poetry config repositories.testpypi https://test.pypi.org/legacy/
+          poetry publish -r testpypi -u __token__ -p ${{ secrets.TESTPYPI_TOKEN }}

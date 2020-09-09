@@ -19,7 +19,7 @@ jobs:
           python-version: 3.8
       - uses: Gr1N/setup-poetry@v2
         with:
-          poetry-version: 1.0.9
+          poetry-version: 1.0.10
       - run: poetry install -E cli
       - run: poetry run poe test
       - run: poetry run poe typecheck
