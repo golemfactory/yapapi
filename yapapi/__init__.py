@@ -1,6 +1,8 @@
 """Golem Python API."""
 import logging
 
+__version__: str = "0.2.0"
+
 
 def enable_default_logger(
     format_: str = "[%(asctime)s %(levelname)s %(name)s] %(message)s", level: int = logging.INFO
