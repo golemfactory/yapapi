@@ -1,7 +1,10 @@
 """Golem Python API."""
 import logging
 
-__version__: str = "0.2.0"
+from pathlib import Path
+from single_version import get_version  # type: ignore
+
+__version__: str = get_version("yapapi", Path(__file__).parent.parent)
 
 
 def enable_default_logger(
