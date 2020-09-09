@@ -164,7 +164,7 @@ class Engine(AsyncContextManager):
         subnet_tag: Optional[str] = None,
         event_emitter: EventEmitter[EventType] = log_event,
     ):
-        """
+        """TODO
         :param package: image from a repository and settings;
                         package may be created e.g. using vm.repo() function
         :param max_workers: TODO
@@ -520,7 +520,7 @@ class Task(Generic[TaskData, TaskResult], object):
         expires: Optional[datetime] = None,
         timeout: Optional[timedelta] = None,
     ):
-        """Creates a new Task object
+        """Create a new Task object
         :param data: contains information needed to prepare command list for the provider
         :param expires: expiration datetime
         :param timeout: timeout from now; overrides expires parameter if provided
@@ -562,8 +562,8 @@ class Task(Generic[TaskData, TaskResult], object):
         return self._expires
 
     def accept_task(self, result: Optional[TaskResult] = None):
-        """Must be called when the results of this task are correct
-        and it shouldn't be retried.
+        """Accept task that was completed. Must be called when
+        the results of a task are correct and it shouldn't be retried.
         :param result: computation result (optional)
         :return: None
         """
@@ -575,8 +575,8 @@ class Task(Generic[TaskData, TaskResult], object):
             cb(self, "accept")
 
     def reject_task(self, reason: Optional[str] = None):
-        """Must be called when the results of this task are incorrect
-        and it should be retried.
+        """Reject task. Must be called when the results of the task
+        are not correct and it should be retried.
         :param reason: task rejection description (optional)
         :return: None
         """

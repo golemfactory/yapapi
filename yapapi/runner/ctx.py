@@ -175,7 +175,7 @@ class WorkContext:
             self._started = True
 
     def send_json(self, json_path: str, data: dict):
-        """Schedules sending JSON data to the provider
+        """Schedule sending JSON data to the provider.
         :param json_path: remote (provider) path
         :param data: dictionary representing JSON data
         :return: None
@@ -184,7 +184,7 @@ class WorkContext:
         self._pending_steps.append(_SendJson(self._storage, data, json_path))
 
     def send_file(self, src_path: str, dst_path: str):
-        """Schedules sending file to the provider
+        """Schedule sending file to the provider.
         :param src_path: local (requestor) path
         :param dst_path: remote (provider) path
         :return: None
@@ -193,7 +193,7 @@ class WorkContext:
         self._pending_steps.append(_SendFile(self._storage, src_path, dst_path))
 
     def run(self, cmd: str, *args: Iterable[str], env: Optional[Dict[str, str]] = None):
-        """Schedules running a command
+        """Schedule running a command.
         :param cmd: command to run on the provider, e.g. /my/dir/run.sh
         :param args: command arguments, e.g. "input1.txt", "output1.txt"
         :param env: optional dictionary with environmental variables
@@ -203,7 +203,7 @@ class WorkContext:
         self._pending_steps.append(_Run(cmd, *args, env=env))
 
     def download_file(self, src_path: str, dst_path: str):
-        """Schedules downloading remote file from the provider
+        """Schedule downloading remote file from the provider.
         :param src_path: remote (provider) path
         :param dst_path: local (requestor) path
         :return: None
@@ -215,7 +215,7 @@ class WorkContext:
         print(f"W{self._id}: ", *args)
 
     def commit(self, task: "Task") -> Tuple["Task", Work]:
-        """Ends task-related command list definition
+        """End task-related command list definition.
         :param task: task related to the list of commands
         :return: this return value should be yielded from the worker() function
         """
