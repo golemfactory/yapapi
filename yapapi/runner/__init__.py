@@ -150,7 +150,7 @@ class _BufferItem(NamedTuple):
 
 
 class Engine(AsyncContextManager):
-    """
+    """Requestor engine. Used to run tasks based on one image on providers.
     """
 
     def __init__(
@@ -165,13 +165,14 @@ class Engine(AsyncContextManager):
         event_emitter: EventEmitter[EventType] = log_event,
     ):
         """
-        :param package:
-        :param max_workers:
-        :param timeout:
-        :param budget:
-        :param strategy:
-        :param subnet_tag:
-        :param event_emitter:
+        :param package: image from a repository and settings;
+                        package may be created e.g. using vm.repo() function
+        :param max_workers: TODO
+        :param timeout: TODO
+        :param budget: TODO
+        :param strategy: TODO
+        :param subnet_tag: TODO
+        :param event_emitter: TODO
         """
         self._subnet: Optional[str] = subnet_tag
         self._strategy = strategy
@@ -191,10 +192,10 @@ class Engine(AsyncContextManager):
         worker: Callable[[WorkContext, AsyncIterator["Task"]], AsyncIterator[Tuple["Task", Work]]],
         data,
     ):
-        """
-        :param worker:
-        :param data:
-        :return:
+        """TODO
+        :param worker: TODO
+        :param data: TODO
+        :return: yields computation progress events
         """
         import asyncio
         import contextlib
