@@ -10,10 +10,14 @@ on:
 jobs:
   test:
     name: Run checks
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8]
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
       fail-fast: false
 
     steps:
@@ -29,4 +33,3 @@ jobs:
       - run: poetry run poe typecheck
       - run: poetry run poe codestyle
       - run: poetry run poe liccheck
-
