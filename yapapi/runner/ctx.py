@@ -180,6 +180,7 @@ class WorkContext:
         :param data: dictionary representing JSON data
         :return: None
         """
+        self.__prepare()
         self._pending_steps.append(_SendJson(self._storage, data, json_path))
 
     def send_file(self, src_path: str, dst_path: str):

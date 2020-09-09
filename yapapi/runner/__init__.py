@@ -505,9 +505,9 @@ TaskResult = TypeVar("TaskResult")
 
 
 class Task(Generic[TaskData, TaskResult], object):
-    """Represents one computation that will be run on the provider;
-    should contain all data needed by the requestor to prepare command list
-    for the provider.
+    """Represents one computation that will be run on the provider
+    (e.g. rendering of one frame); should contain all data needed
+    by the requestor to prepare command list for the provider.
     """
 
     ids: ClassVar[Iterator[int]] = itertools.count(1)
@@ -520,7 +520,7 @@ class Task(Generic[TaskData, TaskResult], object):
         timeout: Optional[timedelta] = None,
     ):
         """Creates a new Task object
-        :param data: contains all information needed to prepare command list for the provider
+        :param data: contains information needed to prepare command list for the provider
         :param expires: expiration datetime
         :param timeout: timeout from now; overrides expires parameter if provided
         """
@@ -561,9 +561,10 @@ class Task(Generic[TaskData, TaskResult], object):
         return self._expires
 
     def accept_task(self, result: Optional[TaskResult] = None):
-        """
-        :param result:
-        :return:
+        """Must be called when the results of this task are correct
+        and it shouldn't be retried.
+        :param result: computation result (optional)
+        :return: None
         """
         if self._emit_event:
             self._emit_event(TaskEvent.ACCEPTED, result=result)
@@ -573,9 +574,10 @@ class Task(Generic[TaskData, TaskResult], object):
             cb(self, "accept")
 
     def reject_task(self, reason: Optional[str] = None):
-        """
-        :param reason:
-        :return:
+        """Must be called when the results of this task are incorrect
+        and it should be retried.
+        :param reason: task rejection description (optional)
+        :return: None
         """
         if self._emit_event:
             self._emit_event(TaskEvent.REJECTED, reason=reason)
