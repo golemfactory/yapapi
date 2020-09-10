@@ -52,7 +52,8 @@ async def main():
         max_workers=3,
         budget=10.0,
         timeout=init_overhead + timedelta(minutes=len(frames) * 2),
-        subnet_tag="testnet",
+        #subnet_tag="testnet",
+        subnet_tag="market-devnet",
     ) as engine:
 
         async for progress in engine.map(worker, [Task(data=frame) for frame in frames]):
