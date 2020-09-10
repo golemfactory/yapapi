@@ -1,5 +1,6 @@
 """Utility functions and classes used within the `yapapi.runner` package."""
 import asyncio
+import sys
 from typing import AsyncContextManager, Callable, Optional
 
 
@@ -26,7 +27,12 @@ class AsyncWrapper(AsyncContextManager):
         self._wrapped = wrapped  # type: ignore  # suppress mypy issue #708
         self._args_buffer = asyncio.Queue()
         self._task = None
-        self._loop = event_loop or asyncio.get_running_loop()
+        if sys.version_info >= (3, 7):
+            self._loop = event_loop or asyncio.get_running_loop()
+        elif sys.version_info >= (3, 6):
+            self._loop = event_loop or asyncio._get_running_loop()
+        else:
+            raise Exception('Python 3.6 is needed')
 
     async def _worker(self) -> None:
         while True:

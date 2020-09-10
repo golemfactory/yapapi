@@ -6,10 +6,10 @@ from typing import Any, Optional, TypeVar, Union
 
 from typing_extensions import Protocol
 
-if sys.version_info >= (3, 8):
-    from typing import get_args as get_type_args
-else:
-    from typing_extensions import get_args as get_type_args  # type: ignore
+#if sys.version_info >= (3, 8):
+#    from typing import get_args as get_type_args
+#else:
+#    from typing_extensions import get_args as get_type_args  # type: ignore
 
 
 class _EventStrMixin:
@@ -113,11 +113,11 @@ _event_type_to_string = {
     StorageEvent.DOWNLOAD_FINISHED: "Download finished",
 }
 
-_all_event_types = {type_ for enum_ in get_type_args(EventType) for type_ in enum_}
+#_all_event_types = {type_ for enum_ in get_type_args(EventType) for type_ in enum_}
 
-assert _all_event_types.issubset(_event_type_to_string.keys()), _all_event_types.difference(
-    _event_type_to_string.keys()
-)
+#assert _all_event_types.issubset(_event_type_to_string.keys()), _all_event_types.difference(
+#    _event_type_to_string.keys()
+#)
 
 
 ResourceId = Union[int, str]
