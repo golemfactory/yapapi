@@ -1,10 +1,15 @@
-from yapapi.rest import Configuration, Market, Activity, Payment  # noqa
-from yapapi import props as yp
-from yapapi.props.builder import DemandBuilder
-from datetime import datetime, timezone
-import json
 import asyncio
 from asyncio import TimeoutError
+from datetime import datetime, timezone
+import json
+
+from yapapi import enable_default_logger
+from yapapi import props as yp
+from yapapi.props.builder import DemandBuilder
+from yapapi.rest import Configuration, Market, Activity, Payment  # noqa
+
+
+enable_default_logger()
 
 
 async def list_offers(conf: Configuration):

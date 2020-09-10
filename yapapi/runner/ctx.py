@@ -1,9 +1,13 @@
 import abc
 import json
 from pathlib import Path
-from typing import Iterable, Optional, Dict, List, Tuple
+from typing import Iterable, Optional, Dict, List, Tuple, TYPE_CHECKING
 
+from .events import EventEmitter, StorageEvent
 from ..storage import StorageProvider, Source, Destination
+
+if TYPE_CHECKING:
+    from . import Task
 
 
 class CommandContainer:
@@ -99,12 +103,19 @@ class _Run(Work):
 
 
 class _RecvFile(Work):
-    def __init__(self, storage: StorageProvider, src_path: str, dst_path: str):
+    def __init__(
+        self,
+        storage: StorageProvider,
+        src_path: str,
+        dst_path: str,
+        emitter: Optional[EventEmitter[StorageEvent]] = None,
+    ):
         self._storage = storage
         self._dst_path = Path(dst_path)
         self._src_path: str = src_path
         self._idx: Optional[int] = None
         self._dst_slot: Optional[Destination] = None
+        self._emitter: Optional[EventEmitter[StorageEvent]] = emitter
 
     async def prepare(self):
         self._dst_slot = await self._storage.new_destination(destination_file=self._dst_path)
@@ -116,11 +127,13 @@ class _RecvFile(Work):
             _from=f"container:{self._src_path}", to=self._dst_slot.upload_url
         )
 
-    async def post(self):
+    async def post(self) -> None:
         assert self._dst_slot, "_RecvFile post without prepare"
-        print("start")
+        if self._emitter:
+            self._emitter(StorageEvent.DOWNLOAD_STARTED, self._src_path)
         await self._dst_slot.download_file(self._dst_path)
-        print("done")
+        if self._emitter:
+            self._emitter(StorageEvent.DOWNLOAD_FINISHED, self._src_path)
 
 
 class _Steps(Work):
@@ -141,11 +154,17 @@ class _Steps(Work):
 
 
 class WorkContext:
-    def __init__(self, ctx_id: str, storage: StorageProvider):
+    def __init__(
+        self,
+        ctx_id: str,
+        storage: StorageProvider,
+        emitter: Optional[EventEmitter[StorageEvent]] = None,
+    ):
         self._id = ctx_id
         self._storage: StorageProvider = storage
         self._pending_steps: List[Work] = []
         self._started: bool = False
+        self._emitter: Optional[EventEmitter[StorageEvent]] = emitter
 
     def __prepare(self):
         if not self._started:
@@ -168,7 +187,7 @@ class WorkContext:
 
     def download_file(self, src_path: str, dst_path: str):
         self.__prepare()
-        self._pending_steps.append(_RecvFile(self._storage, src_path, dst_path))
+        self._pending_steps.append(_RecvFile(self._storage, src_path, dst_path, self._emitter))
 
     def log(self, *args):
         print(f"W{self._id}: ", *args)
