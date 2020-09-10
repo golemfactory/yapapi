@@ -256,8 +256,9 @@ class Engine(AsyncContextManager):
                 emit_progress("sub", "created", subscription.id)
                 async for proposal in subscription.events():
                     emit_progress("prop", "recv", proposal.id, _from=proposal.issuer)
-                    score = await strategy.score_offer(proposal)
+                    score = SCORE_NEUTRAL #await strategy.score_offer(proposal)
                     if score < SCORE_NEUTRAL:
+                        emit_progress("prop", "rejecting...", proposal_id, _for=provider_id)
                         proposal_id, provider_id = proposal.id, proposal.issuer
                         with contextlib.suppress(Exception):
                             await proposal.reject()
@@ -269,7 +270,11 @@ class Engine(AsyncContextManager):
                         offer_buffer[proposal.issuer] = _BufferItem(datetime.now(), score, proposal)
                     else:
                         emit_progress("prop", "respond", proposal.id)
-                        await proposal.respond(builder.props, builder.cons)
+                        try:
+                            await proposal.respond(builder.props, builder.cons)
+                        except Exception as e:
+                            #print(f"got except: {e}")
+                            emit_progress("prop", "respond failed. abandoning further negitiations", proposal.id, _for=proposal.issuer)  #, err=str(e))
 
         # aio_session = await self._stack.enter_async_context(aiohttp.ClientSession())
         # storage_manager = await DavStorageProvider.for_directory(
