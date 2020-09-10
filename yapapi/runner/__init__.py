@@ -150,7 +150,7 @@ class _BufferItem(NamedTuple):
 
 
 class Engine(AsyncContextManager):
-    """Requestor engine. Used to run tasks based on one image on providers.
+    """Requestor engine. Used to run tasks based on a common container image on providers.
     """
 
     def __init__(
@@ -164,15 +164,19 @@ class Engine(AsyncContextManager):
         subnet_tag: Optional[str] = None,
         event_emitter: EventEmitter[EventType] = log_event,
     ):
-        """TODO
-        :param package: image from a repository and settings;
-                        package may be created e.g. using vm.repo() function
-        :param max_workers: TODO
-        :param timeout: TODO
-        :param budget: TODO
-        :param strategy: TODO
-        :param subnet_tag: TODO
-        :param event_emitter: TODO
+        """Create a new requestor engine.
+
+        :param package: container image and related settings; vm.repo() function may be
+                        used to return package from a repository
+        :param max_workers: maximum number of workers doing the computation
+        :param timeout: timeout for the whole computation
+        :param budget: maximum budget for payments
+        :param strategy: market strategy used to select providers from the market
+                         (e.g. LeastExpensiveLinearPayuMS or DummyMS)
+        :param subnet_tag: use only providers in the subnet with the subnet_tag name
+        :param event_emitter: an object implementing EventEmitter that handles events
+                              related to the computation; by default it is a function
+                              that logs all events
         """
         self._subnet: Optional[str] = subnet_tag
         self._strategy = strategy
@@ -192,9 +196,11 @@ class Engine(AsyncContextManager):
         worker: Callable[[WorkContext, AsyncIterator["Task"]], AsyncIterator[Tuple["Task", Work]]],
         data,
     ):
-        """TODO
-        :param worker: TODO
-        :param data: TODO
+        """Run computations on providers
+
+        :param worker: a function that takes a WorkContext object and a list o tasks,
+                       adds commands to the context object and yields committed comments
+        :param data: a list of Task objects to be computed on providers
         :return: yields computation progress events
         """
         import asyncio
@@ -506,7 +512,9 @@ TaskResult = TypeVar("TaskResult")
 
 
 class Task(Generic[TaskData, TaskResult], object):
-    """Represents one computation that will be run on the provider
+    """One computation unit.
+
+    Represents one computation unit that will be run on the provider
     (e.g. rendering of one frame); should contain all data needed
     by the requestor to prepare command list for the provider.
     """
@@ -521,6 +529,7 @@ class Task(Generic[TaskData, TaskResult], object):
         timeout: Optional[timedelta] = None,
     ):
         """Create a new Task object
+
         :param data: contains information needed to prepare command list for the provider
         :param expires: expiration datetime
         :param timeout: timeout from now; overrides expires parameter if provided
@@ -562,8 +571,10 @@ class Task(Generic[TaskData, TaskResult], object):
         return self._expires
 
     def accept_task(self, result: Optional[TaskResult] = None):
-        """Accept task that was completed. Must be called when
-        the results of a task are correct and it shouldn't be retried.
+        """Accept task that was completed.
+
+        Must be called when the results of a task are correct and it shouldn't be retried.
+
         :param result: computation result (optional)
         :return: None
         """
@@ -575,8 +586,11 @@ class Task(Generic[TaskData, TaskResult], object):
             cb(self, "accept")
 
     def reject_task(self, reason: Optional[str] = None):
-        """Reject task. Must be called when the results of the task
+        """Reject task.
+
+        Must be called when the results of the task
         are not correct and it should be retried.
+
         :param reason: task rejection description (optional)
         :return: None
         """
