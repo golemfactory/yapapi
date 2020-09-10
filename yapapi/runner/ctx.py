@@ -154,7 +154,7 @@ class _Steps(Work):
 
 
 class WorkContext:
-    """Should be used to define commands to be sent to the provider
+    """Contains commands scheduled to be sent to provider.
     """
 
     def __init__(
