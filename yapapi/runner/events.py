@@ -6,11 +6,6 @@ from typing import Any, Optional, TypeVar, Union
 
 from typing_extensions import Protocol
 
-if sys.version_info >= (3, 8):
-    from typing import get_args as get_type_args
-elif sys.version_info >= (3, 7):
-    from typing_extensions import get_args as get_type_args  # type: ignore
-
 
 class _EventStrMixin:
     """Provides `__str()__` method for event types."""
@@ -113,7 +108,9 @@ _event_type_to_string = {
     StorageEvent.DOWNLOAD_FINISHED: "Download finished",
 }
 
-if sys.version_info >= (3, 7):
+if sys.version_info >= (3, 8):
+    from typing import get_args as get_type_args
+
     _all_event_types = {type_ for enum_ in get_type_args(EventType) for type_ in enum_}
 
     assert _all_event_types.issubset(_event_type_to_string.keys()), _all_event_types.difference(
