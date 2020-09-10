@@ -196,7 +196,7 @@ class Engine(AsyncContextManager):
         worker: Callable[[WorkContext, AsyncIterator["Task"]], AsyncIterator[Tuple["Task", Work]]],
         data,
     ):
-        """Run computations on providers
+        """Run computations on providers.
 
         :param worker: a function that takes a WorkContext object and a list o tasks,
                        adds commands to the context object and yields committed comments
@@ -528,7 +528,7 @@ class Task(Generic[TaskData, TaskResult], object):
         expires: Optional[datetime] = None,
         timeout: Optional[timedelta] = None,
     ):
-        """Create a new Task object
+        """Create a new Task object.
 
         :param data: contains information needed to prepare command list for the provider
         :param expires: expiration datetime
