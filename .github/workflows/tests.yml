@@ -30,6 +30,7 @@ jobs:
           poetry-version: 1.0.10
       - run: echo "::set-env name=EXTENDED_CHECK::1"
         if: ${{ matrix.os == 'ubuntu-latest' }}
+        name: Enable extended checks
       - run: poetry install -E cli
       - run: poetry run poe test
       - run: poetry run poe typecheck
