@@ -33,3 +33,4 @@ jobs:
       - run: poetry run poe typecheck
       - run: poetry run poe codestyle
       - run: poetry run poe liccheck
+        if: matrix.os == 'ubuntu-latest'
