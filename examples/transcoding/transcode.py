@@ -49,7 +49,7 @@ async def main():
                         "video": {"codec": task.data.codec,},
                         "resolution": task.data.resolution,
                     },
-                    "output_stream": f"/golem/output/output.{format}"
+                    "output_stream": f"/golem/output/output.{format}",
                 },
             )
             ctx.run("/golem/scripts/run-ffmpeg.sh")
@@ -60,7 +60,7 @@ async def main():
             task.accept_task()
 
         ctx.log("Transcoding finished!")
-    
+
     # TODO make this dynamic, e.g. depending on the size of files to transfer
     # worst-case time overhead for initialization, e.g. negotiation, file transfer etc.
     init_overhead: timedelta = timedelta(minutes=3)
