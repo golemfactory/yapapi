@@ -38,7 +38,6 @@ async def main():
             format: str = task.data.format
             filename, ext = os.path.splitext(task.data.input)
 
-            ctx.begin()
             ctx.send_file(task.data.input, f"/golem/resources/input_video{ext}")
             ctx.send_json(
                 "/golem/work/params.json",
