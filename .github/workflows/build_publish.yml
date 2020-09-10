@@ -2,7 +2,7 @@ name: Build and publish the release
 
 on:
   release:
-    types: [ released ]
+    types: [ prereleased, released ]
 
 jobs:
   test:
@@ -57,6 +57,7 @@ jobs:
     needs: [build]
     name: Publish the release
     runs-on: ubuntu-latest
+    if: ${{ github.event.action == 'released' }}
 
     steps:
       - uses: actions/checkout@v2
