@@ -42,17 +42,14 @@ async def main():
             ctx.send_json(
                 "/golem/work/params.json",
                 {
-                    'command': 'transcode',
-
-                    'track': f"/golem/resources/input_video{ext}",
-                    'targs': {
-                        'container': task.data.format,
-                        'video': {
-                            'codec': task.data.codec,
-                        },
-                        'resolution': task.data.resolution,
+                    "command": "transcode",
+                    "track": f"/golem/resources/input_video{ext}",
+                    "targs": {
+                        "container": task.data.format,
+                        "video": {"codec": task.data.codec,},
+                        "resolution": task.data.resolution,
                     },
-                    'output_stream': f"/golem/output/output.{format}"
+                    "output_stream": f"/golem/output/output.{format}"
                 },
             )
             ctx.run("/golem/scripts/run-ffmpeg.sh")
