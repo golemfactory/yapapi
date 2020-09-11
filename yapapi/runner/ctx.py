@@ -174,6 +174,9 @@ class WorkContext:
             self._pending_steps.append(_InitStep())
             self._started = True
 
+    def begin(self):
+        pass
+
     def send_json(self, json_path: str, data: dict):
         """Schedule sending JSON data to the provider.
 
