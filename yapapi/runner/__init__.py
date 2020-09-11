@@ -199,7 +199,7 @@ class Engine(AsyncContextManager):
 
         :param worker: a callable that takes a WorkContext object and a list o tasks,
                        adds commands to the context object and yields committed comments
-        :param data: a sequence of Task objects to be computed on providers
+        :param data: an iterator of Task objects to be computed on providers
         :return: yields computation progress events
         """
         import asyncio
