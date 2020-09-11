@@ -150,7 +150,7 @@ class _BufferItem(NamedTuple):
 
 
 class Engine(AsyncContextManager):
-    """Requestor engine. Used to run tasks based on a common container image on providers.
+    """Requestor engine. Used to run tasks based on a common package on providers.
     """
 
     def __init__(
@@ -166,7 +166,7 @@ class Engine(AsyncContextManager):
     ):
         """Create a new requestor engine.
 
-        :param package: container image and related settings; vm.repo() function may be
+        :param package: a package common for all tasks; vm.repo() function may be
                         used to return package from a repository
         :param max_workers: maximum number of workers doing the computation
         :param timeout: timeout for the whole computation
@@ -174,9 +174,8 @@ class Engine(AsyncContextManager):
         :param strategy: market strategy used to select providers from the market
                          (e.g. LeastExpensiveLinearPayuMS or DummyMS)
         :param subnet_tag: use only providers in the subnet with the subnet_tag name
-        :param event_emitter: an object implementing EventEmitter that handles events
-                              related to the computation; by default it is a function
-                              that logs all events
+        :param event_emitter: an EventEmitter that emits events related to the
+                              computation; by default it is a function that logs all events
         """
         self._subnet: Optional[str] = subnet_tag
         self._strategy = strategy
@@ -198,9 +197,9 @@ class Engine(AsyncContextManager):
     ):
         """Run computations on providers.
 
-        :param worker: a function that takes a WorkContext object and a list o tasks,
+        :param worker: a callable that takes a WorkContext object and a list o tasks,
                        adds commands to the context object and yields committed comments
-        :param data: a list of Task objects to be computed on providers
+        :param data: a sequence of Task objects to be computed on providers
         :return: yields computation progress events
         """
         import asyncio
@@ -515,8 +514,7 @@ class Task(Generic[TaskData, TaskResult], object):
     """One computation unit.
 
     Represents one computation unit that will be run on the provider
-    (e.g. rendering of one frame); should contain all data needed
-    by the requestor to prepare command list for the provider.
+    (e.g. rendering of one frame).
     """
 
     ids: ClassVar[Iterator[int]] = itertools.count(1)

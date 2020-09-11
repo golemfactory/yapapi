@@ -154,7 +154,7 @@ class _Steps(Work):
 
 
 class WorkContext:
-    """Contains commands scheduled to be sent to provider.
+    """An object used to schedule commands to be sent to provider.
     """
 
     def __init__(
@@ -222,7 +222,8 @@ class WorkContext:
         """End task-related command list definition.
 
         :param task: task related to the list of commands
-        :return: this return value should be yielded from the worker() function
+        :return: a tuple of Task and Work objects (the latter contains
+                 sequence commands added before calling this method)
         """
         steps = self._pending_steps
         self._pending_steps = []
