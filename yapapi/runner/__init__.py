@@ -198,7 +198,7 @@ class Engine(AsyncContextManager):
         """Run computations on providers.
 
         :param worker: a callable that takes a WorkContext object and a list o tasks,
-                       adds commands to the context object and yields committed comments
+                       adds commands to the context object and yields committed commands
         :param data: an iterator of Task objects to be computed on providers
         :return: yields computation progress events
         """
