@@ -313,9 +313,7 @@ class Engine(AsyncContextManager):
                     raise
                 async for proposal in events:
                     emit_progress(ProposalEvent.RECEIVED, proposal.id, from_=proposal.issuer)
-                    # TODO: score_offer does not work with not flattened properties JSON
-                    #score = await strategy.score_offer(proposal)
-                    score = SCORE_NEUTRAL
+                    score = await strategy.score_offer(proposal)
                     if score < SCORE_NEUTRAL:
                         proposal_id, provider_id = proposal.id, proposal.issuer
                         with contextlib.suppress(Exception):
