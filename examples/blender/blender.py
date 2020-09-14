@@ -2,13 +2,15 @@ from yapapi import enable_default_logger
 from yapapi.runner import Engine, Task, vm
 from yapapi.runner.ctx import WorkContext
 from datetime import timedelta
+import argparse
 import asyncio
 
 
 async def main():
+    args = parse_args()
     package = await vm.repo(
-        image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-        min_mem_gib=0.5,
+        image_hash="3c436e6bdfa188e35b2881be6377e41a63062e8cd9710345757d3559",
+        min_mem_gib=1.0,
         min_storage_gib=2.0,
     )
 
@@ -52,15 +54,22 @@ async def main():
         max_workers=3,
         budget=10.0,
         timeout=init_overhead + timedelta(minutes=len(frames) * 2),
-        subnet_tag="testnet",
+        subnet_tag=args.subnet,
+        stream_output=args.stream_output,
     ) as engine:
 
         async for progress in engine.map(worker, [Task(data=frame) for frame in frames]):
             print("progress=", progress)
 
 
-if __name__ == "__main__":
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--subnet", type=str, default="testnet")
+    parser.add_argument("--stream-output", action="store_true")
+    return parser.parse_args()
 
+
+if __name__ == "__main__":
     enable_default_logger()
     loop = asyncio.get_event_loop()
     task = loop.create_task(main())

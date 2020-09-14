@@ -163,6 +163,7 @@ class Engine(AsyncContextManager):
         strategy: MarketStrategy = DummyMS(),
         subnet_tag: Optional[str] = None,
         event_emitter: EventEmitter[EventType] = log_event,
+        stream_output: bool = False,
     ):
         """Create a new requestor engine.
 
@@ -189,6 +190,7 @@ class Engine(AsyncContextManager):
         # Add buffering to the provided event emitter to make sure
         # that emitting events will not block
         self._wrapped_emitter = AsyncWrapper(event_emitter)
+        self._stream_output = stream_output
 
     async def map(
         self,
@@ -248,6 +250,7 @@ class Engine(AsyncContextManager):
         activity_api: rest.Activity = self._activity_api
         strategy = self._strategy
         work_queue: asyncio.Queue[Task] = asyncio.Queue()
+        stream_output = self._stream_output
 
         workers: Set[asyncio.Task[None]] = set()
         last_wid = 0
@@ -372,17 +375,13 @@ class Engine(AsyncContextManager):
                         await batch.prepare()
                         cc = CommandContainer()
                         batch.register(cc)
-                        remote = await act.send(cc.commands())
+                        remote = await act.send(cc.commands(), stream_output)
                         emit_progress(
                             TaskEvent.SCRIPT_SENT, task.id, cmds=cc.commands(), remote=remote,
                         )
-                        async for step in remote:
+                        async for (evt, step) in remote:
                             emit_progress(
-                                TaskEvent.COMMAND_EXECUTED,
-                                task.id,
-                                worker_id=wid,
-                                message=step.message,
-                                idx=step.idx,
+                                evt, task.id, worker_id=wid, message=step.message, idx=step.idx,
                             )
                         emit_progress(TaskEvent.GETTING_RESULTS, task.id, worker_id=wid)
                         await batch.post()

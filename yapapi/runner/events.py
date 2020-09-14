@@ -58,6 +58,9 @@ class TaskEvent(_EventStrMixin, Enum):
     """Types of events related to tasks."""
 
     SCRIPT_SENT = auto()
+    COMMAND_STARTED = auto()
+    COMMAND_STDOUT = auto()
+    COMMAND_STDERR = auto()
     COMMAND_EXECUTED = auto()
     GETTING_RESULTS = auto()
     SCRIPT_FINISHED = auto()
@@ -99,6 +102,9 @@ _event_type_to_string = {
     WorkerEvent.GOT_TASK: "Worker got new task",
     WorkerEvent.FINISHED: "Worker has finished",
     TaskEvent.SCRIPT_SENT: "Script sent to provider",
+    TaskEvent.COMMAND_STARTED: "Command started",
+    TaskEvent.COMMAND_STDOUT: "Command stdout",
+    TaskEvent.COMMAND_STDERR: "Command stderr",
     TaskEvent.COMMAND_EXECUTED: "Command executed",
     TaskEvent.GETTING_RESULTS: "Getting task results",
     TaskEvent.SCRIPT_FINISHED: "Script finished",
