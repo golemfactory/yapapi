@@ -1,5 +1,6 @@
 """Golem Python API."""
 import logging
+import toml
 
 from pathlib import Path
 from pkg_resources import get_distribution
@@ -22,8 +23,6 @@ def enable_default_logger(
 def get_version() -> str:
     pyproject_path = Path(__file__).parents[1] / "pyproject.toml"
     if pyproject_path.exists():
-        import toml
-
         with open(pyproject_path) as f:
             pyproject = toml.loads(f.read())
 

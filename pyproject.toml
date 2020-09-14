@@ -31,6 +31,7 @@ async_exit_stack = "^1.0.1"
 jsonrpc-base = "^1.0.3"
 
 ya-aioclient = "^0.1.1"
+toml = "^0.10.1"
 
 
 [tool.poetry.extras]
