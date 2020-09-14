@@ -32,6 +32,8 @@ jsonrpc-base = "^1.0.3"
 
 ya-aioclient = "^0.1.1"
 
+single-version = "1.2.2"
+
 [tool.poetry.extras]
 cli = ['fire', 'rich']
 
@@ -93,6 +95,7 @@ _liccheck_export = "poetry export -E cli -f requirements.txt -o .requirements.tx
 _liccheck_verify = "liccheck -r .requirements.txt"
 liccheck = ["_liccheck_export", "_liccheck_verify"]
 check = ["test", "typecheck", "codestyle", "liccheck"]
+clean = "rm -rf .coverage .requirements.txt dist"
 docs = "portray as_html --overwrite"
 
 
