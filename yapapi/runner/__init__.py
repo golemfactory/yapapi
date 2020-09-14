@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from enum import Enum, auto
 import itertools
+import logging
 from types import MappingProxyType
 from typing import (
     Optional,
@@ -45,6 +46,8 @@ from .. import rest
 from ..props import com, Activity, Identification, IdentificationKeys
 from ..props.builder import DemandBuilder
 from ..storage import gftp
+
+logger = logging.getLogger(__name__)
 
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
@@ -327,10 +330,14 @@ class Engine(AsyncContextManager):
                             await proposal.respond(builder.props, builder.cons)
                             emit_progress(ProposalEvent.RESPONDED, proposal.id)
                         except Exception:
-                            #print(f"got except: {e}")
-                            #emit_progress("prop", "respond failed. abandoning further negitiations", proposal.id, _for=proposal.issuer)  #, err=str(e))
                             emit_progress(ProposalEvent.FAILED, proposal.id)
-                            raise
+                            logger.exception(
+                                "Error while responding to proposal."
+                                " proposal=%r, builder.props=%r, builder.cons=%r",
+                                proposal,
+                                builder.props,
+                                builder.cons,
+                            )
 
         # aio_session = await self._stack.enter_async_context(aiohttp.ClientSession())
         # storage_manager = await DavStorageProvider.for_directory(
