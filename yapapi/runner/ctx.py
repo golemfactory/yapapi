@@ -154,6 +154,9 @@ class _Steps(Work):
 
 
 class WorkContext:
+    """An object used to schedule commands to be sent to provider.
+    """
+
     def __init__(
         self,
         ctx_id: str,
@@ -175,17 +178,43 @@ class WorkContext:
         pass
 
     def send_json(self, json_path: str, data: dict):
+        """Schedule sending JSON data to the provider.
+
+        :param json_path: remote (provider) path
+        :param data: dictionary representing JSON data
+        :return: None
+        """
+        self.__prepare()
         self._pending_steps.append(_SendJson(self._storage, data, json_path))
 
     def send_file(self, src_path: str, dst_path: str):
+        """Schedule sending file to the provider.
+
+        :param src_path: local (requestor) path
+        :param dst_path: remote (provider) path
+        :return: None
+        """
         self.__prepare()
         self._pending_steps.append(_SendFile(self._storage, src_path, dst_path))
 
     def run(self, cmd: str, *args: Iterable[str], env: Optional[Dict[str, str]] = None):
+        """Schedule running a command.
+
+        :param cmd: command to run on the provider, e.g. /my/dir/run.sh
+        :param args: command arguments, e.g. "input1.txt", "output1.txt"
+        :param env: optional dictionary with environmental variables
+        :return: None
+        """
         self.__prepare()
         self._pending_steps.append(_Run(cmd, *args, env=env))
 
     def download_file(self, src_path: str, dst_path: str):
+        """Schedule downloading remote file from the provider.
+
+        :param src_path: remote (provider) path
+        :param dst_path: local (requestor) path
+        :return: None
+        """
         self.__prepare()
         self._pending_steps.append(_RecvFile(self._storage, src_path, dst_path, self._emitter))
 
@@ -193,6 +222,12 @@ class WorkContext:
         print(f"W{self._id}: ", *args)
 
     def commit(self, task: "Task") -> Tuple["Task", Work]:
+        """End task-related command list definition.
+
+        :param task: task related to the list of commands
+        :return: a tuple of Task and Work objects (the latter contains
+                 sequence commands added before calling this method)
+        """
         steps = self._pending_steps
         self._pending_steps = []
         return task, _Steps(*steps)
