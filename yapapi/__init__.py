@@ -1,10 +1,9 @@
 """Golem Python API."""
 import logging
+import toml
 
 from pathlib import Path
-from single_version import get_version  # type: ignore
-
-__version__: str = get_version("yapapi", Path(__file__).parent.parent)
+from pkg_resources import get_distribution
 
 
 def enable_default_logger(
@@ -19,3 +18,17 @@ def enable_default_logger(
     logger.addHandler(handler)
     logger.setLevel(level)
     logger.disabled = False
+
+
+def get_version() -> str:
+    pyproject_path = Path(__file__).parents[1] / "pyproject.toml"
+    if pyproject_path.exists():
+        with open(pyproject_path) as f:
+            pyproject = toml.loads(f.read())
+
+        return pyproject["tool"]["poetry"]["version"]
+
+    return get_distribution("yapapi").version
+
+
+__version__: str = get_version()
