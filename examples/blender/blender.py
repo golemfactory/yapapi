@@ -16,7 +16,6 @@ async def main():
         ctx.send_file("./cubes.blend", "/golem/resource/scene.blend")
         async for task in tasks:
             frame = task.data
-            ctx.begin()
             crops = [{"outfilebasename": "out", "borders_x": [0.0, 1.0], "borders_y": [0.0, 1.0]}]
             ctx.send_json(
                 "/golem/work/params.json",
@@ -37,7 +36,7 @@ async def main():
             ctx.download_file(f"/golem/output/out{frame:04d}.png", f"output_{frame}.png")
             yield ctx.commit(task)
             # TODO: Check if job results are valid
-            # and reject by: task.reject_task(msg = 'invalid file')
+            # and reject by: task.reject_task(reason = 'invalid file')
             task.accept_task()
 
         ctx.log("no more frames to render")
