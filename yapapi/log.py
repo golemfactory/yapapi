@@ -1,7 +1,9 @@
+from collections import defaultdict
 from itertools import count
 import json
 import logging
-from typing import Any, Dict, Iterator, Set
+import time
+from typing import Any, Dict, Iterator, List, Set
 
 from yapapi.runner.events import Event, EventType, event_type_to_string
 
@@ -38,10 +40,10 @@ def log_event_json(event: EventType) -> None:
     This function is compatible with the `EventEmitter` protocol."""
 
     info = {name: str(value) for name, value in event._asdict().items()}
-    logger.debug("%s %s", type(event).__name__, json.dumps(info))
+    logger.debug("%s %s", type(event).__name__, json.dumps(info) if info else "")
 
 
-# TODO: consider moving this class to examples/
+# TODO: consider moving this class to examples
 class SummaryLogger:
     """Aggregates information from computation events to provide a high-level description.
 
@@ -51,16 +53,35 @@ class SummaryLogger:
     def __init__(self):
         # Generates subsequent numbers, for use in generated provider names
         self.numbers: Iterator[int] = count(1)
+        # Start time of the computation
+        self.start_time: float = 0
         # Set of proposal issuer ids
         self.proposal_issuers: Set[str] = set()
         # Maps agreement ids to provider names
         self.sent_agreements: Dict[str, str] = {}
+        # Set of agreements confirmed by providers
+        self.confirmed_agreements: Set[str] = set()
         # Maps task id to task data
         self.task_data: Dict[str, Any] = {}
-        # Maps worker id to agreement id
-        self.worker_agreement: Dict[str, str] = {}
+        # Maps a provider name to the list of tasks computed by the provider
+        self.tasks_computed: Dict[str, List[str]] = defaultdict(list)
+        self.error_occurred = False
 
     def log(self, event: EventType) -> None:
+
+        if self.error_occurred:
+            return
+
+        try:
+            self._handle(event)
+        except KeyError as ke:
+            logger.exception("SummaryLogger entered invalid state")
+            self.error_occurred = True
+
+    def _handle(self, event: EventType):
+
+        if isinstance(event, Event.ComputationStarted):
+            self.start_time = time.time()
 
         if isinstance(event, Event.SubscriptionCreated):
             logger.info(event_type_to_string[type(event)])
@@ -69,39 +90,44 @@ class SummaryLogger:
             self.proposal_issuers.add(event.provider_id)
 
         elif isinstance(event, Event.ProposalConfirmed):
-            logger.info(
-                "Received proposals from %s providers so far",
-                len(self.proposal_issuers)
-            )
+            logger.info("Received proposals from %s providers so far", len(self.proposal_issuers))
 
         elif isinstance(event, Event.AgreementCreated):
             provider_name = event.provider_id.name
             if not provider_name:
                 provider_name = f"provider-{next(self.numbers)}"
-            logger.info("Agreement proposed to provider %s", provider_name)
+            logger.info("Agreement proposed to provider '%s'", provider_name)
             self.sent_agreements[event.agr_id] = provider_name
 
         elif isinstance(event, Event.AgreementConfirmed):
-            assert event.agr_id in self.sent_agreements
-            logger.info("Agreement confirmed by provider %s", self.sent_agreements[event.agr_id])
-
-        elif isinstance(event, Event.WorkerCreated):
-            self.worker_agreement[event.wrk_id] = event.agr_id
+            logger.info("Agreement confirmed by provider '%s'", self.sent_agreements[event.agr_id])
+            self.confirmed_agreements.add(event.agr_id)
 
         elif isinstance(event, Event.TaskStarted):
             self.task_data[event.task_id] = event.task_data
 
         elif isinstance(event, Event.ScriptSent):
-            assert event.task_id in self.task_data
-            assert event.wrk_id in self.worker_agreement
-            agr_id = self.worker_agreement[event.wrk_id]
-            assert agr_id in self.sent_agreements
-            provider_name = self.sent_agreements[agr_id]
+            provider_name = self.sent_agreements[event.agr_id]
             logger.info(
-                "Task sent to provider %s, task data: %s",
+                "Task sent to provider '%s', task data: %s",
                 provider_name,
-                self.task_data(event.task_id)
+                self.task_data[event.task_id],
             )
 
-# def log_highlevel(event: EventType) -> None:
-#
+        elif isinstance(event, Event.ScriptFinished):
+            provider_name = self.sent_agreements[event.agr_id]
+            logger.info(
+                "Task computed by provider '%s', task data: %s",
+                provider_name,
+                self.task_data[event.task_id],
+            )
+            self.tasks_computed[provider_name].append(event.task_id)
+
+        elif isinstance(event, Event.ComputationFinished):
+            total_time = time.time() - self.start_time
+            logger.info(f"Summary: Computation finished in {total_time:.1f}s")
+            logger.info(
+                "Summary: Negotiated agreements with %s providers", len(self.confirmed_agreements)
+            )
+            for provider_name, tasks in self.tasks_computed.items():
+                logger.info("Summary: Provider '%s' computed %s tasks", provider_name, len(tasks))
