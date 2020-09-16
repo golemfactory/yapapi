@@ -4,7 +4,7 @@ from yapapi import enable_default_logger
 from yapapi.runner import Engine, Task, vm
 from yapapi.runner.ctx import WorkContext
 from datetime import timedelta
-import argparse
+from examples import utils
 import asyncio
 import logging
 
@@ -63,17 +63,8 @@ async def main(subnet_tag="testnet"):
             print("progress=", progress)
 
 
-def build_parser():
-    parser = argparse.ArgumentParser(description="Render blender scene")
-    parser.add_argument("--subnet-tag", default="testnet")
-    parser.add_argument(
-        "--debug", dest="log_level", action="store_const", const=logging.DEBUG, default=logging.INFO
-    )
-    return parser
-
-
 if __name__ == "__main__":
-    parser = build_parser()
+    parser = utils.build_parser()
     args = parser.parse_args()
 
     enable_default_logger(level=args.log_level)

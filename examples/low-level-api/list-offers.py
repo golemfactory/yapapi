@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-import argparse
 import asyncio
 from asyncio import TimeoutError
 from datetime import datetime, timezone
+from examples import utils
 import json
 import logging
 
@@ -28,17 +28,8 @@ async def list_offers(conf: Configuration, subnet_tag="testnet"):
         print("done")
 
 
-def build_parser():
-    parser = argparse.ArgumentParser(description="Render blender scene")
-    parser.add_argument("--subnet-tag", default="testnet")
-    parser.add_argument(
-        "--debug", dest="log_level", action="store_const", const=logging.DEBUG, default=logging.INFO
-    )
-    return parser
-
-
 def main():
-    parser = build_parser()
+    parser = utils.build_parser()
     args = parser.parse_args()
     enable_default_logger(level=args.log_level)
     try:
