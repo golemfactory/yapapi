@@ -7,9 +7,9 @@ from pkg_resources import get_distribution
 
 
 def enable_default_logger(
-    format_: str = "[%(asctime)s %(levelname)s %(name)s] %(message)s", level: int = logging.INFO
+    format_: str = "[%(asctime)s %(levelname)s %(name)s] %(message)s", level: int = logging.DEBUG
 ):
-    """Enable the default logger that logs to stderr."""
+    """Enable the default logger that logs human-readable messages to stderr."""
 
     logger = logging.getLogger("yapapi")
     handler = logging.StreamHandler()

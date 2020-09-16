@@ -1,161 +1,146 @@
-"""Representing and logging events in Golem computation."""
-from enum import Enum, auto
-import logging
+"""Representing events in Golem computation."""
 import sys
-from typing import Any, Optional, TypeVar, Union
-
-from typing_extensions import Protocol
-
-
-class _EventStrMixin:
-    """Provides `__str()__` method for event types."""
-
-    def __str__(self) -> str:
-        return _event_type_to_string[self]
-
-
-class SubscriptionEvent(_EventStrMixin, Enum):
-    """Types of events related to subscriptions."""
-
-    CREATED = auto()
-    FAILED = auto()
-    COLLECT_FAILED = auto()
-
-
-class ProposalEvent(_EventStrMixin, Enum):
-    """Types of events related to proposals."""
-
-    BUFFERED = auto()
-    FAILED = auto()
-    RECEIVED = auto()
-    REJECTED = auto()
-    RESPONDED = auto()
-
-
-class AgreementEvent(_EventStrMixin, Enum):
-    """Types of events related to agreements."""
-
-    CREATED = auto()
-    CONFIRMED = auto()
-    REJECTED = auto()
-    PAYMENT_ACCEPTED = auto()
-    PAYMENT_PREPARED = auto()
-    PAYMENT_QUEUED = auto()
-    INVOICE_RECEIVED = auto()
-
-
-class WorkerEvent(_EventStrMixin, Enum):
-    """Types of events related to workers."""
-
-    CREATED = auto()
-    ACTIVITY_CREATED = auto()
-    ACTIVITY_CREATE_FAILED = auto()
-    GOT_TASK = auto()
-    FINISHED = auto()
-
-
-class TaskEvent(_EventStrMixin, Enum):
-    """Types of events related to tasks."""
-
-    SCRIPT_SENT = auto()
-    COMMAND_EXECUTED = auto()
-    GETTING_RESULTS = auto()
-    SCRIPT_FINISHED = auto()
-    ACCEPTED = auto()
-    REJECTED = auto()
-
-
-class StorageEvent(_EventStrMixin, Enum):
-    """Types of events related to storage."""
-
-    DOWNLOAD_STARTED = auto()
-    DOWNLOAD_FINISHED = auto()
-
-
-EventType = Union[
-    SubscriptionEvent, ProposalEvent, AgreementEvent, WorkerEvent, TaskEvent, StorageEvent
-]
-
-
-_event_type_to_string = {
-    SubscriptionEvent.CREATED: "Proposal subscription created",
-    SubscriptionEvent.FAILED: "Failed to subscribe to proposals",
-    SubscriptionEvent.COLLECT_FAILED: "Failed to collect proposals",
-    ProposalEvent.BUFFERED: "Proposal buffered",
-    ProposalEvent.FAILED: "Proposal failed",
-    ProposalEvent.RECEIVED: "Proposal received",
-    ProposalEvent.REJECTED: "Proposal rejected",
-    ProposalEvent.RESPONDED: "Responded to proposal",
-    AgreementEvent.CREATED: "Agreement created",
-    AgreementEvent.CONFIRMED: "Agreement confirmed",
-    AgreementEvent.REJECTED: "Agreement rejected",
-    AgreementEvent.PAYMENT_ACCEPTED: "Payment accepted for agreement",
-    AgreementEvent.PAYMENT_PREPARED: "Payment prepared for agreement",
-    AgreementEvent.PAYMENT_QUEUED: "Payment queued for agreement",
-    AgreementEvent.INVOICE_RECEIVED: "Invoice received for agreement",
-    WorkerEvent.CREATED: "Worker created",
-    WorkerEvent.ACTIVITY_CREATED: "Activity created",
-    WorkerEvent.ACTIVITY_CREATE_FAILED: "Failed to create activity",
-    WorkerEvent.GOT_TASK: "Worker got new task",
-    WorkerEvent.FINISHED: "Worker has finished",
-    TaskEvent.SCRIPT_SENT: "Script sent to provider",
-    TaskEvent.COMMAND_EXECUTED: "Command executed",
-    TaskEvent.GETTING_RESULTS: "Getting task results",
-    TaskEvent.SCRIPT_FINISHED: "Script finished",
-    TaskEvent.ACCEPTED: "Task accepted",
-    TaskEvent.REJECTED: "Task rejected",
-    StorageEvent.DOWNLOAD_STARTED: "Download started",
-    StorageEvent.DOWNLOAD_FINISHED: "Download finished",
-}
+from typing import Any, NamedTuple, Optional, Union
 
 if sys.version_info >= (3, 8):
     from typing import get_args as get_type_args
+elif sys.version_info >= (3, 7):
+    from typing_extensions import get_args as get_type_args  # type: ignore
+else:
+    get_type_args = None
 
-    _all_event_types = {type_ for enum_ in get_type_args(EventType) for type_ in enum_}
 
-    assert _all_event_types.issubset(_event_type_to_string.keys()), _all_event_types.difference(
-        _event_type_to_string.keys()
+from yapapi.props import Identification
+
+
+class Event:
+    """A namespace for event types."""
+
+    ComputationStarted = NamedTuple("ComputationStarted", [])
+    ComputationFinished = NamedTuple("ComputationFinished", [])
+    ComputationFailed = NamedTuple("ComputationFailed", [("reason", str)])
+    SubscriptionCreated = NamedTuple("SubscriptionCreated", [("sub_id", str)])
+    SubscriptionFailed = NamedTuple("SubscriptionFailed", [("reason", str)])
+    CollectFailed = NamedTuple("CollectFailed", [("sub_id", str), ("reason", str)])
+    ProposalReceived = NamedTuple("ProposalReceived", [("prop_id", str), ("provider_id", str)])
+    ProposalRejected = NamedTuple("ProposalRejected", [("prop_id", str)])
+    ProposalResponded = NamedTuple("ProposalResponded", [("prop_id", str)])
+    ProposalConfirmed = NamedTuple("ProposalConfirmed", [("prop_id", str)])
+    ProposalFailed = NamedTuple("ProposalFailed", [("prop_id", str), ("reason", str)])
+    AgreementCreated = NamedTuple(
+        "AgreementCreated", [("agr_id", str), ("provider_id", Identification)]
     )
+    AgreementConfirmed = NamedTuple("AgreementConfirmed", [("agr_id", str)])
+    AgreementRejected = NamedTuple("AgreementRejected", [("agr_id", str)])
+    PaymentAccepted = NamedTuple(
+        "PaymentAccepted", [("agr_id", str), ("inv_id", str), ("amount", str)]
+    )
+    PaymentPrepared = NamedTuple("PaymentPrepared", [("agr_id", str)])
+    PaymentQueued = NamedTuple("PaymentQueued", [("agr_id", str)])
+    InvoiceReceived = NamedTuple(
+        "InvoiceReceived", [("agr_id", str), ("inv_id", str), ("issuer_id", str), ("amount", str)]
+    )
+    WorkerStarted = NamedTuple("WorkerStarted", [("agr_id", str)])
+    ActivityCreated = NamedTuple("ActivityCreated", [("act_id", str), ("agr_id", str)])
+    ActivityCreateFailed = NamedTuple("ActivityCreateFailed", [("agr_id", str)])
+    TaskStarted = NamedTuple("TaskStarted", [("agr_id", str), ("task_id", str), ("task_data", Any)])
+    WorkerFinished = NamedTuple("WorkerFinished", [("agr_id", str)])
+    ScriptSent = NamedTuple("ScriptSent", [("agr_id", str), ("task_id", str), ("cmds", Any)])
+    CommandExecuted = NamedTuple(
+        "CommandExecuted", [("agr_id", str), ("task_id", str), ("cmd_idx", int), ("message", str)]
+    )
+    GettingResults = NamedTuple("GettingResults", [("agr_id", str), ("task_id", str)])
+    ScriptFinished = NamedTuple("ScriptFinished", [("agr_id", str), ("task_id", str)])
+    TaskAccepted = NamedTuple("TaskAccepted", [("task_id", str), ("result", Any)])
+    TaskRejected = NamedTuple("TaskRejected", [("task_id", str), ("reason", Optional[str])])
+    DownloadStarted = NamedTuple("DownloadStarted", [("path", str)])
+    DownloadFinished = NamedTuple("DownloadFinished", [("path", str)])
+
+    def __init__(self, *_args, **_kwargs):
+        raise NotImplementedError(f"Cannot create instances of {type(self).__name__}")
 
 
-ResourceId = Union[int, str]
+EventType = Union[
+    Event.ComputationStarted,
+    Event.ComputationFinished,
+    Event.ComputationFailed,
+    Event.SubscriptionCreated,
+    Event.SubscriptionFailed,
+    Event.CollectFailed,
+    Event.ProposalFailed,
+    Event.ProposalReceived,
+    Event.ProposalRejected,
+    Event.ProposalResponded,
+    Event.ProposalConfirmed,
+    Event.AgreementCreated,
+    Event.AgreementConfirmed,
+    Event.AgreementRejected,
+    Event.PaymentAccepted,
+    Event.PaymentPrepared,
+    Event.PaymentQueued,
+    Event.InvoiceReceived,
+    Event.WorkerStarted,
+    Event.ActivityCreated,
+    Event.ActivityCreateFailed,
+    Event.TaskStarted,
+    Event.WorkerFinished,
+    Event.ScriptSent,
+    Event.CommandExecuted,
+    Event.GettingResults,
+    Event.ScriptFinished,
+    Event.TaskAccepted,
+    Event.TaskRejected,
+    Event.DownloadStarted,
+    Event.DownloadFinished,
+]
 
 
-E = TypeVar("E", contravariant=True, bound=EventType)
+if get_type_args:
+    # Check that `EventType` includes all event types from `Event`
+    event_membertypes = set(value for value in vars(Event).values() if isinstance(value, type))
+    eventtype_members = set(get_type_args(EventType))
+    assert event_membertypes == eventtype_members, event_membertypes.difference(eventtype_members)
 
 
-class EventEmitter(Protocol[E]):
-    """A protocol for callables that can emit events of type `E`."""
+# Default human-readable representation of event types.
+event_type_to_string = {
+    Event.ComputationStarted: "Computation started",
+    Event.ComputationFinished: "Computation finished",
+    Event.ComputationFailed: "Computation failed",
+    Event.SubscriptionCreated: "Demand published on the market",
+    Event.SubscriptionFailed: "Demand publication failed",
+    Event.CollectFailed: "Failed to collect proposals for demand",
+    Event.ProposalReceived: "Proposal received from the market",
+    Event.ProposalRejected: "Proposal rejected",  # by whom? alt: Rejected a proposal?
+    Event.ProposalResponded: "Responded to a proposal",
+    Event.ProposalFailed: "Failed to respond to proposal",
+    Event.ProposalConfirmed: "Proposal confirmed by provider",  # Proposal negotiated with provider?
+    Event.AgreementCreated: "Agreement proposal sent to provider",
+    Event.AgreementConfirmed: "Agreement approved by provider",
+    Event.AgreementRejected: "Agreement rejected by provider",
+    Event.PaymentAccepted: "Payment accepted",  # by who?
+    Event.PaymentPrepared: "Payment prepared",
+    Event.PaymentQueued: "Payment queued",
+    Event.InvoiceReceived: "Invoice received",  # by who?
+    Event.WorkerStarted: "Worker started for agreement",
+    Event.ActivityCreated: "Activity created on provider",
+    Event.ActivityCreateFailed: "Failed to create activity",
+    Event.TaskStarted: "Task started",
+    Event.ScriptSent: "Script sent to provider",
+    Event.CommandExecuted: "Script command executed",
+    Event.GettingResults: "Getting script results",
+    Event.ScriptFinished: "Script finished",
+    Event.TaskAccepted: "Task accepted",  # by who?
+    Event.TaskRejected: "Task rejected",  # by who?
+    Event.WorkerFinished: "Worker finished",
+    Event.DownloadStarted: "Download started",
+    Event.DownloadFinished: "Download finished",
+}
 
-    def __call__(
-        self, event_type: E, resource_id: Optional[ResourceId] = None, **kwargs: Any
-    ) -> None:
-        """Emit an event with given event type and data."""
 
-
-logger = logging.getLogger("yapapi.runner")
-
-
-def log_event(
-    event_type: EventType, resource_id: Optional[ResourceId] = None, **kwargs: Any,
-) -> None:
-    """Log an event. This function is compatible with the `EventEmitter` protocol."""
-
-    def _format(obj: Any, max_len: int = 200) -> str:
-        # This will also escape control characters, in particular,
-        # newline characters in `obj` will be replaced by r"\n".
-        text = repr(obj)
-        if len(text) > max_len:
-            text = text[: max_len - 3] + "..."
-        return text
-
-    if not logger.isEnabledFor(logging.INFO):
-        return
-
-    msg = _event_type_to_string[event_type]
-    if resource_id is not None:
-        msg += f", id = {_format(resource_id)}"
-    if kwargs:
-        msg += ", "
-        msg += ", ".join(f"{arg} = {_format(value)}" for arg, value in kwargs.items())
-    logger.info(msg)
+if get_type_args:
+    # Check that `event_type_to_string` includes all event types from `Event`
+    event_membertypes = set(value for value in vars(Event).values() if isinstance(value, type))
+    assert event_membertypes.issubset(event_type_to_string.keys()), event_membertypes.difference(
+        event_type_to_string.keys()
+    )
