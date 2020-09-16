@@ -311,7 +311,11 @@ class Engine(AsyncContextManager):
                     raise
                 async for proposal in events:
                     emit_progress(ProposalEvent.RECEIVED, proposal.id, from_=proposal.issuer)
-                    score = await strategy.score_offer(proposal)
+                    try:
+                        score = await strategy.score_offer(proposal)
+                    except Exception:
+                        emit_progress(ProposalEvent.FAILED, proposal.id)
+                        continue
                     if score < SCORE_NEUTRAL:
                         proposal_id, provider_id = proposal.id, proposal.issuer
                         with contextlib.suppress(Exception):
