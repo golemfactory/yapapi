@@ -64,8 +64,7 @@ class Activity(AsyncContextManager["Activity"]):
 @dataclass
 class Result:
     idx: int
-    message: Optional[str] = field(default=None)
-    event: Optional["RuntimeEvent"] = field(default=None)
+    message: Optional[str]
 
 
 class CommandExecutionError(Exception):
