@@ -39,8 +39,12 @@ class AsyncWrapper(AsyncContextManager):
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self._args_buffer.join()
-        self._task.cancel()
-        self._task = None
+        try:
+            if self._task.exception():
+                print("Error in AsyncWrapper task:", self._task.exception())
+                raise self._task.exception()
+        finally:
+            self._task.cancel()
 
     def async_call(self, *args, **kwargs) -> None:
         """Schedule an asynchronous call to the wrapped callable."""
