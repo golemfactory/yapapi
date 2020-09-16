@@ -62,11 +62,15 @@ async def main(subnet_tag="testnet"):
         async for progress in engine.map(worker, [Task(data=frame) for frame in frames]):
             print("progress=", progress)
 
+
 def build_parser():
-    parser = argparse.ArgumentParser(description='Render blender scene')
-    parser.add_argument('--subnet-tag', default='testnet')
-    parser.add_argument('--debug', dest='log_level', action='store_const', const=logging.DEBUG, default=logging.INFO)
+    parser = argparse.ArgumentParser(description="Render blender scene")
+    parser.add_argument("--subnet-tag", default="testnet")
+    parser.add_argument(
+        "--debug", dest="log_level", action="store_const", const=logging.DEBUG, default=logging.INFO
+    )
     return parser
+
 
 if __name__ == "__main__":
     parser = build_parser()
