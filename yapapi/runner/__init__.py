@@ -153,8 +153,7 @@ class _BufferItem(NamedTuple):
 
 
 class Engine(AsyncContextManager):
-    """Requestor engine. Used to run tasks based on a common package on providers.
-    """
+    """Requestor engine. Used to run tasks based on a common package on providers."""
 
     def __init__(
         self,
