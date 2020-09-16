@@ -16,7 +16,7 @@ async def list_offers(conf: Configuration, subnet_tag="testnet"):
     async with conf.market() as client:
         market_api = Market(client)
         dbuild = DemandBuilder()
-        dbuild.add(yp.Identification(name="some scannig node", subnet_tag=subnet_tag))
+        dbuild.add(yp.Identification(name="some scanning node", subnet_tag=subnet_tag))
         dbuild.add(yp.Activity(expiration=datetime.now(timezone.utc)))
 
         async with market_api.subscribe(dbuild.props, dbuild.cons) as subscription:
