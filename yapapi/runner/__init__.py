@@ -454,8 +454,7 @@ class Engine(AsyncContextManager):
                 for task in done:
                     # if an exception occurred when a service task was running
                     if task in services and not task.cancelled() and task.exception():
-                        e: Exception = task.exception()
-                        raise e
+                        raise cast(Exception, task.exception())
                 workers -= done
                 services -= done
 
