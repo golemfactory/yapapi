@@ -35,7 +35,7 @@ from .events import (
     EventType,
     Event,
 )
-from yapapi.log import log_event
+
 from .utils import AsyncWrapper
 from .. import rest
 from ..props import com, Activity, Identification, IdentificationKeys
@@ -153,8 +153,7 @@ class _BufferItem(NamedTuple):
 
 
 class Engine(AsyncContextManager):
-    """Requestor engine. Used to run tasks based on a common package on providers.
-    """
+    """Requestor engine. Used to run tasks based on a common package on providers."""
 
     def __init__(
         self,
@@ -165,7 +164,7 @@ class Engine(AsyncContextManager):
         budget: Union[float, Decimal],
         strategy: MarketStrategy = DummyMS(),
         subnet_tag: Optional[str] = None,
-        event_emitter: Callable[[EventType], None] = log_event,
+        event_emitter: Optional[Callable[[EventType], None]] = None,
     ):
         """Create a new requestor engine.
 
@@ -190,6 +189,13 @@ class Engine(AsyncContextManager):
         # TODO: setup precitsion
         self._budget_amount = Decimal(budget)
         self._budget_allocation: Optional[rest.payment.Allocation] = None
+
+        if not event_emitter:
+            # Use local import to avoid cyclic imports when yapapi.log
+            # is imported by client code
+            from ..log import log_event
+
+            event_emitter = log_event
         # Add buffering to the provided event emitter to make sure
         # that emitting events will not block
         self._wrapped_emitter = AsyncWrapper(event_emitter)
@@ -269,7 +275,9 @@ class Engine(AsyncContextManager):
                 if invoice.agreement_id in agreements_to_pay:
                     emit(
                         Event.InvoiceReceived(
-                            agr_id=invoice.agreement_id, inv_id=invoice.invoice_id
+                            agr_id=invoice.agreement_id,
+                            inv_id=invoice.invoice_id,
+                            amount=invoice.amount,
                         )
                     )
                     agreements_to_pay.remove(invoice.agreement_id)
