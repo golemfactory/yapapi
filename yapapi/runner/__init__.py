@@ -117,7 +117,10 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
         demand.ensure(f"({com.PRICE_MODEL}={com.PriceModel.LINEAR.value})")
 
     async def score_offer(self, offer: rest.market.OfferProposal) -> float:
-        linear: com.ComLinear = com.ComLinear.from_props(offer.props)
+        try:
+            linear: com.ComLinear = com.ComLinear.from_props(offer.props)
+        except Exception:
+            return SCORE_REJECTED
 
         if linear.scheme != com.BillingScheme.PAYU:
             return SCORE_REJECTED
