@@ -64,7 +64,7 @@ async def main(subnet_tag="testnet"):
 
 
 if __name__ == "__main__":
-    parser = utils.build_parser()
+    parser = utils.build_parser("Render blender scene")
     args = parser.parse_args()
 
     enable_default_logger(level=args.log_level)

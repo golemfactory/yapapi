@@ -29,7 +29,7 @@ async def list_offers(conf: Configuration, subnet_tag="testnet"):
 
 
 def main():
-    parser = utils.build_parser()
+    parser = utils.build_parser("List offers")
     args = parser.parse_args()
     enable_default_logger(level=args.log_level)
     try:
