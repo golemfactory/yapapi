@@ -452,10 +452,13 @@ class Engine(AsyncContextManager):
             ):
                 if datetime.now(timezone.utc) > self._expires:
                     raise TimeoutError(f"task timeout exceeded. timeout={self._conf.timeout}")
-
                 done, pending = await asyncio.wait(
                     services.union(workers), timeout=10, return_when=asyncio.FIRST_COMPLETED
                 )
+                for task in done:
+                    # if an exception occurred when a service task was running
+                    if task in services and not task.cancelled() and task.exception():
+                        raise cast(Exception, task.exception())
                 workers -= done
                 services -= done
 
