@@ -38,7 +38,7 @@ class Event:
     PaymentPrepared = NamedTuple("PaymentPrepared", [("agr_id", str)])
     PaymentQueued = NamedTuple("PaymentQueued", [("agr_id", str)])
     InvoiceReceived = NamedTuple(
-        "InvoiceReceived", [("agr_id", str), ("inv_id", str), ("issuer_id", str), ("amount", str)]
+        "InvoiceReceived", [("agr_id", str), ("inv_id", str), ("amount", str)]
     )
     WorkerStarted = NamedTuple("WorkerStarted", [("agr_id", str)])
     ActivityCreated = NamedTuple("ActivityCreated", [("act_id", str), ("agr_id", str)])

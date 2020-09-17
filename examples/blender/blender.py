@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
+import asyncio
+from datetime import timedelta
+import pathlib
+import sys
 
 from yapapi import enable_default_logger
 from yapapi.runner import Engine, Task, vm
 from yapapi.runner.ctx import WorkContext
-from datetime import timedelta
-import asyncio
-import logging
+
+# For importing `utils.py`:
+script_dir = pathlib.Path(__file__).resolve().parent
+parent_directory = script_dir.parent
+sys.stderr.write(f"Adding {parent_directory} to sys.path.\n")
+sys.path.append(str(parent_directory))
+import utils
 
 
 async def main(subnet_tag="testnet"):
@@ -16,7 +24,8 @@ async def main(subnet_tag="testnet"):
     )
 
     async def worker(ctx: WorkContext, tasks):
-        ctx.send_file("./cubes.blend", "/golem/resource/scene.blend")
+        scene_path = str(script_dir / "cubes.blend")
+        ctx.send_file(scene_path, "/golem/resource/scene.blend")
         async for task in tasks:
             frame = task.data
             crops = [{"outfilebasename": "out", "borders_x": [0.0, 1.0], "borders_y": [0.0, 1.0]}]
@@ -50,12 +59,26 @@ async def main(subnet_tag="testnet"):
     # worst-case time overhead for initialization, e.g. negotiation, file transfer etc.
     init_overhead: timedelta = timedelta(minutes=3)
 
+    # Set up logging.
+    # For detailed human-readable output use:
+    #   imnport yapapi.log
+    #   emitter = yapapi.log.log_event
+    # For even more detailed machine-readable output use
+    #   import yapapi.log
+    #   emitter = yapapi.log.log_event_json
+    # For summary human-readable output use
+    emitter = utils.SummaryLogger().log
+    # To combine summary with detailed output use:
+    #  import yapapi.log
+    #  emitter = utils.SummaryLogger(yapapi.log.log_event).log
+
     async with Engine(
         package=package,
         max_workers=3,
         budget=10.0,
         timeout=init_overhead + timedelta(minutes=len(frames) * 2),
         subnet_tag=subnet_tag,
+        event_emitter=emitter,
     ) as engine:
 
         async for progress in engine.map(worker, [Task(data=frame) for frame in frames]):
@@ -65,11 +88,6 @@ async def main(subnet_tag="testnet"):
 if __name__ == "__main__":
     import pathlib
     import sys
-
-    parent_directory = pathlib.Path(__file__).resolve().parent.parent
-    sys.stderr.write(f"Adding {parent_directory} to sys.path.\n")
-    sys.path.append(str(parent_directory))
-    import utils
 
     parser = utils.build_parser("Render blender scene")
     args = parser.parse_args()
