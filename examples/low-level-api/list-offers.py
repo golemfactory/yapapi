@@ -2,7 +2,6 @@
 import asyncio
 from asyncio import TimeoutError
 from datetime import datetime, timezone
-from examples import utils
 import json
 import logging
 
@@ -29,6 +28,14 @@ async def list_offers(conf: Configuration, subnet_tag="testnet"):
 
 
 def main():
+    import pathlib
+    import sys
+
+    parent_directory = pathlib.Path(__file__).resolve().parent.parent
+    sys.stderr.write(f"Adding {parent_directory} to sys.path.\n")
+    sys.path.append(str(parent_directory))
+    import utils
+
     parser = utils.build_parser("List offers")
     args = parser.parse_args()
     enable_default_logger(level=args.log_level)

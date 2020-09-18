@@ -4,7 +4,6 @@ from yapapi import enable_default_logger
 from yapapi.runner import Engine, Task, vm
 from yapapi.runner.ctx import WorkContext
 from datetime import timedelta
-from examples import utils
 import asyncio
 import logging
 
@@ -64,6 +63,14 @@ async def main(subnet_tag="testnet"):
 
 
 if __name__ == "__main__":
+    import pathlib
+    import sys
+
+    parent_directory = pathlib.Path(__file__).resolve().parent.parent
+    sys.stderr.write(f"Adding {parent_directory} to sys.path.\n")
+    sys.path.append(str(parent_directory))
+    import utils
+
     parser = utils.build_parser("Render blender scene")
     args = parser.parse_args()
 

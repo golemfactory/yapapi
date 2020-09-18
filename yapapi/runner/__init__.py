@@ -326,9 +326,7 @@ class Engine(AsyncContextManager):
                         continue
                     if proposal.is_draft:
                         emit_progress(ProposalEvent.BUFFERED, proposal.id)
-                        offer_buffer[proposal.issuer] = _BufferItem(
-                            datetime.now(), score, proposal
-                        )
+                        offer_buffer[proposal.issuer] = _BufferItem(datetime.now(), score, proposal)
                     else:
                         try:
                             await proposal.respond(builder.props, builder.cons)
