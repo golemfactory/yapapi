@@ -1,11 +1,14 @@
+#!/usr/bin/env python3
+
 from yapapi import enable_default_logger
 from yapapi.runner import Engine, Task, vm
 from yapapi.runner.ctx import WorkContext
 from datetime import timedelta
 import asyncio
+import logging
 
 
-async def main():
+async def main(subnet_tag="testnet"):
     package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         min_mem_gib=0.5,
@@ -52,7 +55,7 @@ async def main():
         max_workers=3,
         budget=10.0,
         timeout=init_overhead + timedelta(minutes=len(frames) * 2),
-        subnet_tag="testnet",
+        subnet_tag=subnet_tag,
     ) as engine:
 
         async for progress in engine.map(worker, [Task(data=frame) for frame in frames]):
@@ -60,10 +63,20 @@ async def main():
 
 
 if __name__ == "__main__":
+    import pathlib
+    import sys
 
-    enable_default_logger()
+    parent_directory = pathlib.Path(__file__).resolve().parent.parent
+    sys.stderr.write(f"Adding {parent_directory} to sys.path.\n")
+    sys.path.append(str(parent_directory))
+    import utils
+
+    parser = utils.build_parser("Render blender scene")
+    args = parser.parse_args()
+
+    enable_default_logger(level=args.log_level)
     loop = asyncio.get_event_loop()
-    task = loop.create_task(main())
+    task = loop.create_task(main(subnet_tag=args.subnet_tag))
     try:
         asyncio.get_event_loop().run_until_complete(task)
     except (Exception, KeyboardInterrupt) as e:

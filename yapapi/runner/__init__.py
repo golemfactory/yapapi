@@ -46,6 +46,7 @@ from ..props import com, Activity, Identification, IdentificationKeys
 from ..props.builder import DemandBuilder
 from ..storage import gftp
 
+
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
 else:
@@ -91,7 +92,10 @@ class DummyMS(MarketStrategy, object):
         self._activity = Activity.from_props(demand.props)
 
     async def score_offer(self, offer: rest.market.OfferProposal) -> float:
-        linear: com.ComLinear = com.ComLinear.from_props(offer.props)
+        try:
+            linear: com.ComLinear = com.ComLinear.from_props(offer.props)
+        except Exception:
+            return SCORE_REJECTED
 
         if linear.scheme != com.BillingScheme.PAYU:
             return SCORE_REJECTED
@@ -116,7 +120,10 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
         demand.ensure(f"({com.PRICE_MODEL}={com.PriceModel.LINEAR.value})")
 
     async def score_offer(self, offer: rest.market.OfferProposal) -> float:
-        linear: com.ComLinear = com.ComLinear.from_props(offer.props)
+        try:
+            linear: com.ComLinear = com.ComLinear.from_props(offer.props)
+        except Exception:
+            return SCORE_REJECTED
 
         if linear.scheme != com.BillingScheme.PAYU:
             return SCORE_REJECTED
@@ -323,9 +330,10 @@ class Engine(AsyncContextManager):
                     else:
                         try:
                             await proposal.respond(builder.props, builder.cons)
-                            emit_progress(ProposalEvent.RESPONDED, proposal.id)
                         except Exception:
                             emit_progress(ProposalEvent.FAILED, proposal.id)
+                            continue
+                        emit_progress(ProposalEvent.RESPONDED, proposal.id)
 
         # aio_session = await self._stack.enter_async_context(aiohttp.ClientSession())
         # storage_manager = await DavStorageProvider.for_directory(
@@ -459,8 +467,6 @@ class Engine(AsyncContextManager):
                 services -= done
 
             yield {"stage": "all work done"}
-        except Exception as e:
-            print("fail=", e)
         finally:
             payment_closing = True
             for worker_task in workers:
