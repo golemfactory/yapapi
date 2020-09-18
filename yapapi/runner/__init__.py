@@ -92,7 +92,10 @@ class DummyMS(MarketStrategy, object):
         self._activity = Activity.from_props(demand.props)
 
     async def score_offer(self, offer: rest.market.OfferProposal) -> float:
-        linear: com.ComLinear = com.ComLinear.from_props(offer.props)
+        try:
+            linear: com.ComLinear = com.ComLinear.from_props(offer.props)
+        except Exception:
+            return SCORE_REJECTED
 
         if linear.scheme != com.BillingScheme.PAYU:
             return SCORE_REJECTED
@@ -314,25 +317,25 @@ class Engine(AsyncContextManager):
                     raise
                 async for proposal in events:
                     emit_progress(ProposalEvent.RECEIVED, proposal.id, from_=proposal.issuer)
-                    try:
-                        score = await strategy.score_offer(proposal)
-                        if score < SCORE_NEUTRAL:
-                            proposal_id, provider_id = proposal.id, proposal.issuer
-                            with contextlib.suppress(Exception):
-                                await proposal.reject()
-                            emit_progress(ProposalEvent.REJECTED, proposal_id, for_=provider_id)
-                            continue
-                        if proposal.is_draft:
-                            emit_progress(ProposalEvent.BUFFERED, proposal.id)
-                            offer_buffer[proposal.issuer] = _BufferItem(
-                                datetime.now(), score, proposal
-                            )
-                        else:
-                            await proposal.respond(builder.props, builder.cons)
-                            emit_progress(ProposalEvent.RESPONDED, proposal.id)
-                    except Exception:
-                        emit_progress(ProposalEvent.FAILED, proposal.id)
+                    score = await strategy.score_offer(proposal)
+                    if score < SCORE_NEUTRAL:
+                        proposal_id, provider_id = proposal.id, proposal.issuer
+                        with contextlib.suppress(Exception):
+                            await proposal.reject()
+                        emit_progress(ProposalEvent.REJECTED, proposal_id, for_=provider_id)
                         continue
+                    if proposal.is_draft:
+                        emit_progress(ProposalEvent.BUFFERED, proposal.id)
+                        offer_buffer[proposal.issuer] = _BufferItem(
+                            datetime.now(), score, proposal
+                        )
+                    else:
+                        try:
+                            await proposal.respond(builder.props, builder.cons)
+                        except Exception:
+                            emit_progress(ProposalEvent.FAILED, proposal.id)
+                            continue
+                        emit_progress(ProposalEvent.RESPONDED, proposal.id)
 
         # aio_session = await self._stack.enter_async_context(aiohttp.ClientSession())
         # storage_manager = await DavStorageProvider.for_directory(
@@ -466,8 +469,6 @@ class Engine(AsyncContextManager):
                 services -= done
 
             yield {"stage": "all work done"}
-        except Exception as e:
-            print("fail=", e)
         finally:
             payment_closing = True
             for worker_task in workers:
