@@ -51,6 +51,25 @@ class SummaryLogger:
     finished: bool
 
     def __init__(self, wrapped_emitter: Optional[Callable[[Event], None]] = None):
+        """Create a SummaryLogger.
+
+        The logger's `log()` method can be used as `event_emitter` callback
+        to `Engine.map()`.
+
+        The `wrapped_emitter` argument can be used for chaining event emitters:
+        each event logged with `log()` is first passed to `wrapped_emitter`.
+
+        Example use:
+        ```
+            detailed_logger = yapapi.log.log_event_json
+            summary_logger = SummaryLogger(wrapped_emitter=detailed_logger)
+            engine = yapapi.runner.Engine(..., event_emitter=summary_logger)
+        ```
+
+        With this setup, each event emitted by `engine` will be logged by
+        `log_event_json`, and additionally, certain events will cause summary
+        messages to be logged by `summary_logger`.
+        """
         self._wrapped_emitter = wrapped_emitter
         self.numbers: Iterator[int] = count(1)
         self._reset()
