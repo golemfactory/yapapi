@@ -97,6 +97,7 @@ liccheck = ["_liccheck_export", "_liccheck_verify"]
 check = ["test", "typecheck", "codestyle", "liccheck"]
 clean = "rm -rf .coverage .requirements.txt dist"
 docs = "portray as_html --overwrite"
+md_source = "pdocs as_markdown yapapi -e -ov -o md"
 
 
 [[tool.portray.mkdocs.nav]]
