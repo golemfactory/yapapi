@@ -4,7 +4,7 @@ from datetime import timedelta
 import pathlib
 import sys
 
-from yapapi import enable_default_logger
+from yapapi.log import enable_default_logger, log_summary, log_event_json
 from yapapi.runner import Engine, Task, vm
 from yapapi.runner.ctx import WorkContext
 
@@ -59,26 +59,16 @@ async def main(subnet_tag="testnet"):
     # worst-case time overhead for initialization, e.g. negotiation, file transfer etc.
     init_overhead: timedelta = timedelta(minutes=3)
 
-    # Set up logging.
-    # For detailed human-readable output use:
-    #   imnport yapapi.log
-    #   emitter = yapapi.log.log_event
-    # For even more detailed machine-readable output use
-    #   import yapapi.log
-    #   emitter = yapapi.log.log_event_json
-    # For summary human-readable output use
-    emitter = utils.SummaryLogger().log
-    # To combine summary with detailed output use:
-    #  import yapapi.log
-    #  emitter = utils.SummaryLogger(yapapi.log.log_event).log
-
+    # By passing `event_emitter=log_summary()` we enable summary logging.
+    # See the documentation of the `yapapi.log` module on how to set
+    # the level of detail and format of the logged information.
     async with Engine(
         package=package,
         max_workers=3,
         budget=10.0,
         timeout=init_overhead + timedelta(minutes=len(frames) * 2),
         subnet_tag=subnet_tag,
-        event_emitter=emitter,
+        event_emitter=log_summary()
     ) as engine:
 
         async for progress in engine.map(worker, [Task(data=frame) for frame in frames]):
