@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from enum import Enum, auto
 import itertools
+from traceback import TracebackException
 from types import MappingProxyType
 from typing import (
     Optional,
@@ -39,6 +40,7 @@ from .events import (
 from .utils import AsyncWrapper
 from .. import rest
 from ..props import com, Activity, Identification, IdentificationKeys
+from ..props.base import InvalidPropertiesError
 from ..props.builder import DemandBuilder
 from ..storage import gftp
 
@@ -88,10 +90,8 @@ class DummyMS(MarketStrategy, object):
         self._activity = Activity.from_props(demand.props)
 
     async def score_offer(self, offer: rest.market.OfferProposal) -> float:
-        try:
-            linear: com.ComLinear = com.ComLinear.from_props(offer.props)
-        except Exception:
-            return SCORE_REJECTED
+
+        linear: com.ComLinear = com.ComLinear.from_props(offer.props)
 
         if linear.scheme != com.BillingScheme.PAYU:
             return SCORE_REJECTED
@@ -116,10 +116,8 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
         demand.ensure(f"({com.PRICE_MODEL}={com.PriceModel.LINEAR.value})")
 
     async def score_offer(self, offer: rest.market.OfferProposal) -> float:
-        try:
-            linear: com.ComLinear = com.ComLinear.from_props(offer.props)
-        except Exception:
-            return SCORE_REJECTED
+
+        linear: com.ComLinear = com.ComLinear.from_props(offer.props)
 
         if linear.scheme != com.BillingScheme.PAYU:
             return SCORE_REJECTED
@@ -319,7 +317,11 @@ class Engine(AsyncContextManager):
                     raise
                 async for proposal in events:
                     emit(Event.ProposalReceived(prop_id=proposal.id, provider_id=proposal.issuer))
-                    score = await strategy.score_offer(proposal)
+                    try:
+                        score = await strategy.score_offer(proposal)
+                    except InvalidPropertiesError as err:
+                        emit(Event.ProposalRejected(prop_id=proposal.id, reason=str(err)))
+                        continue
                     if score < SCORE_NEUTRAL:
                         with contextlib.suppress(Exception):
                             await proposal.reject()

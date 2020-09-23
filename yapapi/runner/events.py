@@ -1,4 +1,5 @@
 """Representing events in Golem computation."""
+from traceback import TracebackException
 import sys
 from typing import Any, NamedTuple, Optional, Union
 
@@ -23,7 +24,7 @@ class Event:
     SubscriptionFailed = NamedTuple("SubscriptionFailed", [("reason", str)])
     CollectFailed = NamedTuple("CollectFailed", [("sub_id", str), ("reason", str)])
     ProposalReceived = NamedTuple("ProposalReceived", [("prop_id", str), ("provider_id", str)])
-    ProposalRejected = NamedTuple("ProposalRejected", [("prop_id", str)])
+    ProposalRejected = NamedTuple("ProposalRejected", [("prop_id", str), ("reason", Optional[str])])
     ProposalResponded = NamedTuple("ProposalResponded", [("prop_id", str)])
     ProposalConfirmed = NamedTuple("ProposalConfirmed", [("prop_id", str)])
     ProposalFailed = NamedTuple("ProposalFailed", [("prop_id", str), ("reason", str)])
