@@ -68,7 +68,7 @@ async def main(subnet_tag="testnet"):
         budget=10.0,
         timeout=init_overhead + timedelta(minutes=len(frames) * 2),
         subnet_tag=subnet_tag,
-        event_emitter=log_summary()
+        event_emitter=log_summary(),
     ) as engine:
 
         async for progress in engine.map(worker, [Task(data=frame) for frame in frames]):
