@@ -25,10 +25,12 @@ PROJECT_ROOT = Path(__file__).parents[1]
 
 def get_md_files(md_root, package_name):
     root = md_root / package_name
-    return sorted([
-        (dirname, sorted([f for f in files if f.endswith('.md')]), )
-        for dirname, _, files in os.walk(root)
-    ])
+    return sorted(
+        [
+            (dirname, sorted([f for f in files if f.endswith(".md")]),)
+            for dirname, _, files in os.walk(root)
+        ]
+    )
 
 
 def get_module_title(file_path):
@@ -42,7 +44,7 @@ def get_module_title(file_path):
     root = etree.getroot()
 
     h1 = root.find(f"./h1")
-    return h1.text.lstrip("Module ") if h1 is not None else ''
+    return h1.text.lstrip("Module ") if h1 is not None else ""
 
 
 def get_pyproject():
@@ -65,15 +67,14 @@ class SummaryNode:
 
     def __str__(self):
         children = ", ".join([str(v) for k, v in self.children.items()])
-        return f"<name={self.name}, filepath={self.filepath}, " \
-               f"children=[{children}]>"
+        return f"<name={self.name}, filepath={self.filepath}, " f"children=[{children}]>"
 
 
 def build_reference(root_node, md_root, package_name, summary_prefix):
     def process_file(dirname, filename):
         file_path = Path(dirname) / filename
         title = get_module_title(file_path)
-        module_path = title.split('.')
+        module_path = title.split(".")
 
         summary_node = root_node
         for segment in module_path:
@@ -98,7 +99,7 @@ def process_portray_nav(parent_node, portray_nav, handbook_root, summary_prefix)
 
             src_path = PROJECT_ROOT / content
             dst_path = handbook_root / content
-            dst_dir = str(dst_path).rsplit('/', maxsplit=1)[0]
+            dst_dir = str(dst_path).rsplit("/", maxsplit=1)[0]
             os.makedirs(dst_dir, exist_ok=True)
             shutil.copyfile(src_path, dst_path)
 
@@ -110,15 +111,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Prepare Markdown docs")
     parser.add_argument("--handbook-dir")
     parser.add_argument("--overwrite", action="store_true")
-    parser.add_argument(
-        "--summary-prefix", default=get_pyproject()['tool']['poetry']['name'])
+    parser.add_argument("--summary-prefix", default=get_pyproject()["tool"]["poetry"]["name"])
     parser.add_argument("--summary-file")
     parser.add_argument("--summary-stdout", action="store_true")
 
     args = parser.parse_args()
 
-    handbook_root = Path(args.handbook_dir) \
-        if args.handbook_dir else PROJECT_ROOT / "handbook"
+    handbook_root = Path(args.handbook_dir) if args.handbook_dir else PROJECT_ROOT / "handbook"
 
     summary_file = args.summary_file or handbook_root / ".SUMMARY.md"
 
@@ -135,28 +134,21 @@ if __name__ == "__main__":
 
     summary = SummaryNode()
 
-    portray_nav = get_portray_config().get('mkdocs', {}).get('nav')
+    portray_nav = get_portray_config().get("mkdocs", {}).get("nav")
     process_portray_nav(summary, portray_nav, handbook_root, args.summary_prefix)
 
-    reference_node = summary.children.setdefault('reference', SummaryNode())
+    reference_node = summary.children.setdefault("reference", SummaryNode())
     reference_node.name = "API Reference"
     build_reference(
-        reference_node,
-        md_root,
-        get_pyproject()['tool']['poetry']['name'],
-        args.summary_prefix
+        reference_node, md_root, get_pyproject()["tool"]["poetry"]["name"], args.summary_prefix
     )
 
     def write_template(stream):
-        stream.write(
-            mako_template.Template(
-                filename=str(summary_template)
-            ).render(summary=summary)
-        )
+        stream.write(mako_template.Template(filename=str(summary_template)).render(summary=summary))
 
     if args.summary_stdout:
         write_template(sys.stdout)
         sys.stdout.write("\n")
     else:
-        with open(summary_file, 'w') as f:
+        with open(summary_file, "w") as f:
             write_template(f)
