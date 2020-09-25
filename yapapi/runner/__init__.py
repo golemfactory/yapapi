@@ -350,7 +350,7 @@ class Engine(AsyncContextManager):
             wid = last_wid
             last_wid += 1
 
-            details = await agreement.details()
+            _details = await agreement.details()
             emit(Event.WorkerStarted(agr_id=agreement.id))
 
             async def task_emitter():
@@ -419,10 +419,7 @@ class Engine(AsyncContextManager):
                         emit(Event.AgreementConfirmed(agr_id=agreement.id))
                         task = loop.create_task(start_worker(agreement))
                         workers.add(task)
-                        # task.add_done_callback(on_worker_stop)
                     except Exception as e:
-                        # import traceback
-                        # traceback.print_exception(Exception, e, e.__traceback__)
                         if task:
                             task.cancel()
                         emit(Event.ProposalFailed(prop_id=b.proposal.id, reason=str(e)))
@@ -459,7 +456,7 @@ class Engine(AsyncContextManager):
                 for task in done:
                     # if an exception occurred when a service task was running
                     if task in services and not task.cancelled() and task.exception():
-                        raise cast(Exception, task.exception())
+                        raise cast(BaseException, task.exception())
                 workers -= done
                 services -= done
 
