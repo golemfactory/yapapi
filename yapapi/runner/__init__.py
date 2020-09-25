@@ -27,7 +27,7 @@ from typing import (
 )
 
 from dataclasses import dataclass, asdict, field
-from typing_extensions import Final
+from typing_extensions import Final, AsyncGenerator
 
 from .ctx import WorkContext, CommandContainer, Work
 from .events import (
@@ -45,6 +45,7 @@ from .. import rest
 from ..props import com, Activity, Identification, IdentificationKeys
 from ..props.builder import DemandBuilder
 from ..storage import gftp
+from ._smartq import SmartQueue, Handle
 
 
 if sys.version_info >= (3, 7):
@@ -199,7 +200,7 @@ class Engine(AsyncContextManager):
 
     async def map(
         self,
-        worker: Callable[[WorkContext, AsyncIterator["Task"]], AsyncIterator[Tuple["Task", Work]]],
+        worker: Callable[[WorkContext, AsyncIterator["Task"]], AsyncGenerator[Work, None]],
         data,
     ):
         """Run computations on providers.
@@ -214,16 +215,7 @@ class Engine(AsyncContextManager):
         import random
 
         stack = self._stack
-        tasks_processed = {"c": 0, "s": 0}
-
         emit_progress = cast(EventEmitter[EventType], self._wrapped_emitter.async_call)
-
-        def on_work_done(task, status):
-            if status == "accept":
-                tasks_processed["c"] += 1
-            else:
-                loop = asyncio.get_event_loop()
-                loop.create_task(work_queue.put(task))
 
         # Creating allocation
         if not self._budget_allocation:
@@ -254,8 +246,7 @@ class Engine(AsyncContextManager):
         market_api = self._market_api
         activity_api: rest.Activity = self._activity_api
         strategy = self._strategy
-        work_queue: asyncio.Queue[Task] = asyncio.Queue()
-
+        work_queue = SmartQueue(data)
         workers: Set[asyncio.Task[None]] = set()
         last_wid = 0
 
@@ -357,13 +348,6 @@ class Engine(AsyncContextManager):
                 provider_idn=details.view_prov(Identification),
             )
 
-            async def task_emitter():
-                while True:
-                    item = await work_queue.get()
-                    item._add_callback(on_work_done)
-                    item._start(emitter=emit_progress)
-                    yield item
-
             try:
                 act = await activity_api.new_activity(agreement.id)
             except Exception:
@@ -373,31 +357,42 @@ class Engine(AsyncContextManager):
                 emit_progress(WorkerEvent.ACTIVITY_CREATED, act.id, worker_id=wid)
 
                 work_context = WorkContext(f"worker-{wid}", storage_manager, emitter=emit_progress)
-                async for (task, batch) in worker(work_context, task_emitter()):
-                    emit_progress(WorkerEvent.GOT_TASK, wid, task=task)
+                consumer = work_queue.new_consumer()
+                command_generator = worker(
+                    work_context, (Task.for_handle(handle, work_queue) async for handle in consumer)
+                )
+                async for batch in command_generator:
                     try:
+                        current_worker_task = consumer.last_item
                         await batch.prepare()
                         cc = CommandContainer()
                         batch.register(cc)
                         remote = await act.send(cc.commands())
-                        emit_progress(
-                            TaskEvent.SCRIPT_SENT, task.id, cmds=cc.commands(), remote=remote,
-                        )
+                        if current_worker_task:
+                            emit_progress(
+                                TaskEvent.SCRIPT_SENT,
+                                current_worker_task.id,
+                                cmds=cc.commands(),
+                                remote=remote,
+                            )
                         async for step in remote:
                             emit_progress(
                                 TaskEvent.COMMAND_EXECUTED,
-                                task.id,
+                                current_worker_task.id,
                                 worker_id=wid,
                                 message=step.message,
                                 idx=step.idx,
                             )
-                        emit_progress(TaskEvent.GETTING_RESULTS, task.id, worker_id=wid)
+                        emit_progress(
+                            TaskEvent.GETTING_RESULTS, current_worker_task.id, worker_id=wid
+                        )
                         await batch.post()
-                        emit_progress(TaskEvent.SCRIPT_FINISHED, task.id, worker_id=wid)
+                        emit_progress(
+                            TaskEvent.SCRIPT_FINISHED, current_worker_task.id, worker_id=wid
+                        )
                         await accept_payment_for_agreement(agreement.id, partial=True)
                     except Exception as exc:
-                        task.reject_task(reason=f"failure: {exc}")
-                        raise
+                        await command_generator.athrow(Exception, exc)
 
             await accept_payment_for_agreement(agreement.id)
             emit_progress(WorkerEvent.FINISHED, wid, agreement=agreement.id)
@@ -432,28 +427,19 @@ class Engine(AsyncContextManager):
                     finally:
                         pass
 
-        async def fill_work_q():
-            for task in data:
-                tasks_processed["s"] += 1
-                await work_queue.put(task)
-
         loop = asyncio.get_event_loop()
         find_offers_task = loop.create_task(find_offers())
         process_invoices_job = loop.create_task(process_invoices())
+        wait_until_done = loop.create_task(work_queue.wait_until_done())
         # Py38: find_offers_task.set_name('find_offers_task')
         try:
-            task_fill_q = loop.create_task(fill_work_q())
             services = {
                 find_offers_task,
-                task_fill_q,
                 loop.create_task(worker_starter()),
                 process_invoices_job,
+                wait_until_done,
             }
-            while (
-                task_fill_q in services
-                or not work_queue.empty()
-                or tasks_processed["s"] > tasks_processed["c"]
-            ):
+            while wait_until_done in services:
                 if datetime.now(timezone.utc) > self._expires:
                     raise TimeoutError(f"task timeout exceeded. timeout={self._conf.timeout}")
                 done, pending = await asyncio.wait(
@@ -545,6 +531,9 @@ class Task(Generic[TaskData, TaskResult], object):
         self._expires: Optional[datetime]
         self._emit_event: Optional[EventEmitter[TaskEvent]] = None
         self._callbacks: Set[Callable[["Task", str], None]] = set()
+        self._handle: Optional[
+            Tuple[Handle["Task[TaskData, TaskResult]"], SmartQueue["Task[TaskData, TaskResult]"]]
+        ] = None
         if timeout:
             self._expires = self._started + timeout
         else:
@@ -563,6 +552,15 @@ class Task(Generic[TaskData, TaskResult], object):
     def _start(self, emitter: EventEmitter[TaskEvent]):
         self._status = TaskStatus.RUNNING
         self._emit_event = emitter
+
+    @staticmethod
+    def for_handle(
+        handle: Handle["Task[TaskData, TaskResult]"],
+        queue: SmartQueue["Task[TaskData, TaskResult]"],
+    ) -> "Task[TaskData, TaskResult]":
+        task = handle.data
+        task._handle = (handle, queue)
+        return task
 
     @property
     def data(self) -> TaskData:
