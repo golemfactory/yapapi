@@ -99,7 +99,7 @@ class Model(abc.ABC):
             elif isinstance(exc, JSONDecodeError):
                 msg = f"Error when decoding '{exc.doc}': {exc}"
             else:
-                msg = f"Invalid properties: {exc}"
+                msg = f"{exc}"
             raise InvalidPropertiesError(msg) from exc
 
     @classmethod
