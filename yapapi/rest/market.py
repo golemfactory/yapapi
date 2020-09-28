@@ -78,8 +78,7 @@ class OfferProposal(object):
     # TODO: This timeout is for negotiation ?
     async def agreement(self, timeout=timedelta(hours=1)) -> Agreement:
         proposal = models.AgreementProposal(
-            proposal_id=self.id,
-            valid_to=datetime.now(timezone.utc) + timeout,
+            proposal_id=self.id, valid_to=datetime.now(timezone.utc) + timeout,
         )
         api: RequestorApi = self._subscription._api
         agreement_id = await api.create_agreement(proposal)
@@ -96,10 +95,7 @@ class OfferProposal(object):
 
 class Subscription(object):
     def __init__(
-        self,
-        api: RequestorApi,
-        subscription_id: str,
-        _details: Optional[models.Demand] = None,
+        self, api: RequestorApi, subscription_id: str, _details: Optional[models.Demand] = None,
     ):
         self._api: RequestorApi = api
         self._id: str = subscription_id

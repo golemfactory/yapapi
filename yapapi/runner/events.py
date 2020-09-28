@@ -137,9 +137,7 @@ logger = logging.getLogger("yapapi.runner")
 
 
 def log_event(
-    event_type: EventType,
-    resource_id: Optional[ResourceId] = None,
-    **kwargs: Any,
+    event_type: EventType, resource_id: Optional[ResourceId] = None, **kwargs: Any,
 ) -> None:
     """Log an event. This function is compatible with the `EventEmitter` protocol."""
 

@@ -139,11 +139,7 @@ class DavStorageProvider(StorageProvider):
         </a:propfind>"""
 
         async with self.client.request(
-            method="PROPFIND",
-            url=self.base_url,
-            auth=self.auth,
-            headers=headers,
-            data=data,
+            method="PROPFIND", url=self.base_url, auth=self.auth, headers=headers, data=data,
         ) as response:
             if response.status != 200:
                 response.raise_for_status()
