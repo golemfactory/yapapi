@@ -1,7 +1,7 @@
 import abc
 import json
 from pathlib import Path
-from typing import Iterable, Optional, Dict, List, Tuple, TYPE_CHECKING
+from typing import Iterable, Optional, Dict, List, Tuple, TYPE_CHECKING, Any
 
 from .events import EventEmitter, StorageEvent
 from ..storage import StorageProvider, Source, Destination
@@ -221,13 +221,12 @@ class WorkContext:
     def log(self, *args):
         print(f"W{self._id}: ", *args)
 
-    def commit(self, task: "Task") -> Tuple["Task", Work]:
-        """End task-related command list definition.
+    def commit(self) -> Work:
+        """Creates sequence of commands to be send to provider.
 
-        :param task: task related to the list of commands
-        :return: a tuple of Task and Work objects (the latter contains
+        :return: Work object (the latter contains
                  sequence commands added before calling this method)
         """
         steps = self._pending_steps
         self._pending_steps = []
-        return task, _Steps(*steps)
+        return _Steps(*steps)

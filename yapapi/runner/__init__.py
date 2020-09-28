@@ -25,6 +25,8 @@ from typing import (
     Iterator,
     ClassVar,
 )
+import traceback
+import asyncio
 
 from dataclasses import dataclass, asdict, field
 from typing_extensions import Final, AsyncGenerator
@@ -357,42 +359,46 @@ class Engine(AsyncContextManager):
                 emit_progress(WorkerEvent.ACTIVITY_CREATED, act.id, worker_id=wid)
 
                 work_context = WorkContext(f"worker-{wid}", storage_manager, emitter=emit_progress)
-                consumer = work_queue.new_consumer()
-                command_generator = worker(
-                    work_context, (Task.for_handle(handle, work_queue) async for handle in consumer)
-                )
-                async for batch in command_generator:
-                    try:
-                        current_worker_task = consumer.last_item
-                        await batch.prepare()
-                        cc = CommandContainer()
-                        batch.register(cc)
-                        remote = await act.send(cc.commands())
-                        if current_worker_task:
+                with work_queue.new_consumer() as consumer:
+                    command_generator = worker(
+                        work_context,
+                        (
+                            Task.for_handle(handle, work_queue, emit_progress)
+                            async for handle in consumer
+                        ),
+                    )
+                    async for batch in command_generator:
+                        try:
+                            current_worker_task = consumer.last_item
+                            await batch.prepare()
+                            cc = CommandContainer()
+                            batch.register(cc)
+                            remote = await act.send(cc.commands())
+                            if current_worker_task:
+                                emit_progress(
+                                    TaskEvent.SCRIPT_SENT,
+                                    current_worker_task.id,
+                                    cmds=cc.commands(),
+                                    remote=remote,
+                                )
+                            async for step in remote:
+                                emit_progress(
+                                    TaskEvent.COMMAND_EXECUTED,
+                                    current_worker_task.id,
+                                    worker_id=wid,
+                                    message=step.message,
+                                    idx=step.idx,
+                                )
                             emit_progress(
-                                TaskEvent.SCRIPT_SENT,
-                                current_worker_task.id,
-                                cmds=cc.commands(),
-                                remote=remote,
+                                TaskEvent.GETTING_RESULTS, current_worker_task.id, worker_id=wid
                             )
-                        async for step in remote:
+                            await batch.post()
                             emit_progress(
-                                TaskEvent.COMMAND_EXECUTED,
-                                current_worker_task.id,
-                                worker_id=wid,
-                                message=step.message,
-                                idx=step.idx,
+                                TaskEvent.SCRIPT_FINISHED, current_worker_task.id, worker_id=wid
                             )
-                        emit_progress(
-                            TaskEvent.GETTING_RESULTS, current_worker_task.id, worker_id=wid
-                        )
-                        await batch.post()
-                        emit_progress(
-                            TaskEvent.SCRIPT_FINISHED, current_worker_task.id, worker_id=wid
-                        )
-                        await accept_payment_for_agreement(agreement.id, partial=True)
-                    except Exception as exc:
-                        await command_generator.athrow(Exception, exc)
+                            await accept_payment_for_agreement(agreement.id, partial=True)
+                        except Exception as exc:
+                            await command_generator.athrow(Exception, exc)
 
             await accept_payment_for_agreement(agreement.id)
             emit_progress(WorkerEvent.FINISHED, wid, agreement=agreement.id)
@@ -449,6 +455,16 @@ class Engine(AsyncContextManager):
                     # if an exception occurred when a service task was running
                     if task in services and not task.cancelled() and task.exception():
                         raise cast(Exception, task.exception())
+                    if task in workers:
+                        exc = task.exception()
+                        log_event(
+                            WorkerEvent.FINISHED, None, exception=exc, runnig_workers=len(workers)
+                        )
+                        try:
+                            await task
+                        except Exception:
+                            traceback.print_exc()
+
                 workers -= done
                 services -= done
 
@@ -553,13 +569,23 @@ class Task(Generic[TaskData, TaskResult], object):
         self._status = TaskStatus.RUNNING
         self._emit_event = emitter
 
+    def _stop(self, retry: bool = False):
+        if self._handle:
+            (handle, queue) = self._handle
+            if retry:
+                asyncio.create_task(queue.reschedule(handle))
+            else:
+                asyncio.create_task(queue.mark_done(handle))
+
     @staticmethod
     def for_handle(
         handle: Handle["Task[TaskData, TaskResult]"],
         queue: SmartQueue["Task[TaskData, TaskResult]"],
+        emitter: EventEmitter[TaskEvent],
     ) -> "Task[TaskData, TaskResult]":
         task = handle.data
         task._handle = (handle, queue)
+        task._start(emitter)
         return task
 
     @property
@@ -584,12 +610,13 @@ class Task(Generic[TaskData, TaskResult], object):
         """
         if self._emit_event:
             self._emit_event(TaskEvent.ACCEPTED, result=result)
-        assert self._status == TaskStatus.RUNNING
+        assert self._status == TaskStatus.RUNNING, "Task not running"
         self._status = TaskStatus.ACCEPTED
+        self._stop()
         for cb in self._callbacks:
             cb(self, "accept")
 
-    def reject_task(self, reason: Optional[str] = None):
+    def reject_task(self, reason: Optional[str] = None, retry: bool = False):
         """Reject task.
 
         Must be called when the results of the task
@@ -600,8 +627,10 @@ class Task(Generic[TaskData, TaskResult], object):
         """
         if self._emit_event:
             self._emit_event(TaskEvent.REJECTED, reason=reason)
-        assert self._status == TaskStatus.RUNNING
+        assert self._status == TaskStatus.RUNNING, "Rejected task was not running"
         self._status = TaskStatus.REJECTED
+        self._stop(retry)
+
         for cb in self._callbacks:
             cb(self, "reject")
 
