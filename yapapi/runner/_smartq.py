@@ -17,13 +17,11 @@ from typing import (
     Type,
     Dict,
 )
-import asyncio, logging
+from typing_extensions import AsyncIterable
+import asyncio
+import logging
 
 _logger = logging.getLogger("yapapi.runner")
-
-from typing_extensions import AsyncIterable
-
-
 Item = TypeVar("Item")
 
 
@@ -163,7 +161,7 @@ class Consumer(
         __exc_value: Optional[BaseException],
         __traceback: Optional[TracebackType],
     ) -> Optional[bool]:
-        _test = asyncio.get_event_loop().create_task(self._queue.reschedule_all(self))
+        asyncio.get_event_loop().create_task(self._queue.reschedule_all(self))
         return None
 
     @property

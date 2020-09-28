@@ -38,9 +38,7 @@ CommandStatus = Literal["ok", "error"]
 
 
 class GftpDriver(Protocol):
-    """Golem FTP service API.
-
-    """
+    """Golem FTP service API."""
 
     async def version(self) -> str:
         """Gets driver version."""
@@ -62,8 +60,8 @@ class GftpDriver(Protocol):
     async def receive(self, *, output_file: str) -> PubLink:
         """Creates GFTP url for receiving file.
 
-         :  `output_file` -
-         """
+        :  `output_file` -
+        """
         pass
 
     async def upload(self, *, file: str, url: str):
@@ -72,7 +70,7 @@ class GftpDriver(Protocol):
     async def shutdown(self) -> CommandStatus:
         """Stops GFTP service.
 
-         After shutdown all generated urls will be unavailable.
+        After shutdown all generated urls will be unavailable.
         """
         pass
 

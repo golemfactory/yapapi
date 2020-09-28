@@ -160,8 +160,7 @@ class _BufferItem(NamedTuple):
 
 
 class Engine(AsyncContextManager):
-    """Requestor engine. Used to run tasks based on a common package on providers.
-    """
+    """Requestor engine. Used to run tasks based on a common package on providers."""
 
     def __init__(
         self,
@@ -572,10 +571,11 @@ class Task(Generic[TaskData, TaskResult], object):
     def _stop(self, retry: bool = False):
         if self._handle:
             (handle, queue) = self._handle
+            loop = asyncio.get_event_loop()
             if retry:
-                asyncio.create_task(queue.reschedule(handle))
+                loop.create_task(queue.reschedule(handle))
             else:
-                asyncio.create_task(queue.mark_done(handle))
+                loop.create_task(queue.mark_done(handle))
 
     @staticmethod
     def for_handle(

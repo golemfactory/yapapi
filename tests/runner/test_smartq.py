@@ -1,7 +1,7 @@
 import pytest
 
 from yapapi.runner._smartq import SmartQueue
-import yapapi, logging
+import logging
 from random import randint
 import asyncio
 
@@ -29,7 +29,7 @@ async def test_smart_queue():
     async def stats():
         while True:
             await asyncio.sleep(10)
-            q.print_status()
+            print(q.stats())
 
     loop = asyncio.get_event_loop()
     stats_job = loop.create_task(stats())
@@ -45,7 +45,7 @@ async def test_smart_queue():
 
 @pytest.mark.asyncio
 async def test_smart_queue_empty():
-    q = SmartQueue([])
+    q: SmartQueue[None] = SmartQueue([])
     with q.new_consumer() as c:
         async for item in c:
             assert False, "Expected empty list"

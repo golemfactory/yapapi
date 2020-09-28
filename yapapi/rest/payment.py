@@ -33,9 +33,7 @@ class AllocationDetails:
 
 @dataclass
 class Allocation(_Link):
-    """Payment reservation for task processing.
-
-    """
+    """Payment reservation for task processing."""
 
     id: str
     """Allocation object id"""
@@ -72,7 +70,10 @@ class _AllocationTask(ResourceCtx[Allocation]):
         assert self._id is not None
 
         return Allocation(
-            _api=self._api, id=self._id, amount=model.total_amount, expires=model.timeout,
+            _api=self._api,
+            id=self._id,
+            amount=model.total_amount,
+            expires=model.timeout,
         )
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -92,9 +93,9 @@ class Payment(object):
     ) -> ResourceCtx[Allocation]:
         """Creates new allocation.
 
-         - `amount`:  Allocation amount.
-         - `expires`: expiration timestamp. by default 30 minutes from now.
-         - `make_deposit`: (unimplemented).
+        - `amount`:  Allocation amount.
+        - `expires`: expiration timestamp. by default 30 minutes from now.
+        - `make_deposit`: (unimplemented).
 
         """
         allocation_timeout: datetime = expires or datetime.now(timezone.utc) + timedelta(minutes=30)

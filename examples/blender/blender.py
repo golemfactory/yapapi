@@ -5,8 +5,6 @@ from yapapi.runner import Engine, Task, vm
 from yapapi.runner.ctx import WorkContext
 from datetime import timedelta
 import asyncio
-import logging
-from random import randint
 
 
 async def main(subnet_tag="testnet"):

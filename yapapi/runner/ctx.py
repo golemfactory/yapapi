@@ -1,13 +1,10 @@
 import abc
 import json
 from pathlib import Path
-from typing import Iterable, Optional, Dict, List, Tuple, TYPE_CHECKING, Any
+from typing import Iterable, Optional, Dict, List, Tuple
 
 from .events import EventEmitter, StorageEvent
 from ..storage import StorageProvider, Source, Destination
-
-if TYPE_CHECKING:
-    from . import Task
 
 
 class CommandContainer:
@@ -154,8 +151,7 @@ class _Steps(Work):
 
 
 class WorkContext:
-    """An object used to schedule commands to be sent to provider.
-    """
+    """An object used to schedule commands to be sent to provider."""
 
     def __init__(
         self,

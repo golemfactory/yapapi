@@ -3,7 +3,6 @@ import asyncio
 from asyncio import TimeoutError
 from datetime import datetime, timezone
 import json
-import logging
 
 from yapapi import enable_default_logger
 from yapapi import props as yp
@@ -41,7 +40,13 @@ def main():
     enable_default_logger(level=args.log_level)
     try:
         asyncio.get_event_loop().run_until_complete(
-            asyncio.wait_for(list_offers(Configuration(), subnet_tag=args.subnet_tag,), timeout=4,)
+            asyncio.wait_for(
+                list_offers(
+                    Configuration(),
+                    subnet_tag=args.subnet_tag,
+                ),
+                timeout=4,
+            )
         )
     except TimeoutError:
         pass
