@@ -42,13 +42,14 @@ as an argument to `log_summary`:
 ```
 """
 from collections import defaultdict
+from dataclasses import asdict
 import itertools
 import json
 import logging
 import time
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set
 
-from yapapi.runner.events import Event, EventType, event_type_to_string
+import yapapi.runner.events as events
 
 
 logger = logging.getLogger("yapapi.runner")
@@ -68,7 +69,66 @@ def enable_default_logger(
     logger.disabled = False
 
 
-def log_event(event: EventType) -> None:
+# Default human-readable representation of event types.
+event_type_to_string = {
+    events.ComputationStarted: "Computation started",
+    events.ComputationFinished: "Computation finished",
+    events.ComputationFailed: "Computation failed",
+    events.SubscriptionCreated: "Demand published on the market",
+    events.SubscriptionFailed: "Demand publication failed",
+    events.CollectFailed: "Failed to collect proposals for demand",
+    events.ProposalReceived: "Proposal received from the market",
+    events.ProposalRejected: "Proposal rejected",  # by who? alt: Rejected a proposal?
+    events.ProposalResponded: "Responded to a proposal",
+    events.ProposalFailed: "Failed to respond to proposal",
+    events.ProposalConfirmed: "Proposal confirmed by provider",  # ... negotiated with provider?
+    events.AgreementCreated: "Agreement proposal sent to provider",
+    events.AgreementConfirmed: "Agreement approved by provider",
+    events.AgreementRejected: "Agreement rejected by provider",
+    events.PaymentAccepted: "Payment accepted",  # by who?
+    events.PaymentPrepared: "Payment prepared",
+    events.PaymentQueued: "Payment queued",
+    events.InvoiceReceived: "Invoice received",  # by who?
+    events.WorkerStarted: "Worker started for agreement",
+    events.ActivityCreated: "Activity created on provider",
+    events.ActivityCreateFailed: "Failed to create activity",
+    events.TaskStarted: "Task started",
+    events.ScriptSent: "Script sent to provider",
+    events.CommandExecuted: "Script command executed",
+    events.GettingResults: "Getting script results",
+    events.ScriptFinished: "Script finished",
+    events.TaskAccepted: "Task accepted",  # by who?
+    events.TaskRejected: "Task rejected",  # by who?
+    events.WorkerFinished: "Worker finished",
+    events.DownloadStarted: "Download started",
+    events.DownloadFinished: "Download finished",
+}
+
+
+def _check_event_type_to_string():
+    # This is to check that `event_type_to_string` covers all event types
+
+    _event_types = set(
+        member
+        for member in events.__dict__.values()
+        if type(member) is type and issubclass(member, events.Event)
+    )
+
+    _event_types_superclasses = {ty for ev in _event_types for ty in ev.mro() if ty is not ev}
+
+    _concrete_event_types = _event_types.difference(_event_types_superclasses)
+
+    assert len(_concrete_event_types) > 0  # Sanity check
+
+    assert _concrete_event_types.issubset(
+        event_type_to_string.keys()
+    ), _concrete_event_types.difference(event_type_to_string.keys())
+
+
+_check_event_type_to_string()
+
+
+def log_event(event: events.Event) -> None:
     """Log an event in human-readable format."""
 
     loglevel = logging.DEBUG
@@ -85,16 +145,16 @@ def log_event(event: EventType) -> None:
         return
 
     msg = event_type_to_string[type(event)]
-    info = "; ".join(f"{name} = {_format(value)}" for name, value in event._asdict().items())
+    info = "; ".join(f"{name} = {_format(value)}" for name, value in asdict(event).items())
     if info:
         msg += "; " + info
     logger.log(loglevel, msg)
 
 
-def log_event_json(event: EventType) -> None:
+def log_event_json(event: events.Event) -> None:
     """Log an event as a tag with attributes in JSON format."""
 
-    info = {name: str(value) for name, value in event._asdict().items()}
+    info = {name: str(value) for name, value in asdict(event).items()}
     logger.debug("%s %s", type(event).__name__, json.dumps(info) if info else "")
 
 
@@ -148,7 +208,7 @@ class SummaryLogger:
     # Has computation finished?
     finished: bool
 
-    def __init__(self, wrapped_emitter: Optional[Callable[[EventType], None]] = None):
+    def __init__(self, wrapped_emitter: Optional[Callable[[events.Event], None]] = None):
         """Create a SummaryLogger."""
 
         self._wrapped_emitter = wrapped_emitter
@@ -178,7 +238,7 @@ class SummaryLogger:
             total_cost = sum(self.provider_cost.values(), 0.0)
             self.logger.info("Total cost: %s", total_cost)
 
-    def log(self, event: EventType) -> None:
+    def log(self, event: events.Event) -> None:
         """Register an event."""
 
         if self._wrapped_emitter:
@@ -193,37 +253,37 @@ class SummaryLogger:
             self.logger.exception("SummaryLogger entered invalid state")
             self.error_occurred = True
 
-    def _handle(self, event: EventType):
+    def _handle(self, event: events.Event):
 
-        if isinstance(event, Event.ComputationStarted):
+        if isinstance(event, events.ComputationStarted):
             self._reset()
 
-        if isinstance(event, Event.SubscriptionCreated):
+        if isinstance(event, events.SubscriptionCreated):
             self.logger.info(event_type_to_string[type(event)])
 
-        elif isinstance(event, Event.ProposalConfirmed):
+        elif isinstance(event, events.ProposalConfirmed):
             self.confirmed_proposals.add(event.prop_id)
             self.logger.info(
                 "Received proposals from %s providers so far", len(self.confirmed_proposals)
             )
 
-        elif isinstance(event, Event.AgreementCreated):
+        elif isinstance(event, events.AgreementCreated):
             provider_name = event.provider_id.name
             if not provider_name:
                 provider_name = f"provider-{next(self.numbers)}"
             self.logger.info("Agreement proposed to provider '%s'", provider_name)
             self.agreement_provider_name[event.agr_id] = provider_name
 
-        elif isinstance(event, Event.AgreementConfirmed):
+        elif isinstance(event, events.AgreementConfirmed):
             self.logger.info(
                 "Agreement confirmed by provider '%s'", self.agreement_provider_name[event.agr_id]
             )
             self.confirmed_agreements.add(event.agr_id)
 
-        elif isinstance(event, Event.TaskStarted):
+        elif isinstance(event, events.TaskStarted):
             self.task_data[event.task_id] = event.task_data
 
-        elif isinstance(event, Event.ScriptSent):
+        elif isinstance(event, events.ScriptSent):
             provider_name = self.agreement_provider_name[event.agr_id]
             self.logger.info(
                 "Task sent to provider '%s', task data: %s",
@@ -231,7 +291,7 @@ class SummaryLogger:
                 self.task_data[event.task_id],
             )
 
-        elif isinstance(event, Event.ScriptFinished):
+        elif isinstance(event, events.ScriptFinished):
             provider_name = self.agreement_provider_name[event.agr_id]
             self.logger.info(
                 "Task computed by provider '%s', task data: %s",
@@ -240,14 +300,14 @@ class SummaryLogger:
             )
             self.provider_tasks[provider_name].append(event.task_id)
 
-        elif isinstance(event, Event.InvoiceReceived):
+        elif isinstance(event, events.InvoiceReceived):
             provider_name = self.agreement_provider_name[event.agr_id]
             cost = self.provider_cost.get(provider_name, 0.0)
             cost += float(event.amount)
             self.provider_cost[provider_name] = cost
             self._print_total_cost()
 
-        elif isinstance(event, Event.ComputationFinished):
+        elif isinstance(event, events.ComputationFinished):
             self.finished = True
             total_time = time.time() - self.start_time
             self.logger.info(f"Computation finished in {total_time:.1f}s")
@@ -259,7 +319,7 @@ class SummaryLogger:
             self._print_total_cost()
 
 
-def log_summary(wrapped_emitter: Optional[Callable[[EventType], None]] = None):
+def log_summary(wrapped_emitter: Optional[Callable[[events.Event], None]] = None):
     """Output a summary of computation.
 
     This is a utility function that creates a `SummaryLogger` instance

@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Dict, List, Tuple, TYPE_CHECKING, Union
 
-from .events import Event
+from .events import DownloadStarted, DownloadFinished
 from ..storage import StorageProvider, Source, Destination
 
 if TYPE_CHECKING:
@@ -102,7 +102,7 @@ class _Run(Work):
         self._idx = commands.run(entry_point=self.cmd, args=self.args)
 
 
-StorageEvent = Union[Event.DownloadStarted, Event.DownloadFinished]
+StorageEvent = Union[DownloadStarted, DownloadFinished]
 
 
 class _RecvFile(Work):
@@ -133,10 +133,10 @@ class _RecvFile(Work):
     async def post(self) -> None:
         assert self._dst_slot, "_RecvFile post without prepare"
         if self._emitter:
-            self._emitter(Event.DownloadStarted(path=self._src_path))
+            self._emitter(DownloadStarted(path=self._src_path))
         await self._dst_slot.download_file(self._dst_path)
         if self._emitter:
-            self._emitter(Event.DownloadFinished(path=str(self._dst_path)))
+            self._emitter(DownloadFinished(path=str(self._dst_path)))
 
 
 class _Steps(Work):
