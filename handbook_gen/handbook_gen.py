@@ -23,8 +23,8 @@ from mako import template as mako_template
 PROJECT_ROOT = Path(__file__).parents[1]
 
 
-def get_md_files(md_root, package_name):
-    root = md_root / package_name
+def get_md_files(md_root):
+    root = md_root
     return sorted(
         [
             (dirname, sorted([f for f in files if f.endswith(".md")]),)
@@ -84,7 +84,7 @@ def build_reference(root_node, md_root, package_name, summary_prefix):
         relative_path = str(Path(dirname).relative_to(md_root) / filename)
         summary_node.filepath = f"{summary_prefix}/{relative_path}"
 
-    for dirname, files in get_md_files(md_root, package_name):
+    for dirname, files in get_md_files(md_root):
         for filename in files:
             process_file(dirname, filename)
 
@@ -124,7 +124,7 @@ if __name__ == "__main__":
     if handbook_root.exists() and args.overwrite:
         shutil.rmtree(handbook_root)
 
-    md_root = PROJECT_ROOT / "md"
+    md_root = PROJECT_ROOT / "build/docs/content"
     art_dir = PROJECT_ROOT / "art"
 
     shutil.copytree(md_root, handbook_root)
