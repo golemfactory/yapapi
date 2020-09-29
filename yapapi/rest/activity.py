@@ -10,7 +10,11 @@ from ya_activity import (
 )
 from typing_extensions import AsyncContextManager, AsyncIterable
 import json
+import logging
 import contextlib
+
+
+_log = logging.getLogger("yapapi.rest")
 
 
 class ActivityService(object):
@@ -23,7 +27,7 @@ class ActivityService(object):
             activity_id = await self._api.create_activity(agreement_id)
             return Activity(self._api, self._state, activity_id)
         except yexc.ApiException:
-            print("Failed to create activity for agreement", agreement_id)
+            _log.error("Failed to create activity for agreement %s", agreement_id)
             raise
 
 
@@ -50,6 +54,13 @@ class Activity(AsyncContextManager["Activity"]):
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        # w/o for some buggy providers which do not kill exe-unit
+        # on destroy_activity event.
+        with contextlib.suppress(yexc.ApiException):
+            batch_id = await self._api.call_exec(
+                self._id, yaa.ExeScriptRequest(text="[{destroy:{}}")
+            )
+            await self._api.get_exec_batch_results(self._id, batch_id, timeout=5.0)
         with contextlib.suppress(yexc.ApiException):
             await self._api.destroy_activity(self._id)
 

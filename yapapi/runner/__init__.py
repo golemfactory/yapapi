@@ -26,6 +26,8 @@ from typing import (
     Iterable,
     ClassVar,
 )
+import traceback
+import asyncio
 
 from dataclasses import dataclass, asdict, field
 from typing_extensions import Final, AsyncGenerator
@@ -295,7 +297,6 @@ class Engine(AsyncContextManager):
             return True
 
         async def find_offers():
-
             try:
                 subscription = await builder.subscribe(market_api)
             except Exception as ex:
@@ -347,39 +348,37 @@ class Engine(AsyncContextManager):
                 emit(events.ActivityCreateFailed(agr_id=agreement.id))
                 raise
             async with act:
+                emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
+
                 work_context = WorkContext(f"worker-{wid}", storage_manager, emitter=emit)
-                consumer = work_queue.new_consumer()
-                command_generator = worker(
-                    work_context, (Task.for_handle(handle, work_queue) async for handle in consumer)
-                )
-                async for batch in command_generator:
-                    try:
-                        current_worker_task = consumer.last_item
-                        await batch.prepare()
-                        cc = CommandContainer()
-                        batch.register(cc)
-                        remote = await act.send(cc.commands())
-                        task_id = current_worker_task.id if current_worker_task else None
-                        emit(
-                            events.ScriptSent(
-                                agr_id=agreement.id, task_id=task_id, cmds=cc.commands()
-                            )
-                        )
-                        async for step in remote:
-                            emit(
-                                events.CommandExecuted(
-                                    agr_id=agreement.id,
-                                    task_id=task_id,
-                                    message=step.message,
-                                    cmd_idx=step.idx,
+                with work_queue.new_consumer() as consumer:
+                    command_generator = worker(
+                        work_context,
+                        (Task.for_handle(handle, work_queue, emit) async for handle in consumer),
+                    )
+                    async for batch in command_generator:
+                        try:
+                            current_worker_task = consumer.last_item
+                            task_id = current_worker_task.id if current_worker_task else None
+                            await batch.prepare()
+                            cc = CommandContainer()
+                            batch.register(cc)
+                            remote = await act.send(cc.commands())
+                            async for step in remote:
+                                emit(
+                                    events.CommandExecuted(
+                                        agr_id=agreement.id,
+                                        task_id=task_id,
+                                        message=step.message,
+                                        cmd_idx=step.idx,
+                                    )
                                 )
-                            )
-                        emit(events.GettingResults(agr_id=agreement.id, task_id=task_id))
-                        await batch.post()
-                        emit(events.ScriptFinished(agr_id=agreement.id, task_id=task_id))
-                        await accept_payment_for_agreement(agreement.id, partial=True)
-                    except Exception as exc:
-                        await command_generator.athrow(Exception, exc)
+                            emit(events.GettingResults(agr_id=agreement.id, task_id=task_id))
+                            await batch.post()
+                            emit(events.WorkerFinished(agr_id=agreement.id))
+                            await accept_payment_for_agreement(agreement.id, partial=True)
+                        except Exception as exc:
+                            await command_generator.athrow(Exception, exc)
 
             await accept_payment_for_agreement(agreement.id)
             emit(events.WorkerFinished(agr_id=agreement.id))
@@ -433,6 +432,12 @@ class Engine(AsyncContextManager):
                     # if an exception occurred when a service task was running
                     if task in services and not task.cancelled() and task.exception():
                         raise cast(Exception, task.exception())
+                    if task in workers:
+                        try:
+                            await task
+                        except Exception:
+                            traceback.print_exc()
+
                 workers -= done
                 services -= done
 
@@ -544,13 +549,24 @@ class Task(Generic[TaskData, TaskResult], object):
         self._status = TaskStatus.RUNNING
         self._emit = emitter
 
+    def _stop(self, retry: bool = False):
+        if self._handle:
+            (handle, queue) = self._handle
+            loop = asyncio.get_event_loop()
+            if retry:
+                loop.create_task(queue.reschedule(handle))
+            else:
+                loop.create_task(queue.mark_done(handle))
+
     @staticmethod
     def for_handle(
         handle: Handle["Task[TaskData, TaskResult]"],
         queue: SmartQueue["Task[TaskData, TaskResult]"],
+        emitter: Callable[[Event], None],
     ) -> "Task[TaskData, TaskResult]":
         task = handle.data
         task._handle = (handle, queue)
+        task._start(emitter)
         return task
 
     @property
@@ -575,12 +591,13 @@ class Task(Generic[TaskData, TaskResult], object):
         """
         if self._emit:
             self._emit(events.TaskAccepted(task_id=self.id, result=result))
-        assert self._status == TaskStatus.RUNNING
+        assert self._status == TaskStatus.RUNNING, "Task not running"
         self._status = TaskStatus.ACCEPTED
+        self._stop()
         for cb in self._callbacks:
             cb(self, "accept")
 
-    def reject_task(self, reason: Optional[str] = None):
+    def reject_task(self, reason: Optional[str] = None, retry: bool = False):
         """Reject task.
 
         Must be called when the results of the task
@@ -591,8 +608,10 @@ class Task(Generic[TaskData, TaskResult], object):
         """
         if self._emit:
             self._emit(events.TaskRejected(task_id=self.id, reason=reason))
-        assert self._status == TaskStatus.RUNNING
+        assert self._status == TaskStatus.RUNNING, "Rejected task was not running"
         self._status = TaskStatus.REJECTED
+        self._stop(retry)
+
         for cb in self._callbacks:
             cb(self, "reject")
 

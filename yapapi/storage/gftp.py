@@ -12,7 +12,7 @@ import uuid
 from os import PathLike
 from pathlib import Path
 from types import TracebackType
-from typing import List, Optional, cast, Union, AsyncIterator, Iterator, Type
+from typing import List, Optional, cast, Union, AsyncIterator, Iterator, Type, Dict
 
 import jsonrpc_base  # type: ignore
 from async_exit_stack import AsyncExitStack  # type: ignore
@@ -38,9 +38,7 @@ CommandStatus = Literal["ok", "error"]
 
 
 class GftpDriver(Protocol):
-    """Golem FTP service API.
-
-    """
+    """Golem FTP service API."""
 
     async def version(self) -> str:
         """Gets driver version."""
@@ -62,8 +60,8 @@ class GftpDriver(Protocol):
     async def receive(self, *, output_file: str) -> PubLink:
         """Creates GFTP url for receiving file.
 
-         :  `output_file` -
-         """
+        :  `output_file` -
+        """
         pass
 
     async def upload(self, *, file: str, url: str):
@@ -72,7 +70,7 @@ class GftpDriver(Protocol):
     async def shutdown(self) -> CommandStatus:
         """Stops GFTP service.
 
-         After shutdown all generated urls will be unavailable.
+        After shutdown all generated urls will be unavailable.
         """
         pass
 
@@ -197,10 +195,12 @@ class GftpDestination(Destination):
 
 class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
     _temp_dir: Optional[Path]
+    _registered_sources: Dict[str, GftpSource]
 
     def __init__(self, *, tmpdir: Optional[str] = None):
         self.__exit_stack = AsyncExitStack()
         self._temp_dir = Path(tmpdir) if tmpdir else None
+        self._registered_sources = dict()
         self._process = None
 
     async def __aenter__(self) -> StorageProvider:
@@ -248,10 +248,15 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
 
     async def upload_file(self, path: os.PathLike) -> Source:
         process = await self.__get_process()
-        links = await process.publish(files=[str(path)])
+        path_str = str(path)
+        if path_str in self._registered_sources:
+            return self._registered_sources[path_str]
+        links = await process.publish(files=[path_str])
         length = Path(path).stat().st_size
         assert len(links) == 1, "invalid gftp publish response"
-        return GftpSource(length, links[0])
+        source = GftpSource(length, links[0])
+        self._registered_sources[path_str] = source
+        return source
 
     async def new_destination(self, destination_file: Optional[PathLike] = None) -> Destination:
         if destination_file:

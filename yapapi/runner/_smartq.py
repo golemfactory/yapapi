@@ -1,4 +1,10 @@
+""" YAPAPI internal module. This is not a part of the public API. It can change at any time.
+
+
+"""
+
 from asyncio.locks import Lock, Condition
+from types import TracebackType
 from typing import (
     Iterable,
     TypeVar,
@@ -7,10 +13,15 @@ from typing import (
     Set,
     Optional,
     Iterator,
+    ContextManager,
+    Type,
+    Dict,
 )
-
 from typing_extensions import AsyncIterable
+import asyncio
+import logging
 
+_logger = logging.getLogger("yapapi.runner")
 Item = TypeVar("Item")
 
 
@@ -23,10 +34,15 @@ class Handle(Generic[Item], object):
         if consumer is not None:
             self._prev_consumers.add(consumer)
 
-        self._consumer: Optional["Consumer[Item]"] = None
+        self._consumer = consumer
+
+    @property
+    def consumer(self):
+        return self._consumer
 
     def assign_consumer(self, consumer: "Consumer[Item]") -> None:
         self._prev_consumers.add(consumer)
+        self._consumer = consumer
 
     @property
     def data(self) -> Item:
@@ -63,6 +79,7 @@ class SmartQueue(Generic[Item], object):
     async def get(self, consumer: "Consumer[Item]") -> Handle[Item]:
         async with self._lock:
             while self.__have_data():
+                _logger.debug("tick")
                 handle = self.__find_rescheduled_item(consumer)
                 if handle:
                     self._rescheduled_items.remove(handle)
@@ -90,6 +107,10 @@ class SmartQueue(Generic[Item], object):
             self._in_progress.remove(handle)
             self._eof.notify_all()
             self._new_items.notify_all()
+        if _logger.isEnabledFor(logging.DEBUG):
+            _logger.debug(
+                f"status in-progress={len(self._in_progress)}, have_item={bool(self._items)}"
+            )
 
     async def reschedule(self, handle: Handle[Item]) -> None:
         assert handle in self._in_progress, "handle is not in progress"
@@ -98,13 +119,21 @@ class SmartQueue(Generic[Item], object):
             self._rescheduled_items.add(handle)
             self._new_items.notify_all()
 
-    def print_status(self):
-        print(
-            f"lock: {self._lock.locked()}, "
-            f"is_progress={len(self._in_progress)}, "
-            f"rescheduled_items={len(self._rescheduled_items)} "
-            f"done={not bool(self._items)}"
-        )
+    async def reschedule_all(self, consumer: "Consumer[Item]"):
+        async with self._lock:
+            handles = [handle for handle in self._in_progress if handle.consumer == consumer]
+            for handle in handles:
+                self._in_progress.remove(handle)
+                self._rescheduled_items.add(handle)
+            self._new_items.notify_all()
+
+    def stats(self) -> Dict:
+        return {
+            "locked": self._lock.locked(),
+            "items": bool(self._items),
+            "in-progress": len(self._in_progress),
+            "rescheduled-items": len(self._rescheduled_items),
+        }
 
     async def wait_until_done(self) -> None:
         async with self._lock:
@@ -112,10 +141,27 @@ class SmartQueue(Generic[Item], object):
                 await self._eof.wait()
 
 
-class Consumer(Generic[Item], AsyncIterator[Handle[Item]], AsyncIterable[Handle[Item]]):
+class Consumer(
+    Generic[Item],
+    AsyncIterator[Handle[Item]],
+    AsyncIterable[Handle[Item]],
+    ContextManager["Consumer[Item]"],
+):
     def __init__(self, queue: SmartQueue[Item]):
         self._queue = queue
         self._fetched: Optional[Handle[Item]] = None
+
+    def __enter__(self) -> "Consumer[Item]":
+        return self
+
+    def __exit__(
+        self,
+        __exc_type: Optional[Type[BaseException]],
+        __exc_value: Optional[BaseException],
+        __traceback: Optional[TracebackType],
+    ) -> Optional[bool]:
+        asyncio.get_event_loop().create_task(self._queue.reschedule_all(self))
+        return None
 
     @property
     def last_item(self) -> Optional[Item]:

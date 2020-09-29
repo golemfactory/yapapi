@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 import asyncio
-from datetime import timedelta
 import pathlib
 import sys
-import utils
 
 from yapapi.log import enable_default_logger, log_summary, log_event_json  # noqa
 from yapapi.runner import Engine, Task, vm
 from yapapi.runner.ctx import WorkContext
+from datetime import timedelta
 
 # For importing `utils.py`:
 script_dir = pathlib.Path(__file__).resolve().parent
 parent_directory = script_dir.parent
 sys.stderr.write(f"Adding {parent_directory} to sys.path.\n")
 sys.path.append(str(parent_directory))
+import utils  # noqa
 
 
 async def main(subnet_tag="testnet"):
@@ -46,9 +46,13 @@ async def main(subnet_tag="testnet"):
             )
             ctx.run("/golem/entrypoints/run-blender.sh")
             ctx.download_file(f"/golem/output/out{frame:04d}.png", f"output_{frame}.png")
-            yield ctx.commit(task)
+            yield ctx.commit()
             # TODO: Check if job results are valid
             # and reject by: task.reject_task(reason = 'invalid file')
+            # if randint(0, 5) == 1:
+            #    task.reject_task(retry=True)
+            # else:
+            #    task.accept_task()
             task.accept_task()
 
         ctx.log("no more frames to render")
