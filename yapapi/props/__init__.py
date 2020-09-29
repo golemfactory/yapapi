@@ -1,4 +1,4 @@
-from .base import Model
+from .base import InvalidPropertiesError, Model
 from dataclasses import dataclass, field
 from typing import Optional
 from decimal import Decimal
