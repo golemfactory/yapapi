@@ -139,9 +139,7 @@ if __name__ == "__main__":
 
     reference_node = summary.children.setdefault("reference", SummaryNode())
     reference_node.name = "API Reference"
-    build_reference(
-        reference_node, md_root, args.summary_prefix
-    )
+    build_reference(reference_node, md_root, args.summary_prefix)
 
     def write_template(stream):
         stream.write(mako_template.Template(filename=str(summary_template)).render(summary=summary))
