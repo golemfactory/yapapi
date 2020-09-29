@@ -94,4 +94,4 @@ if __name__ == "__main__":
     except (Exception, KeyboardInterrupt) as e:
         print(e)
         task.cancel()
-        asyncio.get_event_loop().run_until_complete(asyncio.sleep(0.3))
+        asyncio.get_event_loop().run_until_complete(task)

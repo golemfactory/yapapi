@@ -3,6 +3,7 @@
 """
 import abc
 import sys
+from asyncio import CancelledError
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from enum import Enum, auto
@@ -360,11 +361,24 @@ class Engine(AsyncContextManager):
                     async for batch in command_generator:
                         try:
                             current_worker_task = consumer.last_item
+                            if current_worker_task:
+                                emit(
+                                    events.TaskStarted(
+                                        agr_id=agreement.id,
+                                        task_id=current_worker_task.id,
+                                        task_data=current_worker_task.data,
+                                    )
+                                )
                             task_id = current_worker_task.id if current_worker_task else None
                             await batch.prepare()
                             cc = CommandContainer()
                             batch.register(cc)
                             remote = await act.send(cc.commands())
+                            emit(
+                                events.ScriptSent(
+                                    agr_id=agreement.id, task_id=task_id, cmds=cc.commands()
+                                )
+                            )
                             async for step in remote:
                                 emit(
                                     events.CommandExecuted(
@@ -376,10 +390,15 @@ class Engine(AsyncContextManager):
                                 )
                             emit(events.GettingResults(agr_id=agreement.id, task_id=task_id))
                             await batch.post()
-                            emit(events.WorkerFinished(agr_id=agreement.id))
+                            emit(events.ScriptFinished(agr_id=agreement.id, task_id=task_id))
                             await accept_payment_for_agreement(agreement.id, partial=True)
                         except Exception as exc:
-                            await command_generator.athrow(Exception, exc)
+                            try:
+                                await command_generator.athrow(Exception, exc)
+                            except Exception:
+                                traceback.print_exc()
+                                emit(events.WorkerFinished(agr_id=agreement.id))
+                                return
 
             await accept_payment_for_agreement(agreement.id)
             emit(events.WorkerFinished(agr_id=agreement.id))
@@ -390,7 +409,7 @@ class Engine(AsyncContextManager):
                 if offer_buffer and len(workers) < self._conf.max_workers:
                     provider_id, b = random.choice(list(offer_buffer.items()))
                     del offer_buffer[provider_id]
-                    task = None
+                    new_task = None
                     try:
                         agreement = await b.proposal.agreement()
                         provider = (await agreement.details()).view_prov(Identification)
@@ -399,14 +418,14 @@ class Engine(AsyncContextManager):
                             emit(events.AgreementRejected(agr_id=agreement.id))
                             continue
                         emit(events.AgreementConfirmed(agr_id=agreement.id))
-                        task = loop.create_task(start_worker(agreement))
-                        workers.add(task)
+                        new_task = loop.create_task(start_worker(agreement))
+                        workers.add(new_task)
                         # task.add_done_callback(on_worker_stop)
                     except Exception as e:
                         # import traceback
                         # traceback.print_exception(Exception, e, e.__traceback__)
-                        if task:
-                            task.cancel()
+                        if new_task:
+                            new_task.cancel()
                         emit(events.ProposalFailed(prop_id=b.proposal.id, reason=str(e)))
                     finally:
                         pass
@@ -444,16 +463,24 @@ class Engine(AsyncContextManager):
 
             yield {"stage": "all work done"}
             emit(events.ComputationFinished())
-
         except Exception as e:
+            if not isinstance(e, (KeyboardInterrupt, CancelledError)):
+                traceback.print_exc()
             emit(events.ComputationFailed(reason=str(e)))
-            raise
 
         finally:
             payment_closing = True
+            find_offers_task.cancel()
+            try:
+                if workers:
+                    for worker_task in workers:
+                        worker_task.cancel()
+                    await asyncio.wait(workers, timeout=15, return_when=asyncio.ALL_COMPLETED)
+            except Exception:
+                traceback.print_exc()
+
             for worker_task in workers:
                 worker_task.cancel()
-            find_offers_task.cancel()
             await asyncio.wait(
                 workers.union({find_offers_task, process_invoices_job}),
                 timeout=5,
@@ -461,7 +488,10 @@ class Engine(AsyncContextManager):
             )
         yield {"stage": "wait for invoices", "agreements_to_pay": agreements_to_pay}
         payment_closing = True
-        await asyncio.wait({process_invoices_job}, timeout=15, return_when=asyncio.ALL_COMPLETED)
+        if agreements_to_pay:
+            await asyncio.wait(
+                {process_invoices_job}, timeout=15, return_when=asyncio.ALL_COMPLETED
+            )
 
         yield {"done": True}
 

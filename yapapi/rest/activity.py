@@ -56,13 +56,28 @@ class Activity(AsyncContextManager["Activity"]):
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         # w/o for some buggy providers which do not kill exe-unit
         # on destroy_activity event.
-        with contextlib.suppress(yexc.ApiException):
-            batch_id = await self._api.call_exec(
-                self._id, yaa.ExeScriptRequest(text="[{destroy:{}}")
+        if exc_type:
+            _log.info(
+                "activity %s CLOSE for [%s] %s",
+                self._id,
+                exc_type.__name__,
+                exc_val,
+                exc_info=(exc_type, exc_val, exc_tb),
             )
-            await self._api.get_exec_batch_results(self._id, batch_id, timeout=5.0)
-        with contextlib.suppress(yexc.ApiException):
-            await self._api.destroy_activity(self._id)
+        try:
+            batch_id = await self._api.call_exec(
+                self._id, yaa.ExeScriptRequest(text='[{"terminate":{}}]')
+            )
+            with contextlib.suppress(yexc.ApiException):
+                # wait 1sec before kill
+                await self._api.get_exec_batch_results(self._id, batch_id, timeout=1.0)
+        except yexc.ApiException:
+            _log.error("failed to destroy activity: %s", self._id, exc_info=True)
+        finally:
+            with contextlib.suppress(yexc.ApiException):
+                await self._api.destroy_activity(self._id)
+            if exc_type:
+                _log.info("activity %s CLOSE done", self._id)
 
 
 @dataclass

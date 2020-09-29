@@ -56,7 +56,7 @@ class ProposalReceived(ProposalEvent):
 
 @dataclass
 class ProposalRejected(ProposalEvent):
-    reason: Optional[str]
+    reason: Optional[str] = None
 
 
 @dataclass

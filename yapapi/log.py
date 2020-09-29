@@ -254,7 +254,6 @@ class SummaryLogger:
             self.error_occurred = True
 
     def _handle(self, event: events.Event):
-
         if isinstance(event, events.ComputationStarted):
             self._reset()
 
