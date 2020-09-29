@@ -3,10 +3,9 @@ import asyncio
 from asyncio import TimeoutError
 from datetime import datetime, timezone
 import json
-import logging
 
-from yapapi import enable_default_logger
 from yapapi import props as yp
+from yapapi.log import enable_default_logger
 from yapapi.props.builder import DemandBuilder
 from yapapi.rest import Configuration, Market, Activity, Payment  # noqa
 

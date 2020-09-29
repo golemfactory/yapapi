@@ -60,6 +60,16 @@ class _PyField:
 ME = TypeVar("ME", bound="Model")
 
 
+class InvalidPropertiesError(Exception):
+    """Raised by `Model.from_props(cls, props)` when given invalid `props`."""
+
+    def __str__(self):
+        msg = "Invalid properties"
+        if self.args:
+            msg += f": {self.args[0]}"
+        return msg
+
+
 class Model(abc.ABC):
     def __init__(self, **kwargs):
         pass
@@ -78,9 +88,19 @@ class Model(abc.ABC):
         data = dict(
             (field_map[key].encode(val) for (key, val) in props.items() if key in field_map)
         )
-        cls._custom_mapping(props, data)
-        self = cls(**data)
-        return self
+        try:
+            cls._custom_mapping(props, data)
+            self = cls(**data)
+            return self
+        except Exception as exc:
+            # Handle some common cases to improve error diagnostics
+            if isinstance(exc, KeyError):
+                msg = f"Missing key: {exc}"
+            elif isinstance(exc, json.JSONDecodeError):
+                msg = f"Error when decoding '{exc.doc}': {exc}"
+            else:
+                msg = f"{exc}"
+            raise InvalidPropertiesError(msg) from exc
 
     @classmethod
     def keys(cls):
