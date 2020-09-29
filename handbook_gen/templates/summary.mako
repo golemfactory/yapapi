@@ -6,9 +6,10 @@ ${render_node(node, 0)}\
 % for i in range(level):
 <% indent += '  ' %>\
 % endfor
-${indent}* [${node.name}]\
 % if node.filepath:
-(${node.filepath})\
+${indent}* [${node.name}](${node.filepath})\
+% else:
+${indent}* ${node.name}\
 % endif
 % for child in node.children.values():
 ${render_node(child, level + 1)}\

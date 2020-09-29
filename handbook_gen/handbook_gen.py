@@ -70,7 +70,7 @@ class SummaryNode:
         return f"<name={self.name}, filepath={self.filepath}, " f"children=[{children}]>"
 
 
-def build_reference(root_node, md_root, package_name, summary_prefix):
+def build_reference(root_node, md_root, summary_prefix):
     def process_file(dirname, filename):
         file_path = Path(dirname) / filename
         title = get_module_title(file_path)
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     reference_node = summary.children.setdefault("reference", SummaryNode())
     reference_node.name = "API Reference"
     build_reference(
-        reference_node, md_root, get_pyproject()["tool"]["poetry"]["name"], args.summary_prefix
+        reference_node, md_root, args.summary_prefix
     )
 
     def write_template(stream):
