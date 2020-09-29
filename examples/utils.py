@@ -1,3 +1,4 @@
+"""Utilities for yapapi example scripts."""
 import argparse
 import logging
 
