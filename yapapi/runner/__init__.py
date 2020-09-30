@@ -2,42 +2,35 @@
 
 """
 import abc
-import sys
-import os
-import asyncio
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from enum import Enum, auto
-import itertools
+import os
+import sys
 from types import MappingProxyType
 from typing import (
-    Optional,
-    TypeVar,
-    Generic,
     AsyncContextManager,
+    AsyncIterator,
     Callable,
+    Dict,
+    Iterable,
+    Mapping,
+    NamedTuple,
+    Optional,
+    Set,
+    TypeVar,
     Union,
     cast,
-    Dict,
-    NamedTuple,
-    Mapping,
-    AsyncIterator,
-    Set,
-    Tuple,
-    Iterator,
-    Iterable,
-    ClassVar,
 )
 import traceback
 
 
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, field
 from typing_extensions import Final, AsyncGenerator
 
 from .ctx import WorkContext, CommandContainer, Work
 from .events import Event
 from . import events
-
+from .task import Task, TaskStatus
 from .utils import AsyncWrapper
 from .. import rest
 from ..props import com, Activity, Identification, IdentificationKeys
@@ -153,6 +146,10 @@ class _BufferItem(NamedTuple):
     proposal: rest.market.OfferProposal
 
 
+D = TypeVar("D")  # Type var for task data
+R = TypeVar("R")  # Type var for task result
+
+
 class Engine(AsyncContextManager):
     """Requestor engine. Used to run tasks based on a common package on providers."""
 
@@ -203,9 +200,9 @@ class Engine(AsyncContextManager):
 
     async def map(
         self,
-        worker: Callable[[WorkContext, AsyncIterator["Task"]], AsyncGenerator[Work, None]],
-        data: Iterable["Task"],
-    ):
+        worker: Callable[[WorkContext, AsyncIterator[Task[D, R]]], AsyncGenerator[Work, None]],
+        data: Iterable[Task[D, R]],
+    ) -> AsyncIterator[Task[D, R]]:
         """Run computations on providers.
 
         :param worker: a callable that takes a WorkContext object and a list o tasks,
@@ -231,11 +228,6 @@ class Engine(AsyncContextManager):
                 ),
             )
 
-            yield {
-                "allocation": self._budget_allocation.id,
-                **asdict(await self._budget_allocation.details()),
-            }
-
         emit(events.ComputationStarted())
 
         # Building offer
@@ -251,7 +243,21 @@ class Engine(AsyncContextManager):
         market_api = self._market_api
         activity_api: rest.Activity = self._activity_api
         strategy = self._strategy
-        work_queue = SmartQueue(data)
+
+        done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
+
+        def on_task_done(task: Task[D, R], status: TaskStatus) -> None:
+            """Callback run when `task` is accepted or rejected."""
+            if status == TaskStatus.ACCEPTED:
+                done_queue.put_nowait(task)
+
+        def input_tasks() -> Iterable[Task[D, R]]:
+            for task in data:
+                task._add_callback(on_task_done)
+                yield task
+
+        work_queue = SmartQueue(input_tasks())
+
         workers: Set[asyncio.Task[None]] = set()
         last_wid = 0
 
@@ -259,7 +265,7 @@ class Engine(AsyncContextManager):
         invoices: Dict[str, rest.payment.Invoice] = dict()
         payment_closing: bool = False
 
-        async def process_invoices():
+        async def process_invoices() -> None:
             assert self._budget_allocation
             allocation: rest.payment.Allocation = self._budget_allocation
             async for invoice in self._payment_api.incoming_invoices():
@@ -278,7 +284,7 @@ class Engine(AsyncContextManager):
                 if payment_closing and not agreements_to_pay:
                     break
 
-        async def accept_payment_for_agreement(agreement_id: str, *, partial=False) -> bool:
+        async def accept_payment_for_agreement(agreement_id: str, *, partial: bool = False) -> bool:
             assert self._budget_allocation
             allocation: rest.payment.Allocation = self._budget_allocation
             emit(events.PaymentPrepared(agr_id=agreement_id))
@@ -296,7 +302,7 @@ class Engine(AsyncContextManager):
             await inv.accept(amount=inv.amount, allocation=allocation)
             return True
 
-        async def find_offers():
+        async def find_offers() -> None:
             try:
                 subscription = await builder.subscribe(market_api)
             except Exception as ex:
@@ -339,7 +345,7 @@ class Engine(AsyncContextManager):
         # )
         storage_manager = await self._stack.enter_async_context(gftp.provider())
 
-        async def start_worker(agreement: rest.market.Agreement):
+        async def start_worker(agreement: rest.market.Agreement) -> None:
             nonlocal last_wid
             wid = last_wid
             last_wid += 1
@@ -412,7 +418,7 @@ class Engine(AsyncContextManager):
             await accept_payment_for_agreement(agreement.id)
             emit(events.WorkerFinished(agr_id=agreement.id))
 
-        async def worker_starter():
+        async def worker_starter() -> None:
             while True:
                 await asyncio.sleep(2)
                 if offer_buffer and len(workers) < self._conf.max_workers:
@@ -443,22 +449,30 @@ class Engine(AsyncContextManager):
         wait_until_done = loop.create_task(work_queue.wait_until_done())
         # Py38: find_offers_task.set_name('find_offers_task')
         try:
+            get_done_task: Optional[asyncio.Task] = None
             services = {
                 find_offers_task,
                 loop.create_task(worker_starter()),
                 process_invoices_job,
                 wait_until_done,
             }
-            while wait_until_done in services:
+
+            while wait_until_done in services or not done_queue.empty():
                 if datetime.now(timezone.utc) > self._expires:
                     raise TimeoutError(f"task timeout exceeded. timeout={self._conf.timeout}")
+
+                if not get_done_task:
+                    get_done_task = loop.create_task(done_queue.get())
+                    services.add(get_done_task)
+
                 done, pending = await asyncio.wait(
                     services.union(workers), timeout=10, return_when=asyncio.FIRST_COMPLETED
                 )
+
                 for task in done:
                     # if an exception occurred when a service task was running
                     if task in services and not task.cancelled() and task.exception():
-                        raise cast(Exception, task.exception())
+                        raise cast(BaseException, task.exception())
                     if task in workers:
                         try:
                             await task
@@ -469,7 +483,12 @@ class Engine(AsyncContextManager):
                 workers -= done
                 services -= done
 
-            yield {"stage": "all work done"}
+                assert get_done_task
+                if get_done_task.done():
+                    yield get_done_task.result()
+                    assert get_done_task not in services
+                    get_done_task = None
+
             emit(events.ComputationFinished())
         except Exception as e:
             if (
@@ -498,16 +517,13 @@ class Engine(AsyncContextManager):
                 timeout=5,
                 return_when=asyncio.ALL_COMPLETED,
             )
-        yield {"stage": "wait for invoices", "agreements_to_pay": agreements_to_pay}
         payment_closing = True
         if agreements_to_pay:
             await asyncio.wait(
                 {process_invoices_job}, timeout=15, return_when=asyncio.ALL_COMPLETED
             )
 
-        yield {"done": True}
-
-    async def __aenter__(self):
+    async def __aenter__(self) -> "Engine":
         stack = self._stack
 
         # TODO: Cleanup on exception here.
@@ -529,134 +545,6 @@ class Engine(AsyncContextManager):
         # self._market_api = None
         # self._payment_api = None
         await self._stack.aclose()
-
-
-class TaskStatus(Enum):
-    WAITING = auto()
-    RUNNING = auto()
-    ACCEPTED = auto()
-    REJECTED = auto()
-
-
-TaskData = TypeVar("TaskData")
-TaskResult = TypeVar("TaskResult")
-TaskEvents = Union[events.TaskAccepted, events.TaskRejected]
-
-
-class Task(Generic[TaskData, TaskResult], object):
-    """One computation unit.
-
-    Represents one computation unit that will be run on the provider
-    (e.g. rendering of one frame).
-    """
-
-    ids: ClassVar[Iterator[int]] = itertools.count(1)
-
-    def __init__(
-        self,
-        data: TaskData,
-        *,
-        expires: Optional[datetime] = None,
-        timeout: Optional[timedelta] = None,
-    ):
-        """Create a new Task object.
-
-        :param data: contains information needed to prepare command list for the provider
-        :param expires: expiration datetime
-        :param timeout: timeout from now; overrides expires parameter if provided
-        """
-        self.id: str = str(next(Task.ids))
-        self._started = datetime.now()
-        self._expires: Optional[datetime]
-        self._emit: Optional[Callable[[TaskEvents], None]] = None
-        self._callbacks: Set[Callable[["Task", str], None]] = set()
-        self._handle: Optional[
-            Tuple[Handle["Task[TaskData, TaskResult]"], SmartQueue["Task[TaskData, TaskResult]"]]
-        ] = None
-        if timeout:
-            self._expires = self._started + timeout
-        else:
-            self._expires = expires
-
-        self._result: Optional[TaskResult] = None
-        self._data = data
-        self._status: TaskStatus = TaskStatus.WAITING
-
-    def _add_callback(self, callback):
-        self._callbacks.add(callback)
-
-    def __repr__(self):
-        return f"Task(id={self.id}, data={self._data})"
-
-    def _start(self, emitter: Callable[[TaskEvents], None]) -> None:
-        self._status = TaskStatus.RUNNING
-        self._emit = emitter
-
-    def _stop(self, retry: bool = False):
-        if self._handle:
-            (handle, queue) = self._handle
-            loop = asyncio.get_event_loop()
-            if retry:
-                loop.create_task(queue.reschedule(handle))
-            else:
-                loop.create_task(queue.mark_done(handle))
-
-    @staticmethod
-    def for_handle(
-        handle: Handle["Task[TaskData, TaskResult]"],
-        queue: SmartQueue["Task[TaskData, TaskResult]"],
-        emitter: Callable[[Event], None],
-    ) -> "Task[TaskData, TaskResult]":
-        task = handle.data
-        task._handle = (handle, queue)
-        task._start(emitter)
-        return task
-
-    @property
-    def data(self) -> TaskData:
-        return self._data
-
-    @property
-    def output(self) -> Optional[TaskResult]:
-        return self._result
-
-    @property
-    def expires(self):
-        return self._expires
-
-    def accept_task(self, result: Optional[TaskResult] = None):
-        """Accept task that was completed.
-
-        Must be called when the results of a task are correct and it shouldn't be retried.
-
-        :param result: computation result (optional)
-        :return: None
-        """
-        if self._emit:
-            self._emit(events.TaskAccepted(task_id=self.id, result=result))
-        assert self._status == TaskStatus.RUNNING, "Task not running"
-        self._status = TaskStatus.ACCEPTED
-        self._stop()
-        for cb in self._callbacks:
-            cb(self, "accept")
-
-    def reject_task(self, reason: Optional[str] = None, retry: bool = False):
-        """Reject task.
-
-        Must be called when the results of the task
-        are not correct and it should be retried.
-
-        :param reason: task rejection description (optional)
-        :return: None
-        """
-        if self._emit:
-            self._emit(events.TaskRejected(task_id=self.id, reason=reason))
-        assert self._status == TaskStatus.RUNNING, "Rejected task was not running"
-        self._status = TaskStatus.REJECTED
-        self._stop(retry)
-
-        for cb in self._callbacks:
-            cb(self, "reject")
 
 
 class Package(abc.ABC):
