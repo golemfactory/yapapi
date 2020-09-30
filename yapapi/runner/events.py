@@ -1,9 +1,12 @@
 """Representing events in Golem computation."""
+import dataclasses
 from dataclasses import dataclass
 from types import TracebackType
 from typing import Any, Optional, Type, Tuple
 
 from yapapi.props import Identification
+
+ExcInfo = Tuple[Type[BaseException], BaseException, Optional[TracebackType]]
 
 
 @dataclass(init=False)
@@ -12,6 +15,9 @@ class Event:
 
     def __init__(self):
         raise NotImplementedError()
+
+    def extract_exc_info(self) -> Tuple[Optional[ExcInfo], "Event"]:
+        return None, self
 
 
 @dataclass
@@ -144,11 +150,16 @@ class TaskStarted(AgreementEvent, TaskEvent):
 
 @dataclass
 class WorkerFinished(AgreementEvent):
-    exception: Optional[Tuple[Type[BaseException], BaseException, Optional[TracebackType]]] = None
+    exception: Optional[ExcInfo] = None
     """ Exception thrown by worker script.
 
         None if worker returns without error.
     """
+
+    def extract_exc_info(self) -> Tuple[Optional[ExcInfo], "Event"]:
+        exc_info = self.exception
+        me = dataclasses.replace(self, exception=None)
+        return exc_info, me
 
 
 @dataclass(init=False)

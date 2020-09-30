@@ -153,9 +153,9 @@ def log_event(event: events.Event) -> None:
 
 def log_event_json(event: events.Event) -> None:
     """Log an event as a tag with attributes in JSON format."""
-
+    (exc_info, event) = event.extract_exc_info()
     info = {name: str(value) for name, value in asdict(event).items()}
-    logger.debug("%s %s", type(event).__name__, json.dumps(info) if info else "")
+    logger.debug("%s %s", type(event).__name__, json.dumps(info) if info else "", exc_info=exc_info)
 
 
 class SummaryLogger:
