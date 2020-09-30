@@ -10,7 +10,11 @@ from ya_activity import (
 )
 from typing_extensions import AsyncContextManager, AsyncIterable
 import json
+import logging
 import contextlib
+
+
+_log = logging.getLogger("yapapi.rest")
 
 
 class ActivityService(object):
@@ -23,7 +27,7 @@ class ActivityService(object):
             activity_id = await self._api.create_activity(agreement_id)
             return Activity(self._api, self._state, activity_id)
         except yexc.ApiException:
-            print("Failed to create activity for agreement", agreement_id)
+            _log.error("Failed to create activity for agreement %s", agreement_id)
             raise
 
 
@@ -50,8 +54,30 @@ class Activity(AsyncContextManager["Activity"]):
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        with contextlib.suppress(yexc.ApiException):
-            await self._api.destroy_activity(self._id)
+        # w/o for some buggy providers which do not kill exe-unit
+        # on destroy_activity event.
+        if exc_type:
+            _log.info(
+                "activity %s CLOSE for [%s] %s",
+                self._id,
+                exc_type.__name__,
+                exc_val,
+                exc_info=(exc_type, exc_val, exc_tb),
+            )
+        try:
+            batch_id = await self._api.call_exec(
+                self._id, yaa.ExeScriptRequest(text='[{"terminate":{}}]')
+            )
+            with contextlib.suppress(yexc.ApiException):
+                # wait 1sec before kill
+                await self._api.get_exec_batch_results(self._id, batch_id, timeout=1.0)
+        except yexc.ApiException:
+            _log.error("failed to destroy activity: %s", self._id, exc_info=True)
+        finally:
+            with contextlib.suppress(yexc.ApiException):
+                await self._api.destroy_activity(self._id)
+            if exc_type:
+                _log.info("activity %s CLOSE done", self._id)
 
 
 @dataclass

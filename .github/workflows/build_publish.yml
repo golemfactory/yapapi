@@ -2,7 +2,7 @@ name: Build and publish the release
 
 on:
   release:
-    types: [ prereleased, released ]
+    types: [prereleased, released]
 
 jobs:
   test:
@@ -44,14 +44,16 @@ jobs:
         id: poetry_version
       - name: Fail on version mismatch
         run: exit 1
-        if: ${{ steps.git_describe.outputs.git-release-tag != steps.poetry_version.outputs.poetry-version }}
+        if:
+          ${{ steps.git_describe.outputs.git-release-tag !=
+          steps.poetry_version.outputs.poetry-version }}
       - name: Build the release
         run: poetry build
       - name: Store the built package
         uses: actions/upload-artifact@v2
         with:
-            name: dist
-            path: dist
+          name: dist
+          path: dist
 
   publish:
     needs: [build]

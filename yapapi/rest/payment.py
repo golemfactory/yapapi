@@ -33,9 +33,7 @@ class AllocationDetails:
 
 @dataclass
 class Allocation(_Link):
-    """Payment reservation for task processing.
-
-    """
+    """Payment reservation for task processing."""
 
     id: str
     """Allocation object id"""
@@ -92,9 +90,9 @@ class Payment(object):
     ) -> ResourceCtx[Allocation]:
         """Creates new allocation.
 
-         - `amount`:  Allocation amount.
-         - `expires`: expiration timestamp. by default 30 minutes from now.
-         - `make_deposit`: (unimplemented).
+        - `amount`:  Allocation amount.
+        - `expires`: expiration timestamp. by default 30 minutes from now.
+        - `make_deposit`: (unimplemented).
 
         """
         allocation_timeout: datetime = expires or datetime.now(timezone.utc) + timedelta(minutes=30)

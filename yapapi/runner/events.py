@@ -1,9 +1,12 @@
 """Representing events in Golem computation."""
-import sys
+import dataclasses
 from dataclasses import dataclass
-from typing import Any, Optional
+from types import TracebackType
+from typing import Any, Optional, Type, Tuple
 
 from yapapi.props import Identification
+
+ExcInfo = Tuple[Type[BaseException], BaseException, Optional[TracebackType]]
 
 
 @dataclass(init=False)
@@ -12,6 +15,9 @@ class Event:
 
     def __init__(self):
         raise NotImplementedError()
+
+    def extract_exc_info(self) -> Tuple[Optional[ExcInfo], "Event"]:
+        return None, self
 
 
 @dataclass
@@ -57,7 +63,7 @@ class ProposalReceived(ProposalEvent):
 
 @dataclass
 class ProposalRejected(ProposalEvent):
-    reason: Optional[str]
+    reason: Optional[str] = None
 
 
 @dataclass
@@ -144,27 +150,41 @@ class TaskStarted(AgreementEvent, TaskEvent):
 
 @dataclass
 class WorkerFinished(AgreementEvent):
-    pass
+    exception: Optional[ExcInfo] = None
+    """ Exception thrown by worker script.
+
+        None if worker returns without error.
+    """
+
+    def extract_exc_info(self) -> Tuple[Optional[ExcInfo], "Event"]:
+        exc_info = self.exception
+        me = dataclasses.replace(self, exception=None)
+        return exc_info, me
+
+
+@dataclass(init=False)
+class ScriptEvent(AgreementEvent):
+    task_id: Optional[str]
 
 
 @dataclass
-class ScriptSent(AgreementEvent, TaskEvent):
+class ScriptSent(ScriptEvent):
     cmds: Any
 
 
 @dataclass
-class CommandExecuted(AgreementEvent, TaskEvent):
+class CommandExecuted(ScriptEvent):
     cmd_idx: int
     message: str
 
 
 @dataclass
-class GettingResults(AgreementEvent, TaskEvent):
+class GettingResults(ScriptEvent):
     pass
 
 
 @dataclass
-class ScriptFinished(AgreementEvent, TaskEvent):
+class ScriptFinished(ScriptEvent):
     pass
 
 
