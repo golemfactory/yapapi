@@ -102,7 +102,6 @@ def process_portray_nav(parent_node, portray_nav, handbook_root, summary_prefix)
             dst_dir = str(dst_path).rsplit("/", maxsplit=1)[0]
             os.makedirs(dst_dir, exist_ok=True)
             shutil.copyfile(src_path, dst_path)
-
         else:
             process_portray_nav(summary_node, content, handbook_root, summary_prefix)
 
