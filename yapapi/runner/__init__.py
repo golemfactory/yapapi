@@ -30,7 +30,7 @@ from typing_extensions import Final, AsyncGenerator
 from .ctx import WorkContext, CommandContainer, Work
 from .events import Event
 from . import events
-from .task import Task
+from .task import Task, TaskStatus
 from .utils import AsyncWrapper
 from .. import rest
 from ..props import com, Activity, Identification, IdentificationKeys
@@ -243,8 +243,20 @@ class Engine(AsyncContextManager):
         market_api = self._market_api
         activity_api: rest.Activity = self._activity_api
         strategy = self._strategy
-        work_queue = SmartQueue(data)
+
         done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
+
+        def on_task_done(task: Task[D, R], status: TaskStatus) -> None:
+            """Callback run when `task` is accepted or rejected."""
+            if status == TaskStatus.ACCEPTED:
+                done_queue.put_nowait(task)
+
+        def input_tasks() -> Iterable[Task[D, R]]:
+            for task in data:
+                task._add_callback(on_task_done)
+                yield task
+
+        work_queue = SmartQueue(input_tasks())
 
         workers: Set[asyncio.Task[None]] = set()
         last_wid = 0

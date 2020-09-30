@@ -46,7 +46,7 @@ class Task(Generic[TaskData, TaskResult]):
         self._started = datetime.now()
         self._expires: Optional[datetime]
         self._emit: Optional[Callable[[TaskEvents], None]] = None
-        self._callbacks: Set[Callable[["Task[TaskData, TaskResult]", str], None]] = set()
+        self._callbacks: Set[Callable[["Task[TaskData, TaskResult]", TaskStatus], None]] = set()
         self._handle: Optional[
             Tuple[Handle["Task[TaskData, TaskResult]"], SmartQueue["Task[TaskData, TaskResult]"]]
         ] = None
@@ -59,7 +59,10 @@ class Task(Generic[TaskData, TaskResult]):
         self._data = data
         self._status: TaskStatus = TaskStatus.WAITING
 
-    def _add_callback(self, callback: Callable[["Task[TaskData, TaskResult]", str], None]) -> None:
+    def _add_callback(
+            self,
+            callback: Callable[["Task[TaskData, TaskResult]", TaskStatus], None]
+    ) -> None:
         self._callbacks.add(callback)
 
     def __repr__(self) -> str:
@@ -82,7 +85,7 @@ class Task(Generic[TaskData, TaskResult]):
     def for_handle(
         handle: Handle["Task[TaskData, TaskResult]"],
         queue: SmartQueue["Task[TaskData, TaskResult]"],
-        emitter: Callable[[Event], None],
+        emitter: Callable[[events.Event], None],
     ) -> "Task[TaskData, TaskResult]":
         task = handle.data
         task._handle = (handle, queue)
@@ -116,7 +119,7 @@ class Task(Generic[TaskData, TaskResult]):
         self._result = result
         self._stop()
         for cb in self._callbacks:
-            cb(self, "accept")
+            cb(self, TaskStatus.ACCEPTED)
 
     def reject_task(self, reason: Optional[str] = None, retry: bool = False) -> None:
         """Reject task.
@@ -134,4 +137,4 @@ class Task(Generic[TaskData, TaskResult]):
         self._stop(retry)
 
         for cb in self._callbacks:
-            cb(self, "reject")
+            cb(self, TaskStatus.REJECTED)
