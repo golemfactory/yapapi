@@ -33,6 +33,7 @@ jsonrpc-base = "^1.0.3"
 
 ya-aioclient = "^0.1.1"
 toml = "^0.10.1"
+pydoc-markdown = "^3.5.0"
 
 
 [tool.poetry.extras]
@@ -96,15 +97,18 @@ _liccheck_export = "poetry export -E cli -f requirements.txt -o .requirements.tx
 _liccheck_verify = "liccheck -r .requirements.txt"
 liccheck = ["_liccheck_export", "_liccheck_verify"]
 check = ["test", "typecheck", "codestyle", "liccheck"]
-clean = "rm -rf .coverage .requirements.txt dist"
+clean = "rm -rf .coverage .requirements.txt dist md handbook build"
 docs = "portray as_html --overwrite"
-
+pdocs = "pdocs as_markdown yapapi -e -ov -o md"
+pydoc-markdown = "pydoc-markdown --build --site-dir=_"
+_handbook_gen = "python handbook_gen/handbook_gen.py --overwrite"
+handbook = ['pydoc-markdown', '_handbook_gen']
 
 [[tool.portray.mkdocs.nav]]
-Home = "README.md"
+Introduction = "README.md"
 
 [[tool.portray.mkdocs.nav]]
-Tutorial = "docs/VM-Tutorial.md"
+"VM Tutorial" = "docs/VM-Tutorial.md"
 
 [[tool.portray.mkdocs.nav]]
 Low-Level = "docs/Low-Level-Api.md"
