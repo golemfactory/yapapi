@@ -55,6 +55,30 @@ jobs:
           name: dist
           path: dist
 
+  test_publish:
+    needs: [build]
+    name: Publish the release to test.pypi
+    runs-on: ubuntu-latest
+    if: ${{ github.event.action == 'prereleased' }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+      - uses: Gr1N/setup-poetry@v2
+        with:
+          poetry-version: 1.0.10
+      - name: Retrieve the built package
+        uses: actions/download-artifact@v2
+        with:
+          name: dist
+          path: dist
+      - name: Publish to pypi
+        run: |
+          poetry config repositories.testpypi https://test.pypi.org/legacy/
+          poetry publish -r testpypi -u __token__ -p ${{ secrets.TESTPYPI_TOKEN }}
+
   publish:
     needs: [build]
     name: Publish the release
