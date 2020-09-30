@@ -145,7 +145,7 @@ class TaskEvent(Event):
 
 @dataclass
 class TaskStarted(AgreementEvent, TaskEvent):
-    task_data: str
+    task_data: Any
 
 
 @dataclass

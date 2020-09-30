@@ -45,10 +45,12 @@ async def main(subnet_tag="testnet"):
                 },
             )
             ctx.run("/golem/entrypoints/run-blender.sh")
-            ctx.download_file(f"/golem/output/out{frame:04d}.png", f"output_{frame}.png")
+            output_file = f"output_{frame}.png"
+            ctx.download_file(f"/golem/output/out{frame:04d}.png", output_file)
             yield ctx.commit()
             # TODO: Check if job results are valid
-            task.accept_task()
+            # and reject by: task.reject_task(reason = 'invalid file')
+            task.accept_task(result=output_file)
 
         ctx.log("no more frames to render")
 
@@ -70,8 +72,8 @@ async def main(subnet_tag="testnet"):
         event_emitter=log_summary(),
     ) as engine:
 
-        async for progress in engine.map(worker, [Task(data=frame) for frame in frames]):
-            print("progress=", progress)
+        async for task in engine.map(worker, [Task(data=frame) for frame in frames]):
+            print(f"\033[36;1mTask computed: {task}, result: {task.output}\033[0m")
 
 
 if __name__ == "__main__":
