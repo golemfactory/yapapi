@@ -4,8 +4,8 @@ from enum import Enum, auto
 import itertools
 from typing import Callable, ClassVar, Iterator, Generic, Optional, Set, Tuple, TypeVar, Union
 
-import yapapi.runner.events as events
-from yapapi.runner._smartq import SmartQueue, Handle
+from . import events
+from ._smartq import SmartQueue, Handle
 
 
 class TaskStatus(Enum):
