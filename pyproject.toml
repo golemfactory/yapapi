@@ -4,8 +4,8 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "yapapi"
-version = "0.2.0"
-description = "High-Level API for Golem The Next Milestone"
+version = "0.2.1-alpha.1"
+description = "High-level Python API for the New Golem"
 authors = ["Przemysław K. Rekucki <przemyslaw.rekucki@golem.network>"]
 license = "LGPL-3.0-or-later"
 classifiers = [
