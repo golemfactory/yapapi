@@ -3,7 +3,7 @@ import asyncio
 import pathlib
 import sys
 
-from yapapi.log import enable_default_logger, log_summary, log_event_json  # noqa
+from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.runner import Engine, Task, vm
 from yapapi.runner.ctx import WorkContext
 from datetime import timedelta

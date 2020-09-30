@@ -60,8 +60,7 @@ class Task(Generic[TaskData, TaskResult]):
         self._status: TaskStatus = TaskStatus.WAITING
 
     def _add_callback(
-            self,
-            callback: Callable[["Task[TaskData, TaskResult]", TaskStatus], None]
+        self, callback: Callable[["Task[TaskData, TaskResult]", TaskStatus], None]
     ) -> None:
         self._callbacks.add(callback)
 

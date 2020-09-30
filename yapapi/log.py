@@ -24,9 +24,9 @@ For detailed human-readable output use the `log_event` function:
 ```
     Engine(..., event_emitter=yapapi.log.log_event)
 ```
-For even more detailed machine-readable output use `log_event_json`:
+For even more detailed machine-readable output use `log_event_repr`:
 ```
-    Engine(..., event_emitter=yapapi.log.log_event_json)
+    Engine(..., event_emitter=yapapi.log.log_event_repr)
 ```
 For summary human-readable output use `log_summary()`:
 ```
@@ -37,7 +37,7 @@ as an argument to `log_summary`:
 ```
     Engine(
         ...
-        event_emitter=yapapi.log.log_summary(yapapi.log.log_event_json)
+        event_emitter=yapapi.log.log_summary(yapapi.log.log_event_repr)
     )
 ```
 """
@@ -151,11 +151,10 @@ def log_event(event: events.Event) -> None:
     logger.log(loglevel, msg)
 
 
-def log_event_json(event: events.Event) -> None:
-    """Log an event as a tag with attributes in JSON format."""
-    (exc_info, event) = event.extract_exc_info()
-    info = {name: str(value) for name, value in asdict(event).items()}
-    logger.debug("%s %s", type(event).__name__, json.dumps(info) if info else "", exc_info=exc_info)
+def log_event_repr(event: events.Event) -> None:
+    """Log the result of calling `__repr__()` for the `event`."""
+    exc_info, _ = event.extract_exc_info()
+    logger.debug("%r", event, exc_info=exc_info)
 
 
 class SummaryLogger:
