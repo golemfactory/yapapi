@@ -4,7 +4,7 @@ uses `Mako` and `Markdown` which are already included as portray/pydocs dependen
 
 The documentation is prepared from:
     * the projects's own `docs`
-    * the automatically generated source reference (output of `pydocs`)
+    * the automatically generated source reference (output of `pydoc-markdown`)
     * `mkdocs` configuration included in `pyproject.toml` (consistency with `portray`)
 
 """
