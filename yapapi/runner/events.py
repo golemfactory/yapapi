@@ -1,6 +1,7 @@
 """Representing events in Golem computation."""
 from dataclasses import dataclass
-from typing import Any, Optional
+from types import TracebackType
+from typing import Any, Optional, Type, Tuple
 
 from yapapi.props import Identification
 
@@ -143,10 +144,14 @@ class TaskStarted(AgreementEvent, TaskEvent):
 
 @dataclass
 class WorkerFinished(AgreementEvent):
-    pass
+    exception: Optional[Tuple[Type[BaseException], BaseException, Optional[TracebackType]]] = None
+    """ Exception thrown by worker script.
+
+        None if worker returns without error.
+    """
 
 
-@dataclass
+@dataclass(init=False)
 class ScriptEvent(AgreementEvent):
     task_id: Optional[str]
 

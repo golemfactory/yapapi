@@ -18,7 +18,7 @@ INVOICE_STATUS_COLOR = {
 
 
 class Allocation:
-    """Payment allocation managment."""
+    """Payment allocation management."""
 
     def __init__(self, appkey: Optional[str] = None):
         self._cli = Configuration(app_key=appkey)
@@ -71,7 +71,7 @@ class Allocation:
 
 
 class Invoices:
-    """Invoice managment."""
+    """Invoice management."""
 
     def __init__(self, appkey: Optional[str] = None):
         self._cli = Configuration(app_key=appkey)

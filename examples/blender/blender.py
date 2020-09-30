@@ -48,11 +48,6 @@ async def main(subnet_tag="testnet"):
             ctx.download_file(f"/golem/output/out{frame:04d}.png", f"output_{frame}.png")
             yield ctx.commit()
             # TODO: Check if job results are valid
-            # and reject by: task.reject_task(reason = 'invalid file')
-            # if randint(0, 5) == 1:
-            #    task.reject_task(retry=True)
-            # else:
-            #    task.accept_task()
             task.accept_task()
 
         ctx.log("no more frames to render")

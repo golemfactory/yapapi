@@ -79,7 +79,6 @@ class SmartQueue(Generic[Item], object):
     async def get(self, consumer: "Consumer[Item]") -> Handle[Item]:
         async with self._lock:
             while self.__have_data():
-                _logger.debug("tick")
                 handle = self.__find_rescheduled_item(consumer)
                 if handle:
                     self._rescheduled_items.remove(handle)

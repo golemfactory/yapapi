@@ -3,7 +3,8 @@
 """
 import abc
 import sys
-from asyncio import CancelledError
+import os
+import asyncio
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from enum import Enum, auto
@@ -28,7 +29,7 @@ from typing import (
     ClassVar,
 )
 import traceback
-import asyncio
+
 
 from dataclasses import dataclass, asdict, field
 from typing_extensions import Final, AsyncGenerator
@@ -68,6 +69,7 @@ CFF_DEFAULT_PRICE_FOR_COUNTER: Final[Mapping[com.Counter, Decimal]] = MappingPro
 class _EngineConf:
     max_workers: int = 5
     timeout: timedelta = timedelta(minutes=5)
+    traceback: bool = bool(os.getenv("YAPAPI_TRACEBACK", 0))
 
 
 class MarketStrategy(abc.ABC):
@@ -392,12 +394,19 @@ class Engine(AsyncContextManager):
                             await batch.post()
                             emit(events.ScriptFinished(agr_id=agreement.id, task_id=task_id))
                             await accept_payment_for_agreement(agreement.id, partial=True)
-                        except Exception as exc:
+                        except Exception:
                             try:
-                                await command_generator.athrow(Exception, exc)
+                                await command_generator.athrow(*sys.exc_info())
                             except Exception:
-                                traceback.print_exc()
-                                emit(events.WorkerFinished(agr_id=agreement.id))
+                                if self._conf.traceback:
+                                    traceback.print_exc()
+                                (exc_typ, exc_val, exc_tb) = sys.exc_info()
+                                assert exc_typ is not None and exc_val is not None
+                                emit(
+                                    events.WorkerFinished(
+                                        agr_id=agreement.id, exception=(exc_typ, exc_val, exc_tb)
+                                    )
+                                )
                                 return
 
             await accept_payment_for_agreement(agreement.id)
@@ -422,8 +431,6 @@ class Engine(AsyncContextManager):
                         workers.add(new_task)
                         # task.add_done_callback(on_worker_stop)
                     except Exception as e:
-                        # import traceback
-                        # traceback.print_exception(Exception, e, e.__traceback__)
                         if new_task:
                             new_task.cancel()
                         emit(events.ProposalFailed(prop_id=b.proposal.id, reason=str(e)))
@@ -456,7 +463,8 @@ class Engine(AsyncContextManager):
                         try:
                             await task
                         except Exception:
-                            traceback.print_exc()
+                            if self._conf.traceback:
+                                traceback.print_exc()
 
                 workers -= done
                 services -= done
@@ -464,7 +472,10 @@ class Engine(AsyncContextManager):
             yield {"stage": "all work done"}
             emit(events.ComputationFinished())
         except Exception as e:
-            if not isinstance(e, (KeyboardInterrupt, CancelledError)):
+            if (
+                not isinstance(e, (KeyboardInterrupt, asyncio.CancelledError))
+                and self._conf.traceback
+            ):
                 traceback.print_exc()
             emit(events.ComputationFailed(reason=str(e)))
 
@@ -477,7 +488,8 @@ class Engine(AsyncContextManager):
                         worker_task.cancel()
                     await asyncio.wait(workers, timeout=15, return_when=asyncio.ALL_COMPLETED)
             except Exception:
-                traceback.print_exc()
+                if self._conf.traceback:
+                    traceback.print_exc()
 
             for worker_task in workers:
                 worker_task.cancel()

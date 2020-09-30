@@ -24,7 +24,7 @@ def render_demand(props: dict, cons: str):
 
 
 class Demand:
-    """Offer subscription managment."""
+    """Offer subscription management."""
 
     def __init__(self, appkey: Optional[str] = None):
         self._cli = Configuration(app_key=appkey)
