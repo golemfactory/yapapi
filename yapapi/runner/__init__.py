@@ -3,6 +3,8 @@
 """
 import abc
 import sys
+import os
+import asyncio
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from enum import Enum, auto
@@ -26,9 +28,11 @@ from typing import (
     Iterable,
     ClassVar,
 )
+import traceback
+
 
 from dataclasses import dataclass, asdict, field
-from typing_extensions import Final
+from typing_extensions import Final, AsyncGenerator
 
 from .ctx import WorkContext, CommandContainer, Work
 from .events import Event
@@ -40,6 +44,7 @@ from ..props import com, Activity, Identification, IdentificationKeys
 from ..props.base import InvalidPropertiesError
 from ..props.builder import DemandBuilder
 from ..storage import gftp
+from ._smartq import SmartQueue, Handle
 
 
 if sys.version_info >= (3, 7):
@@ -64,6 +69,7 @@ CFF_DEFAULT_PRICE_FOR_COUNTER: Final[Mapping[com.Counter, Decimal]] = MappingPro
 class _EngineConf:
     max_workers: int = 5
     timeout: timedelta = timedelta(minutes=5)
+    traceback: bool = bool(os.getenv("YAPAPI_TRACEBACK", 0))
 
 
 class MarketStrategy(abc.ABC):
@@ -197,7 +203,7 @@ class Engine(AsyncContextManager):
 
     async def map(
         self,
-        worker: Callable[[WorkContext, AsyncIterator["Task"]], AsyncIterator[Tuple["Task", Work]]],
+        worker: Callable[[WorkContext, AsyncIterator["Task"]], AsyncGenerator[Work, None]],
         data: Iterable["Task"],
     ):
         """Run computations on providers.
@@ -212,16 +218,7 @@ class Engine(AsyncContextManager):
         import random
 
         stack = self._stack
-        tasks_processed = {"c": 0, "s": 0}
-
         emit = cast(Callable[[Event], None], self._wrapped_emitter.async_call)
-
-        def on_work_done(task, status):
-            if status == "accept":
-                tasks_processed["c"] += 1
-            else:
-                loop = asyncio.get_event_loop()
-                loop.create_task(work_queue.put(task))
 
         # Creating allocation
         if not self._budget_allocation:
@@ -254,8 +251,7 @@ class Engine(AsyncContextManager):
         market_api = self._market_api
         activity_api: rest.Activity = self._activity_api
         strategy = self._strategy
-        work_queue: asyncio.Queue[Task] = asyncio.Queue()
-
+        work_queue = SmartQueue(data)
         workers: Set[asyncio.Task[None]] = set()
         last_wid = 0
 
@@ -301,7 +297,6 @@ class Engine(AsyncContextManager):
             return True
 
         async def find_offers():
-
             try:
                 subscription = await builder.subscribe(market_api)
             except Exception as ex:
@@ -349,15 +344,7 @@ class Engine(AsyncContextManager):
             wid = last_wid
             last_wid += 1
 
-            details = await agreement.details()
             emit(events.WorkerStarted(agr_id=agreement.id))
-
-            async def task_emitter():
-                while True:
-                    item = await work_queue.get()
-                    item._add_callback(on_work_done)
-                    item._start(emitter=emit)
-                    yield item
 
             try:
                 act = await activity_api.new_activity(agreement.id)
@@ -366,39 +353,61 @@ class Engine(AsyncContextManager):
                 raise
             async with act:
                 emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
+
                 work_context = WorkContext(f"worker-{wid}", storage_manager, emitter=emit)
-                async for (task, batch) in worker(work_context, task_emitter()):
-                    emit(
-                        events.TaskStarted(
-                            agr_id=agreement.id, task_id=task.id, task_data=task.data
-                        )
+                with work_queue.new_consumer() as consumer:
+                    command_generator = worker(
+                        work_context,
+                        (Task.for_handle(handle, work_queue, emit) async for handle in consumer),
                     )
-                    try:
-                        await batch.prepare()
-                        cc = CommandContainer()
-                        batch.register(cc)
-                        remote = await act.send(cc.commands())
-                        emit(
-                            events.ScriptSent(
-                                agr_id=agreement.id, task_id=task.id, cmds=cc.commands()
-                            )
-                        )
-                        async for step in remote:
+                    async for batch in command_generator:
+                        try:
+                            current_worker_task = consumer.last_item
+                            if current_worker_task:
+                                emit(
+                                    events.TaskStarted(
+                                        agr_id=agreement.id,
+                                        task_id=current_worker_task.id,
+                                        task_data=current_worker_task.data,
+                                    )
+                                )
+                            task_id = current_worker_task.id if current_worker_task else None
+                            await batch.prepare()
+                            cc = CommandContainer()
+                            batch.register(cc)
+                            remote = await act.send(cc.commands())
                             emit(
-                                events.CommandExecuted(
-                                    agr_id=agreement.id,
-                                    task_id=task.id,
-                                    message=step.message,
-                                    cmd_idx=step.idx,
+                                events.ScriptSent(
+                                    agr_id=agreement.id, task_id=task_id, cmds=cc.commands()
                                 )
                             )
-                        emit(events.GettingResults(agr_id=agreement.id, task_id=task.id))
-                        await batch.post()
-                        emit(events.ScriptFinished(agr_id=agreement.id, task_id=task.id))
-                        await accept_payment_for_agreement(agreement.id, partial=True)
-                    except Exception as exc:
-                        task.reject_task(reason=f"failure: {exc}")
-                        raise
+                            async for step in remote:
+                                emit(
+                                    events.CommandExecuted(
+                                        agr_id=agreement.id,
+                                        task_id=task_id,
+                                        message=step.message,
+                                        cmd_idx=step.idx,
+                                    )
+                                )
+                            emit(events.GettingResults(agr_id=agreement.id, task_id=task_id))
+                            await batch.post()
+                            emit(events.ScriptFinished(agr_id=agreement.id, task_id=task_id))
+                            await accept_payment_for_agreement(agreement.id, partial=True)
+                        except Exception:
+                            try:
+                                await command_generator.athrow(*sys.exc_info())
+                            except Exception:
+                                if self._conf.traceback:
+                                    traceback.print_exc()
+                                (exc_typ, exc_val, exc_tb) = sys.exc_info()
+                                assert exc_typ is not None and exc_val is not None
+                                emit(
+                                    events.WorkerFinished(
+                                        agr_id=agreement.id, exception=(exc_typ, exc_val, exc_tb)
+                                    )
+                                )
+                                return
 
             await accept_payment_for_agreement(agreement.id)
             emit(events.WorkerFinished(agr_id=agreement.id))
@@ -409,49 +418,38 @@ class Engine(AsyncContextManager):
                 if offer_buffer and len(workers) < self._conf.max_workers:
                     provider_id, b = random.choice(list(offer_buffer.items()))
                     del offer_buffer[provider_id]
-                    task = None
+                    new_task = None
                     try:
                         agreement = await b.proposal.agreement()
-                        provider_id = (await agreement.details()).view_prov(Identification)
-                        emit(events.AgreementCreated(agr_id=agreement.id, provider_id=provider_id))
+                        provider = (await agreement.details()).view_prov(Identification)
+                        emit(events.AgreementCreated(agr_id=agreement.id, provider_id=provider))
                         if not await agreement.confirm():
                             emit(events.AgreementRejected(agr_id=agreement.id))
                             continue
                         emit(events.AgreementConfirmed(agr_id=agreement.id))
-                        task = loop.create_task(start_worker(agreement))
-                        workers.add(task)
+                        new_task = loop.create_task(start_worker(agreement))
+                        workers.add(new_task)
                         # task.add_done_callback(on_worker_stop)
                     except Exception as e:
-                        # import traceback
-                        # traceback.print_exception(Exception, e, e.__traceback__)
-                        if task:
-                            task.cancel()
+                        if new_task:
+                            new_task.cancel()
                         emit(events.ProposalFailed(prop_id=b.proposal.id, reason=str(e)))
                     finally:
                         pass
 
-        async def fill_work_q():
-            for task in data:
-                tasks_processed["s"] += 1
-                await work_queue.put(task)
-
         loop = asyncio.get_event_loop()
         find_offers_task = loop.create_task(find_offers())
         process_invoices_job = loop.create_task(process_invoices())
+        wait_until_done = loop.create_task(work_queue.wait_until_done())
         # Py38: find_offers_task.set_name('find_offers_task')
         try:
-            task_fill_q = loop.create_task(fill_work_q())
             services = {
                 find_offers_task,
-                task_fill_q,
                 loop.create_task(worker_starter()),
                 process_invoices_job,
+                wait_until_done,
             }
-            while (
-                task_fill_q in services
-                or not work_queue.empty()
-                or tasks_processed["s"] > tasks_processed["c"]
-            ):
+            while wait_until_done in services:
                 if datetime.now(timezone.utc) > self._expires:
                     raise TimeoutError(f"task timeout exceeded. timeout={self._conf.timeout}")
                 done, pending = await asyncio.wait(
@@ -461,21 +459,40 @@ class Engine(AsyncContextManager):
                     # if an exception occurred when a service task was running
                     if task in services and not task.cancelled() and task.exception():
                         raise cast(Exception, task.exception())
+                    if task in workers:
+                        try:
+                            await task
+                        except Exception:
+                            if self._conf.traceback:
+                                traceback.print_exc()
+
                 workers -= done
                 services -= done
 
             yield {"stage": "all work done"}
             emit(events.ComputationFinished())
-
         except Exception as e:
+            if (
+                not isinstance(e, (KeyboardInterrupt, asyncio.CancelledError))
+                and self._conf.traceback
+            ):
+                traceback.print_exc()
             emit(events.ComputationFailed(reason=str(e)))
-            raise
 
         finally:
             payment_closing = True
+            find_offers_task.cancel()
+            try:
+                if workers:
+                    for worker_task in workers:
+                        worker_task.cancel()
+                    await asyncio.wait(workers, timeout=15, return_when=asyncio.ALL_COMPLETED)
+            except Exception:
+                if self._conf.traceback:
+                    traceback.print_exc()
+
             for worker_task in workers:
                 worker_task.cancel()
-            find_offers_task.cancel()
             await asyncio.wait(
                 workers.union({find_offers_task, process_invoices_job}),
                 timeout=5,
@@ -483,7 +500,10 @@ class Engine(AsyncContextManager):
             )
         yield {"stage": "wait for invoices", "agreements_to_pay": agreements_to_pay}
         payment_closing = True
-        await asyncio.wait({process_invoices_job}, timeout=15, return_when=asyncio.ALL_COMPLETED)
+        if agreements_to_pay:
+            await asyncio.wait(
+                {process_invoices_job}, timeout=15, return_when=asyncio.ALL_COMPLETED
+            )
 
         yield {"done": True}
 
@@ -550,6 +570,9 @@ class Task(Generic[TaskData, TaskResult], object):
         self._expires: Optional[datetime]
         self._emit: Optional[Callable[[TaskEvents], None]] = None
         self._callbacks: Set[Callable[["Task", str], None]] = set()
+        self._handle: Optional[
+            Tuple[Handle["Task[TaskData, TaskResult]"], SmartQueue["Task[TaskData, TaskResult]"]]
+        ] = None
         if timeout:
             self._expires = self._started + timeout
         else:
@@ -568,6 +591,26 @@ class Task(Generic[TaskData, TaskResult], object):
     def _start(self, emitter: Callable[[TaskEvents], None]) -> None:
         self._status = TaskStatus.RUNNING
         self._emit = emitter
+
+    def _stop(self, retry: bool = False):
+        if self._handle:
+            (handle, queue) = self._handle
+            loop = asyncio.get_event_loop()
+            if retry:
+                loop.create_task(queue.reschedule(handle))
+            else:
+                loop.create_task(queue.mark_done(handle))
+
+    @staticmethod
+    def for_handle(
+        handle: Handle["Task[TaskData, TaskResult]"],
+        queue: SmartQueue["Task[TaskData, TaskResult]"],
+        emitter: Callable[[Event], None],
+    ) -> "Task[TaskData, TaskResult]":
+        task = handle.data
+        task._handle = (handle, queue)
+        task._start(emitter)
+        return task
 
     @property
     def data(self) -> TaskData:
@@ -591,12 +634,13 @@ class Task(Generic[TaskData, TaskResult], object):
         """
         if self._emit:
             self._emit(events.TaskAccepted(task_id=self.id, result=result))
-        assert self._status == TaskStatus.RUNNING
+        assert self._status == TaskStatus.RUNNING, "Task not running"
         self._status = TaskStatus.ACCEPTED
+        self._stop()
         for cb in self._callbacks:
             cb(self, "accept")
 
-    def reject_task(self, reason: Optional[str] = None):
+    def reject_task(self, reason: Optional[str] = None, retry: bool = False):
         """Reject task.
 
         Must be called when the results of the task
@@ -607,8 +651,10 @@ class Task(Generic[TaskData, TaskResult], object):
         """
         if self._emit:
             self._emit(events.TaskRejected(task_id=self.id, reason=reason))
-        assert self._status == TaskStatus.RUNNING
+        assert self._status == TaskStatus.RUNNING, "Rejected task was not running"
         self._status = TaskStatus.REJECTED
+        self._stop(retry)
+
         for cb in self._callbacks:
             cb(self, "reject")
 

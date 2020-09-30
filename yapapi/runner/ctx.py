@@ -1,13 +1,10 @@
 import abc
 import json
 from pathlib import Path
-from typing import Callable, Iterable, Optional, Dict, List, Tuple, TYPE_CHECKING, Union
+from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union
 
 from .events import DownloadStarted, DownloadFinished
 from ..storage import StorageProvider, Source, Destination
-
-if TYPE_CHECKING:
-    from . import Task
 
 
 class CommandContainer:
@@ -157,8 +154,7 @@ class _Steps(Work):
 
 
 class WorkContext:
-    """An object used to schedule commands to be sent to provider.
-    """
+    """An object used to schedule commands to be sent to provider."""
 
     def __init__(
         self,
@@ -224,13 +220,12 @@ class WorkContext:
     def log(self, *args):
         print(f"W{self._id}: ", *args)
 
-    def commit(self, task: "Task") -> Tuple["Task", Work]:
-        """End task-related command list definition.
+    def commit(self) -> Work:
+        """Creates sequence of commands to be send to provider.
 
-        :param task: task related to the list of commands
-        :return: a tuple of Task and Work objects (the latter contains
+        :return: Work object (the latter contains
                  sequence commands added before calling this method)
         """
         steps = self._pending_steps
         self._pending_steps = []
-        return task, _Steps(*steps)
+        return _Steps(*steps)

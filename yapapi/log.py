@@ -153,9 +153,9 @@ def log_event(event: events.Event) -> None:
 
 def log_event_json(event: events.Event) -> None:
     """Log an event as a tag with attributes in JSON format."""
-
+    (exc_info, event) = event.extract_exc_info()
     info = {name: str(value) for name, value in asdict(event).items()}
-    logger.debug("%s %s", type(event).__name__, json.dumps(info) if info else "")
+    logger.debug("%s %s", type(event).__name__, json.dumps(info) if info else "", exc_info=exc_info)
 
 
 class SummaryLogger:
@@ -254,7 +254,6 @@ class SummaryLogger:
             self.error_occurred = True
 
     def _handle(self, event: events.Event):
-
         if isinstance(event, events.ComputationStarted):
             self._reset()
 
@@ -288,7 +287,7 @@ class SummaryLogger:
             self.logger.info(
                 "Task sent to provider '%s', task data: %s",
                 provider_name,
-                self.task_data[event.task_id],
+                self.task_data[event.task_id] if event.task_id else "<initialization>",
             )
 
         elif isinstance(event, events.ScriptFinished):
@@ -296,9 +295,10 @@ class SummaryLogger:
             self.logger.info(
                 "Task computed by provider '%s', task data: %s",
                 provider_name,
-                self.task_data[event.task_id],
+                self.task_data[event.task_id] if event.task_id else "<initialization>",
             )
-            self.provider_tasks[provider_name].append(event.task_id)
+            if event.task_id:
+                self.provider_tasks[provider_name].append(event.task_id)
 
         elif isinstance(event, events.InvoiceReceived):
             provider_name = self.agreement_provider_name[event.agr_id]
