@@ -7,8 +7,12 @@ from datetime import datetime
 
 @dataclass
 class Identification(Model):
+    """Properties describing the node's identity"""
     name: Optional[str] = field(default=None, metadata={"key": "golem.node.id.name"})
+    """human-readable name of the Golem node"""
+
     subnet_tag: Optional[str] = field(default=None, metadata={"key": "golem.node.debug.subnet"})
+    """the name of the subnet within which the Demands and Offers are matched"""
 
 
 IdentificationKeys = Identification.keys()

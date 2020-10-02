@@ -9,6 +9,32 @@ from . import Model
 
 
 class DemandBuilder:
+    """Builds a dictionary of properties and constraints from high level models.
+
+    The dictionary represents a Demand object, which is later matched by the new Golem's
+    market implementation against Offers coming from providers to find those providers
+    who can satisfy the requestor's demand.
+
+    example usage:
+
+    ```python
+    >>> import yapapi
+    >>> from yapapi import props as yp
+    >>> from yapapi.props.builder import DemandBuilder
+    >>> from datetime import datetime, timezone
+    >>> builder = DemandBuilder()
+    >>> builder.add(yp.Identification(name="a node", subnet_tag="testnet"))
+    >>> builder.add(yp.Activity(expiration=datetime.now(timezone.utc)))
+    >>> builder.__repr__
+    >>> print(builder)
+    {'props':
+        {'golem.node.id.name': 'a node',
+         'golem.node.debug.subnet': 'testnet',
+         'golem.srv.comp.expiration': 1601655628772},
+     'constraints': []}
+    ```
+
+    """
     def __init__(self):
         self._props: dict = {}
         self._constraints: List[str] = []
@@ -19,10 +45,12 @@ class DemandBuilder:
 
     @property
     def props(self) -> dict:
+        """list of this demand's properties"""
         return self._props
 
     @property
     def cons(self) -> str:
+        """list of this demand's constraints"""
         c_list = self._constraints
         c_value: str
         if not c_list:
@@ -36,9 +64,11 @@ class DemandBuilder:
         return c_value
 
     def ensure(self, constraint: str):
+        """add a constraint to the demand definition"""
         self._constraints.append(constraint)
 
     def add(self, m: Model):
+        """add properties from the specified model to this demand definition"""
         kv = m.keys()
         base = asdict(m)
 
