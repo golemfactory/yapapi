@@ -77,9 +77,6 @@ async def main(subnet_tag="testnet"):
 
 
 if __name__ == "__main__":
-    import pathlib
-    import sys
-
     parser = utils.build_parser("Render blender scene")
     args = parser.parse_args()
 
