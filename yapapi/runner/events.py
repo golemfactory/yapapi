@@ -174,7 +174,9 @@ class ScriptSent(ScriptEvent):
 
 @dataclass
 class CommandExecuted(ScriptEvent):
+    success: bool
     cmd_idx: int
+    command: Any
     message: str
 
 

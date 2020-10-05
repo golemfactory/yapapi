@@ -314,6 +314,17 @@ class SummaryLogger:
                 self.task_data[event.task_id] if event.task_id else "<initialization>",
             )
 
+        elif isinstance(event, events.CommandExecuted):
+            if event.success:
+                return
+            provider_name = self.agreement_provider_name[event.agr_id]
+            self.logger.warning(
+                "Command failed on provider '%s', command: %s, output: %s",
+                provider_name,
+                event.command,
+                event.message,
+            )
+
         elif isinstance(event, events.ScriptFinished):
             provider_name = self.agreement_provider_name[event.agr_id]
             self.logger.info(
