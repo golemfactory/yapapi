@@ -10,8 +10,8 @@ These functions should be passed as `event_emitter` arguments to `Engine()`.
 * Functions that perform configuration of the `logging` module itself.
 Since logging configuration is in general a responsibility of the code that
 uses `yapapi` as a library, we only provide the `enable_default_logger`
-function in this category, that enables logging to stderr with given level
-(`logging.DEBUG` by default).
+function in this category, that enables logging to stderr with level `logging.INFO`
+and, optionally, to a given file with level `logging.DEBUG`.
 
 
 Functions for handling events
@@ -55,17 +55,29 @@ logger = logging.getLogger("yapapi.runner")
 
 
 def enable_default_logger(
-    format_: str = "[%(asctime)s %(levelname)s %(name)s] %(message)s", level: int = logging.DEBUG
+    format_: str = "[%(asctime)s %(levelname)s %(name)s] %(message)s",
+    log_file: Optional[str] = None,
 ):
-    """Enable the default logger that logs messages to stderr."""
+    """Enable the default logger that logs messages to stderr with level `INFO`.
 
+    If `log_file` is specified, the logger with output messages with level `DEBUG` to
+    the given file.
+    """
     logger = logging.getLogger("yapapi")
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter(format_))
-    handler.setLevel(level)
-    logger.addHandler(handler)
-    logger.setLevel(level)
+    logger.setLevel(logging.DEBUG)
     logger.disabled = False
+    formatter = logging.Formatter(format_)
+
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    console_handler.setLevel(logging.INFO)
+    logger.addHandler(console_handler)
+
+    if log_file:
+        file_handler = logging.FileHandler(filename=log_file, mode="w")
+        file_handler.setFormatter(formatter)
+        file_handler.setLevel(logging.DEBUG)
+        logger.addHandler(file_handler)
 
 
 # Default human-readable representation of event types.

@@ -69,7 +69,7 @@ async def main(subnet_tag="testnet"):
         budget=10.0,
         timeout=init_overhead + timedelta(minutes=len(frames) * 2),
         subnet_tag=subnet_tag,
-        event_emitter=log_summary(),
+        event_emitter=log_summary(log_event_repr),
     ) as engine:
 
         async for task in engine.map(worker, [Task(data=frame) for frame in frames]):
@@ -81,9 +81,10 @@ if __name__ == "__main__":
     import sys
 
     parser = utils.build_parser("Render blender scene")
+    parser.set_defaults(log_file="blender-yapapi.log")
     args = parser.parse_args()
 
-    enable_default_logger(level=args.log_level)
+    enable_default_logger(log_file=args.log_file)
     loop = asyncio.get_event_loop()
     task = loop.create_task(main(subnet_tag=args.subnet_tag))
     try:
