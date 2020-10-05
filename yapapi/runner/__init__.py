@@ -32,10 +32,11 @@ from .events import Event
 from . import events
 from .task import Task, TaskStatus
 from .utils import AsyncWrapper
-from .. import rest
 from ..props import com, Activity, Identification, IdentificationKeys
 from ..props.base import InvalidPropertiesError
 from ..props.builder import DemandBuilder
+from .. import rest
+from ..rest.activity import CommandExecutionError
 from ..storage import gftp
 from ._smartq import SmartQueue, Handle
 
@@ -387,15 +388,34 @@ class Engine(AsyncContextManager):
                                     agr_id=agreement.id, task_id=task_id, cmds=cc.commands()
                                 )
                             )
-                            async for step in remote:
+
+                            try:
+                                async for step in remote:
+                                    emit(
+                                        events.CommandExecuted(
+                                            success=True,
+                                            agr_id=agreement.id,
+                                            task_id=task_id,
+                                            command=cc.commands()[step.idx],
+                                            message=step.message,
+                                            cmd_idx=step.idx,
+                                        )
+                                    )
+                            except CommandExecutionError as err:
+                                assert len(err.args) >= 2
+                                cmd_msg, cmd_idx = err.args[0:2]
                                 emit(
                                     events.CommandExecuted(
+                                        success=False,
                                         agr_id=agreement.id,
                                         task_id=task_id,
-                                        message=step.message,
-                                        cmd_idx=step.idx,
+                                        command=cc.commands()[cmd_idx],
+                                        message=cmd_msg,
+                                        cmd_idx=cmd_idx,
                                     )
                                 )
+                                raise
+
                             emit(events.GettingResults(agr_id=agreement.id, task_id=task_id))
                             await batch.post()
                             emit(events.ScriptFinished(agr_id=agreement.id, task_id=task_id))
