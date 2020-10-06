@@ -60,8 +60,7 @@ async def main(args):
     async def worker_find_password(ctx: WorkContext, tasks):
         in_hash_filename = str(script_dir / "in.hash")
         ctx.send_file(in_hash_filename, "/golem/work/in.hash")
-        ctx.send_file("empty", "/golem/work/hashcat.potfile")
-        ctx.run("touch /golem/work/hashcat.potfile")
+        ctx.send_file("empty.txt", "/golem/work/hashcat.potfile")
 
         async for task in tasks:
             skip = task.data
@@ -92,7 +91,11 @@ async def main(args):
     ) as engine:
 
         async for task in engine.map(worker_check_keyspace, [Task(data = None)] ):
-            print(f"Task computed: keyspace size count")
+            print(
+                f"{utils.TEXT_COLOR_CYAN}"
+                f"Task computed: keyspace size count"
+                f"{utils.TEXT_COLOR_DEFAULT}"
+                )
 
         keyspace = read_keyspace()
 
