@@ -101,15 +101,17 @@ async def main(args):
     ) as engine:
 
         async for task in engine.map(worker_check_keyspace, [Task(data=None)]):
-            print(
-                f"{utils.TEXT_COLOR_CYAN}"
-                f"Task computed: keyspace size count"
-                f"{utils.TEXT_COLOR_DEFAULT}"
-            )
+            pass
 
         keyspace = read_keyspace()
 
-        step = int(keyspace / args.number_of_providers)
+        print(
+            f"{utils.TEXT_COLOR_CYAN}"
+            f"Task computed: keyspace size count. The keyspace is {keyspace}"
+            f"{utils.TEXT_COLOR_DEFAULT}"
+        )
+
+        step = int(keyspace / args.number_of_providers) + 1
 
         ranges: range = range(0, keyspace, step)
 
