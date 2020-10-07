@@ -154,6 +154,7 @@ R = TypeVar("R")  # Type var for task result
 class Engine(AsyncContextManager):
     """Requestor engine. Used to run tasks based on a common package on providers."""
 
+    # TODO 0.4+ rename `event_emitter` to `event_consumer`
     def __init__(
         self,
         *,

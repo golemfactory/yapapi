@@ -53,10 +53,12 @@ class Activity(AsyncContextManager["Activity"]):
         return self._id
 
     async def state(self) -> yaa.ActivityState:
+        """Query the state of the activity."""
         state: yaa.ActivityState = await self._state.get_activity_state(self._id)
         return state
 
     async def send(self, script: List[dict]):
+        """Send the execution script to the provider's execution unit."""
         script_txt = json.dumps(script)
         batch_id = await self._api.call_exec(self._id, yaa.ExeScriptRequest(text=script_txt))
         return Batch(self._api, self._id, batch_id, len(script))

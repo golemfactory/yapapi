@@ -17,12 +17,14 @@ class AgreementDetails(object):
     def __init__(self, *, _ref: models.Agreement):
         self.raw_details = _ref
 
+    # TODO 0.4+ update the name to something more readable
     def view_prov(self, c: Type[_ModelType]) -> _ModelType:
         offer: models.Offer = self.raw_details.offer
         return c.from_props(offer.properties)
 
 
 class Agreement(object):
+    """Higher-level interface to the REST's Agreement model."""
     def __init__(self, api: RequestorApi, subscription: "Subscription", agreement_id: str):
         self._api = api
         self._subscription = subscription
@@ -36,12 +38,17 @@ class Agreement(object):
         return AgreementDetails(_ref=await self._api.get_agreement(self._id))
 
     async def confirm(self) -> bool:
+        """
+        Sign and send the agreement to the provider and then wait for it to be approved.
+        :return: True if the agreement has been confirmed, False otherwise
+        """
         await self._api.confirm_agreement(self._id)
         msg = await self._api.wait_for_approval(self._id, timeout=90, _request_timeout=100)
         return isinstance(msg, str) and msg.strip().lower() == "approved"
 
 
 class OfferProposal(object):
+    """Higher-level interface to handle the negotiation phase between the parties."""
 
     __slots__ = ("_proposal", "_subscription")
 
@@ -66,9 +73,11 @@ class OfferProposal(object):
         return self._proposal.proposal.state == "Draft"
 
     async def reject(self, reason: Optional[str] = None):
+        """Reject the Offer."""
         await self._subscription._api.reject_proposal_offer(self._subscription.id, self.id)
 
     async def respond(self, props: dict, constraints: str) -> str:
+        """Create an agreeement Proposal for a received Offer, based on our Demand."""
         proposal = models.Proposal(properties=props, constraints=constraints)
         new_proposal = await self._subscription._api.counter_proposal_demand(
             self._subscription.id, self.id, proposal
@@ -76,7 +85,9 @@ class OfferProposal(object):
         return new_proposal
 
     # TODO: This timeout is for negotiation ?
+    # TODO 0.4+ the function name should be a verb, e.g. `create_agreement`
     async def agreement(self, timeout=timedelta(hours=1)) -> Agreement:
+        """Create an Agreement based on this Proposal."""
         proposal = models.AgreementProposal(
             proposal_id=self.id, valid_to=datetime.now(timezone.utc) + timeout,
         )
@@ -94,6 +105,7 @@ class OfferProposal(object):
 
 
 class Subscription(object):
+    """Higher-level interface to REST API's Subscription model."""
     def __init__(
         self, api: RequestorApi, subscription_id: str, _details: Optional[models.Demand] = None,
     ):
@@ -118,15 +130,20 @@ class Subscription(object):
 
     @property
     def details(self) -> models.Demand:
+        """
+        :return: the Demand for which the Subscription has been registered.
+        """
         assert self._details is not None, "expected details on list object"
         return self._details
 
     async def delete(self):
+        """Unsubscribe this Demand from the market."""
         self._open = False
         if not self._deleted:
             await self._api.unsubscribe_demand(self._id)
 
     async def events(self) -> AsyncIterator[OfferProposal]:
+        """Yields counter-proposal based on the incoming, matching Offers."""
         while self._open:
             proposals = await self._api.collect_offers(self._id, timeout=10, max_events=10)
             for proposal in proposals:
@@ -163,11 +180,14 @@ class AsyncResource(Generic[ResourceType]):
 
 
 class Market(object):
+    """Higher-level interface to the Market REST API."""
     def __init__(self, api_client: ApiClient):
         self._api: RequestorApi = RequestorApi(api_client)
 
     def subscribe(self, props: dict, constraints: str) -> AsyncResource[Subscription]:
-
+        """
+        Create a subscription for a demand specified by the supplied properties and constraints.
+        """
         request = models.Demand(properties=props, constraints=constraints)
 
         async def create() -> Subscription:
@@ -177,6 +197,7 @@ class Market(object):
         return AsyncResource(create())
 
     async def subscriptions(self) -> AsyncIterator[Subscription]:
+        """Yield all the subscriptions that this requestor agent has on the market."""
         for s in (
             Subscription(self._api, demand.demand_id, _details=demand)
             for demand in await self._api.get_demands()

@@ -88,4 +88,5 @@ class DemandBuilder:
             self._props[prop_id] = value
 
     async def subscribe(self, market: Market) -> Subscription:
+        """Create a Demand on the market and subscribe to Offers that will match that Demand."""
         return await market.subscribe(self._props, self.cons)
