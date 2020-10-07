@@ -354,16 +354,22 @@ class SummaryLogger:
             self._print_total_cost()
 
         elif isinstance(event, events.CommandStarted):
-            self.logger.info(f"Command started (task {event.task_id}, idx {event.cmd_idx}): {event.command}")
+            self.logger.info(
+                f"Command started (task {event.task_id}, idx {event.cmd_idx}): {event.command}"
+            )
 
         elif isinstance(event, events.CommandExecuted):
             self.logger.info(f"Command finished (task {event.task_id}, idx {event.cmd_idx})")
 
         elif isinstance(event, events.CommandStdOut):
-            self.logger.info(f"Command stdout (task {event.task_id}, idx {event.cmd_idx}): {event.output.rstrip()}")
+            self.logger.info(
+                f"Command stdout (task {event.task_id}, idx {event.cmd_idx}): {event.output.rstrip()}"
+            )
 
         elif isinstance(event, events.CommandStdErr):
-            self.logger.warning(f"Command stderr (task {event.task_id}, idx {event.cmd_idx}): {event.output.rstrip()}")
+            self.logger.warning(
+                f"Command stderr (task {event.task_id}, idx {event.cmd_idx}): {event.output.rstrip()}"
+            )
 
 
 def log_summary(wrapped_emitter: Optional[Callable[[events.Event], None]] = None):

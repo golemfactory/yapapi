@@ -1,4 +1,4 @@
-from typing import AsyncIterator, Sized, List, Optional
+from typing import AsyncIterator, Sized, List, Optional, Type, Any, Dict
 
 from aiohttp import ClientPayloadError
 from aiohttp_sse_client.client import MessageEvent  # type: ignore
@@ -201,9 +201,10 @@ def command_event_ctx(msg_event: MessageEvent) -> events.CommandEventContext:
 
     evt_dict = json.loads(msg_event.data)
     evt_kind = next(iter(evt_dict["kind"]))
-    evt_data = evt_dict["kind"][evt_kind]
+    evt_data: Any = evt_dict["kind"][evt_kind]
 
-    kwargs = dict(cmd_idx=int(evt_dict["index"]))
+    evt_cls: Type[events.CommandEvent]
+    kwargs: Dict[str, Any] = dict(cmd_idx=int(evt_dict["index"]))
 
     if evt_kind == "started":
         if not (isinstance(evt_data, dict) and evt_data["command"]):
@@ -219,11 +220,11 @@ def command_event_ctx(msg_event: MessageEvent) -> events.CommandEventContext:
 
     elif evt_kind == "stdout":
         evt_cls = events.CommandStdOut
-        kwargs["output"] = evt_data or ""
+        kwargs["output"] = str(evt_data) or ""
 
     elif evt_kind == "stderr":
         evt_cls = events.CommandStdErr
-        kwargs["output"] = evt_data or ""
+        kwargs["output"] = str(evt_data) or ""
 
     else:
         raise RuntimeError(f"Unsupported runtime event: {evt_kind}")

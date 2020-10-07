@@ -182,7 +182,7 @@ class ScriptFinished(ScriptEvent):
     pass
 
 
-@dataclass(init=False)
+@dataclass
 class CommandEvent(ScriptEvent):
     cmd_idx: int
 
@@ -194,8 +194,7 @@ class CommandEventContext:
 
     def should_break(self, last_idx: int) -> bool:
         return self.evt_cls is CommandExecuted and (
-            self.kwargs["cmd_idx"] >= last_idx or
-            self.kwargs["return_code"] != 0
+            self.kwargs["cmd_idx"] >= last_idx or self.kwargs["return_code"] != 0
         )
 
     def event(self, agr_id: str, task_id: str) -> CommandEvent:
