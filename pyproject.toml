@@ -105,7 +105,7 @@ _handbook_gen = "python handbook_gen/handbook_gen.py --overwrite"
 handbook = ['pydoc-markdown', '_handbook_gen']
 
 [[tool.portray.mkdocs.nav]]
-"Introduction Golem's high-level Python API" = "README.md"
+"Introduction to Golem's high-level Python API" = "README.md"
 
 [[tool.portray.mkdocs.nav]]
 "VM Tutorial" = "docs/VM-Tutorial.md"
