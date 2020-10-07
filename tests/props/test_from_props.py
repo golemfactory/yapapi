@@ -94,4 +94,6 @@ def test_from_props(props, error_msg):
         else:
             assert False, exc
     else:
-        assert not error_msg, f"Expected InvalidPropertiesError with msg='{error_msg}'."
+        assert (
+            error_msg is None
+        ), f"Expected InvalidPropertiesError with msg including '{error_msg}'."
