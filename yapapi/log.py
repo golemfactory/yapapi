@@ -309,7 +309,7 @@ class SummaryLogger:
                     f" no provider has responded for {self.time_waiting_for_proposals.seconds}s."
                 )
             msg += (
-                " Make sure you're using correct versions of yagna and yapapi,"
+                " Make sure you're using the latest relesed versions of yagna and yapapi,"
                 " and the correct subnet."
             )
             self.logger.warning(msg)
