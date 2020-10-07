@@ -39,7 +39,8 @@ class AsyncWrapper(AsyncContextManager):
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self._args_buffer.join()
-        self._task.cancel()
+        if self._task:
+            self._task.cancel()
         self._task = None
 
     def async_call(self, *args, **kwargs) -> None:

@@ -1,167 +1,242 @@
-"""Representing and logging events in Golem computation."""
-from enum import Enum, auto
-import logging
-import sys
-from typing import Any, Optional, TypeVar, Union
+"""Representing events in Golem computation."""
+import dataclasses
+from dataclasses import dataclass
+from types import TracebackType
+from typing import Any, Optional, Type, Tuple
 
-from typing_extensions import Protocol
+from yapapi.props import Identification
 
-
-class _EventStrMixin:
-    """Provides `__str()__` method for event types."""
-
-    def __str__(self) -> str:
-        return _event_type_to_string[self]
+ExcInfo = Tuple[Type[BaseException], BaseException, Optional[TracebackType]]
 
 
-class SubscriptionEvent(_EventStrMixin, Enum):
-    """Types of events related to subscriptions."""
+@dataclass(init=False)
+class Event:
+    """An abstract base class for types of events emitted by `Engine.map()`."""
 
-    CREATED = auto()
-    FAILED = auto()
-    COLLECT_FAILED = auto()
+    def __init__(self):
+        raise NotImplementedError()
 
-
-class ProposalEvent(_EventStrMixin, Enum):
-    """Types of events related to proposals."""
-
-    BUFFERED = auto()
-    FAILED = auto()
-    RECEIVED = auto()
-    REJECTED = auto()
-    RESPONDED = auto()
+    def extract_exc_info(self) -> Tuple[Optional[ExcInfo], "Event"]:
+        return None, self
 
 
-class AgreementEvent(_EventStrMixin, Enum):
-    """Types of events related to agreements."""
-
-    CREATED = auto()
-    CONFIRMED = auto()
-    REJECTED = auto()
-    PAYMENT_ACCEPTED = auto()
-    PAYMENT_PREPARED = auto()
-    PAYMENT_QUEUED = auto()
-    INVOICE_RECEIVED = auto()
+@dataclass
+class ComputationStarted(Event):
+    pass
 
 
-class WorkerEvent(_EventStrMixin, Enum):
-    """Types of events related to workers."""
-
-    CREATED = auto()
-    ACTIVITY_CREATED = auto()
-    ACTIVITY_CREATE_FAILED = auto()
-    GOT_TASK = auto()
-    FINISHED = auto()
+@dataclass
+class ComputationFinished(Event):
+    pass
 
 
-class TaskEvent(_EventStrMixin, Enum):
-    """Types of events related to tasks."""
-
-    SCRIPT_SENT = auto()
-    COMMAND_STARTED = auto()
-    COMMAND_STDOUT = auto()
-    COMMAND_STDERR = auto()
-    COMMAND_EXECUTED = auto()
-    GETTING_RESULTS = auto()
-    SCRIPT_FINISHED = auto()
-    ACCEPTED = auto()
-    REJECTED = auto()
+@dataclass
+class ComputationFailed(Event):
+    reason: str
 
 
-class StorageEvent(_EventStrMixin, Enum):
-    """Types of events related to storage."""
-
-    DOWNLOAD_STARTED = auto()
-    DOWNLOAD_FINISHED = auto()
+@dataclass
+class SubscriptionCreated(Event):
+    sub_id: str
 
 
-EventType = Union[
-    SubscriptionEvent, ProposalEvent, AgreementEvent, WorkerEvent, TaskEvent, StorageEvent
-]
+@dataclass
+class SubscriptionFailed(Event):
+    reason: str
 
 
-_event_type_to_string = {
-    SubscriptionEvent.CREATED: "Proposal subscription created",
-    SubscriptionEvent.FAILED: "Failed to subscribe to proposals",
-    SubscriptionEvent.COLLECT_FAILED: "Failed to collect proposals",
-    ProposalEvent.BUFFERED: "Proposal buffered",
-    ProposalEvent.FAILED: "Proposal failed",
-    ProposalEvent.RECEIVED: "Proposal received",
-    ProposalEvent.REJECTED: "Proposal rejected",
-    ProposalEvent.RESPONDED: "Responded to proposal",
-    AgreementEvent.CREATED: "Agreement created",
-    AgreementEvent.CONFIRMED: "Agreement confirmed",
-    AgreementEvent.REJECTED: "Agreement rejected",
-    AgreementEvent.PAYMENT_ACCEPTED: "Payment accepted for agreement",
-    AgreementEvent.PAYMENT_PREPARED: "Payment prepared for agreement",
-    AgreementEvent.PAYMENT_QUEUED: "Payment queued for agreement",
-    AgreementEvent.INVOICE_RECEIVED: "Invoice received for agreement",
-    WorkerEvent.CREATED: "Worker created",
-    WorkerEvent.ACTIVITY_CREATED: "Activity created",
-    WorkerEvent.ACTIVITY_CREATE_FAILED: "Failed to create activity",
-    WorkerEvent.GOT_TASK: "Worker got new task",
-    WorkerEvent.FINISHED: "Worker has finished",
-    TaskEvent.SCRIPT_SENT: "Script sent to provider",
-    TaskEvent.COMMAND_STARTED: "Command started",
-    TaskEvent.COMMAND_STDOUT: "Command stdout",
-    TaskEvent.COMMAND_STDERR: "Command stderr",
-    TaskEvent.COMMAND_EXECUTED: "Command executed",
-    TaskEvent.GETTING_RESULTS: "Getting task results",
-    TaskEvent.SCRIPT_FINISHED: "Script finished",
-    TaskEvent.ACCEPTED: "Task accepted",
-    TaskEvent.REJECTED: "Task rejected",
-    StorageEvent.DOWNLOAD_STARTED: "Download started",
-    StorageEvent.DOWNLOAD_FINISHED: "Download finished",
-}
-
-if sys.version_info >= (3, 8):
-    from typing import get_args as get_type_args
-
-    _all_event_types = {type_ for enum_ in get_type_args(EventType) for type_ in enum_}
-
-    assert _all_event_types.issubset(_event_type_to_string.keys()), _all_event_types.difference(
-        _event_type_to_string.keys()
-    )
+@dataclass
+class CollectFailed(Event):
+    sub_id: str
+    reason: str
 
 
-ResourceId = Union[int, str]
+@dataclass(init=False)
+class ProposalEvent(Event):
+    prop_id: str
 
 
-E = TypeVar("E", contravariant=True, bound=EventType)
+@dataclass
+class ProposalReceived(ProposalEvent):
+    provider_id: str
 
 
-class EventEmitter(Protocol[E]):
-    """A protocol for callables that can emit events of type `E`."""
-
-    def __call__(
-        self, event_type: E, resource_id: Optional[ResourceId] = None, **kwargs: Any
-    ) -> None:
-        """Emit an event with given event type and data."""
+@dataclass
+class ProposalRejected(ProposalEvent):
+    reason: Optional[str] = None
 
 
-logger = logging.getLogger("yapapi.runner")
+@dataclass
+class ProposalResponded(ProposalEvent):
+    pass
 
 
-def log_event(
-    event_type: EventType, resource_id: Optional[ResourceId] = None, **kwargs: Any,
-) -> None:
-    """Log an event. This function is compatible with the `EventEmitter` protocol."""
+@dataclass
+class ProposalConfirmed(ProposalEvent):
+    pass
 
-    def _format(obj: Any, max_len: int = 200) -> str:
-        # This will also escape control characters, in particular,
-        # newline characters in `obj` will be replaced by r"\n".
-        text = repr(obj)
-        if len(text) > max_len:
-            text = text[: max_len - 3] + "..."
-        return text
 
-    if not logger.isEnabledFor(logging.INFO):
-        return
+@dataclass
+class ProposalFailed(ProposalEvent):
+    reason: str
 
-    msg = _event_type_to_string[event_type]
-    if resource_id is not None:
-        msg += f", id = {_format(resource_id)}"
-    if kwargs:
-        msg += ", "
-        msg += ", ".join(f"{arg} = {_format(value)}" for arg, value in kwargs.items())
-    logger.info(msg)
+
+@dataclass(init=False)
+class AgreementEvent(Event):
+    agr_id: str
+
+
+@dataclass
+class AgreementCreated(AgreementEvent):
+    provider_id: Identification
+
+
+@dataclass
+class AgreementConfirmed(AgreementEvent):
+    pass
+
+
+@dataclass
+class AgreementRejected(AgreementEvent):
+    pass
+
+
+@dataclass
+class PaymentAccepted(AgreementEvent):
+    inv_id: str
+    amount: str
+
+
+@dataclass
+class PaymentPrepared(AgreementEvent):
+    pass
+
+
+@dataclass
+class PaymentQueued(AgreementEvent):
+    pass
+
+
+@dataclass
+class InvoiceReceived(AgreementEvent):
+    inv_id: str
+    amount: str
+
+
+@dataclass
+class WorkerStarted(AgreementEvent):
+    pass
+
+
+@dataclass
+class ActivityCreated(AgreementEvent):
+    act_id: str
+
+
+@dataclass
+class ActivityCreateFailed(AgreementEvent):
+    pass
+
+
+@dataclass(init=False)
+class TaskEvent(Event):
+    task_id: str
+
+
+@dataclass
+class TaskStarted(AgreementEvent, TaskEvent):
+    task_data: Any
+
+
+@dataclass
+class WorkerFinished(AgreementEvent):
+    exception: Optional[ExcInfo] = None
+    """ Exception thrown by worker script.
+
+        None if worker returns without error.
+    """
+
+    def extract_exc_info(self) -> Tuple[Optional[ExcInfo], "Event"]:
+        exc_info = self.exception
+        me = dataclasses.replace(self, exception=None)
+        return exc_info, me
+
+
+@dataclass(init=False)
+class ScriptEvent(AgreementEvent):
+    task_id: Optional[str]
+
+
+@dataclass
+class ScriptSent(ScriptEvent):
+    cmds: Any
+
+
+@dataclass
+class GettingResults(ScriptEvent):
+    pass
+
+
+@dataclass
+class ScriptFinished(ScriptEvent):
+    pass
+
+
+@dataclass(init=False)
+class CommandEvent(ScriptEvent):
+    cmd_idx: int
+
+
+@dataclass
+class CommandEventContext:
+    evt_cls: Type[CommandEvent]
+    kwargs: dict
+
+    def should_break(self, last_idx: int) -> bool:
+        return self.evt_cls is CommandExecuted and (
+            self.kwargs["cmd_idx"] >= last_idx or
+            self.kwargs["return_code"] != 0
+        )
+
+    def event(self, agr_id: str, task_id: str) -> CommandEvent:
+        return self.evt_cls(agr_id=agr_id, task_id=task_id, **self.kwargs)
+
+
+@dataclass
+class CommandExecuted(CommandEvent):
+    return_code: Optional[int] = dataclasses.field(default=None)
+    message: Optional[str] = dataclasses.field(default=None)
+
+
+@dataclass
+class CommandStarted(CommandEvent):
+    command: str
+
+
+@dataclass
+class CommandStdOut(CommandEvent):
+    output: str
+
+
+@dataclass
+class CommandStdErr(CommandEvent):
+    output: str
+
+@dataclass
+class TaskAccepted(TaskEvent):
+    result: Any
+
+
+@dataclass
+class TaskRejected(TaskEvent):
+    reason: Optional[str]
+
+
+@dataclass
+class DownloadStarted(Event):
+    path: str
+
+
+@dataclass
+class DownloadFinished(Event):
+    path: str

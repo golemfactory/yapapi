@@ -1,6 +1,7 @@
 __pycache__/
 .mypy_cache
 .idea
+*.egg-info
 
 dist/
 poetry.lock

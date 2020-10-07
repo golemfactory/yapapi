@@ -1,8 +1,8 @@
-from typing import AsyncIterator, Dict, Sized, List, Optional, Tuple
+from typing import AsyncIterator, Sized, List, Optional
 
 from aiohttp import ClientPayloadError
 from aiohttp_sse_client.client import MessageEvent  # type: ignore
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from ya_activity import (
     ApiClient,
     RequestorControlApi,
@@ -12,9 +12,12 @@ from ya_activity import (
 )
 from typing_extensions import AsyncContextManager, AsyncIterable
 import json
+import logging
 import contextlib
 
-from ..runner import TaskEvent
+from ..runner import events
+
+_log = logging.getLogger("yapapi.rest")
 
 
 class ActivityService(object):
@@ -27,7 +30,7 @@ class ActivityService(object):
             activity_id = await self._api.create_activity(agreement_id)
             return Activity(self._api, self._state, activity_id)
         except yexc.ApiException:
-            print("Failed to create activity for agreement", agreement_id)
+            _log.error("Failed to create activity for agreement %s", agreement_id)
             raise
 
 
@@ -57,8 +60,30 @@ class Activity(AsyncContextManager["Activity"]):
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        with contextlib.suppress(yexc.ApiException):
-            await self._api.destroy_activity(self._id)
+        # w/o for some buggy providers which do not kill exe-unit
+        # on destroy_activity event.
+        if exc_type:
+            _log.info(
+                "activity %s CLOSE for [%s] %s",
+                self._id,
+                exc_type.__name__,
+                exc_val,
+                exc_info=(exc_type, exc_val, exc_tb),
+            )
+        try:
+            batch_id = await self._api.call_exec(
+                self._id, yaa.ExeScriptRequest(text='[{"terminate":{}}]')
+            )
+            with contextlib.suppress(yexc.ApiException):
+                # wait 1sec before kill
+                await self._api.get_exec_batch_results(self._id, batch_id, timeout=1.0)
+        except yexc.ApiException:
+            _log.error("failed to destroy activity: %s", self._id, exc_info=True)
+        finally:
+            with contextlib.suppress(yexc.ApiException):
+                await self._api.destroy_activity(self._id)
+            if exc_type:
+                _log.info("activity %s CLOSE done", self._id)
 
 
 @dataclass
@@ -71,7 +96,7 @@ class CommandExecutionError(Exception):
     pass
 
 
-class Batch(AsyncIterable[Tuple[TaskEvent, Result]], Sized):
+class Batch(AsyncIterable[events.CommandEventContext], Sized):
 
     _api: RequestorControlApi
     _activity_id: str
@@ -89,7 +114,7 @@ class Batch(AsyncIterable[Tuple[TaskEvent, Result]], Sized):
     def id(self):
         return self._batch_id
 
-    async def __aiter__(self) -> AsyncIterator[Tuple[TaskEvent, Result]]:
+    async def __aiter__(self) -> AsyncIterator[events.CommandEventContext]:
         import asyncio
 
         last_idx = 0
@@ -104,7 +129,10 @@ class Batch(AsyncIterable[Tuple[TaskEvent, Result]], Sized):
                 assert last_idx == result.index, f"Expected {last_idx}, got {result.index}"
                 if result.result == "Error":
                     raise CommandExecutionError(result.message, last_idx)
-                yield TaskEvent.COMMAND_EXECUTED, Result(idx=result.index, message=result.message)
+
+                kwargs = dict(cmd_idx=result.index, message=result.message)
+                yield events.CommandEventContext(evt_cls=events.CommandExecuted, kwargs=kwargs)
+
                 last_idx = result.index + 1
                 if result.is_batch_finished:
                     break
@@ -115,68 +143,7 @@ class Batch(AsyncIterable[Tuple[TaskEvent, Result]], Sized):
         return self._size
 
 
-@dataclass(frozen=True)
-class RuntimeEvent:
-    activity_id: str
-    batch_id: str
-    index: int
-    timestamp: str
-    kind: TaskEvent
-    data: Dict
-
-    @classmethod
-    def new(cls, activity_id: str, msg_evt: MessageEvent) -> "RuntimeEvent":
-        if msg_evt.type != "runtime":
-            raise RuntimeError(f"Unsupported event: {msg_evt.type}")
-
-        rt_evt_dict = json.loads(msg_evt.data)
-        rt_evt_kind = next(iter(rt_evt_dict["kind"]))
-        rt_evt_data = rt_evt_dict["kind"][rt_evt_kind]
-
-        if rt_evt_kind == "started":
-            kind = TaskEvent.COMMAND_STARTED
-            data = cls._evt_started_data(rt_evt_data)
-        elif rt_evt_kind == "finished":
-            kind = TaskEvent.COMMAND_EXECUTED
-            data = cls._evt_finished_data(rt_evt_data)
-        elif rt_evt_kind == "stdout":
-            kind = TaskEvent.COMMAND_STDOUT
-            data = cls._evt_output_data(rt_evt_data)
-        elif rt_evt_kind == "stderr":
-            kind = TaskEvent.COMMAND_STDERR
-            data = cls._evt_output_data(rt_evt_data)
-        else:
-            raise RuntimeError(f"Unsupported runtime event: {rt_evt_kind}")
-
-        return RuntimeEvent(
-            activity_id,
-            rt_evt_dict["batch_id"],
-            int(rt_evt_dict["index"]),
-            rt_evt_dict["timestamp"],
-            kind,
-            data,
-        )
-
-    @staticmethod
-    def _evt_started_data(output) -> Dict:
-        if not (isinstance(output, dict) and output["command"]):
-            raise RuntimeError("Invalid 'started' event")
-        return output
-
-    @staticmethod
-    def _evt_finished_data(output) -> Dict:
-        if not (isinstance(output, dict) and isinstance(output["return_code"], int)):
-            raise RuntimeError("Invalid 'finished' event")
-        return output
-
-    @staticmethod
-    def _evt_output_data(output) -> Dict:
-        if not isinstance(output, str):
-            raise RuntimeError("Invalid output event")
-        return {"output": output}
-
-
-class StreamingBatch(AsyncIterable[Tuple[TaskEvent, Result]], Sized):
+class StreamingBatch(AsyncIterable[events.CommandEventContext], Sized):
     def __init__(
         self, _api: RequestorControlApi, activity_id: str, batch_id: str, batch_size: int
     ) -> None:
@@ -185,7 +152,7 @@ class StreamingBatch(AsyncIterable[Tuple[TaskEvent, Result]], Sized):
         self._batch_id = batch_id
         self._size = batch_size
 
-    async def __aiter__(self) -> AsyncIterator[Tuple[TaskEvent, Result]]:
+    async def __aiter__(self) -> AsyncIterator[events.CommandEventContext]:
         from aiohttp_sse_client import client as sse_client  # type: ignore
 
         api_client = self._api.api_client
@@ -202,18 +169,15 @@ class StreamingBatch(AsyncIterable[Tuple[TaskEvent, Result]], Sized):
             f"{host}/activity/{activity_id}/exec/{batch_id}", headers=headers,
         ) as event_source:
             try:
-                async for event in event_source:
+                async for msg_event in event_source:
                     try:
-                        rt_evt = RuntimeEvent.new(activity_id, event)
+                        evt_ctx = command_event_ctx(msg_event)
                     except Exception as exc:  # noqa
                         print("Event exception:", exc)
-                        continue
-
-                    yield rt_evt.kind, Result(idx=rt_evt.index, message=str(rt_evt.data))
-                    if rt_evt.kind is not TaskEvent.COMMAND_EXECUTED:
-                        continue
-                    if rt_evt.index >= last_idx or rt_evt.data["return_code"] != 0:
-                        break
+                    else:
+                        yield evt_ctx
+                        if evt_ctx.should_break(last_idx):
+                            break
             except (ConnectionError, ClientPayloadError):
                 raise
 
@@ -223,3 +187,39 @@ class StreamingBatch(AsyncIterable[Tuple[TaskEvent, Result]], Sized):
 
     def __len__(self) -> int:
         return self._size
+
+
+def command_event_ctx(msg_event: MessageEvent) -> events.CommandEventContext:
+    if msg_event.type != "runtime":
+        raise RuntimeError(f"Unsupported event: {msg_event.type}")
+
+    evt_dict = json.loads(msg_event.data)
+    evt_kind = next(iter(evt_dict["kind"]))
+    evt_data = evt_dict["kind"][evt_kind]
+
+    kwargs = dict(cmd_idx=int(evt_dict["index"]))
+
+    if evt_kind == "started":
+        if not (isinstance(evt_data, dict) and evt_data["command"]):
+            raise RuntimeError("Invalid CommandStarted event: no command provided")
+        evt_cls = events.CommandStarted
+        kwargs["command"] = evt_data["command"]
+
+    elif evt_kind == "finished":
+        if not (isinstance(evt_data, dict) and isinstance(evt_data["return_code"], int)):
+            raise RuntimeError("Invalid CommandFinished event: no return code provided")
+        evt_cls = events.CommandExecuted
+        kwargs["return_code"] = int(evt_data["return_code"])
+
+    elif evt_kind == "stdout":
+        evt_cls = events.CommandStdOut
+        kwargs["output"] = evt_data or ""
+
+    elif evt_kind == "stderr":
+        evt_cls = events.CommandStdErr
+        kwargs["output"] = evt_data or ""
+
+    else:
+        raise RuntimeError(f"Unsupported runtime event: {evt_kind}")
+
+    return events.CommandEventContext(evt_cls=evt_cls, kwargs=kwargs)
