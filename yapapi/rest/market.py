@@ -25,6 +25,7 @@ class AgreementDetails(object):
 
 class Agreement(object):
     """Higher-level interface to the REST's Agreement model."""
+
     def __init__(self, api: RequestorApi, subscription: "Subscription", agreement_id: str):
         self._api = api
         self._subscription = subscription
@@ -106,6 +107,7 @@ class OfferProposal(object):
 
 class Subscription(object):
     """Higher-level interface to REST API's Subscription model."""
+
     def __init__(
         self, api: RequestorApi, subscription_id: str, _details: Optional[models.Demand] = None,
     ):
@@ -181,6 +183,7 @@ class AsyncResource(Generic[ResourceType]):
 
 class Market(object):
     """Higher-level interface to the Market REST API."""
+
     def __init__(self, api_client: ApiClient):
         self._api: RequestorApi = RequestorApi(api_client)
 

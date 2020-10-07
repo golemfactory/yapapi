@@ -41,6 +41,7 @@ class Configuration(object):
     * `YAGNA_PAYMENT_URL`
     * `YAGNA_ACTIVITY_URL`
     """
+
     def __init__(
         self,
         app_key=None,
