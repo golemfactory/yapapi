@@ -22,6 +22,16 @@ from yapapi.props import com, InvalidPropertiesError
                 "golem.com.pricing.model": "linear",
                 "golem.com.pricing.model.linear.coeffs": [0.001, 0.002, 0.0],
                 "golem.com.usage.vector": ["golem.usage.cpu_sec", "golem.usage.duration_sec"],
+                "golem.com.scheme": "payu",
+                "golem.superfluous.key": "Some other stuff"
+            },
+            None,
+        ),
+        (
+            {
+                "golem.com.pricing.model": "linear",
+                "golem.com.pricing.model.linear.coeffs": [0.001, 0.002, 0.0],
+                "golem.com.usage.vector": ["golem.usage.cpu_sec", "golem.usage.duration_sec"],
                 # "golem.com.scheme": "payu",
             },
             "missing 1 required positional argument: 'scheme'",
@@ -83,3 +93,5 @@ def test_from_props(props, error_msg):
             assert error_msg in str(exc)
         else:
             assert False, exc
+    else:
+        assert not error_msg, f"Expected InvalidPropertiesError with msg='{error_msg}'."
