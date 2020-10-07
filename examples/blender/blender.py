@@ -16,7 +16,7 @@ sys.path.append(str(parent_directory))
 import utils  # noqa
 
 
-async def main(subnet_tag="testnet"):
+async def main(subnet_tag: str):
     package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         min_mem_gib=0.5,
@@ -69,19 +69,26 @@ async def main(subnet_tag="testnet"):
         budget=10.0,
         timeout=init_overhead + timedelta(minutes=len(frames) * 2),
         subnet_tag=subnet_tag,
-        event_emitter=log_summary(),
+        event_emitter=log_summary(log_event_repr),
     ) as engine:
 
         async for task in engine.map(worker, [Task(data=frame) for frame in frames]):
-            print(f"\033[36;1mTask computed: {task}, result: {task.output}\033[0m")
+            print(
+                f"{utils.TEXT_COLOR_CYAN}"
+                f"Task computed: {task}, result: {task.output}"
+                f"{utils.TEXT_COLOR_DEFAULT}"
+            )
 
 
 if __name__ == "__main__":
     parser = utils.build_parser("Render blender scene")
+    parser.set_defaults(log_file="blender-yapapi.log")
     args = parser.parse_args()
 
-    enable_default_logger(level=args.log_level)
+    enable_default_logger(log_file=args.log_file)
     loop = asyncio.get_event_loop()
+    subnet = args.subnet_tag
+    sys.stderr.write(f"Using subnet: {utils.TEXT_COLOR_YELLOW}{subnet}{utils.TEXT_COLOR_DEFAULT}\n")
     task = loop.create_task(main(subnet_tag=args.subnet_tag))
     try:
         asyncio.get_event_loop().run_until_complete(task)
