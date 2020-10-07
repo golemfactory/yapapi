@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union
 
-from .events import DownloadStarted, DownloadFinished
+from .events import DownloadStarted, DownloadFinished, UserLogMessage
 from ..storage import StorageProvider, Source, Destination
 
 
@@ -99,7 +99,7 @@ class _Run(Work):
         self._idx = commands.run(entry_point=self.cmd, args=self.args)
 
 
-StorageEvent = Union[DownloadStarted, DownloadFinished]
+StorageOrLogEvent = Union[DownloadStarted, DownloadFinished, UserLogMessage]
 
 
 class _RecvFile(Work):
@@ -108,14 +108,14 @@ class _RecvFile(Work):
         storage: StorageProvider,
         src_path: str,
         dst_path: str,
-        emitter: Optional[Callable[[StorageEvent], None]] = None,
+        emitter: Optional[Callable[[StorageOrLogEvent], None]] = None,
     ):
         self._storage = storage
         self._dst_path = Path(dst_path)
         self._src_path: str = src_path
         self._idx: Optional[int] = None
         self._dst_slot: Optional[Destination] = None
-        self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
+        self._emitter: Optional[Callable[[StorageOrLogEvent], None]] = emitter
 
     async def prepare(self):
         self._dst_slot = await self._storage.new_destination(destination_file=self._dst_path)
@@ -160,13 +160,13 @@ class WorkContext:
         self,
         ctx_id: str,
         storage: StorageProvider,
-        emitter: Optional[Callable[[StorageEvent], None]] = None,
+        emitter: Optional[Callable[[StorageOrLogEvent], None]] = None,
     ):
         self._id = ctx_id
         self._storage: StorageProvider = storage
         self._pending_steps: List[Work] = []
         self._started: bool = False
-        self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
+        self._emitter: Optional[Callable[[StorageOrLogEvent], None]] = emitter
 
     def __prepare(self):
         if not self._started:
@@ -217,8 +217,8 @@ class WorkContext:
         self.__prepare()
         self._pending_steps.append(_RecvFile(self._storage, src_path, dst_path, self._emitter))
 
-    def log(self, *args):
-        print(f"W{self._id}: ", *args)
+    def log(self, message: str):
+        self._emitter(UserLogMessage(ctx_id=self._id, message=message))
 
     def commit(self) -> Work:
         """Creates sequence of commands to be send to provider.

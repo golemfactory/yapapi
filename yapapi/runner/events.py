@@ -206,3 +206,9 @@ class DownloadStarted(Event):
 @dataclass
 class DownloadFinished(Event):
     path: str
+
+
+@dataclass
+class UserLogMessage(Event):
+    ctx_id: str
+    message: str

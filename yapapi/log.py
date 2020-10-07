@@ -101,6 +101,7 @@ event_type_to_string = {
     events.WorkerFinished: "Worker finished",
     events.DownloadStarted: "Download started",
     events.DownloadFinished: "Download finished",
+    events.UserLogMessage: "Message logged by user",
 }
 
 
