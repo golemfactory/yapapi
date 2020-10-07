@@ -130,7 +130,8 @@ class Batch(AsyncIterable[events.CommandEventContext], Sized):
                 if result.result == "Error":
                     raise CommandExecutionError(result.message, last_idx)
 
-                kwargs = dict(cmd_idx=result.index, message=result.message)
+                message = dict(stdout=result.stdout, stderr=result.stderr, message=result.message)
+                kwargs = dict(cmd_idx=result.index, message=json.dumps(message, indent=4))
                 yield events.CommandEventContext(evt_cls=events.CommandExecuted, kwargs=kwargs)
 
                 last_idx = result.index + 1
@@ -173,12 +174,14 @@ class StreamingBatch(AsyncIterable[events.CommandEventContext], Sized):
                     try:
                         evt_ctx = command_event_ctx(msg_event)
                     except Exception as exc:  # noqa
-                        print("Event exception:", exc)
+                        _log.error("Event exception:", exc)
                     else:
                         yield evt_ctx
                         if evt_ctx.should_break(last_idx):
                             break
-            except (ConnectionError, ClientPayloadError):
+            except ClientPayloadError as exc:
+                _log.error("Event payload exception:", exc)
+            except ConnectionError:
                 raise
 
     @property
@@ -201,13 +204,13 @@ def command_event_ctx(msg_event: MessageEvent) -> events.CommandEventContext:
 
     if evt_kind == "started":
         if not (isinstance(evt_data, dict) and evt_data["command"]):
-            raise RuntimeError("Invalid CommandStarted event: no command provided")
+            raise RuntimeError("Invalid CommandStarted event: missing 'command'")
         evt_cls = events.CommandStarted
         kwargs["command"] = evt_data["command"]
 
     elif evt_kind == "finished":
         if not (isinstance(evt_data, dict) and isinstance(evt_data["return_code"], int)):
-            raise RuntimeError("Invalid CommandFinished event: no return code provided")
+            raise RuntimeError("Invalid CommandFinished event: missing 'return code'")
         evt_cls = events.CommandExecuted
         kwargs["return_code"] = int(evt_data["return_code"])
 
