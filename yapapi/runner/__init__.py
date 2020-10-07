@@ -63,6 +63,7 @@ CFF_DEFAULT_PRICE_FOR_COUNTER: Final[Mapping[com.Counter, Decimal]] = MappingPro
 class _EngineConf:
     max_workers: int = 5
     timeout: timedelta = timedelta(minutes=5)
+    get_offers_timeout: timedelta = timedelta(seconds=20)
     traceback: bool = bool(os.getenv("YAPAPI_TRACEBACK", 0))
 
 
@@ -274,6 +275,9 @@ class Engine(AsyncContextManager):
         invoices: Dict[str, rest.payment.Invoice] = dict()
         payment_closing: bool = False
 
+        offers_collected = 0
+        proposals_confirmed = 0
+
         async def process_invoices() -> None:
             assert self._budget_allocation
             allocation: rest.payment.Allocation = self._budget_allocation
@@ -312,6 +316,7 @@ class Engine(AsyncContextManager):
             return True
 
         async def find_offers() -> None:
+            nonlocal offers_collected, proposals_confirmed
             try:
                 subscription = await builder.subscribe(market_api)
             except Exception as ex:
@@ -326,6 +331,7 @@ class Engine(AsyncContextManager):
                     raise
                 async for proposal in proposals:
                     emit(events.ProposalReceived(prop_id=proposal.id, provider_id=proposal.issuer))
+                    offers_collected += 1
                     try:
                         score = await strategy.score_offer(proposal)
                     except InvalidPropertiesError as err:
@@ -344,6 +350,7 @@ class Engine(AsyncContextManager):
                     else:
                         emit(events.ProposalConfirmed(prop_id=proposal.id))
                         offer_buffer[proposal.issuer] = _BufferItem(datetime.now(), score, proposal)
+                        proposals_confirmed += 1
 
         # aio_session = await self._stack.enter_async_context(aiohttp.ClientSession())
         # storage_manager = await DavStorageProvider.for_directory(
@@ -476,6 +483,7 @@ class Engine(AsyncContextManager):
         process_invoices_job = loop.create_task(process_invoices())
         wait_until_done = loop.create_task(work_queue.wait_until_done())
         # Py38: find_offers_task.set_name('find_offers_task')
+
         try:
             get_done_task: Optional[asyncio.Task] = None
             services = {
@@ -486,8 +494,17 @@ class Engine(AsyncContextManager):
             }
 
             while wait_until_done in services or not done_queue.empty():
-                if datetime.now(timezone.utc) > self._expires:
+
+                now = datetime.now(timezone.utc)
+                if now > self._expires:
                     raise TimeoutError(f"task timeout exceeded. timeout={self._conf.timeout}")
+                if now > self._get_offers_deadline and proposals_confirmed == 0:
+                    emit(
+                        events.NoProposalsConfirmed(
+                            num_offers=offers_collected, timeout=self._conf.get_offers_timeout
+                        )
+                    )
+                    self._get_offers_deadline += self._conf.get_offers_timeout
 
                 if not get_done_task:
                     get_done_task = loop.create_task(done_queue.get())
@@ -518,13 +535,14 @@ class Engine(AsyncContextManager):
                     get_done_task = None
 
             emit(events.ComputationFinished())
+
         except Exception as e:
             if (
                 not isinstance(e, (KeyboardInterrupt, asyncio.CancelledError))
                 and self._conf.traceback
             ):
                 traceback.print_exc()
-            emit(events.ComputationFailed(reason=str(e)))
+            emit(events.ComputationFailed(reason=e.__repr__()))
 
         finally:
             payment_closing = True
@@ -556,6 +574,7 @@ class Engine(AsyncContextManager):
 
         # TODO: Cleanup on exception here.
         self._expires = datetime.now(timezone.utc) + self._conf.timeout
+        self._get_offers_deadline = datetime.now(timezone.utc) + self._conf.get_offers_timeout
         market_client = await stack.enter_async_context(self._api_config.market())
         self._market_api = rest.Market(market_client)
 
