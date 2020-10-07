@@ -19,6 +19,7 @@ _log = logging.getLogger("yapapi.rest")
 
 class ActivityService(object):
     """A convenience helper to facilitate the creation of an Activity."""
+
     def __init__(self, api_client: ApiClient):
         self._api = RequestorControlApi(api_client)
         self._state = RequestorStateApi(api_client)
@@ -41,6 +42,7 @@ class ActivityService(object):
 
 class Activity(AsyncContextManager["Activity"]):
     """Higher-level wrapper for REST's Activity endpoint"""
+
     def __init__(self, _api: RequestorControlApi, _state: RequestorStateApi, activity_id: str):
         self._api: RequestorControlApi = _api
         self._state: RequestorStateApi = _state
