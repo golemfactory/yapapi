@@ -222,6 +222,7 @@ class CommandStdOut(CommandEvent):
 class CommandStdErr(CommandEvent):
     output: str
 
+
 @dataclass
 class TaskAccepted(TaskEvent):
     result: Any

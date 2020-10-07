@@ -20,6 +20,9 @@ from ..runner import events
 _log = logging.getLogger("yapapi.rest")
 
 
+_log = logging.getLogger("yapapi.rest")
+
+
 class ActivityService(object):
     def __init__(self, api_client: ApiClient):
         self._api = RequestorControlApi(api_client)
