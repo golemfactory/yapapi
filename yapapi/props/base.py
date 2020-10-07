@@ -71,6 +71,13 @@ class InvalidPropertiesError(Exception):
 
 
 class Model(abc.ABC):
+    """
+    Base class from which all property models inherit.
+
+    Provides helper methods to load the property model data from a dictionary and
+    to get a mapping of all the keys available in the given model.
+    """
+
     def __init__(self, **kwargs):
         pass
 
@@ -80,6 +87,16 @@ class Model(abc.ABC):
 
     @classmethod
     def from_props(cls: Type[ME], props: Props) -> ME:
+        """
+        Initialize the model from the dictionary representation.
+
+        When provided with a dictionary of properties, it will find the matching keys
+        within it and fill the model fields with the values from the dictionary.
+
+        It ignores non-matching keys - i.e. doesn't require filtering of the properties'
+        dictionary before the model is fed with the data. Thus, several models can be
+        initialized from the same dictionary and all models will only load their own data.
+        """
         field_map = dict(
             (f.metadata["key"], _PyField(name=f.name, type=f.type, required=f.default is MISSING),)
             for f in fields(cls)
@@ -104,6 +121,27 @@ class Model(abc.ABC):
 
     @classmethod
     def keys(cls):
+        """
+        :return: a mapping between the model's field names and the property keys
+
+        example:
+        ```python
+        >>> import dataclasses
+        >>> import typing
+        >>> from yapapi.props.base import Model
+        >>> @dataclasses.dataclass
+        ... class Identification(Model):
+        ...     name: typing.Optional[str] = \
+        ...     dataclasses.field(default=None, metadata={"key": "golem.node.id.name"})
+        ...
+        >>> Identification.keys().name
+        'golem.node.id.name'
+        ```
+        """
+
+        # TODO 0.4+: _Keys doesn't need to inherit from dict
+        #  as it doesn't use dict's interface anyway
+
         class _Keys(dict):
             def __init__(self, iter):
                 self.__dict__ = dict(iter)

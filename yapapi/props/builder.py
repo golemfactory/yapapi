@@ -7,6 +7,9 @@ from dataclasses import asdict
 
 from . import Model
 
+# TODO in 0.4+: `cons` is not obvious, should be named `constraints`
+# TODO in 0.4+: maybe `props` should just be named `properties` (?)
+
 
 class DemandBuilder:
     """Builds a dictionary of properties and constraints from high level models.
@@ -33,8 +36,8 @@ class DemandBuilder:
          'golem.srv.comp.expiration': 1601655628772},
      'constraints': []}
     ```
-
     """
+
     def __init__(self):
         self._props: dict = {}
         self._constraints: List[str] = []

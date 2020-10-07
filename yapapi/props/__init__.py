@@ -5,9 +5,13 @@ from decimal import Decimal
 from datetime import datetime
 
 
+# TODO in 0.4+: `Identification` should probably be named `Identity`
+
+
 @dataclass
 class Identification(Model):
     """Properties describing the node's identity"""
+
     name: Optional[str] = field(default=None, metadata={"key": "golem.node.id.name"})
     """human-readable name of the Golem node"""
 
