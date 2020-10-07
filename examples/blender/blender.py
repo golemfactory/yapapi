@@ -5,7 +5,7 @@ import sys
 
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.runner import Engine, Task, vm
-from yapapi.runner.ctx import WorkContext
+from yapapi.runner.ctx import WorkContext, CaptureContext
 from datetime import timedelta
 
 # For importing `utils.py`:
@@ -22,6 +22,11 @@ async def main(subnet_tag="testnet", stream_output=False):
         min_mem_gib=1.0,
         min_storage_gib=2.0,
     )
+
+    if args.stream_output:
+        capture_ctx = CaptureContext.stream()
+    else:
+        capture_ctx = CaptureContext.all()
 
     async def worker(ctx: WorkContext, tasks):
         scene_path = str(script_dir / "cubes.blend")
@@ -44,7 +49,7 @@ async def main(subnet_tag="testnet", stream_output=False):
                     "OUTPUT_DIR": "/golem/output",
                 },
             )
-            ctx.run("/golem/entrypoints/run-blender.sh")
+            ctx.run("/golem/entrypoints/run-blender.sh", stdout=capture_ctx, stderr=capture_ctx)
             output_file = f"output_{frame}.png"
             ctx.download_file(f"/golem/output/out{frame:04d}.png", output_file)
             yield ctx.commit()
