@@ -218,7 +218,8 @@ class WorkContext:
         self._pending_steps.append(_RecvFile(self._storage, src_path, dst_path, self._emitter))
 
     def log(self, message: str):
-        self._emitter(UserLogMessage(ctx_id=self._id, message=message))
+        if self._emitter:
+            self._emitter(UserLogMessage(ctx_id=self._id, message=message))
 
     def commit(self) -> Work:
         """Creates sequence of commands to be send to provider.
