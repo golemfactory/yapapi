@@ -8,7 +8,7 @@
 
 ## How to use
 
-An example Golem application, using a docker image containing the Blender renderer:
+An example Golem application, using a Docker image containing the Blender renderer:
 
 ```python
 import asyncio
