@@ -1,5 +1,5 @@
 """
-
+An implementation of the new Golem's requestor engine.
 """
 import abc
 from datetime import datetime, timedelta, timezone
