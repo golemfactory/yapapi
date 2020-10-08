@@ -35,7 +35,7 @@ class Configuration(object):
     used to authenticate with the daemon. The application key must be either specified
     explicitly using the `app_key` argument or provided by the `YAGNA_APPKEY` environment variable.
 
-    Other than that, the urls of each specific REST API can be overridden
+    Other than that, the URLs of each specific REST API can be overridden
     using the following environment variables:
     * `YAGNA_MARKET_URL`
     * `YAGNA_PAYMENT_URL`
@@ -65,7 +65,7 @@ class Configuration(object):
 
     @property
     def app_key(self) -> str:
-        """yagna daemon's application key used to access the REST API"""
+        """Yagna daemon's application key used to access the REST API."""
         return self.__app_key
 
     @property
@@ -80,25 +80,25 @@ class Configuration(object):
 
     @property
     def activity_url(self) -> str:
-        """The ULR of the Activity REST API"""
+        """The URL of the Activity REST API"""
         return self.__activity_url
 
     def market(self) -> ya_market.ApiClient:
-        """REST client for the Market API"""
+        """Return a REST client for the Market API."""
         cfg = ya_market.Configuration(host=self.market_url)
         return ya_market.ApiClient(
             configuration=cfg, header_name="authorization", header_value=f"Bearer {self.app_key}",
         )
 
     def payment(self) -> ya_payment.ApiClient:
-        """REST client for the Payment API"""
+        """Return a REST client for the Payment API."""
         cfg = ya_payment.Configuration(host=self.payment_url)
         return ya_payment.ApiClient(
             configuration=cfg, header_name="authorization", header_value=f"Bearer {self.app_key}",
         )
 
     def activity(self) -> ya_activity.ApiClient:
-        """REST client for the Activity API"""
+        """Return a REST client for the Activity API."""
         cfg = ya_activity.Configuration(host=self.activity_url)
         return ya_activity.ApiClient(
             configuration=cfg, header_name="authorization", header_value=f"Bearer {self.app_key}",

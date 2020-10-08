@@ -28,15 +28,15 @@ class CommandContainer:
 
 class Work(abc.ABC):
     async def prepare(self):
-        """hook to be executed on requestor's end before the script is sent to the provider."""
+        """A hook to be executed on requestor's end before the script is sent to the provider."""
         pass
 
     def register(self, commands: CommandContainer):
-        """hook which adds the required command to the exescript."""
+        """A hook which adds the required command to the exescript."""
         pass
 
     async def post(self):
-        """hook to be executed on requestor's end after the script has finished."""
+        """A hook to be executed on requestor's end after the script has finished."""
         pass
 
 

@@ -48,12 +48,12 @@ class DemandBuilder:
 
     @property
     def props(self) -> dict:
-        """list of this demand's properties"""
+        """List of properties for this demand."""
         return self._props
 
     @property
     def cons(self) -> str:
-        """list of this demand's constraints"""
+        """List of constraints for this demand."""
         c_list = self._constraints
         c_value: str
         if not c_list:
@@ -67,11 +67,11 @@ class DemandBuilder:
         return c_value
 
     def ensure(self, constraint: str):
-        """add a constraint to the demand definition"""
+        """Add a constraint to the demand definition."""
         self._constraints.append(constraint)
 
     def add(self, m: Model):
-        """add properties from the specified model to this demand definition"""
+        """Add properties from the specified model to this demand definition."""
         kv = m.keys()
         base = asdict(m)
 

@@ -24,7 +24,7 @@ class AgreementDetails(object):
 
 
 class Agreement(object):
-    """Higher-level interface to the REST's Agreement model."""
+    """Mid-level interface to the REST's Agreement model."""
 
     def __init__(self, api: RequestorApi, subscription: "Subscription", agreement_id: str):
         self._api = api
@@ -39,8 +39,8 @@ class Agreement(object):
         return AgreementDetails(_ref=await self._api.get_agreement(self._id))
 
     async def confirm(self) -> bool:
-        """
-        Sign and send the agreement to the provider and then wait for it to be approved.
+        """Sign and send the agreement to the provider and then wait for it to be approved.
+        
         :return: True if the agreement has been confirmed, False otherwise
         """
         await self._api.confirm_agreement(self._id)
@@ -49,7 +49,7 @@ class Agreement(object):
 
 
 class OfferProposal(object):
-    """Higher-level interface to handle the negotiation phase between the parties."""
+    """Mid-level interface to handle the negotiation phase between the parties."""
 
     __slots__ = ("_proposal", "_subscription")
 
@@ -106,7 +106,7 @@ class OfferProposal(object):
 
 
 class Subscription(object):
-    """Higher-level interface to REST API's Subscription model."""
+    """Mid-level interface to REST API's Subscription model."""
 
     def __init__(
         self, api: RequestorApi, subscription_id: str, _details: Optional[models.Demand] = None,
@@ -145,7 +145,7 @@ class Subscription(object):
             await self._api.unsubscribe_demand(self._id)
 
     async def events(self) -> AsyncIterator[OfferProposal]:
-        """Yields counter-proposal based on the incoming, matching Offers."""
+        """Yield counter-proposals based on the incoming, matching Offers."""
         while self._open:
             proposals = await self._api.collect_offers(self._id, timeout=10, max_events=10)
             for proposal in proposals:
@@ -182,7 +182,7 @@ class AsyncResource(Generic[ResourceType]):
 
 
 class Market(object):
-    """Higher-level interface to the Market REST API."""
+    """Mid-level interface to the Market REST API."""
 
     def __init__(self, api_client: ApiClient):
         self._api: RequestorApi = RequestorApi(api_client)

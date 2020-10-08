@@ -25,8 +25,7 @@ class ActivityService(object):
         self._state = RequestorStateApi(api_client)
 
     async def new_activity(self, agreement_id: str) -> "Activity":
-        """
-        create an activity within bounds of the specified agreement.
+        """Create an activity within bounds of the specified agreement.
 
         :return: the object that represents the Activity
                  and allows to query and control its state
@@ -41,7 +40,7 @@ class ActivityService(object):
 
 
 class Activity(AsyncContextManager["Activity"]):
-    """Higher-level wrapper for REST's Activity endpoint"""
+    """Mid-level wrapper for REST's Activity endpoint"""
 
     def __init__(self, _api: RequestorControlApi, _state: RequestorStateApi, activity_id: str):
         self._api: RequestorControlApi = _api

@@ -88,7 +88,7 @@ class Model(abc.ABC):
     @classmethod
     def from_props(cls: Type[ME], props: Props) -> ME:
         """
-        Initialize the model from the dictionary representation.
+        Initialize the model from a dictionary representation.
 
         When provided with a dictionary of properties, it will find the matching keys
         within it and fill the model fields with the values from the dictionary.
