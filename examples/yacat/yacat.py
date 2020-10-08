@@ -45,7 +45,7 @@ def read_password(ranges):
 
 async def main(args):
     package = await vm.repo(
-        image_hash="88d8c03a883254945f6c287f68eecd17e4a4da8e94abf7b3ee38ca6f",
+        image_hash="2c17589f1651baff9b82aa431850e296455777be265c2c5446c902e9",
         min_mem_gib=0.5,
         min_storage_gib=2.0,
     )
@@ -75,7 +75,6 @@ async def main(args):
                 f"/bin/sh",
                 "--",
                 "-c",
-               # "touch /golem/work/hashcat.potfile;",
                 f"hashcat -a 3 -m 400 /golem/work/in.hash --skip {skip} --limit {limit} {args.mask} -o /golem/work/hashcat.potfile",
             )
             output_file = f"hashcat_{skip}.potfile"
