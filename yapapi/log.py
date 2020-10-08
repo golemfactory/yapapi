@@ -43,6 +43,7 @@ as an argument to `log_summary`:
 """
 from collections import defaultdict, Counter
 from dataclasses import asdict
+from datetime import timedelta
 import itertools
 import logging
 import time
@@ -88,6 +89,7 @@ event_type_to_string = {
     events.SubscriptionCreated: "Demand published on the market",
     events.SubscriptionFailed: "Demand publication failed",
     events.CollectFailed: "Failed to collect proposals for demand",
+    events.NoProposalsConfirmed: "No proposals confirmed by providers",
     events.ProposalReceived: "Proposal received from the market",
     events.ProposalRejected: "Proposal rejected",  # by who? alt: Rejected a proposal?
     events.ProposalResponded: "Responded to a proposal",
@@ -224,6 +226,9 @@ class SummaryLogger:
     # Has computation finished?
     finished: bool
 
+    # Total time waiting for the first proposal
+    time_waiting_for_proposals: timedelta
+
     def __init__(self, wrapped_emitter: Optional[Callable[[events.Event], None]] = None):
         """Create a SummaryLogger."""
 
@@ -245,6 +250,7 @@ class SummaryLogger:
         self.provider_failures = Counter()
         self.finished = False
         self.error_occurred = False
+        self.time_waiting_for_proposals = timedelta(0)
 
     def _print_total_cost(self) -> None:
 
@@ -289,6 +295,24 @@ class SummaryLogger:
             self.logger.info(
                 "Received proposals from %s providers so far", len(confirmed_providers)
             )
+
+        elif isinstance(event, events.NoProposalsConfirmed):
+            self.time_waiting_for_proposals += event.timeout
+            if event.num_offers == 0:
+                msg = (
+                    "No offers have been collected from the market for"
+                    f" {self.time_waiting_for_proposals.seconds}s."
+                )
+            else:
+                msg = (
+                    f"{event.num_offers} offers have been collected from the market, but"
+                    f" no provider has responded for {self.time_waiting_for_proposals.seconds}s."
+                )
+            msg += (
+                " Make sure you're using the latest released versions of yagna and yapapi,"
+                " and the correct subnet."
+            )
+            self.logger.warning(msg)
 
         elif isinstance(event, events.AgreementCreated):
             provider_name = event.provider_id.name
@@ -372,6 +396,9 @@ class SummaryLogger:
                     "Activity failed %s time(s) on provider '%s'", count, provider_name
                 )
             self._print_total_cost()
+
+        elif isinstance(event, events.ComputationFailed):
+            self.logger.error(f"Computation failed, reason: %s", event.reason)
 
 
 def log_summary(wrapped_emitter: Optional[Callable[[events.Event], None]] = None):
