@@ -17,9 +17,8 @@ import utils  # noqa
 
 
 def write_hash(hash):
-    f = open(str(script_dir / "in.hash"), "w")
-    f.write(hash)
-    f.close()
+    with open(str(script_dir / "in.hash"), "w") as f:
+        f.write(hash)
 
 
 def write_keyspace_check_script(mask):
