@@ -12,7 +12,7 @@ from . import Model
 
 
 class DemandBuilder:
-    """Builds a dictionary of properties and constraints from high level models.
+    """Builds a dictionary of properties and constraints from high-level models.
 
     The dictionary represents a Demand object, which is later matched by the new Golem's
     market implementation against Offers coming from providers to find those providers
