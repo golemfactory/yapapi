@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 import asyncio
+from datetime import timedelta
 import pathlib
 import sys
 
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.runner import Engine, Task, vm
 from yapapi.runner.ctx import WorkContext
-from datetime import timedelta
+
 
 # For importing `utils.py`:
 script_dir = pathlib.Path(__file__).resolve().parent
@@ -17,24 +18,23 @@ import utils  # noqa
 
 
 def write_hash(hash):
-    with open(str(script_dir / "in.hash"), "w") as f:
+    with open("in.hash", "w") as f:
         f.write(hash)
 
 
 def write_keyspace_check_script(mask):
-    f = open(str(script_dir / "keyspace.sh"), "w")
-    f.write(f"hashcat --keyspace -a 3 {mask} -m 400 > /golem/work/keyspace.txt")
-    f.close()
+    with open("keyspace.sh", "w") as f:
+        f.write(f"hashcat --keyspace -a 3 {mask} -m 400 > /golem/work/keyspace.txt")
 
 
 def read_keyspace():
-    f = open(str(script_dir / "keyspace.txt"), "r")
-    return int(f.readline())
+    with open("keyspace.txt", "r") as f:
+        return int(f.readline())
 
 
 def read_password(ranges):
     for r in ranges:
-        f = open(str(script_dir / f"hashcat_{r}.potfile"), "r")
+        f = open(f"hashcat_{r}.potfile", "r")
         line = f.readline()
         split_list = line.split(":")
         if len(split_list) >= 2:
@@ -51,31 +51,31 @@ async def main(args):
 
     async def worker_check_keyspace(ctx: WorkContext, tasks):
         async for task in tasks:
-            keyspace_sh_filename = str(script_dir / "keyspace.sh")
+            keyspace_sh_filename = "keyspace.sh"
             ctx.send_file(keyspace_sh_filename, "/golem/work/keyspace.sh")
-            ctx.begin()
             ctx.run("/bin/sh", "/golem/work/keyspace.sh")
             output_file = "keyspace.txt"
             ctx.download_file("/golem/work/keyspace.txt", output_file)
-            # ctx.download_file("/golem/work/keyspace.sh", output_file)
             yield ctx.commit()
-            task.accept_task(result=output_file)
+            task.accept_task()
 
     async def worker_find_password(ctx: WorkContext, tasks):
-        in_hash_filename = str(script_dir / "in.hash")
-        ctx.send_file(in_hash_filename, "/golem/work/in.hash")
-        ctx.send_file("empty.txt", "/golem/work/hashcat.potfile")
+        ctx.send_file("in.hash", "/golem/work/in.hash")
+        # ctx.send_file(str(script_dir / "empty.txt"), "/golem/work/hashcat.potfile")
 
         async for task in tasks:
             skip = task.data
             limit = skip + step
-            ctx.begin()
-            ctx.run(
-                f"/bin/sh",
-                "--",
-                "-c",
-                f"hashcat -a 3 -m 400 /golem/work/in.hash --skip {skip} --limit {limit} {args.mask} -o /golem/work/hashcat.potfile",
+
+            # Commands to be run on the provider
+            commands = (
+                "  touch /golem/work/hashcat.potfile;"
+                "  hashcat -a 3 -m 400 /golem/work/in.hash"
+                f" --skip {skip} --limit {limit} {args.mask}"
+                "  -o /golem/work/hashcat.potfile"
             )
+            ctx.run(f"/bin/sh", "-c", commands)
+
             output_file = f"hashcat_{skip}.potfile"
             ctx.download_file(f"/golem/work/hashcat.potfile", output_file)
             yield ctx.commit()
@@ -99,6 +99,7 @@ async def main(args):
         event_emitter=log_summary(log_event_repr),
     ) as engine:
 
+        # this is not typical use of engine.map as, there is only one task, with no data
         async for task in engine.map(worker_check_keyspace, [Task(data=None)]):
             pass
 
@@ -106,7 +107,7 @@ async def main(args):
 
         print(
             f"{utils.TEXT_COLOR_CYAN}"
-            f"Task computed: keyspace size count. The keyspace is {keyspace}"
+            f"Task computed: keyspace size count. The keyspace size is {keyspace}"
             f"{utils.TEXT_COLOR_DEFAULT}"
         )
 
@@ -134,12 +135,9 @@ async def main(args):
 
 
 if __name__ == "__main__":
-    import pathlib
-    import sys
-
     parser = utils.build_parser("yacat")
 
-    parser.add_argument("--numberOfProviders", dest="number_of_providers", type=int, default=3)
+    parser.add_argument("--number-of-providers", dest="number_of_providers", type=int, default=3)
     parser.add_argument("mask")
     parser.add_argument("hash")
 
@@ -155,8 +153,8 @@ if __name__ == "__main__":
     task = loop.create_task(main(args))
 
     try:
-        asyncio.get_event_loop().run_until_complete(task)
+        loop.run_until_complete(task)
     except (Exception, KeyboardInterrupt) as e:
         print(e)
         task.cancel()
-        asyncio.get_event_loop().run_until_complete(task)
+        loop.run_until_complete(task)
