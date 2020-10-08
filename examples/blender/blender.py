@@ -16,16 +16,14 @@ sys.path.append(str(parent_directory))
 import utils  # noqa
 
 
-async def main(subnet_tag="testnet", stream_output=False):
+async def main(subnet_tag="testnet", capture_ctx=None):
     package = await vm.repo(
         image_hash="3c436e6bdfa188e35b2881be6377e41a63062e8cd9710345757d3559",
         min_mem_gib=1.0,
         min_storage_gib=2.0,
     )
 
-    if args.stream_output:
-        capture_ctx = CaptureContext.stream()
-    else:
+    if not capture_ctx:
         capture_ctx = CaptureContext.all()
 
     async def worker(ctx: WorkContext, tasks):
@@ -75,11 +73,25 @@ async def main(subnet_tag="testnet", stream_output=False):
         timeout=init_overhead + timedelta(minutes=len(frames) * 2),
         subnet_tag=subnet_tag,
         event_emitter=log_summary(),
-        stream_output=stream_output,
+        stream_output=capture_ctx.is_streaming(),
     ) as engine:
 
         async for task in engine.map(worker, [Task(data=frame) for frame in frames]):
             print(f"\033[36;1mTask computed: {task}, result: {task.output}\033[0m")
+
+
+def build_capture_ctx(mode=None, limit=None, fmt=None):
+    if mode in (None, "all"):
+        return CaptureContext.all(fmt)
+    elif mode == "stream":
+        return CaptureContext.stream(limit, fmt)
+    elif mode == "head":
+        return CaptureContext.head(limit, fmt)
+    elif mode == "tail":
+        return CaptureContext.tail(limit, fmt)
+    elif mode == "headTail":
+        return CaptureContext.head_tail(limit, fmt)
+    raise RuntimeError(f"Invalid output capture mode: {mode}")
 
 
 if __name__ == "__main__":
@@ -87,12 +99,15 @@ if __name__ == "__main__":
     import sys
 
     parser = utils.build_parser("Render blender scene")
-    parser.add_argument("--stream-output", action="store_true")
+    parser.add_argument("--capture-mode", type=str, choices=["stream", "all", "head", "tail", "headTail"])
+    parser.add_argument("--capture-limit", type=int, default=None)
+    parser.add_argument("--capture-format", type=str, choices=["str", "bin"])
     args = parser.parse_args()
+    capture_ctx = build_capture_ctx(args.capture_mode, args.capture_limit, args.capture_format)
 
     enable_default_logger(level=args.log_level)
     loop = asyncio.get_event_loop()
-    task = loop.create_task(main(subnet_tag=args.subnet_tag, stream_output=args.stream_output))
+    task = loop.create_task(main(subnet_tag=args.subnet_tag, capture_ctx=capture_ctx))
     try:
         asyncio.get_event_loop().run_until_complete(task)
     except (Exception, KeyboardInterrupt) as e:

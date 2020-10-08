@@ -284,9 +284,12 @@ class CaptureContext:
 
         return {"stream" if self.mode == CaptureMode.STREAM else "atEnd": inner}
 
+    def is_streaming(self) -> bool:
+        return self.mode == CaptureMode.STREAM
+
     @classmethod
-    def stream(cls, limit: Optional[int] = None) -> "CaptureContext":
-        return cls._build(CaptureMode.STREAM, limit=limit)
+    def stream(cls, limit: Optional[int] = None, fmt: Optional[str] = None) -> "CaptureContext":
+        return cls._build(CaptureMode.STREAM, limit=limit, fmt=fmt)
 
     @classmethod
     def all(cls, fmt: Optional[str] = None) -> "CaptureContext":
