@@ -2,6 +2,9 @@
 Mid level binding for Golem REST API
 """
 
+from . import activity
+from . import market
+
 from .configuration import Configuration
 from .market import Market
 from .payment import Payment

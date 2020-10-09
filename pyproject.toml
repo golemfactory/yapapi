@@ -4,8 +4,8 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "yapapi"
-version = "0.2.0"
-description = "High-Level API for Golem The Next Milestone"
+version = "0.3.0-alpha.2"
+description = "High-level Python API for the New Golem"
 authors = ["Przemysław K. Rekucki <przemyslaw.rekucki@golem.network>"]
 license = "LGPL-3.0-or-later"
 classifiers = [
@@ -34,7 +34,6 @@ jsonrpc-base = "^1.0.3"
 
 ya-aioclient = { url = "https://builds.golem.network/packages/ya_aioclient-0.2.2-py3-none-any.whl"}
 toml = "^0.10.1"
-pydoc-markdown = "^3.5.0"
 
 
 [tool.poetry.extras]
@@ -50,6 +49,7 @@ mypy = "^0.782"
 liccheck = "^0.4.7"
 poethepoet = "^0.8.0"
 pytest-cov = "^2.10.1"
+pydoc-markdown = "^3.5.0"
 
 [tool.portray]
 

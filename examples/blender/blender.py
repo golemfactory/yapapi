@@ -7,6 +7,7 @@ from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noq
 from yapapi.runner import Engine, Task, vm
 from yapapi.runner.ctx import WorkContext, CaptureContext
 from datetime import timedelta
+from typing import Optional
 
 # For importing `utils.py`:
 script_dir = pathlib.Path(__file__).resolve().parent
@@ -16,7 +17,7 @@ sys.path.append(str(parent_directory))
 import utils  # noqa
 
 
-async def main(subnet_tag="testnet", capture_ctx=None):
+async def main(subnet_tag: str, capture_ctx: Optional[CaptureContext]):
     package = await vm.repo(
         image_hash="3c436e6bdfa188e35b2881be6377e41a63062e8cd9710345757d3559",
         min_mem_gib=1.0,
@@ -72,12 +73,16 @@ async def main(subnet_tag="testnet", capture_ctx=None):
         budget=10.0,
         timeout=init_overhead + timedelta(minutes=len(frames) * 2),
         subnet_tag=subnet_tag,
-        event_emitter=log_summary(),
+        event_emitter=log_summary(log_event_repr),
         stream_output=capture_ctx.is_streaming(),
     ) as engine:
 
         async for task in engine.map(worker, [Task(data=frame) for frame in frames]):
-            print(f"\033[36;1mTask computed: {task}, result: {task.output}\033[0m")
+            print(
+                f"{utils.TEXT_COLOR_CYAN}"
+                f"Task computed: {task}, result: {task.output}"
+                f"{utils.TEXT_COLOR_DEFAULT}"
+            )
 
 
 def build_capture_ctx(mode=None, limit=None, fmt=None):
@@ -102,12 +107,15 @@ if __name__ == "__main__":
     parser.add_argument("--capture-mode", type=str, choices=["stream", "all", "head", "tail", "headTail"])
     parser.add_argument("--capture-limit", type=int, default=None)
     parser.add_argument("--capture-format", type=str, choices=["str", "bin"])
+    parser.set_defaults(log_file="blender-yapapi.log")
     args = parser.parse_args()
     capture_ctx = build_capture_ctx(args.capture_mode, args.capture_limit, args.capture_format)
 
-    enable_default_logger(level=args.log_level)
+    enable_default_logger(log_file=args.log_file)
     loop = asyncio.get_event_loop()
-    task = loop.create_task(main(subnet_tag=args.subnet_tag, capture_ctx=capture_ctx))
+    subnet = args.subnet_tag
+    sys.stderr.write(f"Using subnet: {utils.TEXT_COLOR_YELLOW}{subnet}{utils.TEXT_COLOR_DEFAULT}\n")
+    task = loop.create_task(main(subnet_tag=subnet, capture_ctx=capture_ctx))
     try:
         asyncio.get_event_loop().run_until_complete(task)
     except (Exception, KeyboardInterrupt) as e:
