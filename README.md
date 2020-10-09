@@ -31,7 +31,7 @@ application development on Golem as easy as possible.
 ## How to use this API?
 
 Assuming you have your Golem node up and running (you can find instructions on how to 
-do that in the [yagna repository](https://github.com/golemfactory/yagna) in our 
+do that in the [yagna repository](https://github.com/golemfactory/yagna) and in our 
 [handbook](https://handbook.golem.network)), what you need to do is:
 * *prepare your payload* - this needs to be a Docker image containing your application
   that will be executed on the provider's end. This image needs to have its volumes
