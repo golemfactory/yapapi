@@ -2,7 +2,6 @@ FROM golemfactory/base:1.5
 
 MAINTAINER Radek Tereszczuk <radoslaw.tereszczuk@golem.network>
 
-RUN apt update
 
 RUN apt-get update && apt-get install -y alien clinfo
 
