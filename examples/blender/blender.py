@@ -16,7 +16,7 @@ sys.path.append(str(parent_directory))
 import utils  # noqa
 
 
-async def main(subnet_tag="testnet", stream_output=False):
+async def main(subnet_tag: str, stream_output: bool):
     package = await vm.repo(
         image_hash="3c436e6bdfa188e35b2881be6377e41a63062e8cd9710345757d3559",
         min_mem_gib=1.0,
@@ -69,12 +69,16 @@ async def main(subnet_tag="testnet", stream_output=False):
         budget=10.0,
         timeout=init_overhead + timedelta(minutes=len(frames) * 2),
         subnet_tag=subnet_tag,
-        event_emitter=log_summary(),
+        event_emitter=log_summary(log_event_repr),
         stream_output=stream_output,
     ) as engine:
 
         async for task in engine.map(worker, [Task(data=frame) for frame in frames]):
-            print(f"\033[36;1mTask computed: {task}, result: {task.output}\033[0m")
+            print(
+                f"{utils.TEXT_COLOR_CYAN}"
+                f"Task computed: {task}, result: {task.output}"
+                f"{utils.TEXT_COLOR_DEFAULT}"
+            )
 
 
 if __name__ == "__main__":
@@ -83,11 +87,14 @@ if __name__ == "__main__":
 
     parser = utils.build_parser("Render blender scene")
     parser.add_argument("--stream-output", action="store_true")
+    parser.set_defaults(log_file="blender-yapapi.log")
     args = parser.parse_args()
 
-    enable_default_logger(level=args.log_level)
+    enable_default_logger(log_file=args.log_file)
     loop = asyncio.get_event_loop()
-    task = loop.create_task(main(subnet_tag=args.subnet_tag, stream_output=args.stream_output))
+    subnet = args.subnet_tag
+    sys.stderr.write(f"Using subnet: {utils.TEXT_COLOR_YELLOW}{subnet}{utils.TEXT_COLOR_DEFAULT}\n")
+    task = loop.create_task(main(subnet_tag=subnet, stream_output=args.stream_output))
     try:
         asyncio.get_event_loop().run_until_complete(task)
     except (Exception, KeyboardInterrupt) as e:

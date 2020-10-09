@@ -20,9 +20,6 @@ from ..runner import events
 _log = logging.getLogger("yapapi.rest")
 
 
-_log = logging.getLogger("yapapi.rest")
-
-
 class ActivityService(object):
     def __init__(self, api_client: ApiClient):
         self._api = RequestorControlApi(api_client)
@@ -180,7 +177,7 @@ class StreamingBatch(AsyncIterable[events.CommandEventContext], Sized):
                         _log.error("Event exception:", exc)
                     else:
                         yield evt_ctx
-                        if evt_ctx.should_break(last_idx):
+                        if evt_ctx.computation_finished(last_idx):
                             break
             except ClientPayloadError as exc:
                 _log.error("Event payload exception:", exc)
@@ -216,7 +213,7 @@ def command_event_ctx(msg_event: MessageEvent) -> events.CommandEventContext:
         if not (isinstance(evt_data, dict) and isinstance(evt_data["return_code"], int)):
             raise RuntimeError("Invalid CommandFinished event: missing 'return code'")
         evt_cls = events.CommandExecuted
-        kwargs["return_code"] = int(evt_data["return_code"])
+        kwargs["success"] = int(evt_data["return_code"]) == 0
 
     elif evt_kind == "stdout":
         evt_cls = events.CommandStdOut

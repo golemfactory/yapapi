@@ -1,8 +1,9 @@
 """Representing events in Golem computation."""
 import dataclasses
+from datetime import timedelta
 from dataclasses import dataclass
 from types import TracebackType
-from typing import Any, Optional, Type, Tuple
+from typing import Any, Optional, Type, Tuple, List
 
 from yapapi.props import Identification
 
@@ -79,6 +80,12 @@ class ProposalConfirmed(ProposalEvent):
 @dataclass
 class ProposalFailed(ProposalEvent):
     reason: str
+
+
+@dataclass
+class NoProposalsConfirmed(Event):
+    num_offers: int
+    timeout: timedelta
 
 
 @dataclass(init=False)
@@ -192,18 +199,22 @@ class CommandEventContext:
     evt_cls: Type[CommandEvent]
     kwargs: dict
 
-    def should_break(self, last_idx: int) -> bool:
+    def computation_finished(self, last_idx: int) -> bool:
         return self.evt_cls is CommandExecuted and (
-            self.kwargs["cmd_idx"] >= last_idx or self.kwargs["return_code"] != 0
+            self.kwargs["cmd_idx"] >= last_idx or not self.kwargs["success"]
         )
 
-    def event(self, agr_id: str, task_id: str) -> CommandEvent:
-        return self.evt_cls(agr_id=agr_id, task_id=task_id, **self.kwargs)
+    def event(self, agr_id: str, task_id: str, cmds: List) -> CommandEvent:
+        kwargs = dict(agr_id=agr_id, task_id=task_id, **self.kwargs)
+        if self.evt_cls is CommandExecuted:
+            kwargs["command"] = cmds[self.kwargs["cmd_idx"]]
+        return self.evt_cls(**kwargs)
 
 
 @dataclass
 class CommandExecuted(CommandEvent):
-    return_code: Optional[int] = dataclasses.field(default=None)
+    command: Any
+    success: bool = dataclasses.field(default=False)
     message: Optional[str] = dataclasses.field(default=None)
 
 
