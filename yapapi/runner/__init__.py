@@ -1,5 +1,5 @@
 """
-
+An implementation of the new Golem's requestor engine.
 """
 import abc
 from datetime import datetime, timedelta, timezone
@@ -153,8 +153,13 @@ R = TypeVar("R")  # Type var for task result
 
 
 class Engine(AsyncContextManager):
-    """Requestor engine. Used to run tasks based on a common package on providers."""
+    """
+    Requestor engine.
 
+    Used to run tasks using the specified application package within providers' execution units.
+    """
+
+    # TODO 0.4+ rename `event_emitter` to `event_consumer`
     def __init__(
         self,
         *,
@@ -206,6 +211,9 @@ class Engine(AsyncContextManager):
         data: Iterable[Task[D, R]],
     ) -> AsyncIterator[Task[D, R]]:
         """Run computations on providers.
+
+        In other words, map the computation's inputs specified by task data
+        to the ouput resulting from running the execution script on a providers' execution units.
 
         :param worker: a callable that takes a WorkContext object and a list o tasks,
                        adds commands to the context object and yields committed commands

@@ -28,13 +28,15 @@ class CommandContainer:
 
 class Work(abc.ABC):
     async def prepare(self):
-        # Executes before commands are send to provider.
+        """A hook to be executed on requestor's end before the script is sent to the provider."""
         pass
 
     def register(self, commands: CommandContainer):
+        """A hook which adds the required command to the exescript."""
         pass
 
     async def post(self):
+        """A hook to be executed on requestor's end after the script has finished."""
         pass
 
 
@@ -141,14 +143,17 @@ class _Steps(Work):
         self._steps: Tuple[Work, ...] = steps
 
     async def prepare(self):
+        """Execute the `prepare` hook for all the defined steps."""
         for step in self._steps:
             await step.prepare()
 
     def register(self, commands: CommandContainer):
+        """Execute the `register` hook for all the defined steps."""
         for step in self._steps:
             step.register(commands)
 
     async def post(self):
+        """Execute the `post` step for all the defined steps."""
         for step in self._steps:
             await step.post()
 
