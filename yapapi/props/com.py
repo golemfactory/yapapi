@@ -1,3 +1,4 @@
+"""Payment-related properties."""
 from typing import Dict, Any
 import enum
 from dataclasses import dataclass, field
