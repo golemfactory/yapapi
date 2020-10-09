@@ -122,7 +122,9 @@ async def main(args):
         password = read_password(ranges)
 
         if password is None:
-            print(f"{utils.TEXT_COLOR_RED}" "No password found" f"{utils.TEXT_COLOR_DEFAULT}")
+            print(f"{utils.TEXT_COLOR_RED}" 
+                f"No password found" 
+                f"{utils.TEXT_COLOR_DEFAULT}")
         else:
             print(
                 f"{utils.TEXT_COLOR_GREEN}"
