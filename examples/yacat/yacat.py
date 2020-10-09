@@ -34,8 +34,8 @@ def read_keyspace():
 
 def read_password(ranges):
     for r in ranges:
-        f = open(f"hashcat_{r}.potfile", "r")
-        line = f.readline()
+        with open(f"hashcat_{r}.potfile", "r") as f:
+            line = f.readline()
         split_list = line.split(":")
         if len(split_list) >= 2:
             return split_list[1]
