@@ -42,6 +42,43 @@ do that in the [yagna repository](https://github.com/golemfactory/yagna) and in 
   API, the creation of a requestor agent should be straighforward and require minimal effort.
   You can use examples contained in this repository (blender and hashcat) as references.
 
+### Components
+
+There are a few components that are crucial for any requestor agent app:
+
+#### Engine
+
+The heart of the high-level API is the requestor's task runner engine (`yapapi.runner.Engine`).
+You tell it, among others, which package (VM image) will be used to run your tasks, 
+how much you'd like to pay and how many providers you'd like to involve in the execution.
+Finally, you feed it the worker script and a list of `Task` objects to execute on providers. 
+
+#### Worker script
+
+The `worker` will most likely be the very core of your requestor app. You need to define
+this function in your agent code and then you pass it to the runner Engine.
+
+It receives the a `WorkContext` (`yapapi.runner.ctx.WorkContext`) object that serves 
+as an interface between your script and the execution unit within the provider. 
+Using the work context, you define the steps that the provider needs to execute in order
+to complete the job you're giving them.
+
+Depending on the number of workers, and thus, the providers that your runner Engine utilizes,
+a single worker may tackle several tasks (fragments of your work) and you can differentiate
+the steps that need to happen once per worker run (that is, per provider node) - 
+e.g. and upload of a source file that's common to each fragment; and those that happen 
+for each individual work fragment  - e.g. the processing of the file using a specific set 
+of parameters.
+
+#### Task
+
+The `Task` (`yapapi.runner.task.Task`) object that describes a fragment of your task,
+that is a single piece of your application's job that will be executed in a single run
+of the execution script on a provider's machine.
+
+The runner engine will feed an instance of your worker - bound to a single provider node - 
+with tasks that this instance has been commissioned to execute.
+
 ### Example
 
 An example Golem application, using a Docker image containing the Blender renderer:
