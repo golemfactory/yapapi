@@ -61,7 +61,6 @@ async def main(args):
 
     async def worker_find_password(ctx: WorkContext, tasks):
         ctx.send_file("in.hash", "/golem/work/in.hash")
-        # ctx.send_file(str(script_dir / "empty.txt"), "/golem/work/hashcat.potfile")
 
         async for task in tasks:
             skip = task.data
@@ -111,7 +110,7 @@ async def main(args):
 
         step = int(keyspace / args.number_of_providers) + 1
 
-        ranges: range = range(0, keyspace, step)
+        ranges = range(0, keyspace, step)
 
         async for task in engine.map(worker_find_password, [Task(data=range) for range in ranges]):
             print(
