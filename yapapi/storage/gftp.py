@@ -85,6 +85,7 @@ class __Process(jsonrpc_base.Server):
         super().__init__()
         self._debug = _debug
         self._proc: Optional[asyncio.subprocess.Process] = None
+        self._lock = asyncio.Lock()
 
     async def __aenter__(self) -> GftpDriver:
         env = dict(os.environ, RUST_LOG="debug") if self._debug else None
@@ -106,14 +107,15 @@ class __Process(jsonrpc_base.Server):
         with contextlib.suppress(Exception):
             await cast(GftpDriver, self).shutdown()
 
-        if p.stdin:
-            await p.stdin.drain()
-            p.stdin.close()
-            try:
-                await asyncio.wait_for(p.wait(), 10.0)
-                return
-            except asyncio.TimeoutError:
-                pass
+        async with self._lock:
+            if p.stdin:
+                await p.stdin.drain()
+                p.stdin.close()
+                try:
+                    await asyncio.wait_for(p.wait(), 10.0)
+                    return
+                except asyncio.TimeoutError:
+                    pass
         p.kill()
         ret_code = await p.wait()
         _logger.debug("GFTP server closed, code=%d", ret_code)
@@ -128,20 +130,21 @@ class __Process(jsonrpc_base.Server):
             stderr.flush()
 
     async def send_message(self, message):
-        assert self._proc is not None
-        assert self._proc.stdin is not None
-        assert self._proc.stdout is not None
-        bytes = message.serialize() + "\n"
-        self.__log_debug("out", bytes)
-        self._proc.stdin.write(bytes.encode("utf-8"))
-        await self._proc.stdin.drain()
-        msg = await self._proc.stdout.readline()
-        self.__log_debug("in", msg)
-        if not msg:
-            sys.stderr.write("Please check if gftp is installed and is in your $PATH.\n")
-            sys.stderr.flush()
-        msg = json.loads(msg)
-        return message.parse_response(msg)
+        async with self._lock:
+            assert self._proc is not None
+            assert self._proc.stdin is not None
+            assert self._proc.stdout is not None
+            bytes = message.serialize() + "\n"
+            self.__log_debug("out", bytes)
+            self._proc.stdin.write(bytes.encode("utf-8"))
+            await self._proc.stdin.drain()
+            msg = await self._proc.stdout.readline()
+            self.__log_debug("in", msg)
+            if not msg:
+                sys.stderr.write("Please check if gftp is installed and is in your $PATH.\n")
+                sys.stderr.flush()
+            msg = json.loads(msg)
+            return message.parse_response(msg)
 
 
 @contextlib.contextmanager
