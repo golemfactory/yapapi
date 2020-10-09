@@ -36,7 +36,6 @@ from ..props import com, Activity, Identification, IdentificationKeys
 from ..props.base import InvalidPropertiesError
 from ..props.builder import DemandBuilder
 from .. import rest
-from ..rest.activity import CommandExecutionError
 from ..storage import gftp
 from ._smartq import SmartQueue, Handle
 
@@ -402,7 +401,7 @@ class Engine(AsyncContextManager):
                                             agr_id=agreement.id, task_id=task_id, cmds=cmds
                                         )
                                     )
-                            except CommandExecutionError as err:
+                            except rest.activity.CommandExecutionError as err:
                                 assert len(err.args) >= 2
                                 cmd_msg, cmd_idx = err.args[0:2]
                                 emit(
