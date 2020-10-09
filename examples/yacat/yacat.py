@@ -34,8 +34,8 @@ def read_keyspace():
 
 def read_password(ranges):
     for r in ranges:
-        f = open(f"hashcat_{r}.potfile", "r")
-        line = f.readline()
+        with open(f"hashcat_{r}.potfile", "r") as f:
+            line = f.readline()
         split_list = line.split(":")
         if len(split_list) >= 2:
             return split_list[1]
@@ -69,7 +69,7 @@ async def main(args):
 
             # Commands to be run on the provider
             commands = (
-                "touch /golem/work/hashcat.potfile;"
+                "touch /golem/work/hashcat.potfile; "
                 f"hashcat -a 3 -m 400 /golem/work/in.hash --skip {skip} --limit {limit} {args.mask} -o /golem/work/hashcat.potfile"
             )
             ctx.run(f"/bin/sh", "-c", commands)
@@ -122,7 +122,7 @@ async def main(args):
 
         password = read_password(ranges)
 
-        if password == None:
+        if password is None:
             print(f"{utils.TEXT_COLOR_RED}" "No password found" f"{utils.TEXT_COLOR_DEFAULT}")
         else:
             print(
