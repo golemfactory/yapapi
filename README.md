@@ -36,7 +36,7 @@ do that in the [yagna repository](https://github.com/golemfactory/yagna) and in 
 * *prepare your payload* - this needs to be a Docker image containing your application
   that will be executed on the provider's end. This image needs to have its volumes
   mapped in a way that will allow the supervisor module to exchange data (write and 
-  read files) with it. This image needs to be packed and uploaded into golem's image repository 
+  read files) with it. This image needs to be packed and uploaded into Golem's image repository
   using or dedicated tool - [`gvmkit-build`](https://pypi.org/project/gvmkit-build/). 
 * *create your requestor agent* - this is where `yapapi` comes in. Utilizing our high-level
   API, the creation of a requestor agent should be straighforward and require minimal effort.
@@ -61,7 +61,8 @@ this function in your agent code and then you pass it to the runner Engine.
 It receives the a `WorkContext` (`yapapi.runner.ctx.WorkContext`) object that serves 
 as an interface between your script and the execution unit within the provider. 
 Using the work context, you define the steps that the provider needs to execute in order
-to complete the job you're giving them.
+to complete the job you're giving them - e.g. transferring files to and from the provider
+or running commands within the execution unit on the provider's end.
 
 Depending on the number of workers, and thus, the providers that your runner Engine utilizes,
 a single worker may tackle several tasks (fragments of your work) and you can differentiate
