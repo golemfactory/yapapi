@@ -33,12 +33,12 @@ application development on Golem as easy as possible.
 Assuming you have your Golem node up and running (you can find instructions on how to 
 do that in the [yagna repository](https://github.com/golemfactory/yagna) and in our 
 [handbook](https://handbook.golem.network)), what you need to do is:
-* *prepare your payload* - this needs to be a Docker image containing your application
+* **prepare your payload** - this needs to be a Docker image containing your application
   that will be executed on the provider's end. This image needs to have its volumes
   mapped in a way that will allow the supervisor module to exchange data (write and 
   read files) with it. This image needs to be packed and uploaded into Golem's image repository
   using our dedicated tool - [`gvmkit-build`](https://pypi.org/project/gvmkit-build/).
-* *create your requestor agent* - this is where `yapapi` comes in. Utilizing our high-level
+* **create your requestor agent** - this is where `yapapi` comes in. Utilizing our high-level
   API, the creation of a requestor agent should be straighforward and require minimal effort.
   You can use examples contained in this repository (blender and hashcat) as references.
 
