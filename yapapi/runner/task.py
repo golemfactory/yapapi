@@ -24,7 +24,7 @@ class Task(Generic[TaskData, TaskResult]):
     """One computation unit.
 
     Represents one computation unit that will be run on the provider
-    (e.g. rendering of one frame).
+    (e.g. rendering of one frame of an animation).
     """
 
     ids: ClassVar[Iterator[int]] = itertools.count(1)
@@ -106,7 +106,7 @@ class Task(Generic[TaskData, TaskResult]):
     def accept_task(self, result: Optional[TaskResult] = None) -> None:
         """Accept task that was completed.
 
-        Must be called when the results of a task are correct and it shouldn't be retried.
+        Must be called when the results of a task are correct.
 
         :param result: computation result (optional)
         :return: None

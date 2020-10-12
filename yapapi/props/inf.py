@@ -1,7 +1,4 @@
-"""
-Infrastructural Properties
-
-"""
+"""Infrastructural properties."""
 
 from typing import Optional, List
 from dataclasses import dataclass, field
