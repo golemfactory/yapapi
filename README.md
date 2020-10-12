@@ -69,9 +69,9 @@ runner Engine utilizes in parallel, a single worker may tackle several tasks
 (fragments of your work) and you can differentiate the steps that need to happen once
 per worker run, which usually means once per provider node - but that depends on the
 exact implementation of your worker function - from those that happen for each
-individual work fragment. The example of the former would be e.g. an upload of a source
-file that's common to each fragment; and the example of the latter is e.g. the processing
-of the file using a set of parameters specified in the `Task` data.
+individual work fragment. An example of the former would be an upload of a source
+file that's common to each fragment; and of the latter - a step that triggers the
+processing of the file using a set of parameters specified in the `Task` data.
 
 #### Task
 
