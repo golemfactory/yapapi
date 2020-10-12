@@ -64,12 +64,14 @@ Using the work context, you define the steps that the provider needs to execute 
 to complete the job you're giving them - e.g. transferring files to and from the provider
 or running commands within the execution unit on the provider's end.
 
-Depending on the number of workers, and thus, the providers that your runner Engine utilizes,
-a single worker may tackle several tasks (fragments of your work) and you can differentiate
-the steps that need to happen once per worker run (that is, per provider node) - 
-e.g. and upload of a source file that's common to each fragment; and those that happen 
-for each individual work fragment - e.g. the processing of the file using a specific set 
-of parameters.
+Depending on the number of workers, and thus, the maximum number of providers that your
+runner Engine utilizes in parallel, a single worker may tackle several tasks
+(fragments of your work) and you can differentiate the steps that need to happen once
+per worker run, which usually means once per provider node - but that depends on the
+exact implementation of your worker function - from those that happen for each
+individual work fragment. The example of the former would be e.g. an upload of a source
+file that's common to each fragment; and the example of the latter is e.g. the processing
+of the file using a set of parameters specified in the `Task` data.
 
 #### Task
 
@@ -78,7 +80,7 @@ that is a single piece of your application's job that will be executed in a sing
 of the execution script on a provider's machine.
 
 The runner engine will feed an instance of your worker - bound to a single provider node - 
-with tasks that this instance has been commissioned to execute.
+with task fragments (`Task` objects) that this instance has been commissioned to execute.
 
 ### Example
 
