@@ -10,8 +10,8 @@ These functions should be passed as `event_emitter` arguments to `Engine()`.
 * Functions that perform configuration of the `logging` module itself.
 Since logging configuration is in general a responsibility of the code that
 uses `yapapi` as a library, we only provide the `enable_default_logger`
-function in this category, that enables logging to stderr with given level
-(`logging.DEBUG` by default).
+function in this category, that enables logging to stderr with level `logging.INFO`
+and, optionally, to a given file with level `logging.DEBUG`.
 
 
 Functions for handling events
@@ -43,6 +43,7 @@ as an argument to `log_summary`:
 """
 from collections import defaultdict, Counter
 from dataclasses import asdict
+from datetime import timedelta
 import itertools
 import logging
 import time
@@ -55,17 +56,29 @@ logger = logging.getLogger("yapapi.runner")
 
 
 def enable_default_logger(
-    format_: str = "[%(asctime)s %(levelname)s %(name)s] %(message)s", level: int = logging.DEBUG
+    format_: str = "[%(asctime)s %(levelname)s %(name)s] %(message)s",
+    log_file: Optional[str] = None,
 ):
-    """Enable the default logger that logs messages to stderr."""
+    """Enable the default logger that logs messages to stderr with level `INFO`.
 
+    If `log_file` is specified, the logger with output messages with level `DEBUG` to
+    the given file.
+    """
     logger = logging.getLogger("yapapi")
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter(format_))
-    handler.setLevel(level)
-    logger.addHandler(handler)
-    logger.setLevel(level)
+    logger.setLevel(logging.DEBUG)
     logger.disabled = False
+    formatter = logging.Formatter(format_)
+
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    console_handler.setLevel(logging.INFO)
+    logger.addHandler(console_handler)
+
+    if log_file:
+        file_handler = logging.FileHandler(filename=log_file, mode="w")
+        file_handler.setFormatter(formatter)
+        file_handler.setLevel(logging.DEBUG)
+        logger.addHandler(file_handler)
 
 
 # Default human-readable representation of event types.
@@ -76,6 +89,7 @@ event_type_to_string = {
     events.SubscriptionCreated: "Demand published on the market",
     events.SubscriptionFailed: "Demand publication failed",
     events.CollectFailed: "Failed to collect proposals for demand",
+    events.NoProposalsConfirmed: "No proposals confirmed by providers",
     events.ProposalReceived: "Proposal received from the market",
     events.ProposalRejected: "Proposal rejected",  # by who? alt: Rejected a proposal?
     events.ProposalResponded: "Responded to a proposal",
@@ -213,6 +227,9 @@ class SummaryLogger:
     # Has computation finished?
     finished: bool
 
+    # Total time waiting for the first proposal
+    time_waiting_for_proposals: timedelta
+
     def __init__(self, wrapped_emitter: Optional[Callable[[events.Event], None]] = None):
         """Create a SummaryLogger."""
 
@@ -234,6 +251,7 @@ class SummaryLogger:
         self.provider_failures = Counter()
         self.finished = False
         self.error_occurred = False
+        self.time_waiting_for_proposals = timedelta(0)
 
     def _print_total_cost(self) -> None:
 
@@ -279,6 +297,24 @@ class SummaryLogger:
                 "Received proposals from %s providers so far", len(confirmed_providers)
             )
 
+        elif isinstance(event, events.NoProposalsConfirmed):
+            self.time_waiting_for_proposals += event.timeout
+            if event.num_offers == 0:
+                msg = (
+                    "No offers have been collected from the market for"
+                    f" {self.time_waiting_for_proposals.seconds}s."
+                )
+            else:
+                msg = (
+                    f"{event.num_offers} offers have been collected from the market, but"
+                    f" no provider has responded for {self.time_waiting_for_proposals.seconds}s."
+                )
+            msg += (
+                " Make sure you're using the latest released versions of yagna and yapapi,"
+                " and the correct subnet."
+            )
+            self.logger.warning(msg)
+
         elif isinstance(event, events.AgreementCreated):
             provider_name = event.provider_id.name
             if not provider_name:
@@ -301,6 +337,17 @@ class SummaryLogger:
                 "Task sent to provider '%s', task data: %s",
                 provider_name,
                 self.task_data[event.task_id] if event.task_id else "<initialization>",
+            )
+
+        elif isinstance(event, events.CommandExecuted):
+            if event.success:
+                return
+            provider_name = self.agreement_provider_name[event.agr_id]
+            self.logger.warning(
+                "Command failed on provider '%s', command: %s, output: %s",
+                provider_name,
+                event.command,
+                event.message,
             )
 
         elif isinstance(event, events.ScriptFinished):
@@ -350,6 +397,9 @@ class SummaryLogger:
                     "Activity failed %s time(s) on provider '%s'", count, provider_name
                 )
             self._print_total_cost()
+
+        elif isinstance(event, events.ComputationFailed):
+            self.logger.error(f"Computation failed, reason: %s", event.reason)
 
 
 def log_summary(wrapped_emitter: Optional[Callable[[events.Event], None]] = None):

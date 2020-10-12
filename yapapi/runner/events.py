@@ -1,5 +1,6 @@
 """Representing events in Golem computation."""
 import dataclasses
+from datetime import timedelta
 from dataclasses import dataclass
 from types import TracebackType
 from typing import Any, Optional, Type, Tuple
@@ -79,6 +80,12 @@ class ProposalConfirmed(ProposalEvent):
 @dataclass
 class ProposalFailed(ProposalEvent):
     reason: str
+
+
+@dataclass
+class NoProposalsConfirmed(Event):
+    num_offers: int
+    timeout: timedelta
 
 
 @dataclass(init=False)
@@ -174,7 +181,9 @@ class ScriptSent(ScriptEvent):
 
 @dataclass
 class CommandExecuted(ScriptEvent):
+    success: bool
     cmd_idx: int
+    command: Any
     message: str
 
 
