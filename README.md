@@ -8,7 +8,7 @@
 
 ## What's Golem, btw?
 
-[Golem](https:://golem.network) is a global, open-source, decentralized supercomputer 
+[Golem](https://golem.network) is a global, open-source, decentralized supercomputer 
 that anyone can access. It connects individual machines - be that laptops, home PCs or 
 even data centers - to form a vast network, the purpose of which is to provide a way to 
 distribute computations to its provider nodes and allow requestors to utilize its unique 
@@ -58,7 +58,7 @@ Finally, you feed it the worker script and a list of `Task` objects to execute o
 The `worker` will most likely be the very core of your requestor app. You need to define
 this function in your agent code and then you pass it to the runner Engine.
 
-It receives the a `WorkContext` (`yapapi.runner.ctx.WorkContext`) object that serves 
+It receives a `WorkContext` (`yapapi.runner.ctx.WorkContext`) object that serves 
 as an interface between your script and the execution unit within the provider. 
 Using the work context, you define the steps that the provider needs to execute in order
 to complete the job you're giving them - e.g. transferring files to and from the provider
