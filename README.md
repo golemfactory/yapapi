@@ -12,7 +12,7 @@
 that anyone can access. It connects individual machines - be that laptops, home PCs or 
 even data centers - to form a vast network, the purpose of which is to provide a way to 
 distribute computations to its provider nodes and allow requestors to utilize its unique 
-potential - which can lie in its combined computing power, the geographical distrubution 
+potential - which can lie in its combined computing power, the geographical distribution 
 or its censorship resistance.
 
 ## Golem's requestor setup
@@ -68,7 +68,7 @@ Depending on the number of workers, and thus, the providers that your runner Eng
 a single worker may tackle several tasks (fragments of your work) and you can differentiate
 the steps that need to happen once per worker run (that is, per provider node) - 
 e.g. and upload of a source file that's common to each fragment; and those that happen 
-for each individual work fragment  - e.g. the processing of the file using a specific set 
+for each individual work fragment - e.g. the processing of the file using a specific set 
 of parameters.
 
 #### Task
