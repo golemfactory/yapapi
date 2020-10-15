@@ -23,12 +23,13 @@ CFF_DEFAULT_PRICE_FOR_COUNTER: Final[Mapping[com.Counter, Decimal]] = MappingPro
 
 
 class MarketStrategy(abc.ABC):
-    """Abstract market strategy"""
+    """Abstract market strategy."""
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
-        pass
+        """Optionally add relevant constraints to a Demand."""
 
     async def score_offer(self, offer: rest.market.OfferProposal) -> float:
+        """Score `offer`. Better offers should get higher scores."""
         return SCORE_REJECTED
 
 
@@ -40,15 +41,18 @@ class DummyMS(MarketStrategy, object):
     that do not exceed maximum prices specified for each counter.
     For other offers, returns `SCORE_REJECTED`.
     """
+
     max_for_counter: Mapping[com.Counter, Decimal] = CFF_DEFAULT_PRICE_FOR_COUNTER
     max_fixed: Decimal = Decimal("0.05")
     _activity: Optional[Activity] = field(init=False, repr=False, default=None)
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
+        """Ensure that the offer uses `PriceModel.LINEAR` price model."""
         demand.ensure(f"({com.PRICE_MODEL}={com.PriceModel.LINEAR.value})")
         self._activity = Activity.from_props(demand.props)
 
     async def score_offer(self, offer: rest.market.OfferProposal) -> float:
+        """Score `offer`. Returns either `SCORE_REJECTED` or `SCORE_NEUTRAL`."""
 
         linear: com.ComLinear = com.ComLinear.from_props(offer.props)
 
@@ -68,14 +72,17 @@ class DummyMS(MarketStrategy, object):
 
 @dataclass
 class LeastExpensiveLinearPayuMS(MarketStrategy, object):
+    """A strategy that scores offers according to cost for given computation time."""
 
     def __init__(self, expected_time_secs: int = 60):
         self._expected_time_secs = expected_time_secs
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
+        """Ensure that the offer uses `PriceModel.LINEAR` price model."""
         demand.ensure(f"({com.PRICE_MODEL}={com.PriceModel.LINEAR.value})")
 
     async def score_offer(self, offer: rest.market.OfferProposal) -> float:
+        """Score `offer` according to cost for expected computation time."""
 
         linear: com.ComLinear = com.ComLinear.from_props(offer.props)
 

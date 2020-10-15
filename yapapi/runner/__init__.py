@@ -264,7 +264,9 @@ class Engine(AsyncContextManager):
                             emit(events.ProposalFailed(prop_id=proposal.id, reason=str(ex)))
                     else:
                         emit(events.ProposalConfirmed(prop_id=proposal.id))
-                        offer_buffer[proposal.issuer] = _BufferedProposal(datetime.now(), score, proposal)
+                        offer_buffer[proposal.issuer] = _BufferedProposal(
+                            datetime.now(), score, proposal
+                        )
                         proposals_confirmed += 1
 
         # aio_session = await self._stack.enter_async_context(aiohttp.ClientSession())
@@ -516,4 +518,4 @@ class Package(abc.ABC):
 
     @abc.abstractmethod
     async def decorate_demand(self, demand: DemandBuilder):
-        """Add package information to Demand."""
+        """Add package information to a Demand."""
