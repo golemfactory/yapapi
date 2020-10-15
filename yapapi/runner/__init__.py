@@ -1,5 +1,5 @@
 """
-An implementation of the new Golem's requestor engine.
+An implementation of the new Golem's task executor.
 """
 import abc
 from datetime import datetime, timedelta, timezone
@@ -50,7 +50,7 @@ CFG_INVOICE_TIMEOUT: Final[timedelta] = timedelta(minutes=5)
 
 
 @dataclass
-class _EngineConf:
+class _ExecutorConfig:
     max_workers: int = 5
     timeout: timedelta = timedelta(minutes=5)
     get_offers_timeout: timedelta = timedelta(seconds=20)
@@ -67,9 +67,9 @@ D = TypeVar("D")  # Type var for task data
 R = TypeVar("R")  # Type var for task result
 
 
-class Engine(AsyncContextManager):
+class Executor(AsyncContextManager):
     """
-    Requestor engine.
+    Task executor.
 
     Used to run tasks using the specified application package within providers' execution units.
     """
@@ -85,7 +85,7 @@ class Engine(AsyncContextManager):
         subnet_tag: Optional[str] = None,
         event_consumer: Optional[Callable[[Event], None]] = None,
     ):
-        """Create a new requestor engine.
+        """Create a new executor.
 
         :param package: a package common for all tasks; vm.repo() function may be
                         used to return package from a repository
@@ -104,7 +104,7 @@ class Engine(AsyncContextManager):
         self._api_config = rest.Configuration()
         self._stack = AsyncExitStack()
         self._package = package
-        self._conf = _EngineConf(max_workers, timeout)
+        self._conf = _ExecutorConfig(max_workers, timeout)
         # TODO: setup precitsion
         self._budget_amount = Decimal(budget)
         self._budget_allocation: Optional[rest.payment.Allocation] = None
@@ -119,15 +119,12 @@ class Engine(AsyncContextManager):
         # that emitting events will not block
         self._wrapped_consumer = AsyncWrapper(event_consumer)
 
-    async def map(
+    async def submit(
         self,
         worker: Callable[[WorkContext, AsyncIterator[Task[D, R]]], AsyncGenerator[Work, None]],
         data: Iterable[Task[D, R]],
     ) -> AsyncIterator[Task[D, R]]:
-        """Run computations on providers.
-
-        In other words, map the computation's inputs specified by task data
-        to the ouput resulting from running the execution script on a providers' execution units.
+        """Submit a computation to be executed on providers.
 
         :param worker: a callable that takes a WorkContext object and a list o tasks,
                        adds commands to the context object and yields committed commands
@@ -485,7 +482,7 @@ class Engine(AsyncContextManager):
                 {process_invoices_job}, timeout=15, return_when=asyncio.ALL_COMPLETED
             )
 
-    async def __aenter__(self) -> "Engine":
+    async def __aenter__(self) -> "Executor":
         stack = self._stack
 
         # TODO: Cleanup on exception here.

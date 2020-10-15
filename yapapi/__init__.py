@@ -4,6 +4,8 @@ import toml
 from pathlib import Path
 from pkg_resources import get_distribution
 
+from .runner import Executor, Task, WorkContext
+
 
 def get_version() -> str:
     """
@@ -20,4 +22,4 @@ def get_version() -> str:
 
 
 __version__: str = get_version()
-__all__ = ["props", "rest", "runner", "storage", "enable_default_logger"]
+__all__ = ["Executor", "props", "rest", "runner", "storage", "Task", "WorkContext"]

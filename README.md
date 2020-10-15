@@ -46,17 +46,17 @@ do that in the [yagna repository](https://github.com/golemfactory/yagna) and in 
 
 There are a few components that are crucial for any requestor agent app:
 
-#### Engine
+#### Executor
 
-The heart of the high-level API is the requestor's task runner engine (`yapapi.runner.Engine`).
-You tell it, among others, which package (VM image) will be used to run your tasks, 
+The heart of the high-level API is the requestor's task executor (`yapapi.Executor`).
+You tell it, among others, which package (VM image) will be used to run your task,
 how much you'd like to pay and how many providers you'd like to involve in the execution.
-Finally, you feed it the worker script and a list of `Task` objects to execute on providers. 
+Finally, you feed it the worker script and a list of `Task` objects to execute on providers.
 
 #### Worker script
 
 The `worker` will most likely be the very core of your requestor app. You need to define
-this function in your agent code and then you pass it to the runner Engine.
+this function in your agent code and then you pass it to the Executor.
 
 It receives a `WorkContext` (`yapapi.runner.ctx.WorkContext`) object that serves 
 as an interface between your script and the execution unit within the provider. 
@@ -65,7 +65,7 @@ to complete the job you're giving them - e.g. transferring files to and from the
 or running commands within the execution unit on the provider's end.
 
 Depending on the number of workers, and thus, the maximum number of providers that your
-runner Engine utilizes in parallel, a single worker may tackle several tasks
+Executor utilizes in parallel, a single worker may tackle several tasks
 (fragments of your work) and you can differentiate the steps that need to happen once
 per worker run, which usually means once per provider node - but that depends on the
 exact implementation of your worker function - from those that happen for each
@@ -79,7 +79,7 @@ The `Task` (`yapapi.runner.task.Task`) object that describes a fragment of your 
 that is a single piece of your application's job that will be executed in a single run
 of the execution script on a provider's machine.
 
-The runner engine will feed an instance of your worker - bound to a single provider node - 
+The Executor will feed an instance of your worker - bound to a single provider node -
 with task fragments (`Task` objects) that this instance has been commissioned to execute.
 
 ### Example
@@ -89,13 +89,13 @@ An example Golem application, using a Docker image containing the Blender render
 ```python
 import asyncio
 
-from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
-from yapapi.runner import Engine, Task, vm
-from yapapi.runner.ctx import WorkContext
+from yapapi import Executor, Task, WorkContext
+from yapapi.log import enable_default_logger, log_summary, log_event_repr
+from yapapi.runner import vm
 from datetime import timedelta
 
 
-async def main(subnet_tag="testnet"):
+async def main(subnet_tag: str):
     package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         min_mem_gib=0.5,
@@ -137,16 +137,16 @@ async def main(subnet_tag="testnet"):
     # By passing `event_consumer=log_summary()` we enable summary logging.
     # See the documentation of the `yapapi.log` module on how to set
     # the level of detail and format of the logged information.
-    async with Engine(
+    async with Executor(
         package=package,
         max_workers=3,
         budget=10.0,
         timeout=init_overhead + timedelta(minutes=len(frames) * 2),
         subnet_tag=subnet_tag,
         event_consumer=log_summary(),
-    ) as engine:
+    ) as executor:
 
-        async for task in engine.map(worker, [Task(data=frame) for frame in frames]):
+        async for task in executor.submit(worker, [Task(data=frame) for frame in frames]):
             print(f"Task computed: {task}, result: {task.output}")
 
 

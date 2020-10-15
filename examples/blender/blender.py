@@ -3,10 +3,9 @@ import asyncio
 import pathlib
 import sys
 
-import yapapi
+from yapapi import Executor, Task, __version__ as yapapi_version, WorkContext
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
-from yapapi.runner import Engine, Task, vm
-from yapapi.runner.ctx import WorkContext
+from yapapi.runner import vm
 from datetime import timedelta
 
 # For importing `utils.py`:
@@ -64,16 +63,16 @@ async def main(subnet_tag: str):
     # By passing `event_consumer=log_summary()` we enable summary logging.
     # See the documentation of the `yapapi.log` module on how to set
     # the level of detail and format of the logged information.
-    async with Engine(
+    async with Executor(
         package=package,
         max_workers=3,
         budget=10.0,
         timeout=init_overhead + timedelta(minutes=len(frames) * 2),
         subnet_tag=subnet_tag,
         event_consumer=log_summary(log_event_repr),
-    ) as engine:
+    ) as executor:
 
-        async for task in engine.map(worker, [Task(data=frame) for frame in frames]):
+        async for task in executor.submit(worker, [Task(data=frame) for frame in frames]):
             print(
                 f"{utils.TEXT_COLOR_CYAN}"
                 f"Task computed: {task}, result: {task.output}"
@@ -90,7 +89,7 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     subnet = args.subnet_tag
     sys.stderr.write(
-        f"yapapi version: {utils.TEXT_COLOR_YELLOW}{yapapi.__version__}{utils.TEXT_COLOR_DEFAULT}\n"
+        f"yapapi version: {utils.TEXT_COLOR_YELLOW}{yapapi_version}{utils.TEXT_COLOR_DEFAULT}\n"
     )
     sys.stderr.write(f"Using subnet: {utils.TEXT_COLOR_YELLOW}{subnet}{utils.TEXT_COLOR_DEFAULT}\n")
     task = loop.create_task(main(subnet_tag=args.subnet_tag))
