@@ -113,7 +113,7 @@ async def main(args):
         ranges = range(0, keyspace, step)
 
         async for task in executor.submit(
-                worker_find_password, [Task(data=range) for range in ranges]
+            worker_find_password, [Task(data=range) for range in ranges]
         ):
             print(
                 f"{utils.TEXT_COLOR_CYAN}"

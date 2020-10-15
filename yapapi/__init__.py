@@ -6,6 +6,7 @@ from pkg_resources import get_distribution
 
 from .runner import Executor, Task, WorkContext
 
+
 def get_version() -> str:
     """
     :return: the version of the yapapi library package
