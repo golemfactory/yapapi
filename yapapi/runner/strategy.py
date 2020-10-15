@@ -41,7 +41,6 @@ class DummyMS(MarketStrategy, object):
     that do not exceed maximum prices specified for each counter.
     For other offers, returns `SCORE_REJECTED`.
     """
-
     max_for_counter: Mapping[com.Counter, Decimal] = CFF_DEFAULT_PRICE_FOR_COUNTER
     max_fixed: Decimal = Decimal("0.05")
     _activity: Optional[Activity] = field(init=False, repr=False, default=None)
@@ -72,7 +71,7 @@ class DummyMS(MarketStrategy, object):
 
 @dataclass
 class LeastExpensiveLinearPayuMS(MarketStrategy, object):
-    """A strategy that scores offers according to cost for given computation time."""
+    """A strategy that scores offers according to cost for a given computation time."""
 
     def __init__(self, expected_time_secs: int = 60):
         self._expected_time_secs = expected_time_secs
