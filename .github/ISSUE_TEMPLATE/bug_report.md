@@ -11,8 +11,11 @@ assignees: ''
 **OS**:
 [ e.g. Ubuntu 18.04, Windows 10, etc ]
 
-**yagna daemon version**
+**yagna daemon version**:
 [ can be determined with `yagna --version`]
+
+**Python version**:
+[ can be determined with `python --version` ]
 
 **yapapi library version**:
 [ can be determined using: `python -c "import yapapi; print(yapapi.__version__)"`]
