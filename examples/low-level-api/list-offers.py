@@ -41,7 +41,7 @@ def main():
     subnet = args.subnet_tag
     sys.stderr.write(f"Using subnet: {utils.TEXT_COLOR_YELLOW}{subnet}{utils.TEXT_COLOR_DEFAULT}\n")
 
-    enable_default_logger(level=args.log_level)
+    enable_default_logger()
     try:
         asyncio.get_event_loop().run_until_complete(
             asyncio.wait_for(list_offers(Configuration(), subnet_tag=subnet,), timeout=4,)
