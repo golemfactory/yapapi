@@ -146,13 +146,13 @@ class ActivityCreateFailed(AgreementEvent):
 
 
 @dataclass(init=False)
-class TaskEvent(Event):
-    task_id: str
+class SubTaskEvent(Event):
+    subtask_id: str
 
 
 @dataclass
-class TaskStarted(AgreementEvent, TaskEvent):
-    task_data: Any
+class SubTaskStarted(AgreementEvent, SubTaskEvent):
+    data: Any
 
 
 @dataclass
@@ -171,7 +171,7 @@ class WorkerFinished(AgreementEvent):
 
 @dataclass(init=False)
 class ScriptEvent(AgreementEvent):
-    task_id: Optional[str]
+    subtask_id: Optional[str]
 
 
 @dataclass
@@ -198,12 +198,12 @@ class ScriptFinished(ScriptEvent):
 
 
 @dataclass
-class TaskAccepted(TaskEvent):
+class SubTaskAccepted(SubTaskEvent):
     result: Any
 
 
 @dataclass
-class TaskRejected(TaskEvent):
+class SubTaskRejected(SubTaskEvent):
     reason: Optional[str]
 
 

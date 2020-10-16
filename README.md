@@ -51,7 +51,7 @@ There are a few components that are crucial for any requestor agent app:
 The heart of the high-level API is the requestor's task executor (`yapapi.Executor`).
 You tell it, among others, which package (VM image) will be used to run your task,
 how much you'd like to pay and how many providers you'd like to involve in the execution.
-Finally, you feed it the worker script and a list of `Task` objects to execute on providers.
+Finally, you feed it the worker script and a list of `SubTask` objects to execute on providers.
 
 #### Worker script
 
@@ -65,22 +65,22 @@ to complete the job you're giving them - e.g. transferring files to and from the
 or running commands within the execution unit on the provider's end.
 
 Depending on the number of workers, and thus, the maximum number of providers that your
-Executor utilizes in parallel, a single worker may tackle several tasks
+Executor utilizes in parallel, a single worker may tackle several subtasks
 (fragments of your work) and you can differentiate the steps that need to happen once
 per worker run, which usually means once per provider node - but that depends on the
 exact implementation of your worker function - from those that happen for each
 individual work fragment. An example of the former would be an upload of a source
 file that's common to each fragment; and of the latter - a step that triggers the
-processing of the file using a set of parameters specified in the `Task` data.
+processing of the file using a set of parameters specified in the `SubTask` data.
 
-#### Task
+#### SubTask
 
-The `Task` (`yapapi.Task`) object that describes a fragment of your task,
+The `SubTask` (`yapapi.SubTask`) object that describes a fragment of your task,
 that is a single piece of your application's job that will be executed in a single run
 of the execution script on a provider's machine.
 
 The Executor will feed an instance of your worker - bound to a single provider node -
-with task fragments (`Task` objects) that this instance has been commissioned to execute.
+with task fragments (`SubTask` objects) that this instance has been commissioned to execute.
 
 ### Example
 
@@ -89,7 +89,7 @@ An example Golem application, using a Docker image containing the Blender render
 ```python
 import asyncio
 
-from yapapi import Executor, Task, WorkContext
+from yapapi import Executor, SubTask, WorkContext
 from yapapi.log import enable_default_logger, log_summary, log_event_repr
 from yapapi.package import vm
 from datetime import timedelta
@@ -102,10 +102,10 @@ async def main(subnet_tag: str):
         min_storage_gib=2.0,
     )
 
-    async def worker(ctx: WorkContext, tasks):
+    async def worker(ctx: WorkContext, subtasks):
         ctx.send_file("./scene.blend", "/golem/resource/scene.blend")
-        async for task in tasks:
-            frame = task.data
+        async for subtask in subtasks:
+            frame = subtask.data
             crops = [{"outfilebasename": "out", "borders_x": [0.0, 1.0], "borders_y": [0.0, 1.0]}]
             ctx.send_json(
                 "/golem/work/params.json",
@@ -126,7 +126,7 @@ async def main(subnet_tag: str):
             output_file = f"output_{frame}.png"
             ctx.download_file(f"/golem/output/out{frame:04d}.png", output_file)
             yield ctx.commit()
-            task.accept_task(result=output_file)
+            subtask.accept_result(result=output_file)
 
         ctx.log("no more frames to render")
 
@@ -146,17 +146,17 @@ async def main(subnet_tag: str):
         event_emitter=log_summary(),
     ) as executor:
 
-        async for task in executor.submit(worker, [Task(data=frame) for frame in frames]):
-            print(f"\033[36;1mTask computed: {task}, result: {task.output}\033[0m")
+        async for subtask in executor.submit(worker, [SubTask(data=frame) for frame in frames]):
+            print(f"\033[36;1mSubtask computed: {subtask}, result: {subtask.output}\033[0m")
 
 
 enable_default_logger()
 loop = asyncio.get_event_loop()
 task = loop.create_task(main(subnet_tag="devnet-alpha.2"))
 try:
-    asyncio.get_event_loop().run_until_complete(task)
+    loop.run_until_complete(task)
 except (Exception, KeyboardInterrupt) as e:
     print(e)
     task.cancel()
-    asyncio.get_event_loop().run_until_complete(task)
+    loop.run_until_complete(task)
 ```

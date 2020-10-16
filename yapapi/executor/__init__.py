@@ -28,7 +28,7 @@ from typing_extensions import Final, AsyncGenerator
 from .ctx import WorkContext, CommandContainer, Work
 from .events import Event
 from . import events
-from .task import Task, TaskStatus
+from .subtask import SubTask, SubTaskStatus
 from .utils import AsyncWrapper
 from ..package import Package
 from ..props import Activity, Identification, IdentificationKeys
@@ -64,8 +64,8 @@ class _BufferedProposal(NamedTuple):
     proposal: rest.market.OfferProposal
 
 
-D = TypeVar("D")  # Type var for task data
-R = TypeVar("R")  # Type var for task result
+D = TypeVar("D")  # Type var for subtask data
+R = TypeVar("R")  # Type var for subtask result
 
 
 class Executor(AsyncContextManager):
@@ -89,7 +89,7 @@ class Executor(AsyncContextManager):
     ):
         """Create a new executor.
 
-        :param package: a package common for all tasks; vm.repo() function may be
+        :param package: a package common for all subtasks; vm.repo() function may be
                         used to return package from a repository
         :param max_workers: maximum number of workers doing the computation
         :param timeout: timeout for the whole computation
@@ -123,14 +123,14 @@ class Executor(AsyncContextManager):
 
     async def submit(
         self,
-        worker: Callable[[WorkContext, AsyncIterator[Task[D, R]]], AsyncGenerator[Work, None]],
-        data: Iterable[Task[D, R]],
-    ) -> AsyncIterator[Task[D, R]]:
+        worker: Callable[[WorkContext, AsyncIterator[SubTask[D, R]]], AsyncGenerator[Work, None]],
+        data: Iterable[SubTask[D, R]],
+    ) -> AsyncIterator[SubTask[D, R]]:
         """Submit a computation to be executed on providers.
 
-        :param worker: a callable that takes a WorkContext object and a list o tasks,
+        :param worker: a callable that takes a WorkContext object and a list o subtasks,
                        adds commands to the context object and yields committed commands
-        :param data: an iterator of Task objects to be computed on providers
+        :param data: an iterator of SubTask objects to be computed on providers
         :return: yields computation progress events
         """
         import asyncio
@@ -167,19 +167,19 @@ class Executor(AsyncContextManager):
         activity_api: rest.Activity = self._activity_api
         strategy = self._strategy
 
-        done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
+        done_queue: asyncio.Queue[SubTask[D, R]] = asyncio.Queue()
 
-        def on_task_done(task: Task[D, R], status: TaskStatus) -> None:
+        def on_subtask_done(subtask: SubTask[D, R], status: SubTaskStatus) -> None:
             """Callback run when `task` is accepted or rejected."""
-            if status == TaskStatus.ACCEPTED:
-                done_queue.put_nowait(task)
+            if status == SubTaskStatus.ACCEPTED:
+                done_queue.put_nowait(subtask)
 
-        def input_tasks() -> Iterable[Task[D, R]]:
-            for task in data:
-                task._add_callback(on_task_done)
-                yield task
+        def input_subtasks() -> Iterable[SubTask[D, R]]:
+            for subtask in data:
+                subtask._add_callback(on_subtask_done)
+                yield subtask
 
-        work_queue = SmartQueue(input_tasks())
+        work_queue = SmartQueue(input_subtasks())
 
         workers: Set[asyncio.Task[None]] = set()
         last_wid = 0
@@ -295,27 +295,27 @@ class Executor(AsyncContextManager):
                 with work_queue.new_consumer() as consumer:
                     command_generator = worker(
                         work_context,
-                        (Task.for_handle(handle, work_queue, emit) async for handle in consumer),
+                        (SubTask.for_handle(handle, work_queue, emit) async for handle in consumer),
                     )
                     async for batch in command_generator:
                         try:
-                            current_worker_task = consumer.last_item
-                            if current_worker_task:
+                            current_subtask = consumer.last_item
+                            if current_subtask:
                                 emit(
-                                    events.TaskStarted(
+                                    events.SubTaskStarted(
                                         agr_id=agreement.id,
-                                        task_id=current_worker_task.id,
-                                        task_data=current_worker_task.data,
+                                        subtask_id=current_subtask.id,
+                                        data=current_subtask.data,
                                     )
                                 )
-                            task_id = current_worker_task.id if current_worker_task else None
+                            subtask_id = current_subtask.id if current_subtask else None
                             await batch.prepare()
                             cc = CommandContainer()
                             batch.register(cc)
                             remote = await act.send(cc.commands())
                             emit(
                                 events.ScriptSent(
-                                    agr_id=agreement.id, task_id=task_id, cmds=cc.commands()
+                                    agr_id=agreement.id, subtask_id=subtask_id, cmds=cc.commands()
                                 )
                             )
 
@@ -325,7 +325,7 @@ class Executor(AsyncContextManager):
                                         events.CommandExecuted(
                                             success=True,
                                             agr_id=agreement.id,
-                                            task_id=task_id,
+                                            subtask_id=subtask_id,
                                             command=cc.commands()[step.idx],
                                             message=step.message,
                                             cmd_idx=step.idx,
@@ -338,7 +338,7 @@ class Executor(AsyncContextManager):
                                     events.CommandExecuted(
                                         success=False,
                                         agr_id=agreement.id,
-                                        task_id=task_id,
+                                        subtask_id=subtask_id,
                                         command=cc.commands()[cmd_idx],
                                         message=cmd_msg,
                                         cmd_idx=cmd_idx,
@@ -346,9 +346,9 @@ class Executor(AsyncContextManager):
                                 )
                                 raise
 
-                            emit(events.GettingResults(agr_id=agreement.id, task_id=task_id))
+                            emit(events.GettingResults(agr_id=agreement.id, subtask_id=subtask_id))
                             await batch.post()
-                            emit(events.ScriptFinished(agr_id=agreement.id, task_id=task_id))
+                            emit(events.ScriptFinished(agr_id=agreement.id, subtask_id=subtask_id))
                             await accept_payment_for_agreement(agreement.id, partial=True)
                         except Exception:
                             try:
@@ -385,7 +385,6 @@ class Executor(AsyncContextManager):
                         emit(events.AgreementConfirmed(agr_id=agreement.id))
                         new_task = loop.create_task(start_worker(agreement))
                         workers.add(new_task)
-                        # task.add_done_callback(on_worker_stop)
                     except Exception as e:
                         if new_task:
                             new_task.cancel()

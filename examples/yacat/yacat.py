@@ -4,7 +4,7 @@ from datetime import timedelta
 import pathlib
 import sys
 
-from yapapi import Executor, Task, WorkContext
+from yapapi import Executor, SubTask, WorkContext
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.package import vm
 
@@ -48,21 +48,21 @@ async def main(args):
         min_storage_gib=2.0,
     )
 
-    async def worker_check_keyspace(ctx: WorkContext, tasks):
-        async for task in tasks:
+    async def worker_check_keyspace(ctx: WorkContext, subtasks):
+        async for subtask in subtasks:
             keyspace_sh_filename = "keyspace.sh"
             ctx.send_file(keyspace_sh_filename, "/golem/work/keyspace.sh")
             ctx.run("/bin/sh", "/golem/work/keyspace.sh")
             output_file = "keyspace.txt"
             ctx.download_file("/golem/work/keyspace.txt", output_file)
             yield ctx.commit()
-            task.accept_task()
+            subtask.accept_result()
 
-    async def worker_find_password(ctx: WorkContext, tasks):
+    async def worker_find_password(ctx: WorkContext, subtasks):
         ctx.send_file("in.hash", "/golem/work/in.hash")
 
-        async for task in tasks:
-            skip = task.data
+        async for subtask in subtasks:
+            skip = subtask.data
             limit = skip + step
 
             # Commands to be run on the provider
@@ -75,7 +75,7 @@ async def main(args):
             output_file = f"hashcat_{skip}.potfile"
             ctx.download_file(f"/golem/work/hashcat.potfile", output_file)
             yield ctx.commit()
-            task.accept_task(result=output_file)
+            subtask.accept_result(result=output_file)
 
     # beginning of the main flow
 
@@ -95,15 +95,15 @@ async def main(args):
         event_emitter=log_summary(log_event_repr),
     ) as executor:
 
-        # This is not a typical use of executor.submit as there is only one task, with no data:
-        async for task in executor.submit(worker_check_keyspace, [Task(data=None)]):
+        # This is not a typical use of executor.submit as there is only one subtask, with no data:
+        async for subtask in executor.submit(worker_check_keyspace, [SubTask(data=None)]):
             pass
 
         keyspace = read_keyspace()
 
         print(
             f"{utils.TEXT_COLOR_CYAN}"
-            f"Task computed: keyspace size count. The keyspace size is {keyspace}"
+            f"Subtask computed: keyspace size count. The keyspace size is {keyspace}"
             f"{utils.TEXT_COLOR_DEFAULT}"
         )
 
@@ -111,12 +111,12 @@ async def main(args):
 
         ranges = range(0, keyspace, step)
 
-        async for task in executor.submit(
-            worker_find_password, [Task(data=range) for range in ranges]
+        async for subtask in executor.submit(
+            worker_find_password, [SubTask(data=range) for range in ranges]
         ):
             print(
                 f"{utils.TEXT_COLOR_CYAN}"
-                f"Task computed: {task}, result: {task.output}"
+                f"Subtask computed: {subtask}, result: {subtask.output}"
                 f"{utils.TEXT_COLOR_DEFAULT}"
             )
 

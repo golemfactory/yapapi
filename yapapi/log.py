@@ -105,13 +105,13 @@ event_type_to_string = {
     events.WorkerStarted: "Worker started for agreement",
     events.ActivityCreated: "Activity created on provider",
     events.ActivityCreateFailed: "Failed to create activity",
-    events.TaskStarted: "Task started",
+    events.SubTaskStarted: "Subtask started",
     events.ScriptSent: "Script sent to provider",
     events.CommandExecuted: "Script command executed",
     events.GettingResults: "Getting script results",
     events.ScriptFinished: "Script finished",
-    events.TaskAccepted: "Task accepted",  # by who?
-    events.TaskRejected: "Task rejected",  # by who?
+    events.SubTaskAccepted: "Subtask accepted",  # by who?
+    events.SubTaskRejected: "Subtask rejected",  # by who?
     events.WorkerFinished: "Worker finished",
     events.DownloadStarted: "Download started",
     events.DownloadFinished: "Download finished",
@@ -212,10 +212,10 @@ class SummaryLogger:
     confirmed_agreements: Set[str]
 
     # Maps task id to task data
-    task_data: Dict[str, Any]
+    subtask_data: Dict[str, Any]
 
     # Maps a provider name to the list of task ids computed by the provider
-    provider_tasks: Dict[str, List[str]]
+    provider_subtasks: Dict[str, List[str]]
 
     # Map a provider name to the sum of amounts in this provider's invoices
     provider_cost: Dict[str, float]
@@ -244,8 +244,8 @@ class SummaryLogger:
         self.confirmed_proposals = set()
         self.agreement_provider_name = {}
         self.confirmed_agreements = set()
-        self.task_data = {}
-        self.provider_tasks = defaultdict(list)
+        self.subtask_data = {}
+        self.provider_subtasks = defaultdict(list)
         self.provider_cost = {}
         self.provider_failures = Counter()
         self.finished = False
@@ -257,7 +257,7 @@ class SummaryLogger:
         if not self.finished:
             return
 
-        provider_names = set(self.provider_tasks.keys())
+        provider_names = set(self.provider_subtasks.keys())
         if set(self.provider_cost).issuperset(provider_names):
             total_cost = sum(self.provider_cost.values(), 0.0)
             self.logger.info("Total cost: %s", total_cost)
@@ -327,15 +327,15 @@ class SummaryLogger:
             )
             self.confirmed_agreements.add(event.agr_id)
 
-        elif isinstance(event, events.TaskStarted):
-            self.task_data[event.task_id] = event.task_data
+        elif isinstance(event, events.SubTaskStarted):
+            self.subtask_data[event.subtask_id] = event.data
 
         elif isinstance(event, events.ScriptSent):
             provider_name = self.agreement_provider_name[event.agr_id]
             self.logger.info(
-                "Task sent to provider '%s', task data: %s",
+                "Subtask sent to provider '%s', subtask data: %s",
                 provider_name,
-                self.task_data[event.task_id] if event.task_id else "<initialization>",
+                self.subtask_data[event.subtask_id] if event.subtask_id else "<initialization>",
             )
 
         elif isinstance(event, events.CommandExecuted):
@@ -352,12 +352,12 @@ class SummaryLogger:
         elif isinstance(event, events.ScriptFinished):
             provider_name = self.agreement_provider_name[event.agr_id]
             self.logger.info(
-                "Task computed by provider '%s', task data: %s",
+                "Subtask computed by provider '%s', subtask data: %s",
                 provider_name,
-                self.task_data[event.task_id] if event.task_id else "<initialization>",
+                self.subtask_data[event.subtask_id] if event.subtask_id else "<initialization>",
             )
-            if event.task_id:
-                self.provider_tasks[provider_name].append(event.task_id)
+            if event.subtask_id:
+                self.provider_subtasks[provider_name].append(event.subtask_id)
 
         elif isinstance(event, events.InvoiceReceived):
             provider_name = self.agreement_provider_name[event.agr_id]
@@ -386,11 +386,11 @@ class SummaryLogger:
                 len(self.confirmed_agreements),
                 len(agreement_providers),
             )
-            for provider_name, tasks in self.provider_tasks.items():
-                self.logger.info("Provider '%s' computed %s tasks", provider_name, len(tasks))
+            for provider_name, tasks in self.provider_subtasks.items():
+                self.logger.info("Provider '%s' computed %s subtasks", provider_name, len(tasks))
             for provider_name in set(self.agreement_provider_name.values()):
-                if provider_name not in self.provider_tasks:
-                    self.logger.info("Provider '%s' did not compute any tasks", provider_name)
+                if provider_name not in self.provider_subtasks:
+                    self.logger.info("Provider '%s' did not compute any subtasks", provider_name)
             for provider_name, count in self.provider_failures.items():
                 self.logger.info(
                     "Activity failed %s time(s) on provider '%s'", count, provider_name

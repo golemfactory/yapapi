@@ -3,7 +3,7 @@ import asyncio
 import pathlib
 import sys
 
-from yapapi import Executor, Task, __version__ as yapapi_version, WorkContext
+from yapapi import Executor, SubTask, __version__ as yapapi_version, WorkContext
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.package import vm
 from datetime import timedelta
@@ -23,11 +23,11 @@ async def main(subnet_tag: str):
         min_storage_gib=2.0,
     )
 
-    async def worker(ctx: WorkContext, tasks):
+    async def worker(ctx: WorkContext, subtasks):
         scene_path = str(script_dir / "cubes.blend")
         ctx.send_file(scene_path, "/golem/resource/scene.blend")
-        async for task in tasks:
-            frame = task.data
+        async for subtask in subtasks:
+            frame = subtask.data
             crops = [{"outfilebasename": "out", "borders_x": [0.0, 1.0], "borders_y": [0.0, 1.0]}]
             ctx.send_json(
                 "/golem/work/params.json",
@@ -50,7 +50,7 @@ async def main(subnet_tag: str):
             yield ctx.commit()
             # TODO: Check if job results are valid
             # and reject by: task.reject_task(reason = 'invalid file')
-            task.accept_task(result=output_file)
+            subtask.accept_result(result=output_file)
 
         ctx.log("no more frames to render")
 
@@ -72,10 +72,10 @@ async def main(subnet_tag: str):
         event_emitter=log_summary(log_event_repr),
     ) as executor:
 
-        async for task in executor.submit(worker, [Task(data=frame) for frame in frames]):
+        async for subtask in executor.submit(worker, [SubTask(data=frame) for frame in frames]):
             print(
                 f"{utils.TEXT_COLOR_CYAN}"
-                f"Task computed: {task}, result: {task.output}"
+                f"Subtask computed: {subtask}, result: {subtask.output}"
                 f"{utils.TEXT_COLOR_DEFAULT}"
             )
 
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     sys.stderr.write(f"Using subnet: {utils.TEXT_COLOR_YELLOW}{subnet}{utils.TEXT_COLOR_DEFAULT}\n")
     task = loop.create_task(main(subnet_tag=args.subnet_tag))
     try:
-        asyncio.get_event_loop().run_until_complete(task)
+        loop.run_until_complete(task)
     except (Exception, KeyboardInterrupt) as e:
         print(e)
         task.cancel()

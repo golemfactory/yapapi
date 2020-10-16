@@ -8,19 +8,19 @@ from . import events
 from ._smartq import SmartQueue, Handle
 
 
-class TaskStatus(Enum):
+class SubTaskStatus(Enum):
     WAITING = auto()
     RUNNING = auto()
     ACCEPTED = auto()
     REJECTED = auto()
 
 
-TaskData = TypeVar("TaskData")
-TaskResult = TypeVar("TaskResult")
-TaskEvents = Union[events.TaskAccepted, events.TaskRejected]
+Data = TypeVar("Data")
+Result = TypeVar("Result")
+TaskEvents = Union[events.SubTaskAccepted, events.SubTaskRejected]
 
 
-class Task(Generic[TaskData, TaskResult]):
+class SubTask(Generic[Data, Result]):
     """One computation unit.
 
     Represents one computation unit that will be run on the provider
@@ -31,44 +31,44 @@ class Task(Generic[TaskData, TaskResult]):
 
     def __init__(
         self,
-        data: TaskData,
+        data: Data,
         *,
         expires: Optional[datetime] = None,
         timeout: Optional[timedelta] = None,
     ):
-        """Create a new Task object.
+        """Create a new SubTask object.
 
         :param data: contains information needed to prepare command list for the provider
         :param expires: expiration datetime
         :param timeout: timeout from now; overrides expires parameter if provided
         """
-        self.id: str = str(next(Task.ids))
+        self.id: str = str(next(SubTask.ids))
         self._started = datetime.now()
         self._expires: Optional[datetime]
         self._emit: Optional[Callable[[TaskEvents], None]] = None
-        self._callbacks: Set[Callable[["Task[TaskData, TaskResult]", TaskStatus], None]] = set()
+        self._callbacks: Set[Callable[["SubTask[Data, Result]", SubTaskStatus], None]] = set()
         self._handle: Optional[
-            Tuple[Handle["Task[TaskData, TaskResult]"], SmartQueue["Task[TaskData, TaskResult]"]]
+            Tuple[Handle["SubTask[Data, Result]"], SmartQueue["SubTask[Data, Result]"]]
         ] = None
         if timeout:
             self._expires = self._started + timeout
         else:
             self._expires = expires
 
-        self._result: Optional[TaskResult] = None
+        self._result: Optional[Result] = None
         self._data = data
-        self._status: TaskStatus = TaskStatus.WAITING
+        self._status: SubTaskStatus = SubTaskStatus.WAITING
 
     def _add_callback(
-        self, callback: Callable[["Task[TaskData, TaskResult]", TaskStatus], None]
+        self, callback: Callable[["SubTask[Data, Result]", SubTaskStatus], None]
     ) -> None:
         self._callbacks.add(callback)
 
     def __repr__(self) -> str:
-        return f"Task(id={self.id}, data={self._data})"
+        return f"SubTask(id={self.id}, data={self._data})"
 
     def _start(self, emitter: Callable[[TaskEvents], None]) -> None:
-        self._status = TaskStatus.RUNNING
+        self._status = SubTaskStatus.RUNNING
         self._emit = emitter
 
     def _stop(self, retry: bool = False):
@@ -82,58 +82,58 @@ class Task(Generic[TaskData, TaskResult]):
 
     @staticmethod
     def for_handle(
-        handle: Handle["Task[TaskData, TaskResult]"],
-        queue: SmartQueue["Task[TaskData, TaskResult]"],
+        handle: Handle["SubTask[Data, Result]"],
+        queue: SmartQueue["SubTask[Data, Result]"],
         emitter: Callable[[events.Event], None],
-    ) -> "Task[TaskData, TaskResult]":
-        task = handle.data
-        task._handle = (handle, queue)
-        task._start(emitter)
-        return task
+    ) -> "SubTask[Data, Result]":
+        subtask = handle.data
+        subtask._handle = (handle, queue)
+        subtask._start(emitter)
+        return subtask
 
     @property
-    def data(self) -> TaskData:
+    def data(self) -> Data:
         return self._data
 
     @property
-    def output(self) -> Optional[TaskResult]:
+    def output(self) -> Optional[Result]:
         return self._result
 
     @property
     def expires(self) -> Optional[datetime]:
         return self._expires
 
-    def accept_task(self, result: Optional[TaskResult] = None) -> None:
-        """Accept task that was completed.
+    def accept_result(self, result: Optional[Result] = None) -> None:
+        """Accept subtask that was completed.
 
-        Must be called when the results of a task are correct.
+        Must be called when the results of the subtask are correct.
 
         :param result: computation result (optional)
         :return: None
         """
         if self._emit:
-            self._emit(events.TaskAccepted(task_id=self.id, result=result))
-        assert self._status == TaskStatus.RUNNING, "Accepted task not running"
-        self._status = TaskStatus.ACCEPTED
+            self._emit(events.SubTaskAccepted(subtask_id=self.id, result=result))
+        assert self._status == SubTaskStatus.RUNNING, "Accepted subtask not running"
+        self._status = SubTaskStatus.ACCEPTED
         self._result = result
         self._stop()
         for cb in self._callbacks:
-            cb(self, TaskStatus.ACCEPTED)
+            cb(self, SubTaskStatus.ACCEPTED)
 
-    def reject_task(self, reason: Optional[str] = None, retry: bool = False) -> None:
-        """Reject task.
+    def reject_result(self, reason: Optional[str] = None, retry: bool = False) -> None:
+        """Reject subtask.
 
-        Must be called when the results of the task
+        Must be called when the results of the subtask
         are not correct and it should be retried.
 
-        :param reason: task rejection description (optional)
+        :param reason: subtask rejection description (optional)
         :return: None
         """
         if self._emit:
-            self._emit(events.TaskRejected(task_id=self.id, reason=reason))
-        assert self._status == TaskStatus.RUNNING, "Rejected task not running"
-        self._status = TaskStatus.REJECTED
+            self._emit(events.SubTaskRejected(subtask_id=self.id, reason=reason))
+        assert self._status == SubTaskStatus.RUNNING, "Rejected task not running"
+        self._status = SubTaskStatus.REJECTED
         self._stop(retry)
 
         for cb in self._callbacks:
-            cb(self, TaskStatus.REJECTED)
+            cb(self, SubTaskStatus.REJECTED)
