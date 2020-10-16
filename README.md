@@ -134,7 +134,7 @@ async def main(subnet_tag="testnet"):
     frames: range = range(0, 60, 10)
     init_overhead: timedelta = timedelta(minutes=3)
 
-    # By passing `event_emitter=log_summary()` we enable summary logging.
+    # By passing `event_consumer=log_summary()` we enable summary logging.
     # See the documentation of the `yapapi.log` module on how to set
     # the level of detail and format of the logged information.
     async with Engine(
@@ -143,7 +143,7 @@ async def main(subnet_tag="testnet"):
         budget=10.0,
         timeout=init_overhead + timedelta(minutes=len(frames) * 2),
         subnet_tag=subnet_tag,
-        event_emitter=log_summary(),
+        event_consumer=log_summary(),
     ) as engine:
 
         async for task in engine.map(worker, [Task(data=frame) for frame in frames]):

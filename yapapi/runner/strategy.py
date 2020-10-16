@@ -49,12 +49,12 @@ class DummyMS(MarketStrategy, object):
     async def decorate_demand(self, demand: DemandBuilder) -> None:
         """Ensure that the offer uses `PriceModel.LINEAR` price model."""
         demand.ensure(f"({com.PRICE_MODEL}={com.PriceModel.LINEAR.value})")
-        self._activity = Activity.from_props(demand.props)
+        self._activity = Activity.from_properties(demand.properties)
 
     async def score_offer(self, offer: rest.market.OfferProposal) -> float:
         """Score `offer`. Returns either `SCORE_REJECTED` or `SCORE_NEUTRAL`."""
 
-        linear: com.ComLinear = com.ComLinear.from_props(offer.props)
+        linear: com.ComLinear = com.ComLinear.from_properties(offer.props)
 
         if linear.scheme != com.BillingScheme.PAYU:
             return SCORE_REJECTED
@@ -84,7 +84,7 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
     async def score_offer(self, offer: rest.market.OfferProposal) -> float:
         """Score `offer` according to cost for expected computation time."""
 
-        linear: com.ComLinear = com.ComLinear.from_props(offer.props)
+        linear: com.ComLinear = com.ComLinear.from_properties(offer.props)
 
         if linear.scheme != com.BillingScheme.PAYU:
             return SCORE_REJECTED

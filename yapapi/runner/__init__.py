@@ -30,7 +30,7 @@ from .events import Event
 from . import events
 from .task import Task, TaskStatus
 from .utils import AsyncWrapper
-from ..props import Activity, Identification, IdentificationKeys
+from ..props import Activity, NodeInfo, NodeInfoKeys
 from ..props.base import InvalidPropertiesError
 from ..props.builder import DemandBuilder
 from .. import rest
@@ -74,7 +74,6 @@ class Engine(AsyncContextManager):
     Used to run tasks using the specified application package within providers' execution units.
     """
 
-    # TODO 0.4+ rename `event_emitter` to `event_consumer`
     def __init__(
         self,
         *,
@@ -84,7 +83,7 @@ class Engine(AsyncContextManager):
         budget: Union[float, Decimal],
         strategy: MarketStrategy = DummyMS(),
         subnet_tag: Optional[str] = None,
-        event_emitter: Optional[Callable[[Event], None]] = None,
+        event_consumer: Optional[Callable[[Event], None]] = None,
     ):
         """Create a new requestor engine.
 
@@ -96,7 +95,7 @@ class Engine(AsyncContextManager):
         :param strategy: market strategy used to select providers from the market
                          (e.g. LeastExpensiveLinearPayuMS or DummyMS)
         :param subnet_tag: use only providers in the subnet with the subnet_tag name
-        :param event_emitter: a callable that emits events related to the
+        :param event_consumer: a callable that processes events related to the
                               computation; by default it is a function that logs all events
         """
 
@@ -110,15 +109,15 @@ class Engine(AsyncContextManager):
         self._budget_amount = Decimal(budget)
         self._budget_allocation: Optional[rest.payment.Allocation] = None
 
-        if not event_emitter:
+        if not event_consumer:
             # Use local import to avoid cyclic imports when yapapi.log
             # is imported by client code
             from ..log import log_event
 
-            event_emitter = log_event
+            event_consumer = log_event
         # Add buffering to the provided event emitter to make sure
         # that emitting events will not block
-        self._wrapped_emitter = AsyncWrapper(event_emitter)
+        self._wrapped_emitter = AsyncWrapper(event_consumer)
 
     async def map(
         self,
@@ -158,9 +157,9 @@ class Engine(AsyncContextManager):
         # Building offer
         builder = DemandBuilder()
         builder.add(Activity(expiration=self._expires))
-        builder.add(Identification(subnet_tag=self._subnet))
+        builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
-            builder.ensure(f"({IdentificationKeys.subnet_tag}={self._subnet})")
+            builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
         await self._package.decorate_demand(builder)
         await self._strategy.decorate_demand(builder)
 
@@ -258,7 +257,7 @@ class Engine(AsyncContextManager):
                         emit(events.ProposalRejected(prop_id=proposal.id))
                     elif not proposal.is_draft:
                         try:
-                            await proposal.respond(builder.props, builder.cons)
+                            await proposal.respond(builder.properties, builder.constraints)
                             emit(events.ProposalResponded(prop_id=proposal.id))
                         except Exception as ex:
                             emit(events.ProposalFailed(prop_id=proposal.id, reason=str(ex)))
@@ -378,8 +377,8 @@ class Engine(AsyncContextManager):
                     del offer_buffer[provider_id]
                     new_task = None
                     try:
-                        agreement = await b.proposal.agreement()
-                        provider = (await agreement.details()).view_prov(Identification)
+                        agreement = await b.proposal.create_agreement()
+                        provider = (await agreement.details()).provider_view.extract(NodeInfo)
                         emit(events.AgreementCreated(agr_id=agreement.id, provider_id=provider))
                         if not await agreement.confirm():
                             emit(events.AgreementRejected(agr_id=agreement.id))

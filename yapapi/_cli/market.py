@@ -97,4 +97,4 @@ class Create:
         demand = DemandBuilder()
         demand.add(Activity(expiration=expires))
         await pacakge.decorate_demand(demand)
-        console.print(render_demand(demand.props, demand.cons))
+        console.print(render_demand(demand.properties, demand.constraints))

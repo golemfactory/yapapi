@@ -61,7 +61,7 @@ async def main(subnet_tag: str):
     # worst-case time overhead for initialization, e.g. negotiation, file transfer etc.
     init_overhead: timedelta = timedelta(minutes=3)
 
-    # By passing `event_emitter=log_summary()` we enable summary logging.
+    # By passing `event_consumer=log_summary()` we enable summary logging.
     # See the documentation of the `yapapi.log` module on how to set
     # the level of detail and format of the logged information.
     async with Engine(
@@ -70,7 +70,7 @@ async def main(subnet_tag: str):
         budget=10.0,
         timeout=init_overhead + timedelta(minutes=len(frames) * 2),
         subnet_tag=subnet_tag,
-        event_emitter=log_summary(log_event_repr),
+        event_consumer=log_summary(log_event_repr),
     ) as engine:
 
         async for task in engine.map(worker, [Task(data=frame) for frame in frames]):

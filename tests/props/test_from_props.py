@@ -1,4 +1,4 @@
-"""Unit tests for `yapapi.props.base.Model.from_props` method"""
+"""Unit tests for `yapapi.properties.base.Model.from_properties` method"""
 
 import pytest
 
@@ -6,7 +6,7 @@ from yapapi.props import com, InvalidPropertiesError
 
 
 @pytest.mark.parametrize(
-    "props, error_msg",
+    "properties, error_msg",
     [
         (
             {
@@ -84,10 +84,10 @@ from yapapi.props import com, InvalidPropertiesError
     ],
 )
 def test_from_props(props, error_msg):
-    """Check whether `from_props(props)` raises errors for invalid `props`."""
+    """Check whether `from_properties(properties)` raises errors for invalid `properties`."""
 
     try:
-        com.ComLinear.from_props(props)
+        com.ComLinear.from_properties(props)
     except InvalidPropertiesError as exc:
         if error_msg is not None:
             assert error_msg in str(exc)

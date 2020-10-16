@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from types import TracebackType
 from typing import Any, Optional, Type, Tuple
 
-from yapapi.props import Identification
+from yapapi.props import NodeInfo
 
 ExcInfo = Tuple[Type[BaseException], BaseException, Optional[TracebackType]]
 
@@ -95,7 +95,7 @@ class AgreementEvent(Event):
 
 @dataclass
 class AgreementCreated(AgreementEvent):
-    provider_id: Identification
+    provider_id: NodeInfo
 
 
 @dataclass

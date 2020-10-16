@@ -6,6 +6,7 @@ from typing_extensions import Awaitable, AsyncContextManager
 
 from ..props import Model
 from ya_market import ApiClient, RequestorApi, models  # type: ignore
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 _ModelType = TypeVar("_ModelType", bound=Model)
@@ -14,13 +15,29 @@ _ModelType = TypeVar("_ModelType", bound=Model)
 class AgreementDetails(object):
     raw_details: models.Agreement
 
+    @dataclass
+    class _View:
+        """A certain fragment of an agreement's properties."""
+        properties: dict
+
+        def extract(self, m: Type[_ModelType]) -> _ModelType:
+            """Extract properties for the given model from this view's properties."""
+            return m.from_properties(self.properties)
+
+    @property
+    def provider_view(self) -> _View:
+        """Get the view of provider's properties in this Agreement."""
+        offer: models.Offer = self.raw_details.offer
+        return self._View(properties=offer.properties)
+
+    @property
+    def requestor_view(self) -> _View:
+        """Get the view of requestor's properties in this Agreement."""
+        demand: models.Demand = self.raw_details.demand
+        return self._View(properties=demand.properties)
+
     def __init__(self, *, _ref: models.Agreement):
         self.raw_details = _ref
-
-    # TODO 0.4+ update the name to something more readable
-    def view_prov(self, c: Type[_ModelType]) -> _ModelType:
-        offer: models.Offer = self.raw_details.offer
-        return c.from_props(offer.properties)
 
 
 class Agreement(object):
@@ -86,8 +103,7 @@ class OfferProposal(object):
         return new_proposal
 
     # TODO: This timeout is for negotiation ?
-    # TODO 0.4+ the function name should be a verb, e.g. `create_agreement`
-    async def agreement(self, timeout=timedelta(hours=1)) -> Agreement:
+    async def create_agreement(self, timeout=timedelta(hours=1)) -> Agreement:
         """Create an Agreement based on this Proposal."""
         proposal = models.AgreementProposal(
             proposal_id=self.id, valid_to=datetime.now(timezone.utc) + timeout,
