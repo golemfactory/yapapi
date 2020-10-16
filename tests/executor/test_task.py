@@ -1,4 +1,4 @@
-from yapapi.runner import Task
+from yapapi.executor import Task
 
 
 def test_task():
