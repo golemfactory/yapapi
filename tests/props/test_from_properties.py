@@ -83,11 +83,11 @@ from yapapi.props import com, InvalidPropertiesError
         ),
     ],
 )
-def test_from_props(props, error_msg):
+def test_from_props(properties, error_msg):
     """Check whether `from_properties(properties)` raises errors for invalid `properties`."""
 
     try:
-        com.ComLinear.from_properties(props)
+        com.ComLinear.from_properties(properties)
     except InvalidPropertiesError as exc:
         if error_msg is not None:
             assert error_msg in str(exc)

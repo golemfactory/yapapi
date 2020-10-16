@@ -18,6 +18,7 @@ class AgreementDetails(object):
     @dataclass
     class _View:
         """A certain fragment of an agreement's properties."""
+
         properties: dict
 
         def extract(self, m: Type[_ModelType]) -> _ModelType:
