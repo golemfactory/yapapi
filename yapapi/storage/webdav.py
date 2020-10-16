@@ -32,7 +32,7 @@ def _parse_prop_resp(xml: str) -> List[DavResource]:
             prop = prop.find("{DAV:}prop")
 
         if prop is None or href is None:
-            raise RuntimeError("missing properties in xml response")
+            raise RuntimeError("missing props in xml response")
         length = prop.findtext("{DAV:}getcontentlength")
         resource_type = prop.find("{DAV:}resourcetype")
         last_modified = prop.findtext("{DAV:}getlastmodified")
