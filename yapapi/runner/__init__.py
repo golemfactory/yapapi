@@ -30,6 +30,7 @@ from .events import Event
 from . import events
 from .task import Task, TaskStatus
 from .utils import AsyncWrapper
+from ..package import Package
 from ..props import Activity, Identification, IdentificationKeys
 from ..props.base import InvalidPropertiesError
 from ..props.builder import DemandBuilder
@@ -78,7 +79,7 @@ class Executor(AsyncContextManager):
     def __init__(
         self,
         *,
-        package: "Package",
+        package: Package,
         max_workers: int = 5,
         timeout: timedelta = timedelta(minutes=5),
         budget: Union[float, Decimal],
@@ -504,15 +505,3 @@ class Executor(AsyncContextManager):
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self._stack.aclose()
-
-
-class Package(abc.ABC):
-    """Information on task package to be used for running tasks on providers."""
-
-    @abc.abstractmethod
-    async def resolve_url(self) -> str:
-        """Return package URL."""
-
-    @abc.abstractmethod
-    async def decorate_demand(self, demand: DemandBuilder):
-        """Add package information to a Demand."""

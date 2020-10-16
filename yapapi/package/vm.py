@@ -1,11 +1,10 @@
-from . import Package
+import aiohttp
 from dataclasses import dataclass
 from typing_extensions import Final
-from ..props import inf
-import aiohttp
 
-from ..props.builder import DemandBuilder
-from ..props.inf import VmRequest, VmPackageFormat
+from yapapi.package import Package
+from yapapi.props.builder import DemandBuilder
+from yapapi.props.inf import InfVmKeys, RuntimeType, VmRequest, VmPackageFormat
 
 _DEFAULT_REPO_URL: Final = "http://3.249.139.167:8000"
 
@@ -19,12 +18,12 @@ class _VmConstrains:
     def __str__(self):
         rules = "\n\t".join(
             [
-                f"({inf.InfVmKeys.mem}>={self.min_mem_gib})",
-                f"({inf.InfVmKeys.storage}>={self.min_storage_gib})",
+                f"({InfVmKeys.mem}>={self.min_mem_gib})",
+                f"({InfVmKeys.storage}>={self.min_storage_gib})",
                 # TODO: provider should report cores.
                 #
                 #  f"({inf.InfVmKeys.cores}>={self.cores})",
-                f"({inf.InfVmKeys.runtime}={inf.RuntimeType.VM.value})",
+                f"({InfVmKeys.runtime}={RuntimeType.VM.value})",
             ]
         )
         return f"(&{rules})"

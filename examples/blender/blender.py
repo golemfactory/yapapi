@@ -5,7 +5,7 @@ import sys
 
 from yapapi import Executor, Task, __version__ as yapapi_version, WorkContext
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
-from yapapi.runner import vm
+from yapapi.package import vm
 from datetime import timedelta
 
 # For importing `utils.py`:

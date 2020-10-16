@@ -6,8 +6,7 @@ import sys
 
 from yapapi import Executor, Task, WorkContext
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
-from yapapi.runner import vm
-
+from yapapi.package import vm
 
 # For importing `utils.py`:
 script_dir = pathlib.Path(__file__).resolve().parent
