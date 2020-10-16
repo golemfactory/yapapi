@@ -21,7 +21,7 @@ from typing_extensions import AsyncIterable
 import asyncio
 import logging
 
-_logger = logging.getLogger("yapapi.runner")
+_logger = logging.getLogger("yapapi.executor")
 Item = TypeVar("Item")
 
 
