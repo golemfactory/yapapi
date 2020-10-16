@@ -6,14 +6,12 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import os
 import sys
-from types import MappingProxyType
 from typing import (
     AsyncContextManager,
     AsyncIterator,
     Callable,
     Dict,
     Iterable,
-    Mapping,
     NamedTuple,
     Optional,
     Set,
@@ -24,7 +22,7 @@ from typing import (
 import traceback
 
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing_extensions import Final, AsyncGenerator
 
 from .ctx import WorkContext, CommandContainer, Work
@@ -32,14 +30,14 @@ from .events import Event
 from . import events
 from .task import Task, TaskStatus
 from .utils import AsyncWrapper
-from ..props import com, Activity, Identification, IdentificationKeys
+from ..props import Activity, Identification, IdentificationKeys
 from ..props.base import InvalidPropertiesError
 from ..props.builder import DemandBuilder
 from .. import rest
 from ..rest.activity import CommandExecutionError
 from ..storage import gftp
 from ._smartq import SmartQueue, Handle
-
+from .strategy import DummyMS, MarketStrategy, SCORE_NEUTRAL
 
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
@@ -50,14 +48,6 @@ else:
 CFG_INVOICE_TIMEOUT: Final[timedelta] = timedelta(minutes=5)
 "Time to receive invoice from provider after tasks ended."
 
-SCORE_NEUTRAL: Final[float] = 0.0
-SCORE_REJECTED: Final[float] = -1.0
-SCORE_TRUSTED: Final[float] = 100.0
-
-CFF_DEFAULT_PRICE_FOR_COUNTER: Final[Mapping[com.Counter, Decimal]] = MappingProxyType(
-    {com.Counter.TIME: Decimal("0.002"), com.Counter.CPU: Decimal("0.002") * 10}
-)
-
 
 @dataclass
 class _EngineConf:
@@ -67,82 +57,7 @@ class _EngineConf:
     traceback: bool = bool(os.getenv("YAPAPI_TRACEBACK", 0))
 
 
-class MarketStrategy(abc.ABC):
-    """Abstract market strategy"""
-
-    async def decorate_demand(self, demand: DemandBuilder) -> None:
-        pass
-
-    async def score_offer(self, offer: rest.market.OfferProposal) -> float:
-        return SCORE_REJECTED
-
-
-@dataclass
-class DummyMS(MarketStrategy, object):
-    max_for_counter: Mapping[com.Counter, Decimal] = CFF_DEFAULT_PRICE_FOR_COUNTER
-    max_fixed: Decimal = Decimal("0.05")
-    _activity: Optional[Activity] = field(init=False, repr=False, default=None)
-
-    async def decorate_demand(self, demand: DemandBuilder) -> None:
-        demand.ensure(f"({com.PRICE_MODEL}={com.PriceModel.LINEAR.value})")
-        self._activity = Activity.from_props(demand.props)
-
-    async def score_offer(self, offer: rest.market.OfferProposal) -> float:
-
-        linear: com.ComLinear = com.ComLinear.from_props(offer.props)
-
-        if linear.scheme != com.BillingScheme.PAYU:
-            return SCORE_REJECTED
-
-        if linear.fixed_price > self.max_fixed:
-            return SCORE_REJECTED
-        for counter, price in linear.price_for.items():
-            if counter not in self.max_for_counter:
-                return SCORE_REJECTED
-            if price > self.max_for_counter[counter]:
-                return SCORE_REJECTED
-
-        return SCORE_NEUTRAL
-
-
-@dataclass
-class LeastExpensiveLinearPayuMS(MarketStrategy, object):
-    def __init__(self, expected_time_secs: int = 60):
-        self._expected_time_secs = expected_time_secs
-
-    async def decorate_demand(self, demand: DemandBuilder) -> None:
-        demand.ensure(f"({com.PRICE_MODEL}={com.PriceModel.LINEAR.value})")
-
-    async def score_offer(self, offer: rest.market.OfferProposal) -> float:
-
-        linear: com.ComLinear = com.ComLinear.from_props(offer.props)
-
-        if linear.scheme != com.BillingScheme.PAYU:
-            return SCORE_REJECTED
-
-        known_time_prices = {com.Counter.TIME, com.Counter.CPU}
-
-        for counter in linear.price_for.keys():
-            if counter not in known_time_prices:
-                return SCORE_REJECTED
-
-        if linear.fixed_price < 0:
-            return SCORE_REJECTED
-        expected_price = linear.fixed_price
-
-        for resource in known_time_prices:
-            if linear.price_for[resource] < 0:
-                return SCORE_REJECTED
-            expected_price += linear.price_for[resource] * self._expected_time_secs
-
-        # The higher the expected price value, the lower the score.
-        # The score is always lower than SCORE_TRUSTED and is always higher than 0.
-        score = SCORE_TRUSTED * 1.0 / (expected_price + 1.01)
-
-        return score
-
-
-class _BufferItem(NamedTuple):
+class _BufferedProposal(NamedTuple):
     ts: datetime
     score: float
     proposal: rest.market.OfferProposal
@@ -249,7 +164,7 @@ class Engine(AsyncContextManager):
         await self._package.decorate_demand(builder)
         await self._strategy.decorate_demand(builder)
 
-        offer_buffer: Dict[str, _BufferItem] = {}
+        offer_buffer: Dict[str, _BufferedProposal] = {}
         market_api = self._market_api
         activity_api: rest.Activity = self._activity_api
         strategy = self._strategy
@@ -349,7 +264,9 @@ class Engine(AsyncContextManager):
                             emit(events.ProposalFailed(prop_id=proposal.id, reason=str(ex)))
                     else:
                         emit(events.ProposalConfirmed(prop_id=proposal.id))
-                        offer_buffer[proposal.issuer] = _BufferItem(datetime.now(), score, proposal)
+                        offer_buffer[proposal.issuer] = _BufferedProposal(
+                            datetime.now(), score, proposal
+                        )
                         proposals_confirmed += 1
 
         # aio_session = await self._stack.enter_async_context(aiohttp.ClientSession())
@@ -589,16 +506,16 @@ class Engine(AsyncContextManager):
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        # self._market_api = None
-        # self._payment_api = None
         await self._stack.aclose()
 
 
 class Package(abc.ABC):
+    """Information on task package to be used for running tasks on providers."""
+
     @abc.abstractmethod
     async def resolve_url(self) -> str:
-        pass
+        """Return package URL."""
 
     @abc.abstractmethod
     async def decorate_demand(self, demand: DemandBuilder):
-        pass
+        """Add package information to a Demand."""
