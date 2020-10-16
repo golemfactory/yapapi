@@ -147,7 +147,7 @@ async def main(subnet_tag="testnet"):
     ) as engine:
 
         async for task in engine.map(worker, [Task(data=frame) for frame in frames]):
-            print(f"\033[36;1mTask computed: {task}, result: {task.output}\033[0m")
+            print(f"Task computed: {task}, result: {task.output}")
 
 
 enable_default_logger()
