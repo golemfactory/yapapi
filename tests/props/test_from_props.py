@@ -1,4 +1,4 @@
-"""Unit tests for `yapapi.properties.base.Model.from_properties` method"""
+"""Unit tests for `yapapi.props.base.Model.from_properties` method"""
 
 import pytest
 
