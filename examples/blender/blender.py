@@ -3,6 +3,7 @@ import asyncio
 import pathlib
 import sys
 
+import yapapi
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.runner import Engine, Task, vm
 from yapapi.runner.ctx import WorkContext
@@ -82,9 +83,6 @@ async def main(subnet_tag: str, stream_output: bool):
 
 
 if __name__ == "__main__":
-    import pathlib
-    import sys
-
     parser = utils.build_parser("Render blender scene")
     parser.add_argument("--stream-output", action="store_true")
     parser.set_defaults(log_file="blender-yapapi.log")
@@ -93,6 +91,9 @@ if __name__ == "__main__":
     enable_default_logger(log_file=args.log_file)
     loop = asyncio.get_event_loop()
     subnet = args.subnet_tag
+    sys.stderr.write(
+        f"yapapi version: {utils.TEXT_COLOR_YELLOW}{yapapi.__version__}{utils.TEXT_COLOR_DEFAULT}\n"
+    )
     sys.stderr.write(f"Using subnet: {utils.TEXT_COLOR_YELLOW}{subnet}{utils.TEXT_COLOR_DEFAULT}\n")
     task = loop.create_task(main(subnet_tag=subnet, stream_output=args.stream_output))
     try:

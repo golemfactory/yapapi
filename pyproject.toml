@@ -4,7 +4,7 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "yapapi"
-version = "0.3.0-alpha.2"
+version = "0.3.0"
 description = "High-level Python API for the New Golem"
 authors = ["Przemysław K. Rekucki <przemyslaw.rekucki@golem.network>"]
 license = "LGPL-3.0-or-later"
@@ -106,7 +106,7 @@ _handbook_gen = "python handbook_gen/handbook_gen.py --overwrite"
 handbook = ['pydoc-markdown', '_handbook_gen']
 
 [[tool.portray.mkdocs.nav]]
-Introduction = "README.md"
+"Introduction to Golem's high-level Python API" = "README.md"
 
 [[tool.portray.mkdocs.nav]]
 "VM Tutorial" = "docs/VM-Tutorial.md"

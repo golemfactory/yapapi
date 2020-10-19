@@ -1,5 +1,7 @@
 """
-Mid level binding for Golem REST API
+Mid-level binding for Golem REST API.
+
+Serves as a more convenient interface between the agent code and the REST API.
 """
 
 from . import activity

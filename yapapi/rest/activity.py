@@ -21,11 +21,19 @@ _log = logging.getLogger("yapapi.rest")
 
 
 class ActivityService(object):
+    """A convenience helper to facilitate the creation of an Activity."""
+
     def __init__(self, api_client: ApiClient):
         self._api = RequestorControlApi(api_client)
         self._state = RequestorStateApi(api_client)
 
     async def new_activity(self, agreement_id: str) -> "Activity":
+        """Create an activity within bounds of the specified agreement.
+
+        :return: the object that represents the Activity
+                 and allows to query and control its state
+        :rtype: Activity
+        """
         try:
             activity_id = await self._api.create_activity(agreement_id)
             return Activity(self._api, self._state, activity_id)
@@ -35,6 +43,8 @@ class ActivityService(object):
 
 
 class Activity(AsyncContextManager["Activity"]):
+    """Mid-level wrapper for REST's Activity endpoint"""
+
     def __init__(self, _api: RequestorControlApi, _state: RequestorStateApi, activity_id: str):
         self._api: RequestorControlApi = _api
         self._state: RequestorStateApi = _state
@@ -45,10 +55,12 @@ class Activity(AsyncContextManager["Activity"]):
         return self._id
 
     async def state(self) -> yaa.ActivityState:
+        """Query the state of the activity."""
         state: yaa.ActivityState = await self._state.get_activity_state(self._id)
         return state
 
     async def send(self, script: List[dict], stream: bool = False):
+        """Send the execution script to the provider's execution unit."""
         script_txt = json.dumps(script)
         batch_id = await self._api.call_exec(self._id, yaa.ExeScriptRequest(text=script_txt))
 
