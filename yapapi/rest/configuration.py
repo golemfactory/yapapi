@@ -5,7 +5,7 @@ import ya_market  # type: ignore
 import ya_payment  # type: ignore
 import ya_activity  # type: ignore
 
-DEFAULT_API_URL: Final[str] = "http://127.0.0.1:7465"
+DEFAULT_YAGNA_API_URL: Final[str] = "http://127.0.0.1:7465"
 
 
 class MissingConfiguration(Exception):
@@ -52,7 +52,7 @@ class Configuration(object):
         activity_url: Optional[str] = None,
     ):
         self.__app_key: str = app_key or env_or_fail("YAGNA_APPKEY", "API authentication token")
-        self.__url = url or DEFAULT_API_URL
+        self.__url = url or os.getenv("YAGNA_API_URL") or DEFAULT_YAGNA_API_URL
 
         def resolve_url(given_url: Optional[str], env_val: str, prefix: str) -> str:
             return given_url or os.getenv(env_val) or f"{self.__url}{prefix}"
