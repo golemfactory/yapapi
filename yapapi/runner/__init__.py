@@ -117,7 +117,7 @@ class Engine(AsyncContextManager):
             event_consumer = log_event
         # Add buffering to the provided event emitter to make sure
         # that emitting events will not block
-        self._wrapped_emitter = AsyncWrapper(event_consumer)
+        self._wrapped_consumer = AsyncWrapper(event_consumer)
 
     async def map(
         self,
@@ -139,7 +139,7 @@ class Engine(AsyncContextManager):
         import random
 
         stack = self._stack
-        emit = cast(Callable[[Event], None], self._wrapped_emitter.async_call)
+        emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
 
         # Creating allocation
         if not self._budget_allocation:
@@ -500,7 +500,7 @@ class Engine(AsyncContextManager):
         payment_client = await stack.enter_async_context(self._api_config.payment())
         self._payment_api = rest.Payment(payment_client)
 
-        await stack.enter_async_context(self._wrapped_emitter)
+        await stack.enter_async_context(self._wrapped_consumer)
 
         return self
 

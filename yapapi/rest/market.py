@@ -16,7 +16,7 @@ class AgreementDetails(object):
     raw_details: models.Agreement
 
     @dataclass
-    class _View:
+    class View:
         """A certain fragment of an agreement's properties."""
 
         properties: dict
@@ -26,16 +26,16 @@ class AgreementDetails(object):
             return m.from_properties(self.properties)
 
     @property
-    def provider_view(self) -> _View:
+    def provider_view(self) -> View:
         """Get the view of provider's properties in this Agreement."""
         offer: models.Offer = self.raw_details.offer
-        return self._View(properties=offer.properties)
+        return self.View(properties=offer.properties)
 
     @property
-    def requestor_view(self) -> _View:
+    def requestor_view(self) -> View:
         """Get the view of requestor's properties in this Agreement."""
         demand: models.Demand = self.raw_details.demand
-        return self._View(properties=demand.properties)
+        return self.View(properties=demand.properties)
 
     def __init__(self, *, _ref: models.Agreement):
         self.raw_details = _ref
