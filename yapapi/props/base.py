@@ -61,7 +61,7 @@ ME = TypeVar("ME", bound="Model")
 
 
 class InvalidPropertiesError(Exception):
-    """Raised by `Model.from_props(cls, props)` when given invalid `props`."""
+    """Raised by `Model.from_properties(cls, properties)` when given invalid `properties`."""
 
     def __str__(self):
         msg = "Invalid properties"
@@ -86,7 +86,7 @@ class Model(abc.ABC):
         pass
 
     @classmethod
-    def from_props(cls: Type[ME], props: Props) -> ME:
+    def from_properties(cls: Type[ME], props: Props) -> ME:
         """
         Initialize the model from a dictionary representation.
 
@@ -128,21 +128,18 @@ class Model(abc.ABC):
         ```python
         >>> import dataclasses
         >>> import typing
-        >>> from yapapi.props.base import Model
+        >>> from yapapi.properties.base import Model
         >>> @dataclasses.dataclass
-        ... class Identification(Model):
+        ... class NodeInfo(Model):
         ...     name: typing.Optional[str] = \
         ...     dataclasses.field(default=None, metadata={"key": "golem.node.id.name"})
         ...
-        >>> Identification.keys().name
+        >>> NodeInfo.keys().name
         'golem.node.id.name'
         ```
         """
 
-        # TODO 0.4+: _Keys doesn't need to inherit from dict
-        #  as it doesn't use dict's interface anyway
-
-        class _Keys(dict):
+        class _Keys:
             def __init__(self, iter):
                 self.__dict__ = dict(iter)
 

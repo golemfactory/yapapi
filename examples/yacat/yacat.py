@@ -83,7 +83,7 @@ async def main(args):
     write_hash(args.hash)
     write_keyspace_check_script(args.mask)
 
-    # By passing `event_emitter=log_summary()` we enable summary logging.
+    # By passing `event_consumer=log_summary()` we enable summary logging.
     # See the documentation of the `yapapi.log` module on how to set
     # the level of detail and format of the logged information.
     async with Engine(
@@ -93,7 +93,7 @@ async def main(args):
         # timeout should be keyspace / number of providers dependent
         timeout=timedelta(minutes=25),
         subnet_tag=args.subnet_tag,
-        event_emitter=log_summary(log_event_repr),
+        event_consumer=log_summary(log_event_repr),
     ) as engine:
 
         # this is not typical use of engine.map as, there is only one task, with no data
