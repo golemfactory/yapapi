@@ -50,7 +50,7 @@ async def main(subnet_tag: str):
             yield ctx.commit()
             # TODO: Check if job results are valid
             # and reject by: task.reject_task(reason = 'invalid file')
-            task.accept_task(result=output_file)
+            task.accept_result(result=output_file)
 
         ctx.log("no more frames to render")
 
@@ -75,7 +75,7 @@ async def main(subnet_tag: str):
         async for task in executor.submit(worker, [Task(data=frame) for frame in frames]):
             print(
                 f"{utils.TEXT_COLOR_CYAN}"
-                f"Task computed: {task}, result: {task.output}"
+                f"Task computed: {task}, result: {task.result}"
                 f"{utils.TEXT_COLOR_DEFAULT}"
             )
 

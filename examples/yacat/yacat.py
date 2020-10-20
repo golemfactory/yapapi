@@ -56,7 +56,7 @@ async def main(args):
             output_file = "keyspace.txt"
             ctx.download_file("/golem/work/keyspace.txt", output_file)
             yield ctx.commit()
-            task.accept_task()
+            task.accept_result()
 
     async def worker_find_password(ctx: WorkContext, tasks):
         ctx.send_file("in.hash", "/golem/work/in.hash")
@@ -75,7 +75,7 @@ async def main(args):
             output_file = f"hashcat_{skip}.potfile"
             ctx.download_file(f"/golem/work/hashcat.potfile", output_file)
             yield ctx.commit()
-            task.accept_task(result=output_file)
+            task.accept_result(result=output_file)
 
     # beginning of the main flow
 
@@ -116,7 +116,7 @@ async def main(args):
         ):
             print(
                 f"{utils.TEXT_COLOR_CYAN}"
-                f"Task computed: {task}, result: {task.output}"
+                f"Task computed: {task}, result: {task.result}"
                 f"{utils.TEXT_COLOR_DEFAULT}"
             )
 

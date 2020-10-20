@@ -66,21 +66,23 @@ or running commands within the execution unit on the provider's end.
 
 Depending on the number of workers, and thus, the maximum number of providers that your
 Executor utilizes in parallel, a single worker may tackle several tasks
-(fragments of your work) and you can differentiate the steps that need to happen once
+(units of your work) and you can differentiate the steps that need to happen once
 per worker run, which usually means once per provider node - but that depends on the
 exact implementation of your worker function - from those that happen for each
-individual work fragment. An example of the former would be an upload of a source
+individual unit of work. An example of the former would be an upload of a source
 file that's common to each fragment; and of the latter - a step that triggers the
 processing of the file using a set of parameters specified in the `Task` data.
 
 #### Task
 
-The `Task` (`yapapi.Task`) object that describes a fragment of your task,
-that is a single piece of your application's job that will be executed in a single run
-of the execution script on a provider's machine.
+The `Task` (`yapapi.Task`) object describes a unit of work that your application needs
+to carry out.
 
 The Executor will feed an instance of your worker - bound to a single provider node -
-with task fragments (`Task` objects) that this instance has been commissioned to execute.
+with `Task` objects. The worker will be responsible for completing those tasks. Typically,
+it will turn each task into a sequence of steps to be executed in a single run 
+of the execution script on a provider's machine, in order to compute the task's result.
+
 
 ### Example
 
@@ -126,7 +128,7 @@ async def main(subnet_tag: str):
             output_file = f"output_{frame}.png"
             ctx.download_file(f"/golem/output/out{frame:04d}.png", output_file)
             yield ctx.commit()
-            task.accept_task(result=output_file)
+            task.accept_result(result=output_file)
 
         ctx.log("no more frames to render")
 
@@ -147,7 +149,7 @@ async def main(subnet_tag: str):
     ) as executor:
 
         async for task in executor.submit(worker, [Task(data=frame) for frame in frames]):
-            print(f"Task computed: {task}, result: {task.output}")
+            print(f"Task computed: {task}, result: {task.result}")
 
 
 enable_default_logger()

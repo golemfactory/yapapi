@@ -96,19 +96,20 @@ class Task(Generic[TaskData, TaskResult]):
         return self._data
 
     @property
-    def output(self) -> Optional[TaskResult]:
+    def result(self) -> Optional[TaskResult]:
         return self._result
 
     @property
     def expires(self) -> Optional[datetime]:
         return self._expires
 
-    def accept_task(self, result: Optional[TaskResult] = None) -> None:
-        """Accept task that was completed.
+    def accept_result(self, result: Optional[TaskResult] = None) -> None:
+        """Accept the result of this task.
 
-        Must be called when the results of a task are correct.
+        Must be called when the result is correct to mark this task
+        as completed.
 
-        :param result: computation result (optional)
+        :param result: task computation result (optional)
         :return: None
         """
         if self._emit:
@@ -120,11 +121,11 @@ class Task(Generic[TaskData, TaskResult]):
         for cb in self._callbacks:
             cb(self, TaskStatus.ACCEPTED)
 
-    def reject_task(self, reason: Optional[str] = None, retry: bool = False) -> None:
-        """Reject task.
+    def reject_result(self, reason: Optional[str] = None, retry: bool = False) -> None:
+        """Reject the result of this task.
 
-        Must be called when the results of the task
-        are not correct and it should be retried.
+        Must be called when the result is not correct to indicate
+        that the task should be retried.
 
         :param reason: task rejection description (optional)
         :return: None
