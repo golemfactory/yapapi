@@ -12,7 +12,7 @@ ExcInfo = Tuple[Type[BaseException], BaseException, Optional[TracebackType]]
 
 @dataclass(init=False)
 class Event:
-    """An abstract base class for types of events emitted by `Engine.map()`."""
+    """An abstract base class for types of events emitted by `Executor.submit()`."""
 
     def __init__(self):
         raise NotImplementedError()

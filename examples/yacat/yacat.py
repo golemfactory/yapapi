@@ -4,10 +4,9 @@ from datetime import timedelta
 import pathlib
 import sys
 
+from yapapi import Executor, Task, WorkContext
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
-from yapapi.runner import Engine, Task, vm
-from yapapi.runner.ctx import WorkContext
-
+from yapapi.package import vm
 
 # For importing `utils.py`:
 script_dir = pathlib.Path(__file__).resolve().parent
@@ -57,7 +56,7 @@ async def main(args):
             output_file = "keyspace.txt"
             ctx.download_file("/golem/work/keyspace.txt", output_file)
             yield ctx.commit()
-            task.accept_task()
+            task.accept_result()
 
     async def worker_find_password(ctx: WorkContext, tasks):
         ctx.send_file("in.hash", "/golem/work/in.hash")
@@ -76,7 +75,7 @@ async def main(args):
             output_file = f"hashcat_{skip}.potfile"
             ctx.download_file(f"/golem/work/hashcat.potfile", output_file)
             yield ctx.commit()
-            task.accept_task(result=output_file)
+            task.accept_result(result=output_file)
 
     # beginning of the main flow
 
@@ -86,7 +85,7 @@ async def main(args):
     # By passing `event_consumer=log_summary()` we enable summary logging.
     # See the documentation of the `yapapi.log` module on how to set
     # the level of detail and format of the logged information.
-    async with Engine(
+    async with Executor(
         package=package,
         max_workers=args.number_of_providers,
         budget=10.0,
@@ -94,10 +93,10 @@ async def main(args):
         timeout=timedelta(minutes=25),
         subnet_tag=args.subnet_tag,
         event_consumer=log_summary(log_event_repr),
-    ) as engine:
+    ) as executor:
 
-        # this is not typical use of engine.map as, there is only one task, with no data
-        async for task in engine.map(worker_check_keyspace, [Task(data=None)]):
+        # This is not a typical use of executor.submit as there is only one task, with no data:
+        async for task in executor.submit(worker_check_keyspace, [Task(data=None)]):
             pass
 
         keyspace = read_keyspace()
@@ -112,10 +111,12 @@ async def main(args):
 
         ranges = range(0, keyspace, step)
 
-        async for task in engine.map(worker_find_password, [Task(data=range) for range in ranges]):
+        async for task in executor.submit(
+            worker_find_password, [Task(data=range) for range in ranges]
+        ):
             print(
                 f"{utils.TEXT_COLOR_CYAN}"
-                f"Task computed: {task}, result: {task.output}"
+                f"Task computed: {task}, result: {task.result}"
                 f"{utils.TEXT_COLOR_DEFAULT}"
             )
 

@@ -1,6 +1,6 @@
 import pytest
 
-from yapapi.runner._smartq import SmartQueue
+from yapapi.executor._smartq import SmartQueue
 import logging
 from random import randint
 import asyncio
