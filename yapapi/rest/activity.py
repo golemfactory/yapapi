@@ -186,13 +186,13 @@ class StreamingBatch(AsyncIterable[events.CommandEventContext], Sized):
                     try:
                         evt_ctx = command_event_ctx(msg_event)
                     except Exception as exc:  # noqa
-                        _log.error("Event exception:", exc)
+                        _log.error(f"Event stream exception (batch {batch_id}): {exc}")
                     else:
                         yield evt_ctx
                         if evt_ctx.computation_finished(last_idx):
                             break
-            except ClientPayloadError as exc:
-                _log.error("Event payload exception:", exc)
+            except ClientPayloadError:
+                _log.error(f"Event payload error (batch {batch_id}): {exc}")
             except ConnectionError:
                 raise
 

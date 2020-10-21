@@ -1,5 +1,7 @@
 import abc
+import enum
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union
 
@@ -91,14 +93,28 @@ class _SendFile(_SendWork):
 
 
 class _Run(Work):
-    def __init__(self, cmd: str, *args: Iterable[str], env: Optional[Dict[str, str]] = None):
+    def __init__(
+            self,
+            cmd: str,
+            *args: Iterable[str],
+            env: Optional[Dict[str, str]] = None,
+            stdout: Optional["CaptureContext"] = None,
+            stderr: Optional["CaptureContext"] = None,
+    ):
         self.cmd = cmd
         self.args = args
         self.env = env
+        self.stdout = stdout
+        self.stderr = stderr
         self._idx = None
 
     def register(self, commands: CommandContainer):
-        self._idx = commands.run(entry_point=self.cmd, args=self.args)
+        capture = dict()
+        if self.stdout:
+            capture["stdout"] = self.stdout.to_dict()
+        if self.stderr:
+            capture["stderr"] = self.stderr.to_dict()
+        self._idx = commands.run(entry_point=self.cmd, args=self.args, capture=capture)
 
 
 StorageEvent = Union[DownloadStarted, DownloadFinished]
@@ -201,16 +217,25 @@ class WorkContext:
         self.__prepare()
         self._pending_steps.append(_SendFile(self._storage, src_path, dst_path))
 
-    def run(self, cmd: str, *args: Iterable[str], env: Optional[Dict[str, str]] = None):
+    def run(
+            self,
+            cmd: str,
+            *args: Iterable[str],
+            env: Optional[Dict[str, str]] = None,
+            stdout: Optional["CaptureContext"] = None,
+            stderr: Optional["CaptureContext"] = None,
+    ):
         """Schedule running a command.
 
         :param cmd: command to run on the provider, e.g. /my/dir/run.sh
         :param args: command arguments, e.g. "input1.txt", "output1.txt"
         :param env: optional dictionary with environmental variables
+        :param stdout: optional standard output capture context
+        :param stderr: optional standard error capture context
         :return: None
         """
         self.__prepare()
-        self._pending_steps.append(_Run(cmd, *args, env=env))
+        self._pending_steps.append(_Run(cmd, *args, env=env, stdout=stdout, stderr=stderr))
 
     def download_file(self, src_path: str, dst_path: str):
         """Schedule downloading remote file from the provider.
@@ -234,3 +259,65 @@ class WorkContext:
         steps = self._pending_steps
         self._pending_steps = []
         return _Steps(*steps)
+
+
+class CaptureMode(enum.Enum):
+    HEAD = "head"
+    TAIL = "tail"
+    HEAD_TAIL = "headTail"
+    STREAM = "stream"
+
+
+class CaptureFormat(enum.Enum):
+    BIN = "bin"
+    STR = "str"
+
+
+@dataclass
+class CaptureContext:
+    mode: CaptureMode
+    limit: Optional[int]
+    fmt: Optional[CaptureFormat]
+
+    def to_dict(self) -> Dict:
+        inner = dict()
+
+        if self.limit:
+            inner[self.mode.value] = self.limit
+        if self.fmt:
+            inner["format"] = self.fmt.value
+
+        return {"stream" if self.mode == CaptureMode.STREAM else "atEnd": inner}
+
+    def is_streaming(self) -> bool:
+        return self.mode == CaptureMode.STREAM
+
+    @classmethod
+    def stream(cls, limit: Optional[int] = None, fmt: Optional[str] = None) -> "CaptureContext":
+        return cls._build(CaptureMode.STREAM, limit=limit, fmt=fmt)
+
+    @classmethod
+    def all(cls, fmt: Optional[str] = None) -> "CaptureContext":
+        return cls._build(CaptureMode.HEAD, fmt=fmt)
+
+    @classmethod
+    def head(cls, limit: int, fmt: Optional[str] = None) -> "CaptureContext":
+        return cls._build(CaptureMode.HEAD, limit=limit, fmt=fmt)
+
+    @classmethod
+    def tail(cls, limit: int, fmt: Optional[str] = None) -> "CaptureContext":
+        return cls._build(CaptureMode.TAIL, limit=limit, fmt=fmt)
+
+    @classmethod
+    def head_tail(cls, limit: int, fmt: Optional[str] = None) -> "CaptureContext":
+        return cls._build(CaptureMode.HEAD_TAIL, limit=limit, fmt=fmt)
+
+    @classmethod
+    def _build(
+            cls,
+            mode: CaptureMode,
+            limit: Optional[int] = None,
+            fmt: Optional[str] = None,
+    ) -> "CaptureContext":
+        fmt = CaptureFormat(fmt) if fmt else None
+        return cls(mode=mode, fmt=fmt, limit=limit)
