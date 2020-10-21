@@ -4,7 +4,7 @@ from datetime import timedelta
 import pathlib
 import sys
 
-from yapapi import Executor, Task, WorkContext
+from yapapi import Executor, Task, WorkContext, asyncio_fix
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.package import vm
 
@@ -140,6 +140,8 @@ if __name__ == "__main__":
     parser.add_argument("hash")
 
     args = parser.parse_args()
+
+    asyncio_fix()
 
     enable_default_logger(log_file=args.log_file)
 

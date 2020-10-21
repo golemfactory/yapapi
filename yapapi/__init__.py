@@ -1,4 +1,6 @@
 """Golem Python API."""
+import asyncio
+import sys
 import toml
 
 from pathlib import Path
@@ -19,6 +21,14 @@ def get_version() -> str:
         return pyproject["tool"]["poetry"]["version"]
 
     return get_distribution("yapapi").version
+
+def asyncio_fix():
+
+    class _WindowsEventPolicy(asyncio.events.BaseDefaultEventLoopPolicy):
+        _loop_factory = asyncio.windows_events.ProactorEventLoop
+
+    if sys.platform == 'win32':
+        asyncio.set_event_loop_policy(_WindowsEventPolicy())
 
 
 __version__: str = get_version()
