@@ -5,14 +5,14 @@ from dataclasses import dataclass
 from types import TracebackType
 from typing import Any, Optional, Type, Tuple
 
-from yapapi.props import Identification
+from yapapi.props import NodeInfo
 
 ExcInfo = Tuple[Type[BaseException], BaseException, Optional[TracebackType]]
 
 
 @dataclass(init=False)
 class Event:
-    """An abstract base class for types of events emitted by `Engine.map()`."""
+    """An abstract base class for types of events emitted by `Executor.submit()`."""
 
     def __init__(self):
         raise NotImplementedError()
@@ -95,7 +95,7 @@ class AgreementEvent(Event):
 
 @dataclass
 class AgreementCreated(AgreementEvent):
-    provider_id: Identification
+    provider_id: NodeInfo
 
 
 @dataclass

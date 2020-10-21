@@ -79,7 +79,7 @@ class Create:
         min_storage_gib: float = 2.0,
         timeout=timedelta(minutes=5),
     ):
-        from yapapi.runner import vm
+        from yapapi.package import vm
 
         console = Console()
         now = datetime.now(timezone.utc)
@@ -97,4 +97,4 @@ class Create:
         demand = DemandBuilder()
         demand.add(Activity(expiration=expires))
         await pacakge.decorate_demand(demand)
-        console.print(render_demand(demand.props, demand.cons))
+        console.print(render_demand(demand.properties, demand.constraints))

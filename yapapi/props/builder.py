@@ -7,9 +7,6 @@ from dataclasses import asdict
 
 from . import Model
 
-# TODO in 0.4+: `cons` is not obvious, should be named `constraints`
-# TODO in 0.4+: maybe `props` should just be named `properties` (?)
-
 
 class DemandBuilder:
     """Builds a dictionary of properties and constraints from high-level models.
@@ -22,15 +19,15 @@ class DemandBuilder:
 
     ```python
     >>> import yapapi
-    >>> from yapapi import props as yp
+    >>> from yapapi import properties as yp
     >>> from yapapi.props.builder import DemandBuilder
     >>> from datetime import datetime, timezone
     >>> builder = DemandBuilder()
-    >>> builder.add(yp.Identification(name="a node", subnet_tag="testnet"))
+    >>> builder.add(yp.NodeInfo(name="a node", subnet_tag="testnet"))
     >>> builder.add(yp.Activity(expiration=datetime.now(timezone.utc)))
     >>> builder.__repr__
     >>> print(builder)
-    {'props':
+    {'properties':
         {'golem.node.id.name': 'a node',
          'golem.node.debug.subnet': 'testnet',
          'golem.srv.comp.expiration': 1601655628772},
@@ -39,20 +36,20 @@ class DemandBuilder:
     """
 
     def __init__(self):
-        self._props: dict = {}
+        self._properties: dict = {}
         self._constraints: List[str] = []
         pass
 
     def __repr__(self):
-        return repr({"props": self._props, "constraints": self._constraints})
+        return repr({"properties": self._properties, "constraints": self._constraints})
 
     @property
-    def props(self) -> dict:
+    def properties(self) -> dict:
         """List of properties for this demand."""
-        return self._props
+        return self._properties
 
     @property
-    def cons(self) -> str:
+    def constraints(self) -> str:
         """List of constraints for this demand."""
         c_list = self._constraints
         c_value: str
@@ -85,8 +82,8 @@ class DemandBuilder:
             if isinstance(value, enum.Enum):
                 value = value.value
             assert isinstance(value, (str, int, list))
-            self._props[prop_id] = value
+            self._properties[prop_id] = value
 
     async def subscribe(self, market: Market) -> Subscription:
         """Create a Demand on the market and subscribe to Offers that will match that Demand."""
-        return await market.subscribe(self._props, self.cons)
+        return await market.subscribe(self._properties, self.constraints)

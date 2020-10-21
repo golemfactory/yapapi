@@ -4,9 +4,9 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "yapapi"
-version = "0.3.0"
+version = "0.4.0-alpha.0"
 description = "High-level Python API for the New Golem"
-authors = ["Przemysław K. Rekucki <przemyslaw.rekucki@golem.network>"]
+authors = ["Przemysław K. Rekucki <przemyslaw.rekucki@golem.network>", "GolemFactory <contact@golem.network>"]
 license = "LGPL-3.0-or-later"
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -15,7 +15,7 @@ classifiers = [
     "Topic :: System :: Distributed Computing"
 ]
 repository = "https://github.com/golemfactory/yapapi"
-documentation = "https://prekucki.github.io/yapapi/"
+documentation = "https://handbook.golem.network/yapapi/"
 readme = "README.md"
 
 [tool.poetry.dependencies]

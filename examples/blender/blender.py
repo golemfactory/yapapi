@@ -3,10 +3,9 @@ import asyncio
 import pathlib
 import sys
 
-import yapapi
+from yapapi import Executor, Task, __version__ as yapapi_version, WorkContext
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
-from yapapi.runner import Engine, Task, vm
-from yapapi.runner.ctx import WorkContext
+from yapapi.package import vm
 from datetime import timedelta
 
 # For importing `utils.py`:
@@ -51,7 +50,7 @@ async def main(subnet_tag: str):
             yield ctx.commit()
             # TODO: Check if job results are valid
             # and reject by: task.reject_task(reason = 'invalid file')
-            task.accept_task(result=output_file)
+            task.accept_result(result=output_file)
 
         ctx.log("no more frames to render")
 
@@ -61,22 +60,22 @@ async def main(subnet_tag: str):
     # worst-case time overhead for initialization, e.g. negotiation, file transfer etc.
     init_overhead: timedelta = timedelta(minutes=3)
 
-    # By passing `event_emitter=log_summary()` we enable summary logging.
+    # By passing `event_consumer=log_summary()` we enable summary logging.
     # See the documentation of the `yapapi.log` module on how to set
     # the level of detail and format of the logged information.
-    async with Engine(
+    async with Executor(
         package=package,
         max_workers=3,
         budget=10.0,
         timeout=init_overhead + timedelta(minutes=len(frames) * 2),
         subnet_tag=subnet_tag,
-        event_emitter=log_summary(log_event_repr),
-    ) as engine:
+        event_consumer=log_summary(log_event_repr),
+    ) as executor:
 
-        async for task in engine.map(worker, [Task(data=frame) for frame in frames]):
+        async for task in executor.submit(worker, [Task(data=frame) for frame in frames]):
             print(
                 f"{utils.TEXT_COLOR_CYAN}"
-                f"Task computed: {task}, result: {task.output}"
+                f"Task computed: {task}, result: {task.result}"
                 f"{utils.TEXT_COLOR_DEFAULT}"
             )
 
@@ -90,7 +89,7 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     subnet = args.subnet_tag
     sys.stderr.write(
-        f"yapapi version: {utils.TEXT_COLOR_YELLOW}{yapapi.__version__}{utils.TEXT_COLOR_DEFAULT}\n"
+        f"yapapi version: {utils.TEXT_COLOR_YELLOW}{yapapi_version}{utils.TEXT_COLOR_DEFAULT}\n"
     )
     sys.stderr.write(f"Using subnet: {utils.TEXT_COLOR_YELLOW}{subnet}{utils.TEXT_COLOR_DEFAULT}\n")
     task = loop.create_task(main(subnet_tag=args.subnet_tag))
