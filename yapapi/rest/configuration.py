@@ -35,6 +35,9 @@ class Configuration(object):
     used to authenticate with the daemon. The application key must be either specified
     explicitly using the `app_key` argument or provided by the `YAGNA_APPKEY` environment variable.
 
+    If `YAGNA_API_URL` environment variable exists, it will be used as a base URL
+    for all REST API URLs. Example value: http://127.0.10.10:7500 (no trailing slash).
+
     Other than that, the URLs of each specific REST API can be overridden
     using the following environment variables:
     * `YAGNA_MARKET_URL`
