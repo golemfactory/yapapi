@@ -359,7 +359,7 @@ class Executor(AsyncContextManager):
                                 assert exc_typ is not None and exc_val is not None
                                 emit(
                                     events.WorkerFinished(
-                                        agr_id=agreement.id, exception=(exc_typ, exc_val, exc_tb)
+                                        agr_id=agreement.id, exc_info=(exc_typ, exc_val, exc_tb)
                                     )
                                 )
                                 return
@@ -456,7 +456,9 @@ class Executor(AsyncContextManager):
                 and self._conf.traceback
             ):
                 traceback.print_exc()
-            emit(events.ComputationFailed(reason=e.__repr__()))
+            (exc_typ, exc_val, exc_tb) = sys.exc_info()
+            assert exc_typ is not None and exc_val is not None
+            emit(events.ComputationFinished(exc_info=(exc_typ, exc_val, exc_tb)))
 
         finally:
             payment_closing = True

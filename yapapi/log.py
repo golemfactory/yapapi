@@ -85,7 +85,6 @@ def enable_default_logger(
 event_type_to_string = {
     events.ComputationStarted: "Computation started",
     events.ComputationFinished: "Computation finished",
-    events.ComputationFailed: "Computation failed",
     events.SubscriptionCreated: "Demand published on the market",
     events.SubscriptionFailed: "Demand publication failed",
     events.CollectFailed: "Failed to collect proposals for demand",
@@ -252,6 +251,28 @@ class SummaryLogger:
         self.error_occurred = False
         self.time_waiting_for_proposals = timedelta(0)
 
+    def _print_summary(self) -> None:
+        """Print a summary at the end of computation."""
+
+        total_time = time.time() - self.start_time
+        self.logger.info(f"Computation finished in {total_time:.1f}s")
+        agreement_providers = {
+            self.agreement_provider_name[agr_id] for agr_id in self.confirmed_agreements
+        }
+        self.logger.info(
+            "Negotiated %d agreements with %d providers",
+            len(self.confirmed_agreements),
+            len(agreement_providers),
+        )
+        for provider_name, tasks in self.provider_tasks.items():
+            self.logger.info("Provider '%s' computed %d tasks", provider_name, len(tasks))
+        for provider_name in set(self.agreement_provider_name.values()):
+            if provider_name not in self.provider_tasks:
+                self.logger.info("Provider '%s' did not compute any tasks", provider_name)
+        for provider_name, count in self.provider_failures.items():
+            self.logger.info("Activity failed %d time(s) on provider '%s'", count, provider_name)
+        self._print_total_cost()
+
     def _print_total_cost(self) -> None:
 
         if not self.finished:
@@ -367,38 +388,24 @@ class SummaryLogger:
             self._print_total_cost()
 
         elif isinstance(event, events.WorkerFinished):
-            if event.exception is None:
+            if event.exc_info is None:
                 return
-            exc_type, exc, tb = event.exception
+            _exc_type, exc, _tb = event.exc_info
             provider_name = self.agreement_provider_name[event.agr_id]
             self.provider_failures[provider_name] += 1
-            self.logger.warning("Activity failed on provider '%s', reason: %r", provider_name, exc)
+            reason = str(exc) or repr(exc) or "unexpected error"
+            self.logger.warning(
+                "Activity failed on provider '%s', reason: %s", provider_name, reason
+            )
 
         elif isinstance(event, events.ComputationFinished):
-            self.finished = True
-            total_time = time.time() - self.start_time
-            self.logger.info(f"Computation finished in {total_time:.1f}s")
-            agreement_providers = {
-                self.agreement_provider_name[agr_id] for agr_id in self.confirmed_agreements
-            }
-            self.logger.info(
-                "Negotiated %s agreements with %s providers",
-                len(self.confirmed_agreements),
-                len(agreement_providers),
-            )
-            for provider_name, tasks in self.provider_tasks.items():
-                self.logger.info("Provider '%s' computed %s tasks", provider_name, len(tasks))
-            for provider_name in set(self.agreement_provider_name.values()):
-                if provider_name not in self.provider_tasks:
-                    self.logger.info("Provider '%s' did not compute any tasks", provider_name)
-            for provider_name, count in self.provider_failures.items():
-                self.logger.info(
-                    "Activity failed %s time(s) on provider '%s'", count, provider_name
-                )
-            self._print_total_cost()
-
-        elif isinstance(event, events.ComputationFailed):
-            self.logger.error(f"Computation failed, reason: %s", event.reason)
+            if not event.exc_info:
+                self.finished = True
+                self._print_summary()
+            else:
+                _exc_type, exc, _tb = event.exc_info
+                reason = str(exc) or repr(exc) or "unexpected error"
+                self.logger.error(f"Computation failed, reason: %s", reason)
 
 
 def log_summary(wrapped_emitter: Optional[Callable[[events.Event], None]] = None):

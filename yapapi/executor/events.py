@@ -18,7 +18,26 @@ class Event:
         raise NotImplementedError()
 
     def extract_exc_info(self) -> Tuple[Optional[ExcInfo], "Event"]:
+        """Extract exception information from this event.
+
+        Return the extracted exception information
+        and a copy of the event without the exception information.
+        """
         return None, self
+
+
+@dataclass(init=False)
+class HasExcInfo(Event):
+    """A base class for types of events that carry an optional exception info."""
+
+    exc_info: Optional[ExcInfo] = None
+
+    def extract_exc_info(self) -> Tuple[Optional[ExcInfo], "Event"]:
+        """Return the `exc_info` field and a copy of this event with the field set to `None`."""
+
+        exc_info = self.exc_info
+        me = dataclasses.replace(self, exc_info=None)
+        return exc_info, me
 
 
 @dataclass
@@ -27,13 +46,8 @@ class ComputationStarted(Event):
 
 
 @dataclass
-class ComputationFinished(Event):
-    pass
-
-
-@dataclass
-class ComputationFailed(Event):
-    reason: str
+class ComputationFinished(HasExcInfo):
+    """Indicates successful completion if `exc_info` is `None` and a failure otherwise."""
 
 
 @dataclass
@@ -156,17 +170,8 @@ class TaskStarted(AgreementEvent, TaskEvent):
 
 
 @dataclass
-class WorkerFinished(AgreementEvent):
-    exception: Optional[ExcInfo] = None
-    """ Exception thrown by worker script.
-
-        None if worker returns without error.
-    """
-
-    def extract_exc_info(self) -> Tuple[Optional[ExcInfo], "Event"]:
-        exc_info = self.exception
-        me = dataclasses.replace(self, exception=None)
-        return exc_info, me
+class WorkerFinished(HasExcInfo, AgreementEvent):
+    """Indicates successful completion if `exc_info` is `None` and a failure otherwise."""
 
 
 @dataclass(init=False)
