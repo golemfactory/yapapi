@@ -33,7 +33,12 @@ class ComputationFinished(Event):
 
 @dataclass
 class ComputationFailed(Event):
-    reason: str
+    exc_info: Optional[ExcInfo]
+
+    def extract_exc_info(self) -> Tuple[Optional[ExcInfo], Event]:
+        exc_info = self.exc_info
+        me = dataclasses.replace(self, exc_info=None)
+        return exc_info, me
 
 
 @dataclass
