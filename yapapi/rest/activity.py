@@ -15,7 +15,7 @@ import json
 import logging
 import contextlib
 
-from ..runner import events
+from ..executor import events
 
 _log = logging.getLogger("yapapi.rest")
 

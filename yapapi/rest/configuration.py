@@ -5,7 +5,7 @@ import ya_market  # type: ignore
 import ya_payment  # type: ignore
 import ya_activity  # type: ignore
 
-DEFAULT_API_URL: Final[str] = "http://127.0.0.1:7465"
+DEFAULT_YAGNA_API_URL: Final[str] = "http://127.0.0.1:7465"
 
 
 class MissingConfiguration(Exception):
@@ -35,6 +35,9 @@ class Configuration(object):
     used to authenticate with the daemon. The application key must be either specified
     explicitly using the `app_key` argument or provided by the `YAGNA_APPKEY` environment variable.
 
+    If `YAGNA_API_URL` environment variable exists, it will be used as a base URL
+    for all REST API URLs. Example value: http://127.0.10.10:7500 (no trailing slash).
+
     Other than that, the URLs of each specific REST API can be overridden
     using the following environment variables:
     * `YAGNA_MARKET_URL`
@@ -52,7 +55,7 @@ class Configuration(object):
         activity_url: Optional[str] = None,
     ):
         self.__app_key: str = app_key or env_or_fail("YAGNA_APPKEY", "API authentication token")
-        self.__url = url or DEFAULT_API_URL
+        self.__url = url or os.getenv("YAGNA_API_URL") or DEFAULT_YAGNA_API_URL
 
         def resolve_url(given_url: Optional[str], env_val: str, prefix: str) -> str:
             return given_url or os.getenv(env_val) or f"{self.__url}{prefix}"

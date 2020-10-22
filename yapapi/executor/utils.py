@@ -1,4 +1,4 @@
-"""Utility functions and classes used within the `yapapi.runner` package."""
+"""Utility functions and classes used within the `yapapi.executor` package."""
 import asyncio
 from typing import AsyncContextManager, Callable, Optional
 

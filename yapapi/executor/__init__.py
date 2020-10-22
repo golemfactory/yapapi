@@ -1,7 +1,6 @@
 """
-An implementation of the new Golem's requestor engine.
+An implementation of the new Golem's task executor.
 """
-import abc
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import os
@@ -25,12 +24,13 @@ import traceback
 from dataclasses import dataclass
 from typing_extensions import Final, AsyncGenerator
 
-from .ctx import WorkContext, CommandContainer, Work
+from .ctx import CaptureContext, CommandContainer, Work,  WorkContext
 from .events import Event
 from . import events
 from .task import Task, TaskStatus
 from .utils import AsyncWrapper
-from ..props import Activity, Identification, IdentificationKeys
+from ..package import Package
+from ..props import Activity, NodeInfo, NodeInfoKeys
 from ..props.base import InvalidPropertiesError
 from ..props.builder import DemandBuilder
 from .. import rest
@@ -49,7 +49,7 @@ CFG_INVOICE_TIMEOUT: Final[timedelta] = timedelta(minutes=5)
 
 
 @dataclass
-class _EngineConf:
+class _ExecutorConfig:
     max_workers: int = 5
     timeout: timedelta = timedelta(minutes=5)
     get_offers_timeout: timedelta = timedelta(seconds=20)
@@ -66,27 +66,26 @@ D = TypeVar("D")  # Type var for task data
 R = TypeVar("R")  # Type var for task result
 
 
-class Engine(AsyncContextManager):
+class Executor(AsyncContextManager):
     """
-    Requestor engine.
+    Task executor.
 
     Used to run tasks using the specified application package within providers' execution units.
     """
 
-    # TODO 0.4+ rename `event_emitter` to `event_consumer`
     def __init__(
         self,
         *,
-        package: "Package",
+        package: Package,
         max_workers: int = 5,
         timeout: timedelta = timedelta(minutes=5),
         budget: Union[float, Decimal],
         strategy: MarketStrategy = DummyMS(),
         subnet_tag: Optional[str] = None,
-        event_emitter: Optional[Callable[[Event], None]] = None,
+        event_consumer: Optional[Callable[[Event], None]] = None,
         stream_output: bool = False,
     ):
-        """Create a new requestor engine.
+        """Create a new executor.
 
         :param package: a package common for all tasks; vm.repo() function may be
                         used to return package from a repository
@@ -96,7 +95,7 @@ class Engine(AsyncContextManager):
         :param strategy: market strategy used to select providers from the market
                          (e.g. LeastExpensiveLinearPayuMS or DummyMS)
         :param subnet_tag: use only providers in the subnet with the subnet_tag name
-        :param event_emitter: a callable that emits events related to the
+        :param event_consumer: a callable that processes events related to the
                               computation; by default it is a function that logs all events
         """
 
@@ -106,30 +105,27 @@ class Engine(AsyncContextManager):
         self._api_config = rest.Configuration()
         self._stack = AsyncExitStack()
         self._package = package
-        self._conf = _EngineConf(max_workers, timeout)
+        self._conf = _ExecutorConfig(max_workers, timeout)
         # TODO: setup precitsion
         self._budget_amount = Decimal(budget)
         self._budget_allocation: Optional[rest.payment.Allocation] = None
 
-        if not event_emitter:
+        if not event_consumer:
             # Use local import to avoid cyclic imports when yapapi.log
             # is imported by client code
             from ..log import log_event
 
-            event_emitter = log_event
+            event_consumer = log_event
         # Add buffering to the provided event emitter to make sure
         # that emitting events will not block
-        self._wrapped_emitter = AsyncWrapper(event_emitter)
+        self._wrapped_consumer = AsyncWrapper(event_consumer)
 
-    async def map(
+    async def submit(
         self,
         worker: Callable[[WorkContext, AsyncIterator[Task[D, R]]], AsyncGenerator[Work, None]],
         data: Iterable[Task[D, R]],
     ) -> AsyncIterator[Task[D, R]]:
-        """Run computations on providers.
-
-        In other words, map the computation's inputs specified by task data
-        to the ouput resulting from running the execution script on a providers' execution units.
+        """Submit a computation to be executed on providers.
 
         :param worker: a callable that takes a WorkContext object and a list o tasks,
                        adds commands to the context object and yields committed commands
@@ -141,7 +137,7 @@ class Engine(AsyncContextManager):
         import random
 
         stack = self._stack
-        emit = cast(Callable[[Event], None], self._wrapped_emitter.async_call)
+        emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
 
         # Creating allocation
         if not self._budget_allocation:
@@ -159,9 +155,9 @@ class Engine(AsyncContextManager):
         # Building offer
         builder = DemandBuilder()
         builder.add(Activity(expiration=self._expires))
-        builder.add(Identification(subnet_tag=self._subnet))
+        builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
-            builder.ensure(f"({IdentificationKeys.subnet_tag}={self._subnet})")
+            builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
         await self._package.decorate_demand(builder)
         await self._strategy.decorate_demand(builder)
 
@@ -260,7 +256,7 @@ class Engine(AsyncContextManager):
                         emit(events.ProposalRejected(prop_id=proposal.id))
                     elif not proposal.is_draft:
                         try:
-                            await proposal.respond(builder.props, builder.cons)
+                            await proposal.respond(builder.properties, builder.constraints)
                             emit(events.ProposalResponded(prop_id=proposal.id))
                         except Exception as ex:
                             emit(events.ProposalFailed(prop_id=proposal.id, reason=str(ex)))
@@ -355,7 +351,7 @@ class Engine(AsyncContextManager):
                                 assert exc_typ is not None and exc_val is not None
                                 emit(
                                     events.WorkerFinished(
-                                        agr_id=agreement.id, exception=(exc_typ, exc_val, exc_tb)
+                                        agr_id=agreement.id, exc_info=(exc_typ, exc_val, exc_tb)
                                     )
                                 )
                                 return
@@ -371,8 +367,8 @@ class Engine(AsyncContextManager):
                     del offer_buffer[provider_id]
                     new_task = None
                     try:
-                        agreement = await b.proposal.agreement()
-                        provider = (await agreement.details()).view_prov(Identification)
+                        agreement = await b.proposal.create_agreement()
+                        provider = (await agreement.details()).provider_view.extract(NodeInfo)
                         emit(events.AgreementCreated(agr_id=agreement.id, provider_id=provider))
                         if not await agreement.confirm():
                             emit(events.AgreementRejected(agr_id=agreement.id))
@@ -452,7 +448,9 @@ class Engine(AsyncContextManager):
                 and self._conf.traceback
             ):
                 traceback.print_exc()
-            emit(events.ComputationFailed(reason=e.__repr__()))
+            (exc_typ, exc_val, exc_tb) = sys.exc_info()
+            assert exc_typ is not None and exc_val is not None
+            emit(events.ComputationFinished(exc_info=(exc_typ, exc_val, exc_tb)))
 
         finally:
             payment_closing = True
@@ -479,7 +477,7 @@ class Engine(AsyncContextManager):
                 {process_invoices_job}, timeout=15, return_when=asyncio.ALL_COMPLETED
             )
 
-    async def __aenter__(self) -> "Engine":
+    async def __aenter__(self) -> "Executor":
         stack = self._stack
 
         # TODO: Cleanup on exception here.
@@ -494,21 +492,9 @@ class Engine(AsyncContextManager):
         payment_client = await stack.enter_async_context(self._api_config.payment())
         self._payment_api = rest.Payment(payment_client)
 
-        await stack.enter_async_context(self._wrapped_emitter)
+        await stack.enter_async_context(self._wrapped_consumer)
 
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self._stack.aclose()
-
-
-class Package(abc.ABC):
-    """Information on task package to be used for running tasks on providers."""
-
-    @abc.abstractmethod
-    async def resolve_url(self) -> str:
-        """Return package URL."""
-
-    @abc.abstractmethod
-    async def decorate_demand(self, demand: DemandBuilder):
-        """Add package information to a Demand."""
