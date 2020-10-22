@@ -260,17 +260,17 @@ class SummaryLogger:
             self.agreement_provider_name[agr_id] for agr_id in self.confirmed_agreements
         }
         self.logger.info(
-            "Negotiated %s agreements with %s providers",
+            "Negotiated %d agreements with %d providers",
             len(self.confirmed_agreements),
             len(agreement_providers),
         )
         for provider_name, tasks in self.provider_tasks.items():
-            self.logger.info("Provider '%s' computed %s tasks", provider_name, len(tasks))
+            self.logger.info("Provider '%s' computed %d tasks", provider_name, len(tasks))
         for provider_name in set(self.agreement_provider_name.values()):
             if provider_name not in self.provider_tasks:
                 self.logger.info("Provider '%s' did not compute any tasks", provider_name)
         for provider_name, count in self.provider_failures.items():
-            self.logger.info("Activity failed %s time(s) on provider '%s'", count, provider_name)
+            self.logger.info("Activity failed %d time(s) on provider '%s'", count, provider_name)
         self._print_total_cost()
 
     def _print_total_cost(self) -> None:
