@@ -22,7 +22,7 @@ jobs:
           - windows-latest
         exclude:
           - os: windows-latest
-          - python-version: 3.9
+            python-version: 3.9
       fail-fast: false
 
     steps:
