@@ -13,9 +13,8 @@ def test_version():
 
 
 def test_asyncio_fix():
-
     async def _asyncio_test():
-        await asyncio.create_subprocess_shell('')
+        await asyncio.create_subprocess_shell("")
 
     yapapi.asyncio_fix()
 

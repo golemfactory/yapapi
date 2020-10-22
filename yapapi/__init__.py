@@ -22,12 +22,13 @@ def get_version() -> str:
 
     return get_distribution("yapapi").version
 
+
 def asyncio_fix():
+    if sys.platform == "win32":
 
-    class _WindowsEventPolicy(asyncio.events.BaseDefaultEventLoopPolicy):
-        _loop_factory = asyncio.windows_events.ProactorEventLoop
+        class _WindowsEventPolicy(asyncio.events.BaseDefaultEventLoopPolicy):
+            _loop_factory = asyncio.windows_events.ProactorEventLoop
 
-    if sys.platform == 'win32':
         asyncio.set_event_loop_policy(_WindowsEventPolicy())
 
 
