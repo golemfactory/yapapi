@@ -20,8 +20,10 @@ jobs:
           - ubuntu-latest
           - macos-latest
           - windows-latest
+        exclude:
+          - os: windows-latest
+          - python-version: 3.9
       fail-fast: false
-    if: matrix.os != 'windows-latest' || matrix.python-version != '3.9'
 
     steps:
       - uses: actions/checkout@v2
