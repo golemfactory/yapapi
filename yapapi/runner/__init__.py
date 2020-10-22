@@ -542,7 +542,9 @@ class Engine(AsyncContextManager):
                 and self._conf.traceback
             ):
                 traceback.print_exc()
-            emit(events.ComputationFailed(reason=e.__repr__()))
+            (exc_typ, exc_val, exc_tb) = sys.exc_info()
+            assert exc_typ is not None and exc_val is not None
+            emit(events.ComputationFailed(exc_info=(exc_typ, exc_val, exc_tb)))
 
         finally:
             payment_closing = True
