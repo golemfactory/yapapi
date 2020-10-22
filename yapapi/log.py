@@ -416,7 +416,9 @@ class SummaryLogger:
             )
 
         elif isinstance(event, events.CommandExecuted):
-            self.logger.info(f"Command finished (task {event.task_id}, idx {event.cmd_idx}): {event.message}")
+            self.logger.info(
+                f"Command finished (task {event.task_id}, idx {event.cmd_idx}): {event.message}"
+            )
 
         elif isinstance(event, events.CommandStdOut):
             self.logger.info(

@@ -191,7 +191,7 @@ class StreamingBatch(AsyncIterable[events.CommandEventContext], Sized):
                         yield evt_ctx
                         if evt_ctx.computation_finished(last_idx):
                             break
-            except ClientPayloadError:
+            except ClientPayloadError as exc:
                 _log.error(f"Event payload error (batch {batch_id}): {exc}")
             except ConnectionError:
                 raise

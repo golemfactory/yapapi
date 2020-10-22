@@ -24,7 +24,7 @@ import traceback
 from dataclasses import dataclass
 from typing_extensions import Final, AsyncGenerator
 
-from .ctx import CaptureContext, CommandContainer, Work,  WorkContext
+from .ctx import CaptureContext, CommandContainer, Work, WorkContext
 from .events import Event
 from . import events
 from .task import Task, TaskStatus

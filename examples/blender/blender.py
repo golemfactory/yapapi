@@ -101,7 +101,9 @@ def build_capture_ctx(mode=None, limit=None, fmt=None):
 
 if __name__ == "__main__":
     parser = utils.build_parser("Render blender scene")
-    parser.add_argument("--capture-mode", type=str, choices=["stream", "all", "head", "tail", "headTail"])
+    parser.add_argument(
+        "--capture-mode", type=str, choices=["stream", "all", "head", "tail", "headTail"]
+    )
     parser.add_argument("--capture-limit", type=int, default=None)
     parser.add_argument("--capture-format", type=str, choices=["str", "bin"])
     parser.set_defaults(log_file="blender-yapapi.log")

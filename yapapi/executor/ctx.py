@@ -94,12 +94,12 @@ class _SendFile(_SendWork):
 
 class _Run(Work):
     def __init__(
-            self,
-            cmd: str,
-            *args: Iterable[str],
-            env: Optional[Dict[str, str]] = None,
-            stdout: Optional["CaptureContext"] = None,
-            stderr: Optional["CaptureContext"] = None,
+        self,
+        cmd: str,
+        *args: Iterable[str],
+        env: Optional[Dict[str, str]] = None,
+        stdout: Optional["CaptureContext"] = None,
+        stderr: Optional["CaptureContext"] = None,
     ):
         self.cmd = cmd
         self.args = args
@@ -218,12 +218,12 @@ class WorkContext:
         self._pending_steps.append(_SendFile(self._storage, src_path, dst_path))
 
     def run(
-            self,
-            cmd: str,
-            *args: Iterable[str],
-            env: Optional[Dict[str, str]] = None,
-            stdout: Optional["CaptureContext"] = None,
-            stderr: Optional["CaptureContext"] = None,
+        self,
+        cmd: str,
+        *args: Iterable[str],
+        env: Optional[Dict[str, str]] = None,
+        stdout: Optional["CaptureContext"] = None,
+        stderr: Optional["CaptureContext"] = None,
     ):
         """Schedule running a command.
 
@@ -314,10 +314,7 @@ class CaptureContext:
 
     @classmethod
     def _build(
-            cls,
-            mode: CaptureMode,
-            limit: Optional[int] = None,
-            fmt: Optional[str] = None,
+        cls, mode: CaptureMode, limit: Optional[int] = None, fmt: Optional[str] = None,
     ) -> "CaptureContext":
-        fmt = CaptureFormat(fmt) if fmt else None
-        return cls(mode=mode, fmt=fmt, limit=limit)
+        cap_fmt: Optional[CaptureFormat] = CaptureFormat(fmt) if fmt else None
+        return cls(mode=mode, fmt=cap_fmt, limit=limit)
