@@ -24,7 +24,7 @@ def get_version() -> str:
 
 
 def asyncio_fix():
-    if sys.platform == "win32":
+    if sys.platform == "win32" and sys.version_info[0] == 3 and sys.version_info[1] <= 7:
 
         class _WindowsEventPolicy(asyncio.events.BaseDefaultEventLoopPolicy):
             _loop_factory = asyncio.windows_events.ProactorEventLoop
