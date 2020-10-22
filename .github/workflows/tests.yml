@@ -21,7 +21,7 @@ jobs:
           - macos-latest
           - windows-latest
       fail-fast: false
-    if: ${{ matrix.os != 'windows-latest' || matrix.python-version != '3.9' }}
+    if: ! (matrix.os == 'windows-latest' && matrix.python-version == '3.9')
 
     steps:
       - uses: actions/checkout@v2
