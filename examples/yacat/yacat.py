@@ -140,6 +140,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    utils.asyncio_fix()
+
     enable_default_logger(log_file=args.log_file)
 
     sys.stderr.write(

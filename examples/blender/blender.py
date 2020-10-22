@@ -86,6 +86,8 @@ if __name__ == "__main__":
     parser.set_defaults(log_file="blender-yapapi.log")
     args = parser.parse_args()
 
+    utils.asyncio_fix()
+
     enable_default_logger(log_file=args.log_file)
     loop = asyncio.get_event_loop()
     subnet = args.subnet_tag
