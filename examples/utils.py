@@ -25,9 +25,8 @@ def build_parser(description: str):
     return parser
 
 def asyncio_fix():
-
-    class _WindowsEventPolicy(asyncio.events.BaseDefaultEventLoopPolicy):
-        _loop_factory = asyncio.windows_events.ProactorEventLoop
-
     if sys.platform == 'win32':
+        class _WindowsEventPolicy(asyncio.events.BaseDefaultEventLoopPolicy):
+            _loop_factory = asyncio.windows_events.ProactorEventLoop
+
         asyncio.set_event_loop_policy(_WindowsEventPolicy())
