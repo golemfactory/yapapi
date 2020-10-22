@@ -372,7 +372,10 @@ class SummaryLogger:
             exc_type, exc, tb = event.exception
             provider_name = self.agreement_provider_name[event.agr_id]
             self.provider_failures[provider_name] += 1
-            self.logger.warning("Activity failed on provider '%s', reason: %r", provider_name, exc)
+            reason = str(exc) or repr(exc) or "unexpected error"
+            self.logger.warning(
+                "Activity failed on provider '%s', reason: %s", provider_name, reason
+            )
 
         elif isinstance(event, events.ComputationFinished):
             self.finished = True
@@ -398,7 +401,12 @@ class SummaryLogger:
             self._print_total_cost()
 
         elif isinstance(event, events.ComputationFailed):
-            self.logger.error(f"Computation failed, reason: %s", event.reason)
+            if not event.exc_info:
+                reason = "unexpected error"
+            else:
+                exc_type, exc, tb = event.exc_info
+                reason = str(exc) or repr(exc) or "unexpected error"
+            self.logger.error(f"Computation failed, reason: %s", reason)
 
 
 def log_summary(wrapped_emitter: Optional[Callable[[events.Event], None]] = None):
