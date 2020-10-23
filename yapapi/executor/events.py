@@ -219,7 +219,7 @@ class CommandEventContext:
 @dataclass
 class CommandExecuted(CommandEvent):
     command: Any
-    success: bool = dataclasses.field(default=False)
+    success: bool = dataclasses.field(default=True)
     message: Optional[str] = dataclasses.field(default=None)
 
 

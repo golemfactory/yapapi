@@ -218,12 +218,7 @@ class WorkContext:
         self._pending_steps.append(_SendFile(self._storage, src_path, dst_path))
 
     def run(
-        self,
-        cmd: str,
-        *args: Iterable[str],
-        env: Optional[Dict[str, str]] = None,
-        stdout: Optional["CaptureContext"] = None,
-        stderr: Optional["CaptureContext"] = None,
+        self, cmd: str, *args: Iterable[str], env: Optional[Dict[str, str]] = None,
     ):
         """Schedule running a command.
 
@@ -234,6 +229,9 @@ class WorkContext:
         :param stderr: optional standard error capture context
         :return: None
         """
+        stdout = CaptureContext.build()
+        stderr = CaptureContext.build()
+
         self.__prepare()
         self._pending_steps.append(_Run(cmd, *args, env=env, stdout=stdout, stderr=stderr))
 
@@ -279,6 +277,27 @@ class CaptureContext:
     limit: Optional[int]
     fmt: Optional[CaptureFormat]
 
+    @classmethod
+    def build(cls, mode=None, limit=None, fmt=None) -> "CaptureContext":
+        if mode in (None, "all"):
+            return cls._build(CaptureMode.HEAD, fmt=fmt)
+        elif mode == "stream":
+            return cls._build(CaptureMode.STREAM, limit=limit, fmt=fmt)
+        elif mode == "head":
+            return cls._build(CaptureMode.HEAD, limit=limit, fmt=fmt)
+        elif mode == "tail":
+            return cls._build(CaptureMode.TAIL, limit=limit, fmt=fmt)
+        elif mode == "headTail":
+            return cls._build(CaptureMode.HEAD_TAIL, limit=limit, fmt=fmt)
+        raise RuntimeError(f"Invalid output capture mode: {mode}")
+
+    @classmethod
+    def _build(
+        cls, mode: CaptureMode, limit: Optional[int] = None, fmt: Optional[str] = None,
+    ) -> "CaptureContext":
+        cap_fmt: Optional[CaptureFormat] = CaptureFormat(fmt) if fmt else None
+        return cls(mode=mode, fmt=cap_fmt, limit=limit)
+
     def to_dict(self) -> Dict:
         inner = dict()
 
@@ -291,30 +310,3 @@ class CaptureContext:
 
     def is_streaming(self) -> bool:
         return self.mode == CaptureMode.STREAM
-
-    @classmethod
-    def stream(cls, limit: Optional[int] = None, fmt: Optional[str] = None) -> "CaptureContext":
-        return cls._build(CaptureMode.STREAM, limit=limit, fmt=fmt)
-
-    @classmethod
-    def all(cls, fmt: Optional[str] = None) -> "CaptureContext":
-        return cls._build(CaptureMode.HEAD, fmt=fmt)
-
-    @classmethod
-    def head(cls, limit: int, fmt: Optional[str] = None) -> "CaptureContext":
-        return cls._build(CaptureMode.HEAD, limit=limit, fmt=fmt)
-
-    @classmethod
-    def tail(cls, limit: int, fmt: Optional[str] = None) -> "CaptureContext":
-        return cls._build(CaptureMode.TAIL, limit=limit, fmt=fmt)
-
-    @classmethod
-    def head_tail(cls, limit: int, fmt: Optional[str] = None) -> "CaptureContext":
-        return cls._build(CaptureMode.HEAD_TAIL, limit=limit, fmt=fmt)
-
-    @classmethod
-    def _build(
-        cls, mode: CaptureMode, limit: Optional[int] = None, fmt: Optional[str] = None,
-    ) -> "CaptureContext":
-        cap_fmt: Optional[CaptureFormat] = CaptureFormat(fmt) if fmt else None
-        return cls(mode=mode, fmt=cap_fmt, limit=limit)

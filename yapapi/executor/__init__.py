@@ -83,7 +83,6 @@ class Executor(AsyncContextManager):
         strategy: MarketStrategy = DummyMS(),
         subnet_tag: Optional[str] = None,
         event_consumer: Optional[Callable[[Event], None]] = None,
-        stream_output: bool = False,
     ):
         """Create a new executor.
 
@@ -100,7 +99,7 @@ class Executor(AsyncContextManager):
         """
 
         self._subnet: Optional[str] = subnet_tag
-        self._stream_output = stream_output
+        self._stream_output = False
         self._strategy = strategy
         self._api_config = rest.Configuration()
         self._stack = AsyncExitStack()
@@ -317,11 +316,10 @@ class Executor(AsyncContextManager):
                             emit(events.ScriptSent(agr_id=agreement.id, task_id=task_id, cmds=cmds))
                             try:
                                 async for evt_ctx in remote:
-                                    emit(
-                                        evt_ctx.event(
-                                            agr_id=agreement.id, task_id=task_id, cmds=cmds
-                                        )
+                                    evt = evt_ctx.event(
+                                        agr_id=agreement.id, task_id=task_id, cmds=cmds
                                     )
+                                    emit(evt)
                             except rest.activity.CommandExecutionError as err:
                                 assert len(err.args) >= 2
                                 cmd_msg, cmd_idx = err.args[0:2]
