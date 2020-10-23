@@ -25,8 +25,11 @@ def build_parser(description: str):
     return parser
 
 
-def asyncio_fix():
-    if sys.platform == "win32" and sys.version_info[0] == 3 and sys.version_info[1] <= 7:
+def windows_event_loop_fix():
+    """Set up asyncio to use ProactorEventLoop implementation for new event loops on Windows."""
+
+    # For Python 3.8 ProactorEventLoop is already the default on Windows
+    if sys.platform == "win32" and sys.version_info < (3, 8):
 
         class _WindowsEventPolicy(asyncio.events.BaseDefaultEventLoopPolicy):
             _loop_factory = asyncio.windows_events.ProactorEventLoop
