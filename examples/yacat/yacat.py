@@ -140,6 +140,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    # This is only required when running on Windows with Python prior to 3.8:
+    utils.windows_event_loop_fix()
+
     enable_default_logger(log_file=args.log_file)
 
     sys.stderr.write(

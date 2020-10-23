@@ -86,6 +86,9 @@ if __name__ == "__main__":
     parser.set_defaults(log_file="blender-yapapi.log")
     args = parser.parse_args()
 
+    # This is only required when running on Windows with Python prior to 3.8:
+    utils.windows_event_loop_fix()
+
     enable_default_logger(log_file=args.log_file)
     loop = asyncio.get_event_loop()
     subnet = args.subnet_tag
