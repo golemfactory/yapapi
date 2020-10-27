@@ -225,8 +225,6 @@ class WorkContext:
         :param cmd: command to run on the provider, e.g. /my/dir/run.sh
         :param args: command arguments, e.g. "input1.txt", "output1.txt"
         :param env: optional dictionary with environmental variables
-        :param stdout: optional standard output capture context
-        :param stderr: optional standard error capture context
         :return: None
         """
         stdout = CaptureContext.build()
