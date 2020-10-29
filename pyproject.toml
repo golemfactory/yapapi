@@ -32,7 +32,7 @@ rich = { version = "^2.2.5", optional = true }
 async_exit_stack = "^1.0.1"
 jsonrpc-base = "^1.0.3"
 
-ya-aioclient = { url = "https://builds.golem.network/packages/ya_aioclient-0.2.2-py3-none-any.whl"}
+ya-aioclient = "0.2.0"
 toml = "^0.10.1"
 
 
