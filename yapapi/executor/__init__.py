@@ -1,7 +1,6 @@
 """
 An implementation of the new Golem's task executor.
 """
-import abc
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import os
@@ -25,7 +24,7 @@ import traceback
 from dataclasses import dataclass
 from typing_extensions import Final, AsyncGenerator
 
-from .ctx import WorkContext, CommandContainer, Work
+from .ctx import CaptureContext, CommandContainer, Work, WorkContext
 from .events import Event
 from . import events
 from .task import Task, TaskStatus
@@ -35,7 +34,6 @@ from ..props import Activity, NodeInfo, NodeInfoKeys
 from ..props.base import InvalidPropertiesError
 from ..props.builder import DemandBuilder
 from .. import rest
-from ..rest.activity import CommandExecutionError
 from ..storage import gftp
 from ._smartq import SmartQueue, Handle
 from .strategy import DummyMS, MarketStrategy, SCORE_NEUTRAL
@@ -101,6 +99,7 @@ class Executor(AsyncContextManager):
         """
 
         self._subnet: Optional[str] = subnet_tag
+        self._stream_output = False
         self._strategy = strategy
         self._api_config = rest.Configuration()
         self._stack = AsyncExitStack()
@@ -167,6 +166,7 @@ class Executor(AsyncContextManager):
         strategy = self._strategy
 
         done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
+        stream_output = self._stream_output
 
         def on_task_done(task: Task[D, R], status: TaskStatus) -> None:
             """Callback run when `task` is accepted or rejected."""
@@ -311,36 +311,26 @@ class Executor(AsyncContextManager):
                             await batch.prepare()
                             cc = CommandContainer()
                             batch.register(cc)
-                            remote = await act.send(cc.commands())
-                            emit(
-                                events.ScriptSent(
-                                    agr_id=agreement.id, task_id=task_id, cmds=cc.commands()
-                                )
-                            )
-
+                            remote = await act.send(cc.commands(), stream_output)
+                            cmds = cc.commands()
+                            emit(events.ScriptSent(agr_id=agreement.id, task_id=task_id, cmds=cmds))
                             try:
-                                async for step in remote:
-                                    emit(
-                                        events.CommandExecuted(
-                                            success=True,
-                                            agr_id=agreement.id,
-                                            task_id=task_id,
-                                            command=cc.commands()[step.idx],
-                                            message=step.message,
-                                            cmd_idx=step.idx,
-                                        )
+                                async for evt_ctx in remote:
+                                    evt = evt_ctx.event(
+                                        agr_id=agreement.id, task_id=task_id, cmds=cmds
                                     )
-                            except CommandExecutionError as err:
+                                    emit(evt)
+                            except rest.activity.CommandExecutionError as err:
                                 assert len(err.args) >= 2
                                 cmd_msg, cmd_idx = err.args[0:2]
                                 emit(
                                     events.CommandExecuted(
-                                        success=False,
                                         agr_id=agreement.id,
                                         task_id=task_id,
+                                        cmd_idx=cmd_idx,
+                                        success=False,
                                         command=cc.commands()[cmd_idx],
                                         message=cmd_msg,
-                                        cmd_idx=cmd_idx,
                                     )
                                 )
                                 raise

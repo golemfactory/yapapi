@@ -3,7 +3,7 @@ import dataclasses
 from datetime import timedelta
 from dataclasses import dataclass
 from types import TracebackType
-from typing import Any, Optional, Type, Tuple
+from typing import Any, Optional, Type, Tuple, List
 
 from yapapi.props import NodeInfo
 
@@ -185,14 +185,6 @@ class ScriptSent(ScriptEvent):
 
 
 @dataclass
-class CommandExecuted(ScriptEvent):
-    success: bool
-    cmd_idx: int
-    command: Any
-    message: str
-
-
-@dataclass
 class GettingResults(ScriptEvent):
     pass
 
@@ -200,6 +192,50 @@ class GettingResults(ScriptEvent):
 @dataclass
 class ScriptFinished(ScriptEvent):
     pass
+
+
+@dataclass
+class CommandEvent(ScriptEvent):
+    cmd_idx: int
+
+
+@dataclass
+class CommandEventContext:
+    evt_cls: Type[CommandEvent]
+    kwargs: dict
+
+    def computation_finished(self, last_idx: int) -> bool:
+        return self.evt_cls is CommandExecuted and (
+            self.kwargs["cmd_idx"] >= last_idx or not self.kwargs["success"]
+        )
+
+    def event(self, agr_id: str, task_id: str, cmds: List) -> CommandEvent:
+        kwargs = dict(agr_id=agr_id, task_id=task_id, **self.kwargs)
+        if self.evt_cls is CommandExecuted:
+            kwargs["command"] = cmds[self.kwargs["cmd_idx"]]
+        return self.evt_cls(**kwargs)
+
+
+@dataclass
+class CommandExecuted(CommandEvent):
+    command: Any
+    success: bool = dataclasses.field(default=True)
+    message: Optional[str] = dataclasses.field(default=None)
+
+
+@dataclass
+class CommandStarted(CommandEvent):
+    command: str
+
+
+@dataclass
+class CommandStdOut(CommandEvent):
+    output: str
+
+
+@dataclass
+class CommandStdErr(CommandEvent):
+    output: str
 
 
 @dataclass

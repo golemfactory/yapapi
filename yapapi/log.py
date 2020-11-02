@@ -106,6 +106,9 @@ event_type_to_string = {
     events.ActivityCreateFailed: "Failed to create activity",
     events.TaskStarted: "Task started",
     events.ScriptSent: "Script sent to provider",
+    events.CommandStarted: "Command started",
+    events.CommandStdOut: "Command stdout",
+    events.CommandStdErr: "Command stderr",
     events.CommandExecuted: "Script command executed",
     events.GettingResults: "Getting script results",
     events.ScriptFinished: "Script finished",
@@ -359,17 +362,6 @@ class SummaryLogger:
                 self.task_data[event.task_id] if event.task_id else "<initialization>",
             )
 
-        elif isinstance(event, events.CommandExecuted):
-            if event.success:
-                return
-            provider_name = self.agreement_provider_name[event.agr_id]
-            self.logger.warning(
-                "Command failed on provider '%s', command: %s, output: %s",
-                provider_name,
-                event.command,
-                event.message,
-            )
-
         elif isinstance(event, events.ScriptFinished):
             provider_name = self.agreement_provider_name[event.agr_id]
             self.logger.info(
@@ -406,6 +398,38 @@ class SummaryLogger:
                 _exc_type, exc, _tb = event.exc_info
                 reason = str(exc) or repr(exc) or "unexpected error"
                 self.logger.error(f"Computation failed, reason: %s", reason)
+
+        elif isinstance(event, events.CommandStarted):
+            self.logger.info(
+                f"Command started (task {event.task_id}, idx {event.cmd_idx}): {event.command}"
+            )
+
+        elif isinstance(event, events.CommandExecuted):
+            if event.success:
+                # display the output with:
+                # self.logger.info(
+                #     f"Command finished (task {event.task_id}, idx {event.cmd_idx}): {event.message}"
+                # )
+                # event.message is set in activity.py:145
+                return
+
+            provider_name = self.agreement_provider_name[event.agr_id]
+            self.logger.warning(
+                "Command failed on provider '%s', command: %s, output: %s",
+                provider_name,
+                event.command,
+                event.message,
+            )
+
+        elif isinstance(event, events.CommandStdOut):
+            self.logger.info(
+                f"Command stdout (task {event.task_id}, idx {event.cmd_idx}): {event.output.rstrip()}"
+            )
+
+        elif isinstance(event, events.CommandStdErr):
+            self.logger.warning(
+                f"Command stderr (task {event.task_id}, idx {event.cmd_idx}): {event.output.rstrip()}"
+            )
 
 
 def log_summary(wrapped_emitter: Optional[Callable[[events.Event], None]] = None):

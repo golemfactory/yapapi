@@ -4,7 +4,7 @@ import toml
 from pathlib import Path
 from pkg_resources import get_distribution
 
-from .executor import Executor, Task, WorkContext
+from .executor import Executor, Task, WorkContext, CaptureContext
 
 
 def get_version() -> str:
@@ -22,4 +22,13 @@ def get_version() -> str:
 
 
 __version__: str = get_version()
-__all__ = ["Executor", "props", "rest", "executor", "storage", "Task", "WorkContext"]
+__all__ = [
+    "Executor",
+    "props",
+    "rest",
+    "executor",
+    "storage",
+    "Task",
+    "WorkContext",
+    "CaptureContext",
+]
