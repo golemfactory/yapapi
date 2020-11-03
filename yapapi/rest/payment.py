@@ -91,7 +91,7 @@ class Payment(object):
         payment_platform: str = "NGNT",
         *,
         expires: Optional[datetime] = None,
-        make_deposit: bool = False
+        make_deposit: bool = False,
     ) -> ResourceCtx[Allocation]:
         """Creates new allocation.
 
