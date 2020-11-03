@@ -107,7 +107,7 @@ class Executor(AsyncContextManager):
         self._conf = _ExecutorConfig(max_workers, timeout)
         # TODO: setup precitsion
         self._budget_amount = Decimal(budget)
-        self._budget_allocation: Optional[rest.payment.Allocation] = None
+        self._budget_allocations: list[rest.payment.Allocation] = []
 
         if not event_consumer:
             # Use local import to avoid cyclic imports when yapapi.log
@@ -138,16 +138,18 @@ class Executor(AsyncContextManager):
         stack = self._stack
         emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
 
-        # Creating allocation
-        if not self._budget_allocation:
-            self._budget_allocation = cast(
-                rest.payment.Allocation,
-                await stack.enter_async_context(
-                    self._payment_api.new_allocation(
-                        self._budget_amount, expires=self._expires + CFG_INVOICE_TIMEOUT
-                    )
-                ),
-            )
+        if not self._budget_allocations:
+            async for account in self._payment_api.accounts():
+                allocation = cast(
+                    rest.payment.Allocation,
+                    await stack.enter_async_context(
+                        self._payment_api.new_allocation(
+                            self._budget_amount, expires=self._expires + CFG_INVOICE_TIMEOUT
+                        )
+                    ),
+                )
+                self._budget_allocations.append(allocation)
+        assert self._budget_allocations, "No payment accounts. Did you forget to run 'yagna payment init -r'?"
 
         emit(events.ComputationStarted())
 
@@ -191,8 +193,8 @@ class Executor(AsyncContextManager):
         proposals_confirmed = 0
 
         async def process_invoices() -> None:
-            assert self._budget_allocation
-            allocation: rest.payment.Allocation = self._budget_allocation
+            assert self._budget_allocations
+            allocation: rest.payment.Allocation = self._budget_allocations[0]
             async for invoice in self._payment_api.incoming_invoices():
                 if invoice.agreement_id in agreements_to_pay:
                     emit(
@@ -211,7 +213,7 @@ class Executor(AsyncContextManager):
 
         async def accept_payment_for_agreement(agreement_id: str, *, partial: bool = False) -> bool:
             assert self._budget_allocation
-            allocation: rest.payment.Allocation = self._budget_allocation
+            allocation: rest.payment.Allocation = self._budget_allocations[0]
             emit(events.PaymentPrepared(agr_id=agreement_id))
             inv = invoices.get(agreement_id)
             if inv is None:

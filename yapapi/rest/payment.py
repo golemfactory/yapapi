@@ -1,4 +1,4 @@
-from ya_payment import ApiClient, RequestorApi
+from ya_payment import Account, ApiClient, RequestorApi
 import ya_payment.models as yap
 from typing import Optional, AsyncIterator, cast, Iterable, Union
 from decimal import Decimal
@@ -86,7 +86,7 @@ class Payment(object):
         self._api: RequestorApi = RequestorApi(api_client)
 
     def new_allocation(
-        self, amount: Decimal, *, expires: Optional[datetime] = None, make_deposit: bool = False
+        self, amount: Decimal, payment_platform: str = "NGNT", *, expires: Optional[datetime] = None, make_deposit: bool = False
     ) -> ResourceCtx[Allocation]:
         """Creates new allocation.
 
@@ -101,6 +101,7 @@ class Payment(object):
             model=yap.Allocation(
                 # TODO: allocation_id should be readonly.
                 allocation_id="",
+                payment_platform=payment_platform,
                 total_amount=str(amount),
                 timeout=allocation_timeout,
                 make_deposit=make_deposit,
@@ -143,6 +144,10 @@ class Payment(object):
             amount=Decimal(allocation_obj.total_amount),
             expires=allocation_obj.timeout,
         )
+
+    async def accounts(self) -> AsyncIterator[Account]:
+        for account_obj in cast(Iterable[Account], await self._api.get_send_accounts()):
+            yield account_obj
 
     async def invoices(self) -> AsyncIterator[Invoice]:
 
