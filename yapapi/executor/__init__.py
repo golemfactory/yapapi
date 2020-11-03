@@ -150,7 +150,9 @@ class Executor(AsyncContextManager):
                     ),
                 )
                 self._budget_allocations.append(allocation)
-        assert self._budget_allocations, "No payment accounts. Did you forget to run 'yagna payment init -r'?"
+        assert (
+            self._budget_allocations
+        ), "No payment accounts. Did you forget to run 'yagna payment init -r'?"
 
         emit(events.ComputationStarted())
 

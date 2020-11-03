@@ -86,7 +86,12 @@ class Payment(object):
         self._api: RequestorApi = RequestorApi(api_client)
 
     def new_allocation(
-        self, amount: Decimal, payment_platform: str = "NGNT", *, expires: Optional[datetime] = None, make_deposit: bool = False
+        self,
+        amount: Decimal,
+        payment_platform: str = "NGNT",
+        *,
+        expires: Optional[datetime] = None,
+        make_deposit: bool = False
     ) -> ResourceCtx[Allocation]:
         """Creates new allocation.
 
