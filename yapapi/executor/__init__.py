@@ -107,7 +107,7 @@ class Executor(AsyncContextManager):
         self._conf = _ExecutorConfig(max_workers, timeout)
         # TODO: setup precitsion
         self._budget_amount = Decimal(budget)
-        self._budget_allocations: list[rest.payment.Allocation] = []
+        self._budget_allocations: List[rest.payment.Allocation] = []
 
         if not event_consumer:
             # Use local import to avoid cyclic imports when yapapi.log
@@ -212,7 +212,7 @@ class Executor(AsyncContextManager):
                     break
 
         async def accept_payment_for_agreement(agreement_id: str, *, partial: bool = False) -> bool:
-            assert self._budget_allocation
+            assert self._budget_allocations
             allocation: rest.payment.Allocation = self._budget_allocations[0]
             emit(events.PaymentPrepared(agr_id=agreement_id))
             inv = invoices.get(agreement_id)
