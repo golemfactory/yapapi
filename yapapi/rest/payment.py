@@ -1,6 +1,6 @@
 from ya_payment import Account, ApiClient, RequestorApi
 import ya_payment.models as yap
-from typing import Optional, AsyncIterator, cast, Iterable, Union
+from typing import Optional, AsyncIterator, cast, Iterable, Union, List
 from decimal import Decimal
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass
@@ -153,6 +153,9 @@ class Payment(object):
     async def accounts(self) -> AsyncIterator[Account]:
         for account_obj in cast(Iterable[Account], await self._api.get_send_accounts()):
             yield account_obj
+
+    async def decorate_demand(self, ids: List[int]) -> yap.MarketDecoration:
+        return await self._api.decorate_demand(ids)
 
     async def invoices(self) -> AsyncIterator[Invoice]:
 

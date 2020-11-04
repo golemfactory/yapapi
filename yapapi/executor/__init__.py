@@ -139,6 +139,7 @@ class Executor(AsyncContextManager):
         stack = self._stack
         emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
 
+        ids_to_decorate = []
         if not self._budget_allocations:
             async for account in self._payment_api.accounts():
                 allocation = cast(
@@ -150,9 +151,11 @@ class Executor(AsyncContextManager):
                     ),
                 )
                 self._budget_allocations.append(allocation)
+                ids_to_decorate.append(allocation.id)
         assert (
             self._budget_allocations
         ), "No payment accounts. Did you forget to run 'yagna payment init -r'?"
+        decoration = await self._payment_api.decorate_demand(ids_to_decorate)
 
         emit(events.ComputationStarted())
 
