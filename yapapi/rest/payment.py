@@ -154,7 +154,7 @@ class Payment(object):
         for account_obj in cast(Iterable[Account], await self._api.get_send_accounts()):
             yield account_obj
 
-    async def decorate_demand(self, ids: List[int]) -> yap.MarketDecoration:
+    async def decorate_demand(self, ids: List[str]) -> yap.MarketDecoration:
         return await self._api.decorate_demand(ids)
 
     async def invoices(self) -> AsyncIterator[Invoice]:
