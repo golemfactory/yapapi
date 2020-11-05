@@ -155,7 +155,7 @@ class Executor(AsyncContextManager):
         assert (
             self._budget_allocations
         ), "No payment accounts. Did you forget to run 'yagna payment init -r'?"
-        decoration = await self._payment_api.decorate_demand(ids_to_decorate)
+        multi_payment_decoration = await self._payment_api.decorate_demand(ids_to_decorate)
 
         emit(events.ComputationStarted())
 
@@ -165,6 +165,9 @@ class Executor(AsyncContextManager):
         builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
+        for constraint in multi_payment_decoration.constraints:
+            builder.ensure(constraint)
+        builder.properties.update({p.key: p.value for p in multi_payment_decoration.properties})
         await self._package.decorate_demand(builder)
         await self._strategy.decorate_demand(builder)
 
