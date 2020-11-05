@@ -230,6 +230,13 @@ class Executor(AsyncContextManager):
                     allocation = allocation_for_invoice(invoice)
                     agreements_to_pay.remove(invoice.agreement_id)
                     await invoice.accept(amount=invoice.amount, allocation=allocation)
+                    emit(
+                        events.PaymentAccepted(
+                            agr_id=invoice.agreement_id,
+                            inv_id=invoice.invoice_id,
+                            amount=invoice.amount,
+                        )
+                    )
                 else:
                     invoices[invoice.agreement_id] = invoice
                 if payment_closing and not agreements_to_pay:
