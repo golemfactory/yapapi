@@ -146,7 +146,9 @@ class Executor(AsyncContextManager):
                     rest.payment.Allocation,
                     await stack.enter_async_context(
                         self._payment_api.new_allocation(
-                            self._budget_amount, expires=self._expires + CFG_INVOICE_TIMEOUT
+                            self._budget_amount,
+                            payment_platform=account.platform,
+                            expires=self._expires + CFG_INVOICE_TIMEOUT
                         )
                     ),
                 )
@@ -201,9 +203,13 @@ class Executor(AsyncContextManager):
         offers_collected = 0
         proposals_confirmed = 0
 
+        def allocation_for_platform(payment_platform: str) -> rest.payment.Allocation:
+            try:
+                return next(a for a in self._budget_allocations if a.payment_platform == payment_platform)
+            except:
+                raise RuntimeError(f"No allocation for {payment_platform} payment platform.")
+
         async def process_invoices() -> None:
-            assert self._budget_allocations
-            allocation: rest.payment.Allocation = self._budget_allocations[0]
             async for invoice in self._payment_api.incoming_invoices():
                 if invoice.agreement_id in agreements_to_pay:
                     emit(
@@ -213,6 +219,7 @@ class Executor(AsyncContextManager):
                             amount=invoice.amount,
                         )
                     )
+                    allocation = allocation_for_platform(invoice.payment_platform)
                     agreements_to_pay.remove(invoice.agreement_id)
                     await invoice.accept(amount=invoice.amount, allocation=allocation)
                 else:
@@ -221,8 +228,6 @@ class Executor(AsyncContextManager):
                     break
 
         async def accept_payment_for_agreement(agreement_id: str, *, partial: bool = False) -> bool:
-            assert self._budget_allocations
-            allocation: rest.payment.Allocation = self._budget_allocations[0]
             emit(events.PaymentPrepared(agr_id=agreement_id))
             inv = invoices.get(agreement_id)
             if inv is None:
@@ -235,6 +240,7 @@ class Executor(AsyncContextManager):
                     agr_id=agreement_id, inv_id=inv.invoice_id, amount=inv.amount
                 )
             )
+            allocation = allocation_for_platform(inv.payment_platform)
             await inv.accept(amount=inv.amount, allocation=allocation)
             return True
 
@@ -266,6 +272,16 @@ class Executor(AsyncContextManager):
                         emit(events.ProposalRejected(prop_id=proposal.id))
                     elif not proposal.is_draft:
                         try:
+                            prov_platforms = {p.split(".")[4] for p in proposal.props if p.startswith("golem.com.payment.platform.")}
+                            req_platforms = {a.payment_platform for a in self._budget_allocations}
+                            common_platforms = req_platforms.intersection(prov_platforms)
+                            if len(common_platforms) > 0:
+                                builder.properties["golem.com.payment.chosen-platform"] = next(iter(common_platforms))
+                            else:
+                                # reject proposal if there are no common payment platforms
+                                with contextlib.suppress(Exception):
+                                    await proposal.reject()
+                                emit(events.ProposalRejected(prop_id=proposal.id, reason="No common payment platforms"))
                             await proposal.respond(builder.properties, builder.constraints)
                             emit(events.ProposalResponded(prop_id=proposal.id))
                         except Exception as ex:

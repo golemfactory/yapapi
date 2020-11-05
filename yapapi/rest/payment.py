@@ -41,6 +41,9 @@ class Allocation(_Link):
     amount: Decimal
     "Total amount allocated"
 
+    payment_platform: str
+    "Payment platform, e.g. NGNT"
+
     expires: Optional[datetime]
     "Allocation expiration timestamp"
 
@@ -70,7 +73,11 @@ class _AllocationTask(ResourceCtx[Allocation]):
         assert self._id is not None
 
         return Allocation(
-            _api=self._api, id=self._id, amount=model.total_amount, expires=model.timeout,
+            _api=self._api,
+            id=self._id,
+            payment_platform=model.payment_platform,
+            amount=model.total_amount,
+            expires=model.timeout,
         )
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
