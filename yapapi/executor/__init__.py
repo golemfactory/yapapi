@@ -148,7 +148,7 @@ class Executor(AsyncContextManager):
                         self._payment_api.new_allocation(
                             self._budget_amount,
                             payment_platform=account.platform,
-                            expires=self._expires + CFG_INVOICE_TIMEOUT
+                            expires=self._expires + CFG_INVOICE_TIMEOUT,
                         )
                     ),
                 )
@@ -205,7 +205,9 @@ class Executor(AsyncContextManager):
 
         def allocation_for_platform(payment_platform: str) -> rest.payment.Allocation:
             try:
-                return next(a for a in self._budget_allocations if a.payment_platform == payment_platform)
+                return next(
+                    a for a in self._budget_allocations if a.payment_platform == payment_platform
+                )
             except:
                 raise RuntimeError(f"No allocation for {payment_platform} payment platform.")
 
@@ -276,16 +278,26 @@ class Executor(AsyncContextManager):
                         emit(events.ProposalRejected(prop_id=proposal.id))
                     elif not proposal.is_draft:
                         try:
-                            prov_platforms = {p.split(".")[4] for p in proposal.props if p.startswith("golem.com.payment.platform.")}
+                            prov_platforms = {
+                                p.split(".")[4]
+                                for p in proposal.props
+                                if p.startswith("golem.com.payment.platform.")
+                            }
                             req_platforms = {a.payment_platform for a in self._budget_allocations}
                             common_platforms = req_platforms.intersection(prov_platforms)
                             if len(common_platforms) > 0:
-                                builder.properties["golem.com.payment.chosen-platform"] = next(iter(common_platforms))
+                                builder.properties["golem.com.payment.chosen-platform"] = next(
+                                    iter(common_platforms)
+                                )
                             else:
                                 # reject proposal if there are no common payment platforms
                                 with contextlib.suppress(Exception):
                                     await proposal.reject()
-                                emit(events.ProposalRejected(prop_id=proposal.id, reason="No common payment platforms"))
+                                emit(
+                                    events.ProposalRejected(
+                                        prop_id=proposal.id, reason="No common payment platforms"
+                                    )
+                                )
                             await proposal.respond(builder.properties, builder.constraints)
                             emit(events.ProposalResponded(prop_id=proposal.id))
                         except Exception as ex:
