@@ -41,7 +41,7 @@ class Allocation(_Link):
     amount: Decimal
     "Total amount allocated"
 
-    payment_platform: str
+    payment_platform: Optional[str]
     "Payment platform, e.g. NGNT"
 
     expires: Optional[datetime]
@@ -145,6 +145,7 @@ class Payment(object):
                 _api=self._api,
                 id=alloc_obj.allocation_id,
                 amount=Decimal(alloc_obj.total_amount),
+                payment_platform=alloc_obj.payment_platform,
                 expires=alloc_obj.timeout,
             )
 
@@ -154,6 +155,7 @@ class Payment(object):
             _api=self._api,
             id=allocation_obj.allocation_id,
             amount=Decimal(allocation_obj.total_amount),
+            payment_platform=allocation_obj.payment_platform,
             expires=allocation_obj.timeout,
         )
 

@@ -219,30 +219,34 @@ class Executor(AsyncContextManager):
                             amount=invoice.amount,
                         )
                     )
-                    allocation = allocation_for_platform(invoice.payment_platform)
-                    agreements_to_pay.remove(invoice.agreement_id)
-                    await invoice.accept(amount=invoice.amount, allocation=allocation)
+                    if invoice.payment_platform:
+                        allocation = allocation_for_platform(invoice.payment_platform)
+                        agreements_to_pay.remove(invoice.agreement_id)
+                        await invoice.accept(amount=invoice.amount, allocation=allocation)
+                    else:
+                        # TODO handle missing payment platform
+                        pass
                 else:
                     invoices[invoice.agreement_id] = invoice
                 if payment_closing and not agreements_to_pay:
                     break
 
-        async def accept_payment_for_agreement(agreement_id: str, *, partial: bool = False) -> bool:
+        async def accept_payment_for_agreement(agreement_id: str, *, partial: bool = False) -> None:
             emit(events.PaymentPrepared(agr_id=agreement_id))
             inv = invoices.get(agreement_id)
             if inv is None:
                 agreements_to_pay.add(agreement_id)
                 emit(events.PaymentQueued(agr_id=agreement_id))
-                return False
+                return
             del invoices[agreement_id]
-            emit(
-                events.PaymentAccepted(
-                    agr_id=agreement_id, inv_id=inv.invoice_id, amount=inv.amount
+            if inv.payment_platform:
+                allocation = allocation_for_platform(inv.payment_platform)
+                await inv.accept(amount=inv.amount, allocation=allocation)
+                emit(
+                    events.PaymentAccepted(
+                        agr_id=agreement_id, inv_id=inv.invoice_id, amount=inv.amount
+                    )
                 )
-            )
-            allocation = allocation_for_platform(inv.payment_platform)
-            await inv.accept(amount=inv.amount, allocation=allocation)
-            return True
 
         async def find_offers() -> None:
             nonlocal offers_collected, proposals_confirmed
