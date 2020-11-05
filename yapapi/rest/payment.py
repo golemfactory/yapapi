@@ -44,6 +44,9 @@ class Allocation(_Link):
     payment_platform: Optional[str]
     "Payment platform, e.g. NGNT"
 
+    payment_address: Optional[str]
+    "Payment address, e.g. 0x123..."
+
     expires: Optional[datetime]
     "Allocation expiration timestamp"
 
@@ -76,6 +79,7 @@ class _AllocationTask(ResourceCtx[Allocation]):
             _api=self._api,
             id=self._id,
             payment_platform=model.payment_platform,
+            payment_address=model.address,
             amount=model.total_amount,
             expires=model.timeout,
         )
@@ -95,7 +99,8 @@ class Payment(object):
     def new_allocation(
         self,
         amount: Decimal,
-        payment_platform: str = "NGNT",
+        payment_platform: str,
+        payment_address: str,
         *,
         expires: Optional[datetime] = None,
         make_deposit: bool = False,
@@ -114,6 +119,7 @@ class Payment(object):
                 # TODO: allocation_id should be readonly.
                 allocation_id="",
                 payment_platform=payment_platform,
+                address=payment_address,
                 total_amount=str(amount),
                 timeout=allocation_timeout,
                 make_deposit=make_deposit,
@@ -146,6 +152,7 @@ class Payment(object):
                 id=alloc_obj.allocation_id,
                 amount=Decimal(alloc_obj.total_amount),
                 payment_platform=alloc_obj.payment_platform,
+                payment_address=alloc_obj.address,
                 expires=alloc_obj.timeout,
             )
 
@@ -156,6 +163,7 @@ class Payment(object):
             id=allocation_obj.allocation_id,
             amount=Decimal(allocation_obj.total_amount),
             payment_platform=allocation_obj.payment_platform,
+            payment_address=allocation_obj.address,
             expires=allocation_obj.timeout,
         )
 
