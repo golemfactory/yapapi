@@ -18,6 +18,7 @@ class Invoice(yap.Invoice):
 
 
 InvoiceStatus = yap.InvoiceStatus
+MarketDecoration = yap.MarketDecoration
 
 
 @dataclass

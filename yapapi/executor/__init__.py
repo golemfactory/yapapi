@@ -254,18 +254,7 @@ class Executor(AsyncContextManager):
                         emit(events.ProposalRejected(prop_id=proposal.id))
                     elif not proposal.is_draft:
                         try:
-                            prov_platforms = {
-                                property.split(".")[4]
-                                for property in proposal.props
-                                if property.startswith("golem.com.payment.platform.")
-                            }
-                            if not prov_platforms:
-                                prov_platforms = {"NGNT"}
-                            req_platforms = {
-                                allocation.payment_platform
-                                for allocation in self._budget_allocations
-                            }
-                            common_platforms = req_platforms.intersection(prov_platforms)
+                            common_platforms = self._get_common_payment_platforms(proposal)
                             if common_platforms:
                                 builder.properties["golem.com.payment.chosen-platform"] = next(
                                     iter(common_platforms)
@@ -499,7 +488,7 @@ class Executor(AsyncContextManager):
                 {process_invoices_job}, timeout=15, return_when=asyncio.ALL_COMPLETED
             )
 
-    async def _create_allocations(self):
+    async def _create_allocations(self) -> rest.payment.MarketDecoration:
         ids_to_decorate = []
         if not self._budget_allocations:
             async for account in self._payment_api.accounts():
@@ -520,6 +509,21 @@ class Executor(AsyncContextManager):
             self._budget_allocations
         ), "No payment accounts. Did you forget to run 'yagna payment init -r'?"
         return await self._payment_api.decorate_demand(ids_to_decorate)
+
+    def _get_common_payment_platforms(self, proposal: rest.market.OfferProposal) -> Set[str]:
+        prov_platforms = {
+            property.split(".")[4]
+            for property in proposal.props
+            if property.startswith("golem.com.payment.platform.") and property is not None
+        }
+        if not prov_platforms:
+            prov_platforms = {"NGNT"}
+        req_platforms = {
+            allocation.payment_platform
+            for allocation in self._budget_allocations
+            if allocation.payment_platform is not None
+        }
+        return req_platforms.intersection(prov_platforms)
 
     def _allocation_for_invoice(self, invoice: rest.payment.Invoice) -> rest.payment.Allocation:
         try:
