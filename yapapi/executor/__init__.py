@@ -11,6 +11,7 @@ from typing import (
     Callable,
     Dict,
     Iterable,
+    List,
     NamedTuple,
     Optional,
     Set,
@@ -107,7 +108,7 @@ class Executor(AsyncContextManager):
         self._conf = _ExecutorConfig(max_workers, timeout)
         # TODO: setup precitsion
         self._budget_amount = Decimal(budget)
-        self._budget_allocation: Optional[rest.payment.Allocation] = None
+        self._budget_allocations: List[rest.payment.Allocation] = []
 
         if not event_consumer:
             # Use local import to avoid cyclic imports when yapapi.log
@@ -138,16 +139,7 @@ class Executor(AsyncContextManager):
         stack = self._stack
         emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
 
-        # Creating allocation
-        if not self._budget_allocation:
-            self._budget_allocation = cast(
-                rest.payment.Allocation,
-                await stack.enter_async_context(
-                    self._payment_api.new_allocation(
-                        self._budget_amount, expires=self._expires + CFG_INVOICE_TIMEOUT
-                    )
-                ),
-            )
+        multi_payment_decoration = await self._create_allocations()
 
         emit(events.ComputationStarted())
 
@@ -157,6 +149,9 @@ class Executor(AsyncContextManager):
         builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
+        for constraint in multi_payment_decoration.constraints:
+            builder.ensure(constraint)
+        builder.properties.update({p.key: p.value for p in multi_payment_decoration.properties})
         await self._package.decorate_demand(builder)
         await self._strategy.decorate_demand(builder)
 
@@ -191,8 +186,6 @@ class Executor(AsyncContextManager):
         proposals_confirmed = 0
 
         async def process_invoices() -> None:
-            assert self._budget_allocation
-            allocation: rest.payment.Allocation = self._budget_allocation
             async for invoice in self._payment_api.incoming_invoices():
                 if invoice.agreement_id in agreements_to_pay:
                     emit(
@@ -202,30 +195,36 @@ class Executor(AsyncContextManager):
                             amount=invoice.amount,
                         )
                     )
+                    allocation = self._allocation_for_invoice(invoice)
                     agreements_to_pay.remove(invoice.agreement_id)
                     await invoice.accept(amount=invoice.amount, allocation=allocation)
+                    emit(
+                        events.PaymentAccepted(
+                            agr_id=invoice.agreement_id,
+                            inv_id=invoice.invoice_id,
+                            amount=invoice.amount,
+                        )
+                    )
                 else:
                     invoices[invoice.agreement_id] = invoice
                 if payment_closing and not agreements_to_pay:
                     break
 
-        async def accept_payment_for_agreement(agreement_id: str, *, partial: bool = False) -> bool:
-            assert self._budget_allocation
-            allocation: rest.payment.Allocation = self._budget_allocation
+        async def accept_payment_for_agreement(agreement_id: str, *, partial: bool = False) -> None:
             emit(events.PaymentPrepared(agr_id=agreement_id))
             inv = invoices.get(agreement_id)
             if inv is None:
                 agreements_to_pay.add(agreement_id)
                 emit(events.PaymentQueued(agr_id=agreement_id))
-                return False
+                return
             del invoices[agreement_id]
+            allocation = self._allocation_for_invoice(inv)
+            await inv.accept(amount=inv.amount, allocation=allocation)
             emit(
                 events.PaymentAccepted(
                     agr_id=agreement_id, inv_id=inv.invoice_id, amount=inv.amount
                 )
             )
-            await inv.accept(amount=inv.amount, allocation=allocation)
-            return True
 
         async def find_offers() -> None:
             nonlocal offers_collected, proposals_confirmed
@@ -255,6 +254,20 @@ class Executor(AsyncContextManager):
                         emit(events.ProposalRejected(prop_id=proposal.id))
                     elif not proposal.is_draft:
                         try:
+                            common_platforms = self._get_common_payment_platforms(proposal)
+                            if common_platforms:
+                                builder.properties["golem.com.payment.chosen-platform"] = next(
+                                    iter(common_platforms)
+                                )
+                            else:
+                                # reject proposal if there are no common payment platforms
+                                with contextlib.suppress(Exception):
+                                    await proposal.reject()
+                                emit(
+                                    events.ProposalRejected(
+                                        prop_id=proposal.id, reason="No common payment platforms"
+                                    )
+                                )
                             await proposal.respond(builder.properties, builder.constraints)
                             emit(events.ProposalResponded(prop_id=proposal.id))
                         except Exception as ex:
@@ -473,6 +486,56 @@ class Executor(AsyncContextManager):
         if agreements_to_pay:
             await asyncio.wait(
                 {process_invoices_job}, timeout=15, return_when=asyncio.ALL_COMPLETED
+            )
+
+    async def _create_allocations(self) -> rest.payment.MarketDecoration:
+        ids_to_decorate = []
+        if not self._budget_allocations:
+            async for account in self._payment_api.accounts():
+                allocation = cast(
+                    rest.payment.Allocation,
+                    await self._stack.enter_async_context(
+                        self._payment_api.new_allocation(
+                            self._budget_amount,
+                            payment_platform=account.platform,
+                            payment_address=account.address,
+                            expires=self._expires + CFG_INVOICE_TIMEOUT,
+                        )
+                    ),
+                )
+                self._budget_allocations.append(allocation)
+                ids_to_decorate.append(allocation.id)
+        assert (
+            self._budget_allocations
+        ), "No payment accounts. Did you forget to run 'yagna payment init -r'?"
+        return await self._payment_api.decorate_demand(ids_to_decorate)
+
+    def _get_common_payment_platforms(self, proposal: rest.market.OfferProposal) -> Set[str]:
+        prov_platforms = {
+            property.split(".")[4]
+            for property in proposal.props
+            if property.startswith("golem.com.payment.platform.") and property is not None
+        }
+        if not prov_platforms:
+            prov_platforms = {"NGNT"}
+        req_platforms = {
+            allocation.payment_platform
+            for allocation in self._budget_allocations
+            if allocation.payment_platform is not None
+        }
+        return req_platforms.intersection(prov_platforms)
+
+    def _allocation_for_invoice(self, invoice: rest.payment.Invoice) -> rest.payment.Allocation:
+        try:
+            return next(
+                allocation
+                for allocation in self._budget_allocations
+                if allocation.payment_address == invoice.payer_addr
+                and allocation.payment_platform == invoice.payment_platform
+            )
+        except:
+            raise RuntimeError(
+                f"No allocation for {invoice.payment_platform} {invoice.payer_addr}."
             )
 
     async def __aenter__(self) -> "Executor":

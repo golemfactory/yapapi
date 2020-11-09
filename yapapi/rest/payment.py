@@ -1,6 +1,6 @@
-from ya_payment import ApiClient, RequestorApi
+from ya_payment import Account, ApiClient, RequestorApi
 import ya_payment.models as yap
-from typing import Optional, AsyncIterator, cast, Iterable, Union
+from typing import Optional, AsyncIterator, cast, Iterable, Union, List
 from decimal import Decimal
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass
@@ -18,6 +18,7 @@ class Invoice(yap.Invoice):
 
 
 InvoiceStatus = yap.InvoiceStatus
+MarketDecoration = yap.MarketDecoration
 
 
 @dataclass
@@ -40,6 +41,12 @@ class Allocation(_Link):
 
     amount: Decimal
     "Total amount allocated"
+
+    payment_platform: Optional[str]
+    "Payment platform, e.g. NGNT"
+
+    payment_address: Optional[str]
+    "Payment address, e.g. 0x123..."
 
     expires: Optional[datetime]
     "Allocation expiration timestamp"
@@ -70,7 +77,12 @@ class _AllocationTask(ResourceCtx[Allocation]):
         assert self._id is not None
 
         return Allocation(
-            _api=self._api, id=self._id, amount=model.total_amount, expires=model.timeout,
+            _api=self._api,
+            id=self._id,
+            payment_platform=model.payment_platform,
+            payment_address=model.address,
+            amount=model.total_amount,
+            expires=model.timeout,
         )
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -86,7 +98,13 @@ class Payment(object):
         self._api: RequestorApi = RequestorApi(api_client)
 
     def new_allocation(
-        self, amount: Decimal, *, expires: Optional[datetime] = None, make_deposit: bool = False
+        self,
+        amount: Decimal,
+        payment_platform: str,
+        payment_address: str,
+        *,
+        expires: Optional[datetime] = None,
+        make_deposit: bool = False,
     ) -> ResourceCtx[Allocation]:
         """Creates new allocation.
 
@@ -101,6 +119,8 @@ class Payment(object):
             model=yap.Allocation(
                 # TODO: allocation_id should be readonly.
                 allocation_id="",
+                payment_platform=payment_platform,
+                address=payment_address,
                 total_amount=str(amount),
                 timeout=allocation_timeout,
                 make_deposit=make_deposit,
@@ -132,6 +152,8 @@ class Payment(object):
                 _api=self._api,
                 id=alloc_obj.allocation_id,
                 amount=Decimal(alloc_obj.total_amount),
+                payment_platform=alloc_obj.payment_platform,
+                payment_address=alloc_obj.address,
                 expires=alloc_obj.timeout,
             )
 
@@ -141,8 +163,17 @@ class Payment(object):
             _api=self._api,
             id=allocation_obj.allocation_id,
             amount=Decimal(allocation_obj.total_amount),
+            payment_platform=allocation_obj.payment_platform,
+            payment_address=allocation_obj.address,
             expires=allocation_obj.timeout,
         )
+
+    async def accounts(self) -> AsyncIterator[Account]:
+        for account_obj in cast(Iterable[Account], await self._api.get_send_accounts()):
+            yield account_obj
+
+    async def decorate_demand(self, ids: List[str]) -> yap.MarketDecoration:
+        return await self._api.decorate_demand(ids)
 
     async def invoices(self) -> AsyncIterator[Invoice]:
 
