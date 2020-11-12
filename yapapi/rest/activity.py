@@ -1,8 +1,15 @@
+import abc
+import contextlib
+from dataclasses import dataclass
+import json
+import logging
 from typing import AsyncIterator, Sized, List, Optional, Type, Any, Dict
+
+from typing_extensions import AsyncContextManager, AsyncIterable
 
 from aiohttp import ClientPayloadError
 from aiohttp_sse_client.client import MessageEvent  # type: ignore
-from dataclasses import dataclass
+
 from ya_activity import (
     ApiClient,
     RequestorControlApi,
@@ -10,10 +17,6 @@ from ya_activity import (
     models as yaa,
     exceptions as yexc,
 )
-from typing_extensions import AsyncContextManager, AsyncIterable
-import json
-import logging
-import contextlib
 
 from ..executor import events
 
@@ -66,7 +69,7 @@ class Activity(AsyncContextManager["Activity"]):
 
         if stream:
             return StreamingBatch(self._api, self._id, batch_id, len(script))
-        return Batch(self._api, self._id, batch_id, len(script))
+        return PollingBatch(self._api, self._id, batch_id, len(script))
 
     async def __aenter__(self) -> "Activity":
         return self
@@ -108,11 +111,13 @@ class CommandExecutionError(Exception):
     pass
 
 
-class Batch(AsyncIterable[events.CommandEventContext], Sized):
+class Batch(abc.ABC, AsyncIterable[events.CommandEventContext]):
+    """Abstract base class for iterating over events related to a batch running on provider."""
 
     _api: RequestorControlApi
     _activity_id: str
     _batch_id: str
+    _size: int
 
     def __init__(
         self, _api: RequestorControlApi, activity_id: str, batch_id: str, batch_size: int
@@ -126,6 +131,8 @@ class Batch(AsyncIterable[events.CommandEventContext], Sized):
     def id(self):
         return self._batch_id
 
+
+class PollingBatch(Batch):
     async def __aiter__(self) -> AsyncIterator[events.CommandEventContext]:
         import asyncio
 
@@ -152,18 +159,12 @@ class Batch(AsyncIterable[events.CommandEventContext], Sized):
             if not any_new:
                 await asyncio.sleep(10)
 
-    def __len__(self) -> int:
-        return self._size
 
-
-class StreamingBatch(AsyncIterable[events.CommandEventContext], Sized):
+class StreamingBatch(Batch):
     def __init__(
-        self, _api: RequestorControlApi, activity_id: str, batch_id: str, batch_size: int
+        self, api_: RequestorControlApi, activity_id: str, batch_id: str, batch_size: int
     ) -> None:
-        self._api = _api
-        self._activity_id = activity_id
-        self._batch_id = batch_id
-        self._size = batch_size
+        super().__init__(api_, activity_id, batch_id, batch_size)
 
     async def __aiter__(self) -> AsyncIterator[events.CommandEventContext]:
         from aiohttp_sse_client import client as sse_client  # type: ignore
@@ -195,13 +196,6 @@ class StreamingBatch(AsyncIterable[events.CommandEventContext], Sized):
                 _log.error(f"Event payload error (batch {batch_id}): {exc}")
             except ConnectionError:
                 raise
-
-    @property
-    def id(self) -> str:
-        return self._batch_id
-
-    def __len__(self) -> int:
-        return self._size
 
 
 def command_event_ctx(msg_event: MessageEvent) -> events.CommandEventContext:
