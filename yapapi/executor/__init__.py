@@ -298,13 +298,14 @@ class Executor(AsyncContextManager):
             try:
                 act = await activity_api.new_activity(agreement.id)
             except Exception:
-                emit(events.ActivityCreateFailed(agr_id=agreement.id))
+                emit(events.ActivityCreateFailed(agr_id=agreement.id, exc_info=sys.exc_info()))
                 raise
             async with act:
                 emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
 
                 work_context = WorkContext(f"worker-{wid}", storage_manager, emitter=emit)
                 with work_queue.new_consumer() as consumer:
+
                     command_generator = worker(
                         work_context,
                         (Task.for_handle(handle, work_queue, emit) async for handle in consumer),

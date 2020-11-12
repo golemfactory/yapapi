@@ -155,7 +155,7 @@ class ActivityCreated(AgreementEvent):
 
 
 @dataclass
-class ActivityCreateFailed(AgreementEvent):
+class ActivityCreateFailed(HasExcInfo, AgreementEvent):
     pass
 
 
