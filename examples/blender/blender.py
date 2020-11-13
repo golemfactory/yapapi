@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
+from datetime import timedelta
 import pathlib
 import sys
 
@@ -12,7 +13,7 @@ from yapapi import (
 )
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.package import vm
-from datetime import timedelta
+from yapapi.rest.activity import BatchTimeoutError
 
 # For importing `utils.py`:
 script_dir = pathlib.Path(__file__).resolve().parent
@@ -53,10 +54,22 @@ async def main(subnet_tag: str):
             ctx.run("/golem/entrypoints/run-blender.sh")
             output_file = f"output_{frame}.png"
             ctx.download_file(f"/golem/output/out{frame:04d}.png", output_file)
-            yield ctx.commit()
-            # TODO: Check if job results are valid
-            # and reject by: task.reject_task(reason = 'invalid file')
-            task.accept_result(result=output_file)
+            try:
+                # Set timeout for executing the script on the provider.
+                # If the timeout is exceeded, this worker instance will be
+                # shut down and all remaining tasks, including the current one,
+                # will be computed by other providers (hopefully).
+                yield ctx.commit(timeout=timedelta(seconds=120))
+                # TODO: Check if job results are valid
+                # and reject by: task.reject_task(reason = 'invalid file')
+                task.accept_result(result=output_file)
+            except BatchTimeoutError:
+                print(
+                    f"{utils.TEXT_COLOR_RED}"
+                    f"Task timed out: {task}, time: {task.running_time}"
+                    f"{utils.TEXT_COLOR_DEFAULT}"
+                )
+                raise
 
         ctx.log("no more frames to render")
 
@@ -81,7 +94,7 @@ async def main(subnet_tag: str):
         async for task in executor.submit(worker, [Task(data=frame) for frame in frames]):
             print(
                 f"{utils.TEXT_COLOR_CYAN}"
-                f"Task computed: {task}, result: {task.result}"
+                f"Task computed: {task}, result: {task.result}, time: {task.running_time}"
                 f"{utils.TEXT_COLOR_DEFAULT}"
             )
 
