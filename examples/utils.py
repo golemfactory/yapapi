@@ -1,5 +1,7 @@
 """Utilities for yapapi example scripts."""
 import argparse
+import asyncio
+import sys
 
 TEXT_COLOR_RED = "\033[31;1m"
 TEXT_COLOR_GREEN = "\033[32;1m"
@@ -21,3 +23,15 @@ def build_parser(description: str):
         "--log-file", default=None, help="Log file for YAPAPI; default: %(default)s"
     )
     return parser
+
+
+def windows_event_loop_fix():
+    """Set up asyncio to use ProactorEventLoop implementation for new event loops on Windows."""
+
+    # For Python 3.8 ProactorEventLoop is already the default on Windows
+    if sys.platform == "win32" and sys.version_info < (3, 8):
+
+        class _WindowsEventPolicy(asyncio.events.BaseDefaultEventLoopPolicy):
+            _loop_factory = asyncio.windows_events.ProactorEventLoop
+
+        asyncio.set_event_loop_policy(_WindowsEventPolicy())
