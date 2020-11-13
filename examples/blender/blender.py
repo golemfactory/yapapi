@@ -3,7 +3,13 @@ import asyncio
 import pathlib
 import sys
 
-from yapapi import Executor, Task, __version__ as yapapi_version, WorkContext, windows_event_loop_fix
+from yapapi import (
+    Executor,
+    Task,
+    __version__ as yapapi_version,
+    WorkContext,
+    windows_event_loop_fix,
+)
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.package import vm
 from datetime import timedelta
