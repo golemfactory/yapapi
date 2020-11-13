@@ -58,6 +58,9 @@ logger = logging.getLogger("yapapi.executor")
 def enable_default_logger(
     format_: str = "[%(asctime)s %(levelname)s %(name)s] %(message)s",
     log_file: Optional[str] = None,
+    debug_activity_api: bool = False,
+    debug_market_api: bool = False,
+    debug_payment_api: bool = False,
 ):
     """Enable the default logger that logs messages to stderr with level `INFO`.
 
@@ -79,6 +82,16 @@ def enable_default_logger(
         file_handler.setFormatter(formatter)
         file_handler.setLevel(logging.DEBUG)
         logger.addHandler(file_handler)
+
+        for flag, logger_name in (
+            (debug_activity_api, "ya_activity"),
+            (debug_market_api, "ya_market"),
+            (debug_payment_api, "ya_payment"),
+        ):
+            if flag:
+                api_logger = logging.getLogger(logger_name)
+                api_logger.setLevel(logging.DEBUG)
+                api_logger.addHandler(file_handler)
 
 
 # Default human-readable representation of event types.
