@@ -1,5 +1,7 @@
 import abc
+import enum
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union
 
@@ -91,14 +93,28 @@ class _SendFile(_SendWork):
 
 
 class _Run(Work):
-    def __init__(self, cmd: str, *args: Iterable[str], env: Optional[Dict[str, str]] = None):
+    def __init__(
+        self,
+        cmd: str,
+        *args: Iterable[str],
+        env: Optional[Dict[str, str]] = None,
+        stdout: Optional["CaptureContext"] = None,
+        stderr: Optional["CaptureContext"] = None,
+    ):
         self.cmd = cmd
         self.args = args
         self.env = env
+        self.stdout = stdout
+        self.stderr = stderr
         self._idx = None
 
     def register(self, commands: CommandContainer):
-        self._idx = commands.run(entry_point=self.cmd, args=self.args)
+        capture = dict()
+        if self.stdout:
+            capture["stdout"] = self.stdout.to_dict()
+        if self.stderr:
+            capture["stderr"] = self.stderr.to_dict()
+        self._idx = commands.run(entry_point=self.cmd, args=self.args, capture=capture)
 
 
 StorageEvent = Union[DownloadStarted, DownloadFinished]
@@ -201,7 +217,9 @@ class WorkContext:
         self.__prepare()
         self._pending_steps.append(_SendFile(self._storage, src_path, dst_path))
 
-    def run(self, cmd: str, *args: Iterable[str], env: Optional[Dict[str, str]] = None):
+    def run(
+        self, cmd: str, *args: Iterable[str], env: Optional[Dict[str, str]] = None,
+    ):
         """Schedule running a command.
 
         :param cmd: command to run on the provider, e.g. /my/dir/run.sh
@@ -209,8 +227,11 @@ class WorkContext:
         :param env: optional dictionary with environmental variables
         :return: None
         """
+        stdout = CaptureContext.build()
+        stderr = CaptureContext.build()
+
         self.__prepare()
-        self._pending_steps.append(_Run(cmd, *args, env=env))
+        self._pending_steps.append(_Run(cmd, *args, env=env, stdout=stdout, stderr=stderr))
 
     def download_file(self, src_path: str, dst_path: str):
         """Schedule downloading remote file from the provider.
@@ -234,3 +255,56 @@ class WorkContext:
         steps = self._pending_steps
         self._pending_steps = []
         return _Steps(*steps)
+
+
+class CaptureMode(enum.Enum):
+    HEAD = "head"
+    TAIL = "tail"
+    HEAD_TAIL = "headTail"
+    STREAM = "stream"
+
+
+class CaptureFormat(enum.Enum):
+    BIN = "bin"
+    STR = "str"
+
+
+@dataclass
+class CaptureContext:
+    mode: CaptureMode
+    limit: Optional[int]
+    fmt: Optional[CaptureFormat]
+
+    @classmethod
+    def build(cls, mode=None, limit=None, fmt=None) -> "CaptureContext":
+        if mode in (None, "all"):
+            return cls._build(CaptureMode.HEAD, fmt=fmt)
+        elif mode == "stream":
+            return cls._build(CaptureMode.STREAM, limit=limit, fmt=fmt)
+        elif mode == "head":
+            return cls._build(CaptureMode.HEAD, limit=limit, fmt=fmt)
+        elif mode == "tail":
+            return cls._build(CaptureMode.TAIL, limit=limit, fmt=fmt)
+        elif mode == "headTail":
+            return cls._build(CaptureMode.HEAD_TAIL, limit=limit, fmt=fmt)
+        raise RuntimeError(f"Invalid output capture mode: {mode}")
+
+    @classmethod
+    def _build(
+        cls, mode: CaptureMode, limit: Optional[int] = None, fmt: Optional[str] = None,
+    ) -> "CaptureContext":
+        cap_fmt: Optional[CaptureFormat] = CaptureFormat(fmt) if fmt else None
+        return cls(mode=mode, fmt=cap_fmt, limit=limit)
+
+    def to_dict(self) -> Dict:
+        inner = dict()
+
+        if self.limit:
+            inner[self.mode.value] = self.limit
+        if self.fmt:
+            inner["format"] = self.fmt.value
+
+        return {"stream" if self.mode == CaptureMode.STREAM else "atEnd": inner}
+
+    def is_streaming(self) -> bool:
+        return self.mode == CaptureMode.STREAM

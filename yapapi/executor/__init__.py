@@ -1,7 +1,6 @@
 """
 An implementation of the new Golem's task executor.
 """
-import abc
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import os
@@ -12,6 +11,7 @@ from typing import (
     Callable,
     Dict,
     Iterable,
+    List,
     NamedTuple,
     Optional,
     Set,
@@ -25,7 +25,7 @@ import traceback
 from dataclasses import dataclass
 from typing_extensions import Final, AsyncGenerator
 
-from .ctx import WorkContext, CommandContainer, Work
+from .ctx import CaptureContext, CommandContainer, Work, WorkContext
 from .events import Event
 from . import events
 from .task import Task, TaskStatus
@@ -35,7 +35,6 @@ from ..props import Activity, NodeInfo, NodeInfoKeys
 from ..props.base import InvalidPropertiesError
 from ..props.builder import DemandBuilder
 from .. import rest
-from ..rest.activity import CommandExecutionError
 from ..storage import gftp
 from ._smartq import SmartQueue, Handle
 from .strategy import DummyMS, MarketStrategy, SCORE_NEUTRAL
@@ -101,6 +100,7 @@ class Executor(AsyncContextManager):
         """
 
         self._subnet: Optional[str] = subnet_tag
+        self._stream_output = False
         self._strategy = strategy
         self._api_config = rest.Configuration()
         self._stack = AsyncExitStack()
@@ -108,7 +108,7 @@ class Executor(AsyncContextManager):
         self._conf = _ExecutorConfig(max_workers, timeout)
         # TODO: setup precitsion
         self._budget_amount = Decimal(budget)
-        self._budget_allocation: Optional[rest.payment.Allocation] = None
+        self._budget_allocations: List[rest.payment.Allocation] = []
 
         if not event_consumer:
             # Use local import to avoid cyclic imports when yapapi.log
@@ -139,16 +139,7 @@ class Executor(AsyncContextManager):
         stack = self._stack
         emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
 
-        # Creating allocation
-        if not self._budget_allocation:
-            self._budget_allocation = cast(
-                rest.payment.Allocation,
-                await stack.enter_async_context(
-                    self._payment_api.new_allocation(
-                        self._budget_amount, expires=self._expires + CFG_INVOICE_TIMEOUT
-                    )
-                ),
-            )
+        multi_payment_decoration = await self._create_allocations()
 
         emit(events.ComputationStarted())
 
@@ -158,6 +149,9 @@ class Executor(AsyncContextManager):
         builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
+        for constraint in multi_payment_decoration.constraints:
+            builder.ensure(constraint)
+        builder.properties.update({p.key: p.value for p in multi_payment_decoration.properties})
         await self._package.decorate_demand(builder)
         await self._strategy.decorate_demand(builder)
 
@@ -167,6 +161,7 @@ class Executor(AsyncContextManager):
         strategy = self._strategy
 
         done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
+        stream_output = self._stream_output
 
         def on_task_done(task: Task[D, R], status: TaskStatus) -> None:
             """Callback run when `task` is accepted or rejected."""
@@ -191,8 +186,6 @@ class Executor(AsyncContextManager):
         proposals_confirmed = 0
 
         async def process_invoices() -> None:
-            assert self._budget_allocation
-            allocation: rest.payment.Allocation = self._budget_allocation
             async for invoice in self._payment_api.incoming_invoices():
                 if invoice.agreement_id in agreements_to_pay:
                     emit(
@@ -202,30 +195,36 @@ class Executor(AsyncContextManager):
                             amount=invoice.amount,
                         )
                     )
+                    allocation = self._allocation_for_invoice(invoice)
                     agreements_to_pay.remove(invoice.agreement_id)
                     await invoice.accept(amount=invoice.amount, allocation=allocation)
+                    emit(
+                        events.PaymentAccepted(
+                            agr_id=invoice.agreement_id,
+                            inv_id=invoice.invoice_id,
+                            amount=invoice.amount,
+                        )
+                    )
                 else:
                     invoices[invoice.agreement_id] = invoice
                 if payment_closing and not agreements_to_pay:
                     break
 
-        async def accept_payment_for_agreement(agreement_id: str, *, partial: bool = False) -> bool:
-            assert self._budget_allocation
-            allocation: rest.payment.Allocation = self._budget_allocation
+        async def accept_payment_for_agreement(agreement_id: str, *, partial: bool = False) -> None:
             emit(events.PaymentPrepared(agr_id=agreement_id))
             inv = invoices.get(agreement_id)
             if inv is None:
                 agreements_to_pay.add(agreement_id)
                 emit(events.PaymentQueued(agr_id=agreement_id))
-                return False
+                return
             del invoices[agreement_id]
+            allocation = self._allocation_for_invoice(inv)
+            await inv.accept(amount=inv.amount, allocation=allocation)
             emit(
                 events.PaymentAccepted(
                     agr_id=agreement_id, inv_id=inv.invoice_id, amount=inv.amount
                 )
             )
-            await inv.accept(amount=inv.amount, allocation=allocation)
-            return True
 
         async def find_offers() -> None:
             nonlocal offers_collected, proposals_confirmed
@@ -255,6 +254,20 @@ class Executor(AsyncContextManager):
                         emit(events.ProposalRejected(prop_id=proposal.id))
                     elif not proposal.is_draft:
                         try:
+                            common_platforms = self._get_common_payment_platforms(proposal)
+                            if common_platforms:
+                                builder.properties["golem.com.payment.chosen-platform"] = next(
+                                    iter(common_platforms)
+                                )
+                            else:
+                                # reject proposal if there are no common payment platforms
+                                with contextlib.suppress(Exception):
+                                    await proposal.reject()
+                                emit(
+                                    events.ProposalRejected(
+                                        prop_id=proposal.id, reason="No common payment platforms"
+                                    )
+                                )
                             await proposal.respond(builder.properties, builder.constraints)
                             emit(events.ProposalResponded(prop_id=proposal.id))
                         except Exception as ex:
@@ -311,36 +324,26 @@ class Executor(AsyncContextManager):
                             await batch.prepare()
                             cc = CommandContainer()
                             batch.register(cc)
-                            remote = await act.send(cc.commands())
-                            emit(
-                                events.ScriptSent(
-                                    agr_id=agreement.id, task_id=task_id, cmds=cc.commands()
-                                )
-                            )
-
+                            remote = await act.send(cc.commands(), stream_output)
+                            cmds = cc.commands()
+                            emit(events.ScriptSent(agr_id=agreement.id, task_id=task_id, cmds=cmds))
                             try:
-                                async for step in remote:
-                                    emit(
-                                        events.CommandExecuted(
-                                            success=True,
-                                            agr_id=agreement.id,
-                                            task_id=task_id,
-                                            command=cc.commands()[step.idx],
-                                            message=step.message,
-                                            cmd_idx=step.idx,
-                                        )
+                                async for evt_ctx in remote:
+                                    evt = evt_ctx.event(
+                                        agr_id=agreement.id, task_id=task_id, cmds=cmds
                                     )
-                            except CommandExecutionError as err:
+                                    emit(evt)
+                            except rest.activity.CommandExecutionError as err:
                                 assert len(err.args) >= 2
                                 cmd_msg, cmd_idx = err.args[0:2]
                                 emit(
                                     events.CommandExecuted(
-                                        success=False,
                                         agr_id=agreement.id,
                                         task_id=task_id,
+                                        cmd_idx=cmd_idx,
+                                        success=False,
                                         command=cc.commands()[cmd_idx],
                                         message=cmd_msg,
-                                        cmd_idx=cmd_idx,
                                     )
                                 )
                                 raise
@@ -359,7 +362,7 @@ class Executor(AsyncContextManager):
                                 assert exc_typ is not None and exc_val is not None
                                 emit(
                                     events.WorkerFinished(
-                                        agr_id=agreement.id, exception=(exc_typ, exc_val, exc_tb)
+                                        agr_id=agreement.id, exc_info=(exc_typ, exc_val, exc_tb)
                                     )
                                 )
                                 return
@@ -456,7 +459,9 @@ class Executor(AsyncContextManager):
                 and self._conf.traceback
             ):
                 traceback.print_exc()
-            emit(events.ComputationFailed(reason=e.__repr__()))
+            (exc_typ, exc_val, exc_tb) = sys.exc_info()
+            assert exc_typ is not None and exc_val is not None
+            emit(events.ComputationFinished(exc_info=(exc_typ, exc_val, exc_tb)))
 
         finally:
             payment_closing = True
@@ -481,6 +486,56 @@ class Executor(AsyncContextManager):
         if agreements_to_pay:
             await asyncio.wait(
                 {process_invoices_job}, timeout=15, return_when=asyncio.ALL_COMPLETED
+            )
+
+    async def _create_allocations(self) -> rest.payment.MarketDecoration:
+        ids_to_decorate = []
+        if not self._budget_allocations:
+            async for account in self._payment_api.accounts():
+                allocation = cast(
+                    rest.payment.Allocation,
+                    await self._stack.enter_async_context(
+                        self._payment_api.new_allocation(
+                            self._budget_amount,
+                            payment_platform=account.platform,
+                            payment_address=account.address,
+                            expires=self._expires + CFG_INVOICE_TIMEOUT,
+                        )
+                    ),
+                )
+                self._budget_allocations.append(allocation)
+                ids_to_decorate.append(allocation.id)
+        assert (
+            self._budget_allocations
+        ), "No payment accounts. Did you forget to run 'yagna payment init -r'?"
+        return await self._payment_api.decorate_demand(ids_to_decorate)
+
+    def _get_common_payment_platforms(self, proposal: rest.market.OfferProposal) -> Set[str]:
+        prov_platforms = {
+            property.split(".")[4]
+            for property in proposal.props
+            if property.startswith("golem.com.payment.platform.") and property is not None
+        }
+        if not prov_platforms:
+            prov_platforms = {"NGNT"}
+        req_platforms = {
+            allocation.payment_platform
+            for allocation in self._budget_allocations
+            if allocation.payment_platform is not None
+        }
+        return req_platforms.intersection(prov_platforms)
+
+    def _allocation_for_invoice(self, invoice: rest.payment.Invoice) -> rest.payment.Allocation:
+        try:
+            return next(
+                allocation
+                for allocation in self._budget_allocations
+                if allocation.payment_address == invoice.payer_addr
+                and allocation.payment_platform == invoice.payment_platform
+            )
+        except:
+            raise RuntimeError(
+                f"No allocation for {invoice.payment_platform} {invoice.payer_addr}."
             )
 
     async def __aenter__(self) -> "Executor":

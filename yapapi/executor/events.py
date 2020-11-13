@@ -3,7 +3,7 @@ import dataclasses
 from datetime import timedelta
 from dataclasses import dataclass
 from types import TracebackType
-from typing import Any, Optional, Type, Tuple
+from typing import Any, Optional, Type, Tuple, List
 
 from yapapi.props import NodeInfo
 
@@ -18,7 +18,26 @@ class Event:
         raise NotImplementedError()
 
     def extract_exc_info(self) -> Tuple[Optional[ExcInfo], "Event"]:
+        """Extract exception information from this event.
+
+        Return the extracted exception information
+        and a copy of the event without the exception information.
+        """
         return None, self
+
+
+@dataclass(init=False)
+class HasExcInfo(Event):
+    """A base class for types of events that carry an optional exception info."""
+
+    exc_info: Optional[ExcInfo] = None
+
+    def extract_exc_info(self) -> Tuple[Optional[ExcInfo], "Event"]:
+        """Return the `exc_info` field and a copy of this event with the field set to `None`."""
+
+        exc_info = self.exc_info
+        me = dataclasses.replace(self, exc_info=None)
+        return exc_info, me
 
 
 @dataclass
@@ -27,13 +46,8 @@ class ComputationStarted(Event):
 
 
 @dataclass
-class ComputationFinished(Event):
-    pass
-
-
-@dataclass
-class ComputationFailed(Event):
-    reason: str
+class ComputationFinished(HasExcInfo):
+    """Indicates successful completion if `exc_info` is `None` and a failure otherwise."""
 
 
 @dataclass
@@ -156,17 +170,8 @@ class TaskStarted(AgreementEvent, TaskEvent):
 
 
 @dataclass
-class WorkerFinished(AgreementEvent):
-    exception: Optional[ExcInfo] = None
-    """ Exception thrown by worker script.
-
-        None if worker returns without error.
-    """
-
-    def extract_exc_info(self) -> Tuple[Optional[ExcInfo], "Event"]:
-        exc_info = self.exception
-        me = dataclasses.replace(self, exception=None)
-        return exc_info, me
+class WorkerFinished(HasExcInfo, AgreementEvent):
+    """Indicates successful completion if `exc_info` is `None` and a failure otherwise."""
 
 
 @dataclass(init=False)
@@ -180,14 +185,6 @@ class ScriptSent(ScriptEvent):
 
 
 @dataclass
-class CommandExecuted(ScriptEvent):
-    success: bool
-    cmd_idx: int
-    command: Any
-    message: str
-
-
-@dataclass
 class GettingResults(ScriptEvent):
     pass
 
@@ -195,6 +192,50 @@ class GettingResults(ScriptEvent):
 @dataclass
 class ScriptFinished(ScriptEvent):
     pass
+
+
+@dataclass
+class CommandEvent(ScriptEvent):
+    cmd_idx: int
+
+
+@dataclass
+class CommandEventContext:
+    evt_cls: Type[CommandEvent]
+    kwargs: dict
+
+    def computation_finished(self, last_idx: int) -> bool:
+        return self.evt_cls is CommandExecuted and (
+            self.kwargs["cmd_idx"] >= last_idx or not self.kwargs["success"]
+        )
+
+    def event(self, agr_id: str, task_id: str, cmds: List) -> CommandEvent:
+        kwargs = dict(agr_id=agr_id, task_id=task_id, **self.kwargs)
+        if self.evt_cls is CommandExecuted:
+            kwargs["command"] = cmds[self.kwargs["cmd_idx"]]
+        return self.evt_cls(**kwargs)
+
+
+@dataclass
+class CommandExecuted(CommandEvent):
+    command: Any
+    success: bool = dataclasses.field(default=True)
+    message: Optional[str] = dataclasses.field(default=None)
+
+
+@dataclass
+class CommandStarted(CommandEvent):
+    command: str
+
+
+@dataclass
+class CommandStdOut(CommandEvent):
+    output: str
+
+
+@dataclass
+class CommandStdErr(CommandEvent):
+    output: str
 
 
 @dataclass

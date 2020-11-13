@@ -3,7 +3,7 @@ import asyncio
 import pathlib
 import sys
 
-from yapapi import Executor, Task, __version__ as yapapi_version, WorkContext, asyncio_fix
+from yapapi import Executor, Task, __version__ as yapapi_version, WorkContext, windows_event_loop_fix
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.package import vm
 from datetime import timedelta
@@ -85,7 +85,8 @@ if __name__ == "__main__":
     parser.set_defaults(log_file="blender-yapapi.log")
     args = parser.parse_args()
 
-    asyncio_fix()
+    # This is only required when running on Windows with Python prior to 3.8:
+    windows_event_loop_fix()
 
     enable_default_logger(log_file=args.log_file)
 

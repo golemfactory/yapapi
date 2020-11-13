@@ -6,7 +6,7 @@ import toml
 from pathlib import Path
 from pkg_resources import get_distribution
 
-from .executor import Executor, Task, WorkContext
+from .executor import Executor, Task, WorkContext, CaptureContext
 
 
 def get_version() -> str:
@@ -23,8 +23,15 @@ def get_version() -> str:
     return get_distribution("yapapi").version
 
 
-def asyncio_fix():
-    if sys.platform == "win32" and sys.version_info[0] == 3 and sys.version_info[1] <= 7:
+def windows_event_loop_fix():
+    """
+    Set up asyncio to use ProactorEventLoop implementation for new event loops on Windows.
+
+    This work-around is only needed for Python 3.6 and 3.7, as,
+    with Python 3.8 `ProactorEventLoop` is already the default on Windows.
+    """
+
+    if sys.platform == "win32" and sys.version_info < (3, 8):
 
         class _WindowsEventPolicy(asyncio.events.BaseDefaultEventLoopPolicy):
             _loop_factory = asyncio.windows_events.ProactorEventLoop
@@ -33,4 +40,13 @@ def asyncio_fix():
 
 
 __version__: str = get_version()
-__all__ = ["Executor", "props", "rest", "executor", "storage", "Task", "WorkContext"]
+__all__ = [
+    "Executor",
+    "props",
+    "rest",
+    "executor",
+    "storage",
+    "Task",
+    "WorkContext",
+    "CaptureContext",
+]

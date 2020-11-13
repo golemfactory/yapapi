@@ -4,7 +4,7 @@ from datetime import timedelta
 import pathlib
 import sys
 
-from yapapi import Executor, Task, WorkContext, asyncio_fix
+from yapapi import Executor, Task, WorkContext, windows_event_loop_fix
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.package import vm
 
@@ -141,7 +141,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    asyncio_fix()
+    # This is only required when running on Windows with Python prior to 3.8:
+    windows_event_loop_fix()
 
     enable_default_logger(log_file=args.log_file)
 
