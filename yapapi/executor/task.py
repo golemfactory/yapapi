@@ -26,6 +26,7 @@ class Task(Generic[TaskData, TaskResult]):
     Represents one computation unit that will be run on the provider
     (e.g. rendering of one frame of an animation).
     """
+
     ids: ClassVar[Iterator[int]] = itertools.count(1)
 
     def __init__(
