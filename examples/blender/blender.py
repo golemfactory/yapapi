@@ -3,7 +3,13 @@ import asyncio
 import pathlib
 import sys
 
-from yapapi import Executor, Task, __version__ as yapapi_version, WorkContext
+from yapapi import (
+    Executor,
+    Task,
+    __version__ as yapapi_version,
+    WorkContext,
+    windows_event_loop_fix,
+)
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.package import vm
 from datetime import timedelta
@@ -86,10 +92,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # This is only required when running on Windows with Python prior to 3.8:
-    utils.windows_event_loop_fix()
+    windows_event_loop_fix()
 
     enable_default_logger(log_file=args.log_file)
+
     loop = asyncio.get_event_loop()
+
     subnet = args.subnet_tag
     sys.stderr.write(
         f"yapapi version: {utils.TEXT_COLOR_YELLOW}{yapapi_version}{utils.TEXT_COLOR_DEFAULT}\n"
@@ -97,8 +105,8 @@ if __name__ == "__main__":
     sys.stderr.write(f"Using subnet: {utils.TEXT_COLOR_YELLOW}{subnet}{utils.TEXT_COLOR_DEFAULT}\n")
     task = loop.create_task(main(subnet_tag=args.subnet_tag))
     try:
-        asyncio.get_event_loop().run_until_complete(task)
+        loop.run_until_complete(task)
     except (Exception, KeyboardInterrupt) as e:
         print(e)
         task.cancel()
-        asyncio.get_event_loop().run_until_complete(task)
+        loop.run_until_complete(task)
