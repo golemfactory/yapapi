@@ -12,7 +12,7 @@ def test_version():
     assert yapapi.__version__ == pyproject["tool"]["poetry"]["version"]
 
 
-def test_wndows_event_loop_fix():
+def test_windows_event_loop_fix():
     async def _asyncio_test():
         await asyncio.create_subprocess_shell("")
 

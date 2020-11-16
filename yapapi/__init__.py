@@ -27,8 +27,8 @@ def windows_event_loop_fix():
     """
     Set up asyncio to use ProactorEventLoop implementation for new event loops on Windows.
 
-    This work-around is only needed for Python 3.6 and 3.7, as,
-    with Python 3.8 `ProactorEventLoop` is already the default on Windows.
+    This work-around is only needed for Python 3.6 and 3.7.
+    With Python 3.8, `ProactorEventLoop` is already the default on Windows.
     """
 
     if sys.platform == "win32" and sys.version_info < (3, 8):
