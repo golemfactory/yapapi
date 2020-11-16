@@ -400,6 +400,7 @@ class Executor(AsyncContextManager):
         process_invoices_job = loop.create_task(process_invoices())
         wait_until_done = loop.create_task(work_queue.wait_until_done())
         # Py38: find_offers_task.set_name('find_offers_task')
+        get_offers_deadline = datetime.now(timezone.utc) + self._conf.get_offers_timeout
 
         try:
             get_done_task: Optional[asyncio.Task] = None
@@ -415,13 +416,13 @@ class Executor(AsyncContextManager):
                 now = datetime.now(timezone.utc)
                 if now > self._expires:
                     raise TimeoutError(f"task timeout exceeded. timeout={self._conf.timeout}")
-                if now > self._get_offers_deadline and proposals_confirmed == 0:
+                if now > get_offers_deadline and proposals_confirmed == 0:
                     emit(
                         events.NoProposalsConfirmed(
                             num_offers=offers_collected, timeout=self._conf.get_offers_timeout
                         )
                     )
-                    self._get_offers_deadline += self._conf.get_offers_timeout
+                    get_offers_deadline += self._conf.get_offers_timeout
 
                 if not get_done_task:
                     get_done_task = loop.create_task(done_queue.get())
@@ -543,7 +544,6 @@ class Executor(AsyncContextManager):
 
         # TODO: Cleanup on exception here.
         self._expires = datetime.now(timezone.utc) + self._conf.timeout
-        self._get_offers_deadline = datetime.now(timezone.utc) + self._conf.get_offers_timeout
         market_client = await stack.enter_async_context(self._api_config.market())
         self._market_api = rest.Market(market_client)
 
