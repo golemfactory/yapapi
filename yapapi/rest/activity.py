@@ -1,19 +1,25 @@
-from typing import AsyncIterator, Sized, List, Optional, Type, Any, Dict
+import abc
+import asyncio
+import contextlib
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+import json
+import logging
+from typing import AsyncIterator, List, Optional, Type, Any, Dict
+
+from typing_extensions import AsyncContextManager, AsyncIterable
 
 from aiohttp import ClientPayloadError
 from aiohttp_sse_client.client import MessageEvent  # type: ignore
-from dataclasses import dataclass
+
 from ya_activity import (
     ApiClient,
+    ApiException,
     RequestorControlApi,
     RequestorStateApi,
     models as yaa,
     exceptions as yexc,
 )
-from typing_extensions import AsyncContextManager, AsyncIterable
-import json
-import logging
-import contextlib
 
 from ..executor import events
 
@@ -59,14 +65,16 @@ class Activity(AsyncContextManager["Activity"]):
         state: yaa.ActivityState = await self._state.get_activity_state(self._id)
         return state
 
-    async def send(self, script: List[dict], stream: bool = False):
+    async def send(
+        self, script: List[dict], stream: bool = False, deadline: Optional[datetime] = None
+    ):
         """Send the execution script to the provider's execution unit."""
         script_txt = json.dumps(script)
         batch_id = await self._api.call_exec(self._id, yaa.ExeScriptRequest(text=script_txt))
 
         if stream:
-            return StreamingBatch(self._api, self._id, batch_id, len(script))
-        return Batch(self._api, self._id, batch_id, len(script))
+            return StreamingBatch(self._api, self._id, batch_id, len(script), deadline)
+        return PollingBatch(self._api, self._id, batch_id, len(script), deadline)
 
     async def __aenter__(self) -> "Activity":
         return self
@@ -89,8 +97,17 @@ class Activity(AsyncContextManager["Activity"]):
             with contextlib.suppress(yexc.ApiException):
                 # wait 1sec before kill
                 await self._api.get_exec_batch_results(self._id, batch_id, timeout=1.0)
-        except yexc.ApiException:
-            _log.error("failed to destroy activity: %s", self._id, exc_info=True)
+        except yexc.ApiException as err:
+            # Suppress errors that say that this activity does not exist (we're closing it anyway).
+            msg_to_suppress = (
+                f"No service registered under given address '/public/exeunit/{self._id}/Exec'"
+            )
+            level = (
+                logging.ERROR
+                if err.status != 500 or msg_to_suppress not in err.body
+                else logging.DEBUG
+            )
+            _log.log(level, "failed to destroy activity: %s", self._id, exc_info=True)
         finally:
             with contextlib.suppress(yexc.ApiException):
                 await self._api.destroy_activity(self._id)
@@ -105,36 +122,67 @@ class Result:
 
 
 class CommandExecutionError(Exception):
-    pass
+    """An exception that indicates that a command failed on a provider."""
 
 
-class Batch(AsyncIterable[events.CommandEventContext], Sized):
+class BatchTimeoutError(Exception):
+    """An exception that indicates that an execution of a batch of commands timed out."""
+
+
+class Batch(abc.ABC, AsyncIterable[events.CommandEventContext]):
+    """Abstract base class for iterating over events related to a batch running on provider."""
 
     _api: RequestorControlApi
     _activity_id: str
     _batch_id: str
+    _size: int
+    _deadline: datetime
 
     def __init__(
-        self, _api: RequestorControlApi, activity_id: str, batch_id: str, batch_size: int
+        self,
+        api: RequestorControlApi,
+        activity_id: str,
+        batch_id: str,
+        batch_size: int,
+        deadline: Optional[datetime] = None,
     ) -> None:
-        self._api = _api
+        self._api = api
         self._activity_id = activity_id
         self._batch_id = batch_id
         self._size = batch_size
+        self._deadline = (
+            deadline if deadline else datetime.now(timezone.utc) + timedelta(days=365000000)
+        )
+
+    def seconds_left(self) -> float:
+        """Return how many seconds are left until the deadline."""
+        now = datetime.now(timezone.utc)
+        return (self._deadline - now).total_seconds()
 
     @property
     def id(self):
+        """Return the ID of this batch."""
         return self._batch_id
 
-    async def __aiter__(self) -> AsyncIterator[events.CommandEventContext]:
-        import asyncio
 
+class PollingBatch(Batch):
+    """A `Batch` implementation that polls the server repeatedly for command status."""
+
+    async def __aiter__(self) -> AsyncIterator[events.CommandEventContext]:
         last_idx = 0
         while last_idx < self._size:
+            timeout = self.seconds_left()
+            if timeout <= 0:
+                raise BatchTimeoutError()
+            try:
+                results: List[yaa.ExeScriptCommandResult] = await self._api.get_exec_batch_results(
+                    self._activity_id, self._batch_id, timeout=timeout
+                )
+            except ApiException as err:
+                if err.status == 408:
+                    raise BatchTimeoutError()
+                raise
             any_new: bool = False
-            results: List[yaa.ExeScriptCommandResult] = await self._api.get_exec_batch_results(
-                self._activity_id, self._batch_id
-            )
             results = results[last_idx:]
             for result in results:
                 any_new = True
@@ -150,20 +198,12 @@ class Batch(AsyncIterable[events.CommandEventContext], Sized):
                 if result.is_batch_finished:
                     break
             if not any_new:
-                await asyncio.sleep(10)
-
-    def __len__(self) -> int:
-        return self._size
+                delay = min(10, max(0, self.seconds_left()))
+                await asyncio.sleep(delay)
 
 
-class StreamingBatch(AsyncIterable[events.CommandEventContext], Sized):
-    def __init__(
-        self, _api: RequestorControlApi, activity_id: str, batch_id: str, batch_size: int
-    ) -> None:
-        self._api = _api
-        self._activity_id = activity_id
-        self._batch_id = batch_id
-        self._size = batch_size
+class StreamingBatch(Batch):
+    """A `Batch` implementation that uses event streaming to return command status."""
 
     async def __aiter__(self) -> AsyncIterator[events.CommandEventContext]:
         from aiohttp_sse_client import client as sse_client  # type: ignore
@@ -179,12 +219,14 @@ class StreamingBatch(AsyncIterable[events.CommandEventContext], Sized):
         last_idx = self._size - 1
 
         async with sse_client.EventSource(
-            f"{host}/activity/{activity_id}/exec/{batch_id}", headers=headers,
+            f"{host}/activity/{activity_id}/exec/{batch_id}",
+            headers=headers,
+            timeout=self.seconds_left(),
         ) as event_source:
             try:
                 async for msg_event in event_source:
                     try:
-                        evt_ctx = command_event_ctx(msg_event)
+                        evt_ctx = _command_event_ctx(msg_event)
                     except Exception as exc:  # noqa
                         _log.error(f"Event stream exception (batch {batch_id}): {exc}")
                     else:
@@ -195,16 +237,13 @@ class StreamingBatch(AsyncIterable[events.CommandEventContext], Sized):
                 _log.error(f"Event payload error (batch {batch_id}): {exc}")
             except ConnectionError:
                 raise
-
-    @property
-    def id(self) -> str:
-        return self._batch_id
-
-    def __len__(self) -> int:
-        return self._size
+            except asyncio.TimeoutError:
+                raise BatchTimeoutError()
 
 
-def command_event_ctx(msg_event: MessageEvent) -> events.CommandEventContext:
+def _command_event_ctx(msg_event: MessageEvent) -> events.CommandEventContext:
+    """Convert a `MessageEvent` to a `CommandEventContext` that emits an appropriate event."""
+
     if msg_event.type != "runtime":
         raise RuntimeError(f"Unsupported event: {msg_event.type}")
 

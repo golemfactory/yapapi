@@ -17,7 +17,7 @@ async def test_allocation(yapapi_payment: Payment):
     async for a in yapapi_payment.allocations():
         print("a=", a)
 
-    async with yapapi_payment.new_allocation(amount=Decimal(40)) as allocation:
+    async with yapapi_payment.new_allocation(Decimal(40), "NGNT", "mockaddress") as allocation:
         found = False
         async for a in yapapi_payment.allocations():
             if a.id == allocation.id:

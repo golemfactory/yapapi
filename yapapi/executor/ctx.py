@@ -2,6 +2,7 @@ import abc
 import enum
 import json
 from dataclasses import dataclass
+from datetime import timedelta
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union
 
@@ -40,6 +41,11 @@ class Work(abc.ABC):
     async def post(self):
         """A hook to be executed on requestor's end after the script has finished."""
         pass
+
+    @property
+    def timeout(self) -> Optional[timedelta]:
+        """Return the optional timeout set for execution of this work."""
+        return None
 
 
 class _InitStep(Work):
@@ -155,8 +161,14 @@ class _RecvFile(Work):
 
 
 class _Steps(Work):
-    def __init__(self, *steps: Work):
+    def __init__(self, *steps: Work, timeout: Optional[timedelta] = None):
         self._steps: Tuple[Work, ...] = steps
+        self._timeout: Optional[timedelta] = timeout
+
+    @property
+    def timeout(self) -> Optional[timedelta]:
+        """Return the optional timeout set for execution of all steps."""
+        return self._timeout
 
     async def prepare(self):
         """Execute the `prepare` hook for all the defined steps."""
@@ -246,15 +258,15 @@ class WorkContext:
     def log(self, *args):
         print(f"W{self._id}: ", *args)
 
-    def commit(self) -> Work:
-        """Creates sequence of commands to be send to provider.
+    def commit(self, timeout: Optional[timedelta] = None) -> Work:
+        """Creates sequence of commands to be sent to provider.
 
         :return: Work object (the latter contains
                  sequence commands added before calling this method)
         """
         steps = self._pending_steps
         self._pending_steps = []
-        return _Steps(*steps)
+        return _Steps(*steps, timeout=timeout)
 
 
 class CaptureMode(enum.Enum):

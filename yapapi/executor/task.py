@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum, auto
 import itertools
 from typing import Callable, ClassVar, Iterator, Generic, Optional, Set, Tuple, TypeVar, Union
@@ -30,30 +30,20 @@ class Task(Generic[TaskData, TaskResult]):
     ids: ClassVar[Iterator[int]] = itertools.count(1)
 
     def __init__(
-        self,
-        data: TaskData,
-        *,
-        expires: Optional[datetime] = None,
-        timeout: Optional[timedelta] = None,
+        self, data: TaskData,
     ):
         """Create a new Task object.
 
         :param data: contains information needed to prepare command list for the provider
-        :param expires: expiration datetime
-        :param timeout: timeout from now; overrides expires parameter if provided
         """
         self.id: str = str(next(Task.ids))
-        self._started = datetime.now()
-        self._expires: Optional[datetime]
+        self._started: Optional[datetime] = None
+        self._finished: Optional[datetime] = None
         self._emit: Optional[Callable[[TaskEvents], None]] = None
         self._callbacks: Set[Callable[["Task[TaskData, TaskResult]", TaskStatus], None]] = set()
         self._handle: Optional[
             Tuple[Handle["Task[TaskData, TaskResult]"], SmartQueue["Task[TaskData, TaskResult]"]]
         ] = None
-        if timeout:
-            self._expires = self._started + timeout
-        else:
-            self._expires = expires
 
         self._result: Optional[TaskResult] = None
         self._data = data
@@ -70,8 +60,11 @@ class Task(Generic[TaskData, TaskResult]):
     def _start(self, emitter: Callable[[TaskEvents], None]) -> None:
         self._status = TaskStatus.RUNNING
         self._emit = emitter
+        self._started = datetime.now(timezone.utc)
+        self._finished = None
 
     def _stop(self, retry: bool = False):
+        self._finished = datetime.now(timezone.utc)
         if self._handle:
             (handle, queue) = self._handle
             loop = asyncio.get_event_loop()
@@ -100,8 +93,14 @@ class Task(Generic[TaskData, TaskResult]):
         return self._result
 
     @property
-    def expires(self) -> Optional[datetime]:
-        return self._expires
+    def running_time(self) -> Optional[timedelta]:
+        """Return the running time of the task (if in progress) or time it took to complete it."""
+        if self._finished:
+            assert self._started
+            return self._finished - self._started
+        if self._started:
+            return datetime.now(timezone.utc) - self._started
+        return None
 
     def accept_result(self, result: Optional[TaskResult] = None) -> None:
         """Accept the result of this task.

@@ -35,6 +35,7 @@ from ..props import Activity, NodeInfo, NodeInfoKeys
 from ..props.base import InvalidPropertiesError
 from ..props.builder import DemandBuilder
 from .. import rest
+from ..rest.activity import CommandExecutionError
 from ..storage import gftp
 from ._smartq import SmartQueue, Handle
 from .strategy import DummyMS, MarketStrategy, SCORE_NEUTRAL
@@ -298,18 +299,25 @@ class Executor(AsyncContextManager):
             try:
                 act = await activity_api.new_activity(agreement.id)
             except Exception:
-                emit(events.ActivityCreateFailed(agr_id=agreement.id))
+                exc_info = sys.exc_info()
+                assert exc_info[0] is not None and exc_info[1] is not None  # for mypy
+                emit(events.ActivityCreateFailed(agr_id=agreement.id, exc_info=exc_info))
+
                 raise
             async with act:
                 emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
 
                 work_context = WorkContext(f"worker-{wid}", storage_manager, emitter=emit)
                 with work_queue.new_consumer() as consumer:
+
                     command_generator = worker(
                         work_context,
                         (Task.for_handle(handle, work_queue, emit) async for handle in consumer),
                     )
                     async for batch in command_generator:
+                        batch_deadline = (
+                            datetime.now(timezone.utc) + batch.timeout if batch.timeout else None
+                        )
                         try:
                             current_worker_task = consumer.last_item
                             if current_worker_task:
@@ -324,16 +332,24 @@ class Executor(AsyncContextManager):
                             await batch.prepare()
                             cc = CommandContainer()
                             batch.register(cc)
-                            remote = await act.send(cc.commands(), stream_output)
+                            remote = await act.send(
+                                cc.commands(), stream_output, deadline=batch_deadline
+                            )
                             cmds = cc.commands()
                             emit(events.ScriptSent(agr_id=agreement.id, task_id=task_id, cmds=cmds))
-                            try:
-                                async for evt_ctx in remote:
-                                    evt = evt_ctx.event(
-                                        agr_id=agreement.id, task_id=task_id, cmds=cmds
-                                    )
-                                    emit(evt)
-                            except rest.activity.CommandExecutionError as err:
+
+                            async for evt_ctx in remote:
+                                evt = evt_ctx.event(agr_id=agreement.id, task_id=task_id, cmds=cmds)
+                                emit(evt)
+
+                            emit(events.GettingResults(agr_id=agreement.id, task_id=task_id))
+                            await batch.post()
+                            emit(events.ScriptFinished(agr_id=agreement.id, task_id=task_id))
+                            await accept_payment_for_agreement(agreement.id, partial=True)
+
+                        except Exception as err:
+
+                            if isinstance(err, CommandExecutionError):
                                 assert len(err.args) >= 2
                                 cmd_msg, cmd_idx = err.args[0:2]
                                 emit(
@@ -346,13 +362,7 @@ class Executor(AsyncContextManager):
                                         message=cmd_msg,
                                     )
                                 )
-                                raise
 
-                            emit(events.GettingResults(agr_id=agreement.id, task_id=task_id))
-                            await batch.post()
-                            emit(events.ScriptFinished(agr_id=agreement.id, task_id=task_id))
-                            await accept_payment_for_agreement(agreement.id, partial=True)
-                        except Exception:
                             try:
                                 await command_generator.athrow(*sys.exc_info())
                             except Exception:
