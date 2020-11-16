@@ -299,10 +299,11 @@ class Executor(AsyncContextManager):
             try:
                 act = await activity_api.new_activity(agreement.id)
             except Exception:
-                exc_info = sys.exc_info()
-                assert exc_info[0] is not None and exc_info[1] is not None  # for mypy
-                emit(events.ActivityCreateFailed(agr_id=agreement.id, exc_info=exc_info))
-
+                emit(
+                    events.ActivityCreateFailed(
+                        agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
+                    )
+                )
                 raise
             async with act:
                 emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
@@ -356,11 +357,9 @@ class Executor(AsyncContextManager):
                             except Exception:
                                 if self._conf.traceback:
                                     traceback.print_exc()
-                                (exc_typ, exc_val, exc_tb) = sys.exc_info()
-                                assert exc_typ is not None and exc_val is not None
                                 emit(
                                     events.WorkerFinished(
-                                        agr_id=agreement.id, exc_info=(exc_typ, exc_val, exc_tb)
+                                        agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
                                     )
                                 )
                                 return
@@ -458,9 +457,7 @@ class Executor(AsyncContextManager):
                 and self._conf.traceback
             ):
                 traceback.print_exc()
-            (exc_typ, exc_val, exc_tb) = sys.exc_info()
-            assert exc_typ is not None and exc_val is not None
-            emit(events.ComputationFinished(exc_info=(exc_typ, exc_val, exc_tb)))
+            emit(events.ComputationFinished(exc_info=sys.exc_info()))  # type: ignore
 
         finally:
             payment_closing = True
