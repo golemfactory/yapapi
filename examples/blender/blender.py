@@ -55,10 +55,10 @@ async def main(subnet_tag: str):
             output_file = f"output_{frame}.png"
             ctx.download_file(f"/golem/output/out{frame:04d}.png", output_file)
             try:
-                # Set timeout for executing the script on the provider.
-                # If the timeout is exceeded, this worker instance will be
-                # shut down and all remaining tasks, including the current one,
-                # will be computed by other providers (hopefully).
+                # Set timeout for executing the script on the provider. Two minutes is plenty
+                # of time for computing a single frame, for other tasks it may be not enough.
+                # If the timeout is exceeded, this worker instance will be shut down and all
+                # remaining tasks, including the current one, will be computed by other providers.
                 yield ctx.commit(timeout=timedelta(seconds=120))
                 # TODO: Check if job results are valid
                 # and reject by: task.reject_task(reason = 'invalid file')

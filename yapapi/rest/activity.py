@@ -99,8 +99,14 @@ class Activity(AsyncContextManager["Activity"]):
                 await self._api.get_exec_batch_results(self._id, batch_id, timeout=1.0)
         except yexc.ApiException as err:
             # Suppress errors that say that this activity does not exist (we're closing it anyway).
-            msg = f"No service registered under given address '/public/exeunit/{self._id}/Exec'"
-            level = logging.ERROR if err.status != 500 or msg not in err.body else logging.DEBUG
+            msg_to_suppress = (
+                f"No service registered under given address '/public/exeunit/{self._id}/Exec'"
+            )
+            level = (
+                logging.ERROR
+                if err.status != 500 or msg_to_suppress not in err.body
+                else logging.DEBUG
+            )
             _log.log(level, "failed to destroy activity: %s", self._id, exc_info=True)
         finally:
             with contextlib.suppress(yexc.ApiException):
