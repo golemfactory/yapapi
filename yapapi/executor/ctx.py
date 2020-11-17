@@ -239,8 +239,8 @@ class WorkContext:
         :param env: optional dictionary with environmental variables
         :return: None
         """
-        stdout = CaptureContext.build()
-        stderr = CaptureContext.build()
+        stdout = CaptureContext.build(mode="stream")
+        stderr = CaptureContext.build(mode="stream")
 
         self.__prepare()
         self._pending_steps.append(_Run(cmd, *args, env=env, stdout=stdout, stderr=stderr))

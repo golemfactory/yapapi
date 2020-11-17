@@ -124,6 +124,22 @@ class Result:
 class CommandExecutionError(Exception):
     """An exception that indicates that a command failed on a provider."""
 
+    command: str
+    """The command that failed."""
+
+    message: Optional[str]
+    """The command's output, if any."""
+
+    def __init__(self, command: str, message: Optional[str] = None):
+        self.command = command
+        self.message = message
+
+    def __str__(self) -> str:
+        msg = f"Command '{self.command}' failed on provider"
+        if self.message:
+            msg += f" with message '{self.message}'"
+        return msg
+
 
 class BatchTimeoutError(Exception):
     """An exception that indicates that an execution of a batch of commands timed out."""
@@ -187,11 +203,16 @@ class PollingBatch(Batch):
             for result in results:
                 any_new = True
                 assert last_idx == result.index, f"Expected {last_idx}, got {result.index}"
-                if result.result == "Error":
-                    raise CommandExecutionError(result.message, last_idx)
 
-                message = dict(stdout=result.stdout, stderr=result.stderr, message=result.message)
-                kwargs = dict(cmd_idx=result.index, message=json.dumps(message, indent=4))
+                message = None
+                if result.message:
+                    message = result.message
+                elif result.stdout or result.stderr:
+                    message = json.dumps({"stdout": result.stdout, "stderr": result.stderr})
+
+                kwargs = dict(
+                    cmd_idx=result.index, message=message, success=(result.result.lower() == "ok")
+                )
                 yield events.CommandEventContext(evt_cls=events.CommandExecuted, kwargs=kwargs)
 
                 last_idx = result.index + 1
@@ -265,6 +286,7 @@ def _command_event_ctx(msg_event: MessageEvent) -> events.CommandEventContext:
             raise RuntimeError("Invalid CommandFinished event: missing 'return code'")
         evt_cls = events.CommandExecuted
         kwargs["success"] = int(evt_data["return_code"]) == 0
+        kwargs["message"] = evt_data.get("message")
 
     elif evt_kind == "stdout":
         evt_cls = events.CommandStdOut
