@@ -412,38 +412,6 @@ class SummaryLogger:
                 reason = str(exc) or repr(exc) or "unexpected error"
                 self.logger.error(f"Computation failed, reason: %s", reason)
 
-        elif isinstance(event, events.CommandStarted):
-            self.logger.info(
-                f"Command started (task {event.task_id}, idx {event.cmd_idx}): {event.command}"
-            )
-
-        elif isinstance(event, events.CommandExecuted):
-            if event.success:
-                # display the output with:
-                # self.logger.info(
-                #     f"Command finished (task {event.task_id}, idx {event.cmd_idx}): {event.message}"
-                # )
-                # event.message is set in activity.py:145
-                return
-
-            provider_name = self.agreement_provider_name[event.agr_id]
-            self.logger.warning(
-                "Command failed on provider '%s', command: %s, output: %s",
-                provider_name,
-                event.command,
-                event.message,
-            )
-
-        elif isinstance(event, events.CommandStdOut):
-            self.logger.info(
-                f"Command stdout (task {event.task_id}, idx {event.cmd_idx}): {event.output.rstrip()}"
-            )
-
-        elif isinstance(event, events.CommandStdErr):
-            self.logger.warning(
-                f"Command stderr (task {event.task_id}, idx {event.cmd_idx}): {event.output.rstrip()}"
-            )
-
 
 def log_summary(wrapped_emitter: Optional[Callable[[events.Event], None]] = None):
     """Output a summary of computation.
