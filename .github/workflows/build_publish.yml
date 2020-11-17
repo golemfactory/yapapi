@@ -90,9 +90,9 @@ jobs:
       - uses: actions/setup-python@v1
         with:
           python-version: 3.8
-      - uses: Gr1N/setup-poetry@v2
+      - uses: Gr1N/setup-poetry@v4
         with:
-          poetry-version: 1.0.10
+          poetry-version: 1.1.4
       - name: Retrieve the built package
         uses: actions/download-artifact@v2
         with:
