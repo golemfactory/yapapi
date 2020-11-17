@@ -32,9 +32,9 @@ jobs:
       - uses: actions/setup-python@v1
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: Gr1N/setup-poetry@v2
+      - uses: Gr1N/setup-poetry@v4
         with:
-          poetry-version: 1.0.10
+          poetry-version: 1.1.4
       - run: echo "::set-env name=EXTENDED_CHECK::1"
         if: ${{ matrix.os == 'ubuntu-latest' }}
         name: Enable extended checks
