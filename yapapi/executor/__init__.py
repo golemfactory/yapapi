@@ -101,7 +101,7 @@ class Executor(AsyncContextManager):
         """
 
         self._subnet: Optional[str] = subnet_tag
-        self._stream_output = False
+        self._stream_output = True
         self._strategy = strategy
         self._api_config = rest.Configuration()
         self._stack = AsyncExitStack()
@@ -299,10 +299,11 @@ class Executor(AsyncContextManager):
             try:
                 act = await activity_api.new_activity(agreement.id)
             except Exception:
-                exc_info = sys.exc_info()
-                assert exc_info[0] is not None and exc_info[1] is not None  # for mypy
-                emit(events.ActivityCreateFailed(agr_id=agreement.id, exc_info=exc_info))
-
+                emit(
+                    events.ActivityCreateFailed(
+                        agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
+                    )
+                )
                 raise
             async with act:
                 emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
@@ -341,38 +342,24 @@ class Executor(AsyncContextManager):
                             async for evt_ctx in remote:
                                 evt = evt_ctx.event(agr_id=agreement.id, task_id=task_id, cmds=cmds)
                                 emit(evt)
+                                if isinstance(evt, events.CommandExecuted) and not evt.success:
+                                    raise CommandExecutionError(evt.command, evt.message)
 
                             emit(events.GettingResults(agr_id=agreement.id, task_id=task_id))
                             await batch.post()
                             emit(events.ScriptFinished(agr_id=agreement.id, task_id=task_id))
                             await accept_payment_for_agreement(agreement.id, partial=True)
 
-                        except Exception as err:
-
-                            if isinstance(err, CommandExecutionError):
-                                assert len(err.args) >= 2
-                                cmd_msg, cmd_idx = err.args[0:2]
-                                emit(
-                                    events.CommandExecuted(
-                                        agr_id=agreement.id,
-                                        task_id=task_id,
-                                        cmd_idx=cmd_idx,
-                                        success=False,
-                                        command=cc.commands()[cmd_idx],
-                                        message=cmd_msg,
-                                    )
-                                )
+                        except Exception:
 
                             try:
                                 await command_generator.athrow(*sys.exc_info())
                             except Exception:
                                 if self._conf.traceback:
                                     traceback.print_exc()
-                                (exc_typ, exc_val, exc_tb) = sys.exc_info()
-                                assert exc_typ is not None and exc_val is not None
                                 emit(
                                     events.WorkerFinished(
-                                        agr_id=agreement.id, exc_info=(exc_typ, exc_val, exc_tb)
+                                        agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
                                     )
                                 )
                                 return
@@ -470,9 +457,7 @@ class Executor(AsyncContextManager):
                 and self._conf.traceback
             ):
                 traceback.print_exc()
-            (exc_typ, exc_val, exc_tb) = sys.exc_info()
-            assert exc_typ is not None and exc_val is not None
-            emit(events.ComputationFinished(exc_info=(exc_typ, exc_val, exc_tb)))
+            emit(events.ComputationFinished(exc_info=sys.exc_info()))  # type: ignore
 
         finally:
             payment_closing = True
