@@ -485,7 +485,6 @@ class Executor(AsyncContextManager):
             )
 
     async def _create_allocations(self) -> rest.payment.MarketDecoration:
-        ids_to_decorate = []
         if not self._budget_allocations:
             async for account in self._payment_api.accounts():
                 allocation = cast(
@@ -500,11 +499,11 @@ class Executor(AsyncContextManager):
                     ),
                 )
                 self._budget_allocations.append(allocation)
-                ids_to_decorate.append(allocation.id)
         assert (
             self._budget_allocations
         ), "No payment accounts. Did you forget to run 'yagna payment init -r'?"
-        return await self._payment_api.decorate_demand(ids_to_decorate)
+        allocation_ids = [allocation.id for allocation in self._budget_allocations]
+        return await self._payment_api.decorate_demand(allocation_ids)
 
     def _get_common_payment_platforms(self, proposal: rest.market.OfferProposal) -> Set[str]:
         prov_platforms = {
