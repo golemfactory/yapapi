@@ -167,7 +167,7 @@ class Batch(abc.ABC, AsyncIterable[events.CommandEventContext]):
         self._batch_id = batch_id
         self._size = batch_size
         self._deadline = (
-            deadline if deadline else datetime.now(timezone.utc) + timedelta(days=365000000)
+            deadline if deadline else datetime.now(timezone.utc) + timedelta(days=365000)
         )
 
     def seconds_left(self) -> float:
