@@ -83,7 +83,7 @@ class Activity(AsyncContextManager["Activity"]):
         # w/o for some buggy providers which do not kill exe-unit
         # on destroy_activity event.
         if exc_type:
-            _log.info(
+            _log.debug(
                 "activity %s CLOSE for [%s] %s",
                 self._id,
                 exc_type.__name__,
@@ -112,7 +112,7 @@ class Activity(AsyncContextManager["Activity"]):
             with contextlib.suppress(yexc.ApiException):
                 await self._api.destroy_activity(self._id)
             if exc_type:
-                _log.info("activity %s CLOSE done", self._id)
+                _log.debug("activity %s CLOSE done", self._id)
 
 
 @dataclass
