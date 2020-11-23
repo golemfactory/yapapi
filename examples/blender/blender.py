@@ -119,7 +119,20 @@ if __name__ == "__main__":
     task = loop.create_task(main(subnet_tag=args.subnet_tag))
     try:
         loop.run_until_complete(task)
-    except (Exception, KeyboardInterrupt) as e:
-        print(e)
+    except KeyboardInterrupt:
+        print(
+            f"{utils.TEXT_COLOR_YELLOW}"
+            "Shutting down gracefully, please wait a few seconds "
+            "or press Ctrl+C to exit immediately..."
+            f"{utils.TEXT_COLOR_DEFAULT}"
+        )
         task.cancel()
-        loop.run_until_complete(task)
+        try:
+            loop.run_until_complete(task)
+            print(
+                f"{utils.TEXT_COLOR_YELLOW}"
+                "Shutdown completed, thank you for waiting!"
+                f"{utils.TEXT_COLOR_DEFAULT}"
+            )
+        except KeyboardInterrupt:
+            pass
