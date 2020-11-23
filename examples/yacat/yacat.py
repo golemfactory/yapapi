@@ -95,9 +95,14 @@ async def main(args):
         event_consumer=log_summary(log_event_repr),
     ) as executor:
 
+        keyspace_computed = False
         # This is not a typical use of executor.submit as there is only one task, with no data:
-        async for task in executor.submit(worker_check_keyspace, [Task(data=None)]):
-            pass
+        async for _task in executor.submit(worker_check_keyspace, [Task(data=None)]):
+            keyspace_computed = True
+
+        if not keyspace_computed:
+            # Assume the errors have been already reported and we may return quietly.
+            return
 
         keyspace = read_keyspace()
 
