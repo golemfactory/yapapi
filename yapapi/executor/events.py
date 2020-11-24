@@ -256,3 +256,8 @@ class DownloadStarted(Event):
 @dataclass
 class DownloadFinished(Event):
     path: str
+
+
+@dataclass
+class ShutdownFinished(HasExcInfo):
+    """Indicates the completion of Executor shutdown sequence"""

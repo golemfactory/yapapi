@@ -130,6 +130,7 @@ event_type_to_string = {
     events.WorkerFinished: "Worker finished",
     events.DownloadStarted: "Download started",
     events.DownloadFinished: "Download finished",
+    events.ShutdownFinished: "Shutdown finished",
 }
 
 
@@ -411,6 +412,14 @@ class SummaryLogger:
                 _exc_type, exc, _tb = event.exc_info
                 reason = str(exc) or repr(exc) or "unexpected error"
                 self.logger.error(f"Computation failed, reason: %s", reason)
+
+        elif isinstance(event, events.ShutdownFinished):
+            if not event.exc_info:
+                self.logger.info("Executor shut down")
+            else:
+                _exc_type, exc, _tb = event.exc_info
+                reason = str(exc) or repr(exc) or "unexpected error"
+                self.logger.error("Error when shutting down Executor: %s", reason)
 
 
 def log_summary(wrapped_emitter: Optional[Callable[[events.Event], None]] = None):
