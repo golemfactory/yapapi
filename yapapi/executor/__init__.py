@@ -144,6 +144,8 @@ class Executor(AsyncContextManager):
                 yield result
 
         finally:
+            # TODO: remove
+            print("*** CANCELLING TASKS", file=sys.stderr)
             # Cancel and gather all tasks to make sure all exceptions are retrieved.
             all_tasks = workers.union(services)
             for task in all_tasks:
@@ -220,8 +222,8 @@ class Executor(AsyncContextManager):
                         )
                     )
                     allocation = self._allocation_for_invoice(invoice)
-                    agreements_to_pay.remove(invoice.agreement_id)
                     await invoice.accept(amount=invoice.amount, allocation=allocation)
+                    agreements_to_pay.remove(invoice.agreement_id)
                     emit(
                         events.PaymentAccepted(
                             agr_id=invoice.agreement_id,
@@ -487,19 +489,28 @@ class Executor(AsyncContextManager):
                 if workers:
                     for worker_task in workers:
                         worker_task.cancel()
+                    # TODO: remove
+                    print("WAITING FOR WORKERS...", file=sys.stderr)
                     await asyncio.wait(workers, timeout=15, return_when=asyncio.ALL_COMPLETED)
             except Exception:
                 if self._conf.traceback:
                     traceback.print_exc()
+            # TODO: remove
+            print("WAITING 5s FOR INVOICES...", file=sys.stderr)
             await asyncio.wait(
                 workers.union({find_offers_task, process_invoices_job}),
                 timeout=5,
                 return_when=asyncio.ALL_COMPLETED,
             )
             if agreements_to_pay:
+                # TODO: remove
+                print("WAITING 15s FOR INVOICES...", file=sys.stderr)
                 await asyncio.wait(
                     {process_invoices_job}, timeout=15, return_when=asyncio.ALL_COMPLETED
                 )
+                if agreements_to_pay:
+                    # TODO: remove
+                    print("AGREEMENTS LEFT UNPAID:", agreements_to_pay, file=sys.stderr)
 
     async def _create_allocations(self) -> rest.payment.MarketDecoration:
         if not self._budget_allocations:
@@ -564,9 +575,14 @@ class Executor(AsyncContextManager):
         payment_client = await stack.enter_async_context(self._api_config.payment())
         self._payment_api = rest.Payment(payment_client)
 
-        await stack.enter_async_context(self._wrapped_consumer)
-
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self._stack.aclose()
+        # TODO: remove
+        print("*** __AEXIT__", file=sys.stderr)
+        emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
+        try:
+            await self._stack.aclose()
+            emit(events.ShutdownFinished())
+        except Exception:
+            emit(events.ShutdownFinished(exc_info=sys.exc_info()))
