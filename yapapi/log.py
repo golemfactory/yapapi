@@ -111,6 +111,7 @@ event_type_to_string = {
     events.AgreementConfirmed: "Agreement approved by provider",
     events.AgreementRejected: "Agreement rejected by provider",
     events.PaymentAccepted: "Payment accepted",  # by who?
+    events.PaymentFailed: "Payment failed",
     events.PaymentPrepared: "Payment prepared",
     events.PaymentQueued: "Payment queued",
     events.InvoiceReceived: "Invoice received",  # by who?
@@ -130,6 +131,7 @@ event_type_to_string = {
     events.WorkerFinished: "Worker finished",
     events.DownloadStarted: "Download started",
     events.DownloadFinished: "Download finished",
+    events.ShutdownFinished: "Shutdown finished",
 }
 
 
@@ -392,6 +394,13 @@ class SummaryLogger:
             self.provider_cost[provider_name] = cost
             self._print_total_cost()
 
+        elif isinstance(event, events.PaymentFailed):
+            assert event.exc_info
+            _exc_type, exc, _tb = event.exc_info
+            provider_name = self.agreement_provider_name[event.agr_id]
+            reason = str(exc) or repr(exc) or "unexpected error"
+            self.logger.error("Payment for provider '%s' failed, reason: %s", provider_name, reason)
+
         elif isinstance(event, events.WorkerFinished):
             if event.exc_info is None:
                 return
@@ -411,6 +420,14 @@ class SummaryLogger:
                 _exc_type, exc, _tb = event.exc_info
                 reason = str(exc) or repr(exc) or "unexpected error"
                 self.logger.error(f"Computation failed, reason: %s", reason)
+
+        elif isinstance(event, events.ShutdownFinished):
+            if not event.exc_info:
+                self.logger.info("Executor shut down")
+            else:
+                _exc_type, exc, _tb = event.exc_info
+                reason = str(exc) or repr(exc) or "unexpected error"
+                self.logger.error("Error when shutting down Executor: %s", reason)
 
 
 def log_summary(wrapped_emitter: Optional[Callable[[events.Event], None]] = None):

@@ -139,6 +139,11 @@ class PaymentQueued(AgreementEvent):
 
 
 @dataclass
+class PaymentFailed(HasExcInfo, AgreementEvent):
+    pass
+
+
+@dataclass
 class InvoiceReceived(AgreementEvent):
     inv_id: str
     amount: str
@@ -256,3 +261,8 @@ class DownloadStarted(Event):
 @dataclass
 class DownloadFinished(Event):
     path: str
+
+
+@dataclass
+class ShutdownFinished(HasExcInfo):
+    """Indicates the completion of Executor shutdown sequence"""

@@ -109,7 +109,7 @@ class Executor(AsyncContextManager):
         self._stack = AsyncExitStack()
         self._package = package
         self._conf = _ExecutorConfig(max_workers, timeout)
-        # TODO: setup precitsion
+        # TODO: setup precision
         self._budget_amount = Decimal(budget)
         self._budget_allocations: List[rest.payment.Allocation] = []
 
@@ -220,15 +220,23 @@ class Executor(AsyncContextManager):
                         )
                     )
                     allocation = self._allocation_for_invoice(invoice)
-                    agreements_to_pay.remove(invoice.agreement_id)
-                    await invoice.accept(amount=invoice.amount, allocation=allocation)
-                    emit(
-                        events.PaymentAccepted(
-                            agr_id=invoice.agreement_id,
-                            inv_id=invoice.invoice_id,
-                            amount=invoice.amount,
+                    try:
+                        await invoice.accept(amount=invoice.amount, allocation=allocation)
+                    except Exception:
+                        emit(
+                            events.PaymentFailed(
+                                agr_id=invoice.agreement_id, exc_info=sys.exc_info()  # type: ignore
+                            )
                         )
-                    )
+                    else:
+                        agreements_to_pay.remove(invoice.agreement_id)
+                        emit(
+                            events.PaymentAccepted(
+                                agr_id=invoice.agreement_id,
+                                inv_id=invoice.invoice_id,
+                                amount=invoice.amount,
+                            )
+                        )
                 else:
                     invoices[invoice.agreement_id] = invoice
                 if payment_closing and not agreements_to_pay:
@@ -564,9 +572,12 @@ class Executor(AsyncContextManager):
         payment_client = await stack.enter_async_context(self._api_config.payment())
         self._payment_api = rest.Payment(payment_client)
 
-        await stack.enter_async_context(self._wrapped_consumer)
-
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self._stack.aclose()
+        emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
+        try:
+            await self._stack.aclose()
+            emit(events.ShutdownFinished())
+        except Exception:
+            emit(events.ShutdownFinished(exc_info=sys.exc_info()))
