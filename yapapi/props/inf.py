@@ -17,9 +17,11 @@ INF_CORES: str = "golem.inf.cpu.cores"
 TRANSFER_CAPS: str = "golem.activity.caps.transfer.protocol"
 """the key which defines the transfer protocol"""
 
+
 @dataclass
 class RuntimeType(Enum):
     """Enum of possible runtime environments."""
+
     UNKNOWN = ""
     """Unknown runtime"""
     WASMTIME = "wasmtime"
@@ -33,6 +35,7 @@ class RuntimeType(Enum):
 @dataclass
 class WasmInterface(Enum):
     """Wasi version"""
+
     WASI_0 = "0"
     """0"""
     WASI_0preview1 = "0preview1"
@@ -42,6 +45,7 @@ class WasmInterface(Enum):
 @dataclass
 class InfBase(Model):
     """Base model describing the possible runtimes and the related requirements."""
+
     mem: float = field(metadata={"key": INF_MEM})
     """memory requirement"""
     runtime: RuntimeType = field(metadata={"key": "golem.runtime.name"})
@@ -56,6 +60,7 @@ class InfBase(Model):
 @dataclass
 class InfVm(InfBase):
     """Model that describes the VM runtime requirement."""
+
     runtime = RuntimeType.VM
     cores: int = field(default=1, metadata={"key": INF_CORES})
     """required number of cores"""
@@ -67,12 +72,14 @@ InfVmKeys = InfVm.keys()
 @dataclass
 class ExeUnitRequest(Model):
     """Model describing the requirements for an execution unit."""
+
     package_url: str = field(metadata={"key": "golem.srv.comp.task_package"})
     """package used for computation"""
 
 
 class VmPackageFormat(Enum):
     """Enum of possible VM package formats."""
+
     UNKNOWN = None
     """unknown"""
     GVMKIT_SQUASH = "gvmkit-squash"
@@ -82,5 +89,6 @@ class VmPackageFormat(Enum):
 @dataclass
 class VmRequest(ExeUnitRequest):
     """Requirements for the VM execution unit."""
+
     package_format: VmPackageFormat = field(metadata={"key": "golem.srv.comp.vm.package_format"})
     """package format"""
