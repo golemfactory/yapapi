@@ -17,18 +17,21 @@ DEFINED_USAGES: str = "golem.com.usage.vector"
 
 class BillingScheme(enum.Enum):
     """Enum of possible billing schemes."""
+
     PAYU = "payu"
     """payment for usage"""
 
 
 class PriceModel(enum.Enum):
     """Enum of possible pricing models."""
+
     LINEAR = "linear"
     """the cost depends linearly on the value it derives from"""
 
 
 class Counter(enum.Enum):
     """Enum of possible resources, the usage of which is paid for."""
+
     TIME = "golem.usage.duration_sec"
     """execution time"""
     CPU = "golem.usage.cpu_sec"
@@ -40,9 +43,11 @@ class Counter(enum.Enum):
     UNKNOWN = ""
     """unknown resource"""
 
+
 @dataclass(frozen=True)
 class Com(Model):
     """Base model for properties describing various payment models."""
+
     scheme: BillingScheme = field(metadata={"key": SCHEME})
     price_model: PriceModel = field(metadata={"key": PRICE_MODEL})
 
@@ -50,6 +55,7 @@ class Com(Model):
 @dataclass(frozen=True)
 class ComLinear(Com):
     """Payment model with linear pricing."""
+
     fixed_price: float
     price_for: Dict[Counter, float]
 
