@@ -64,7 +64,22 @@ class DemandBuilder:
         return c_value
 
     def ensure(self, constraint: str):
-        """Add a constraint to the demand definition."""
+        """Add a constraint to the demand definition.
+
+        :param constraint: a constraint expressed in Golem's property description format.
+
+                           it may be a simple constraint defining just one property,
+                           e.g.: `(golem.node.debug.subnet=community.3)`,
+                           `(golem.com.payment.platform.NGNT.address=*)`
+
+                           or it may be a compound constraint that defines requirements
+                           over a set of properties, e.g.:
+                           `(&(golem.inf.mem.gib>=0.5)
+                              (golem.inf.storage.gib>=2.0)
+                              (golem.runtime.name=vm))`
+
+        """
+
         self._constraints.append(constraint)
 
     def add(self, m: Model):

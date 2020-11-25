@@ -131,22 +131,21 @@ class Payment(object):
         )
 
     async def allocations(self) -> AsyncIterator[Allocation]:
-        """Lists all active allocations.
+        """List all active allocations.
 
-        Example:
+        example usage - listing all active allocations:
 
-        Listing all active allocations
+        ```python
+        from yapapi import rest
 
-            from yapapi import rest
-
-            async def list_allocations(payment_api: rest.Payment):
-                async for allocation in payment_api.allocations():
-                    print(f'''allocation: {allocation.id}
-                        amount={allocation.amount},
-                        expires={allocation.expires}''')
-
-
+        async def list_allocations(payment_api: rest.Payment):
+            async for allocation in payment_api.allocations():
+                print(f'''allocation: {allocation.id}
+                    amount={allocation.amount},
+                    expires={allocation.expires}''')
+        ```
         """
+
         for alloc_obj in cast(Iterable[yap.Allocation], await self._api.get_allocations()):
             yield Allocation(
                 _api=self._api,
