@@ -427,6 +427,7 @@ class Executor(AsyncContextManager):
         find_offers_task = loop.create_task(find_offers())
         process_invoices_job = loop.create_task(process_invoices())
         wait_until_done = loop.create_task(work_queue.wait_until_done())
+        worker_starter_task = loop.create_task(worker_starter())
         # Py38: find_offers_task.set_name('find_offers_task')
 
         get_offers_deadline = datetime.now(timezone.utc) + self._conf.get_offers_timeout
@@ -437,6 +438,7 @@ class Executor(AsyncContextManager):
                 loop.create_task(worker_starter()),
                 process_invoices_job,
                 wait_until_done,
+                worker_starter_task,
             }
         )
 
@@ -490,6 +492,7 @@ class Executor(AsyncContextManager):
         finally:
 
             payment_closing = True
+            worker_starter_task.cancel()
             find_offers_task.cancel()
             try:
                 if workers:
