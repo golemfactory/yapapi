@@ -225,8 +225,7 @@ class Executor(AsyncContextManager):
                     except Exception:
                         emit(
                             events.PaymentFailed(
-                                agr_id=invoice.agreement_id,
-                                exc_info=sys.exc_info()  # type: ignore
+                                agr_id=invoice.agreement_id, exc_info=sys.exc_info()  # type: ignore
                             )
                         )
                     else:
@@ -506,7 +505,6 @@ class Executor(AsyncContextManager):
                 return_when=asyncio.ALL_COMPLETED,
             )
             if agreements_to_pay:
-                # TODO: remove
                 await asyncio.wait(
                     {process_invoices_job}, timeout=15, return_when=asyncio.ALL_COMPLETED
                 )
