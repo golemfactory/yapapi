@@ -139,6 +139,11 @@ class PaymentQueued(AgreementEvent):
 
 
 @dataclass
+class PaymentFailed(HasExcInfo, AgreementEvent):
+    pass
+
+
+@dataclass
 class InvoiceReceived(AgreementEvent):
     inv_id: str
     amount: str
