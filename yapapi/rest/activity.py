@@ -94,7 +94,7 @@ class Activity(AsyncContextManager["Activity"]):
             batch_id = await self._api.call_exec(
                 self._id, yaa.ExeScriptRequest(text='[{"terminate":{}}]')
             )
-            with contextlib.suppress(yexc.ApiException):
+            with contextlib.suppress(yexc.ApiException, asyncio.TimeoutError):
                 # wait 1sec before kill
                 await self._api.get_exec_batch_results(self._id, batch_id, timeout=1.0)
         except yexc.ApiException as err:
