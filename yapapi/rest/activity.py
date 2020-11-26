@@ -84,35 +84,26 @@ class Activity(AsyncContextManager["Activity"]):
         # on destroy_activity event.
         if exc_type:
             _log.debug(
-                "activity %s CLOSE for [%s] %s",
-                self._id,
-                exc_type.__name__,
-                exc_val,
-                exc_info=(exc_type, exc_val, exc_tb),
+                "Closing activity %s on error:", self._id, exc_info=(exc_type, exc_val, exc_tb)
             )
+        else:
+            _log.debug("Closing activity %s", self._id)
         try:
             batch_id = await self._api.call_exec(
                 self._id, yaa.ExeScriptRequest(text='[{"terminate":{}}]')
             )
-            with contextlib.suppress(yexc.ApiException, asyncio.TimeoutError):
+            with contextlib.suppress(asyncio.TimeoutError):
                 # wait 1sec before kill
-                await self._api.get_exec_batch_results(self._id, batch_id, timeout=1.0)
-        except yexc.ApiException as err:
-            # Suppress errors that say that this activity does not exist (we're closing it anyway).
-            msg_to_suppress = (
-                f"No service registered under given address '/public/exeunit/{self._id}/Exec'"
-            )
-            level = (
-                logging.ERROR
-                if err.status != 500 or msg_to_suppress not in err.body
-                else logging.DEBUG
-            )
-            _log.log(level, "failed to destroy activity: %s", self._id, exc_info=True)
+                await asyncio.wait_for(
+                    self._api.get_exec_batch_results(self._id, batch_id, timeout=1.0), timeout=1.0
+                )
+        except:
+            _log.debug("Failed to terminate activity gracefully: %s", self._id, exc_info=True)
         finally:
             with contextlib.suppress(yexc.ApiException):
+                _log.debug("Destroying activity %s...", self._id)
                 await self._api.destroy_activity(self._id)
-            if exc_type:
-                _log.debug("activity %s CLOSE done", self._id)
+            _log.debug("Activity %s closed", self._id)
 
 
 @dataclass
