@@ -71,8 +71,6 @@ async def main(subnet_tag: str):
                 )
                 raise
 
-        ctx.log("no more frames to render")
-
     # iterator over the frame indices that we want to render
     frames: range = range(0, 60, 10)
     # TODO make this dynamic, e.g. depending on the size of files to transfer
@@ -134,5 +132,5 @@ if __name__ == "__main__":
                 "Shutdown completed, thank you for waiting!"
                 f"{utils.TEXT_COLOR_DEFAULT}"
             )
-        except KeyboardInterrupt:
+        except (asyncio.CancelledError, KeyboardInterrupt):
             pass
