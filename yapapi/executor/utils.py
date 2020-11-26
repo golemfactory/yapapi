@@ -35,7 +35,7 @@ class AsyncWrapper:
             self._wrapped(*args, **kwargs)
             self._args_buffer.task_done()
 
-    async def _delete(self) -> None:
+    async def stop(self) -> None:
         await self._args_buffer.join()
         if self._task:
             self._task.cancel()
@@ -43,8 +43,10 @@ class AsyncWrapper:
             self._task = None
 
     def __del__(self):
-        self._loop.run_until_complete(self._delete())
+        self._loop.run_until_complete(self.stop())
 
     def async_call(self, *args, **kwargs) -> None:
         """Schedule an asynchronous call to the wrapped callable."""
+        if not self._task:
+            raise RuntimeError("AsyncWrapper is closed")
         self._args_buffer.put_nowait((args, kwargs))

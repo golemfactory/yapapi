@@ -41,6 +41,7 @@ as an argument to `log_summary`:
     )
 ```
 """
+from asyncio import CancelledError
 from collections import defaultdict, Counter
 from dataclasses import asdict
 from datetime import timedelta
@@ -52,7 +53,8 @@ from typing import Any, Callable, Dict, Iterator, List, Optional, Set
 import yapapi.executor.events as events
 
 
-logger = logging.getLogger("yapapi.executor")
+event_logger = logging.getLogger("yapapi.events")
+executor_logger = logging.getLogger("yapapi.executor")
 
 
 def enable_default_logger(
@@ -82,6 +84,10 @@ def enable_default_logger(
         file_handler.setFormatter(formatter)
         file_handler.setLevel(logging.DEBUG)
         logger.addHandler(file_handler)
+
+        executor_logger.info(
+            "Using log file `%s`; in case of errors look for additional information there", log_file
+        )
 
         for flag, logger_name in (
             (debug_activity_api, "ya_activity"),
@@ -171,20 +177,20 @@ def log_event(event: events.Event) -> None:
             text = text[: max_len - 3] + "..."
         return text
 
-    if not logger.isEnabledFor(loglevel):
+    if not event_logger.isEnabledFor(loglevel):
         return
 
     msg = event_type_to_string[type(event)]
     info = "; ".join(f"{name} = {_format(value)}" for name, value in asdict(event).items())
     if info:
         msg += "; " + info
-    logger.log(loglevel, msg)
+    event_logger.log(loglevel, msg)
 
 
 def log_event_repr(event: events.Event) -> None:
     """Log the result of calling `__repr__()` for the `event`."""
     exc_info, _ = event.extract_exc_info()
-    logger.debug("%r", event, exc_info=exc_info)
+    event_logger.debug("%r", event, exc_info=exc_info)
 
 
 class SummaryLogger:
@@ -240,6 +246,9 @@ class SummaryLogger:
     # Count how many times a worker failed on a provider
     provider_failures: Dict[str, int]
 
+    # Has computation been cancelled?
+    cancelled: bool
+
     # Has computation finished?
     finished: bool
 
@@ -265,6 +274,7 @@ class SummaryLogger:
         self.provider_tasks = defaultdict(list)
         self.provider_cost = {}
         self.provider_failures = Counter()
+        self.cancelled = False
         self.finished = False
         self.error_occurred = False
         self.time_waiting_for_proposals = timedelta(0)
@@ -402,7 +412,7 @@ class SummaryLogger:
             self.logger.error("Payment for provider '%s' failed, reason: %s", provider_name, reason)
 
         elif isinstance(event, events.WorkerFinished):
-            if event.exc_info is None:
+            if event.exc_info is None or self.cancelled:
                 return
             _exc_type, exc, _tb = event.exc_info
             provider_name = self.agreement_provider_name[event.agr_id]
@@ -420,10 +430,13 @@ class SummaryLogger:
                 _exc_type, exc, _tb = event.exc_info
                 reason = str(exc) or repr(exc) or "unexpected error"
                 self.logger.error(f"Computation failed, reason: %s", reason)
+                if isinstance(exc, CancelledError):
+                    self.cancelled = True
 
         elif isinstance(event, events.ShutdownFinished):
             if not event.exc_info:
-                self.logger.info("Executor shut down")
+                total_time = time.time() - self.start_time
+                self.logger.info(f"Executor shut down, total time: {total_time:.1f}s")
             else:
                 _exc_type, exc, _tb = event.exc_info
                 reason = str(exc) or repr(exc) or "unexpected error"
