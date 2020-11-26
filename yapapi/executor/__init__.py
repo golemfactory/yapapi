@@ -89,6 +89,7 @@ class Executor(AsyncContextManager):
         budget: Union[float, Decimal],
         strategy: MarketStrategy = DummyMS(),
         subnet_tag: Optional[str] = None,
+        provider_node_name: Optional[str] = None,
         event_consumer: Optional[Callable[[Event], None]] = None,
     ):
         """Create a new executor.
@@ -106,6 +107,7 @@ class Executor(AsyncContextManager):
         """
 
         self._subnet: Optional[str] = subnet_tag
+        self._provider_node_name = provider_node_name
         self._stream_output = True
         self._strategy = strategy
         self._api_config = rest.Configuration()
@@ -178,6 +180,9 @@ class Executor(AsyncContextManager):
         builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
+        if self._provider_node_name:
+            builder.ensure(f"({NodeInfoKeys.name}={self._provider_node_name})")
+
         for constraint in multi_payment_decoration.constraints:
             builder.ensure(constraint)
         builder.properties.update({p.key: p.value for p in multi_payment_decoration.properties})

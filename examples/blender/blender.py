@@ -86,6 +86,7 @@ async def main(subnet_tag: str):
         budget=10.0,
         timeout=init_overhead + timedelta(minutes=len(frames) * 2),
         subnet_tag=subnet_tag,
+        provider_node_name='whirlwind.3',
         event_consumer=log_summary(log_event_repr),
     ) as executor:
 
