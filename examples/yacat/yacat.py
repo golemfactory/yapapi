@@ -30,6 +30,7 @@ def read_keyspace():
     with open("keyspace.txt", "r") as f:
         return int(f.readline())
 
+
 def read_password(ranges):
     for r in ranges:
         path = pathlib.Path(f"hashcat_{r}.potfile")
@@ -41,6 +42,7 @@ def read_password(ranges):
         if len(split_list) >= 2:
             return split_list[1]
     return None
+
 
 async def main(args):
     package = await vm.repo(
