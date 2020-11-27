@@ -67,8 +67,9 @@ async def main(args):
 
             # Commands to be run on the provider
             commands = (
+                "rm /golem/work/hashcat.potfile || true; "
                 "touch /golem/work/hashcat.potfile; "
-                f"hashcat -a 3 -m 400 /golem/work/in.hash --skip {skip} --limit {limit} {args.mask} -o /golem/work/hashcat.potfile"
+                f"hashcat -a 3 -m 400 /golem/work/in.hash {args.mask} --skip={skip} --limit={limit} --self-test-disable -o /golem/work/hashcat.potfile || true"
             )
             ctx.run(f"/bin/sh", "-c", commands)
 
