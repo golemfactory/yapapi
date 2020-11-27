@@ -299,17 +299,12 @@ class SummaryLogger:
                 self.logger.info("Provider '%s' did not compute any tasks", provider_name)
         for provider_name, count in self.provider_failures.items():
             self.logger.info("Activity failed %d time(s) on provider '%s'", count, provider_name)
-        self._print_total_cost()
 
     def _print_total_cost(self) -> None:
+        """Print the sum of all accepted invoices."""
 
-        if not self.finished:
-            return
-
-        provider_names = set(self.provider_tasks.keys())
-        if set(self.provider_cost).issuperset(provider_names):
-            total_cost = sum(self.provider_cost.values(), 0.0)
-            self.logger.info("Total cost: %s", total_cost)
+        total_cost = sum(self.provider_cost.values(), 0.0)
+        self.logger.info("Total cost: %s", total_cost)
 
     def log(self, event: events.Event) -> None:
         """Register an event."""
@@ -397,12 +392,11 @@ class SummaryLogger:
             if event.task_id:
                 self.provider_tasks[provider_name].append(event.task_id)
 
-        elif isinstance(event, events.InvoiceReceived):
+        elif isinstance(event, events.PaymentAccepted):
             provider_name = self.agreement_provider_name[event.agr_id]
             cost = self.provider_cost.get(provider_name, 0.0)
             cost += float(event.amount)
             self.provider_cost[provider_name] = cost
-            self._print_total_cost()
 
         elif isinstance(event, events.PaymentFailed):
             assert event.exc_info
@@ -434,6 +428,7 @@ class SummaryLogger:
                     self.cancelled = True
 
         elif isinstance(event, events.ShutdownFinished):
+            self._print_total_cost()
             if not event.exc_info:
                 total_time = time.time() - self.start_time
                 self.logger.info(f"Executor shut down, total time: {total_time:.1f}s")
