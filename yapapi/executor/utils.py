@@ -42,9 +42,6 @@ class AsyncWrapper:
             await asyncio.gather(self._task, return_exceptions=True)
             self._task = None
 
-    def __del__(self):
-        self._loop.run_until_complete(self.stop())
-
     def async_call(self, *args, **kwargs) -> None:
         """Schedule an asynchronous call to the wrapped callable."""
         if not self._task:

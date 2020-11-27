@@ -260,10 +260,17 @@ class SummaryLogger:
 
         self._wrapped_emitter = wrapped_emitter
         self.numbers: Iterator[int] = itertools.count(1)
+        self.provider_cost = {}
         self._reset()
 
     def _reset(self) -> None:
-        """Reset all information aggregated by this logger."""
+        """Reset all information aggregated by this logger related to a single computation.
+
+        Here "computation" means an interval of time between the events
+        `ComputationStarted` and `ComputationFinished`.
+
+        Note that the `provider_cost` is not reset here, it is zeroed on `ExecutorShutdown`.
+        """
 
         self.start_time = time.time()
         self.received_proposals = {}
@@ -272,7 +279,6 @@ class SummaryLogger:
         self.confirmed_agreements = set()
         self.task_data = {}
         self.provider_tasks = defaultdict(list)
-        self.provider_cost = {}
         self.provider_failures = Counter()
         self.cancelled = False
         self.finished = False
@@ -299,17 +305,13 @@ class SummaryLogger:
                 self.logger.info("Provider '%s' did not compute any tasks", provider_name)
         for provider_name, count in self.provider_failures.items():
             self.logger.info("Activity failed %d time(s) on provider '%s'", count, provider_name)
-        self._print_total_cost()
 
-    def _print_total_cost(self) -> None:
+    def _print_total_cost(self, partial: bool = False) -> None:
+        """Print the sum of all accepted invoices."""
 
-        if not self.finished:
-            return
-
-        provider_names = set(self.provider_tasks.keys())
-        if set(self.provider_cost).issuperset(provider_names):
-            total_cost = sum(self.provider_cost.values(), 0.0)
-            self.logger.info("Total cost: %s", total_cost)
+        total_cost = sum(self.provider_cost.values(), 0.0)
+        label = "Total cost" if not partial else "The cost so far"
+        self.logger.info("%s: %s", label, total_cost)
 
     def log(self, event: events.Event) -> None:
         """Register an event."""
@@ -329,6 +331,9 @@ class SummaryLogger:
     def _handle(self, event: events.Event):
         if isinstance(event, events.ComputationStarted):
             self._reset()
+            if self.provider_cost:
+                # This means another computation run in the current Executor instance.
+                self._print_total_cost(partial=True)
 
         if isinstance(event, events.SubscriptionCreated):
             self.logger.info(event_type_to_string[type(event)])
@@ -397,12 +402,11 @@ class SummaryLogger:
             if event.task_id:
                 self.provider_tasks[provider_name].append(event.task_id)
 
-        elif isinstance(event, events.InvoiceReceived):
+        elif isinstance(event, events.PaymentAccepted):
             provider_name = self.agreement_provider_name[event.agr_id]
             cost = self.provider_cost.get(provider_name, 0.0)
             cost += float(event.amount)
             self.provider_cost[provider_name] = cost
-            self._print_total_cost()
 
         elif isinstance(event, events.PaymentFailed):
             assert event.exc_info
@@ -434,6 +438,8 @@ class SummaryLogger:
                     self.cancelled = True
 
         elif isinstance(event, events.ShutdownFinished):
+            self._print_total_cost()
+            self.provider_cost = {}
             if not event.exc_info:
                 total_time = time.time() - self.start_time
                 self.logger.info(f"Executor shut down, total time: {total_time:.1f}s")
