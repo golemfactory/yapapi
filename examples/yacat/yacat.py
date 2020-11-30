@@ -70,7 +70,7 @@ async def main(args):
 
             # Commands to be run on the provider
             commands = (
-                "rm /golem/work/*.potfile ~/.hashcat/hashcat.potfile || true; "
+                "rm -f /golem/work/*.potfile ~/.hashcat/hashcat.potfile; "
                 f"touch /golem/work/hashcat_{skip}.potfile; "
                 f"hashcat -a 3 -m 400 /golem/work/in.hash {args.mask} --skip={skip} --limit={limit} --self-test-disable -o /golem/work/hashcat_{skip}.potfile || true"
             )
