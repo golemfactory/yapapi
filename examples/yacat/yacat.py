@@ -33,7 +33,10 @@ def read_keyspace():
 
 def read_password(ranges):
     for r in ranges:
-        with open(f"hashcat_{r}.potfile", "r") as f:
+        path = pathlib.Path(f"hashcat_{r}.potfile")
+        if not path.is_file():
+            continue
+        with open(path, "r") as f:
             line = f.readline()
         split_list = line.split(":")
         if len(split_list) >= 2:
@@ -67,14 +70,13 @@ async def main(args):
 
             # Commands to be run on the provider
             commands = (
-                "rm /golem/work/hashcat.potfile || true; "
-                "touch /golem/work/hashcat.potfile; "
-                f"hashcat -a 3 -m 400 /golem/work/in.hash {args.mask} --skip={skip} --limit={limit} --self-test-disable -o /golem/work/hashcat.potfile || true"
+                f"touch /golem/work/hashcat_{skip}.potfile; "
+                f"hashcat -a 3 -m 400 /golem/work/in.hash {args.mask} --skip={skip} --limit={limit} --self-test-disable -o /golem/work/hashcat_{skip}.potfile || true"
             )
             ctx.run(f"/bin/sh", "-c", commands)
 
             output_file = f"hashcat_{skip}.potfile"
-            ctx.download_file(f"/golem/work/hashcat.potfile", output_file)
+            ctx.download_file(f"/golem/work/hashcat_{skip}.potfile", output_file)
             yield ctx.commit()
             task.accept_result(result=output_file)
 
