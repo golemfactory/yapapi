@@ -1,6 +1,10 @@
 """Utility functions and classes used within the `yapapi.executor` package."""
 import asyncio
-from typing import Callable, Optional
+import logging
+from typing import Callable, Generic, Iterable, Iterator, Optional, TypeVar
+
+
+logger = logging.getLogger(__name__)
 
 
 class AsyncWrapper:
@@ -30,10 +34,15 @@ class AsyncWrapper:
         self._task = self._loop.create_task(self._worker())
 
     async def _worker(self) -> None:
-        while True:
-            (args, kwargs) = await self._args_buffer.get()
-            self._wrapped(*args, **kwargs)
-            self._args_buffer.task_done()
+        try:
+            while True:
+                (args, kwargs) = await self._args_buffer.get()
+                self._wrapped(*args, **kwargs)
+                self._args_buffer.task_done()
+        except (asyncio.CancelledError, KeyboardInterrupt):
+            logger.debug("Worker task interrupted", exc_info=True)
+        except Exception:
+            logger.debug("Unexpected error in worker task", exc_info=True)
 
     async def stop(self) -> None:
         await self._args_buffer.join()
@@ -41,9 +50,49 @@ class AsyncWrapper:
             self._task.cancel()
             await asyncio.gather(self._task, return_exceptions=True)
             self._task = None
+            logger.debug("AsyncWrapper stopped")
 
     def async_call(self, *args, **kwargs) -> None:
         """Schedule an asynchronous call to the wrapped callable."""
         if not self._task:
             raise RuntimeError("AsyncWrapper is closed")
         self._args_buffer.put_nowait((args, kwargs))
+
+
+E = TypeVar("E")
+
+
+class LookaheadIterator(Generic[E]):
+    def __init__(self, base: Iterable[E]):
+        self._base: Optional[Iterator[E]] = iter(base)
+        self._first: Optional[E] = None
+        self._forward()
+
+    def _forward(self) -> None:
+        if self.empty:
+            return
+        assert self._base
+        try:
+            self._first = next(self._base)
+        except StopIteration:
+            self._first = None
+            self._base = None
+
+    @property
+    def empty(self) -> bool:
+        return self._base is None
+
+    @property
+    def first(self) -> E:
+        if self.empty:
+            raise StopIteration
+        assert self._first
+        return self._first
+
+    def __next__(self) -> E:
+        first = self.first
+        self._forward()
+        return first
+
+    def __iter__(self) -> Iterator[E]:
+        return self
