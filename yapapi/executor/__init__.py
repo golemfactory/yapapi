@@ -405,7 +405,11 @@ class Executor(AsyncContextManager):
         async def worker_starter() -> None:
             while True:
                 await asyncio.sleep(2)
-                if offer_buffer and len(workers) < self._conf.max_workers:
+                if (
+                    offer_buffer
+                    and len(workers) < self._conf.max_workers
+                    and work_queue.has_unassigned_items()
+                ):
                     provider_id, b = random.choice(list(offer_buffer.items()))
                     del offer_buffer[provider_id]
                     new_task = None

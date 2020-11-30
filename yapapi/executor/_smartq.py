@@ -9,10 +9,10 @@ from typing import (
     Iterable,
     TypeVar,
     Generic,
+    Iterator,
     AsyncIterator,
     Set,
     Optional,
-    Iterator,
     ContextManager,
     Type,
     Dict,
@@ -20,6 +20,8 @@ from typing import (
 from typing_extensions import AsyncIterable
 import asyncio
 import logging
+from more_itertools import peekable
+
 
 _logger = logging.getLogger("yapapi.executor")
 Item = TypeVar("Item")
@@ -51,7 +53,7 @@ class Handle(Generic[Item], object):
 
 class SmartQueue(Generic[Item], object):
     def __init__(self, items: Iterable[Item], *, retry_cnt: int = 2):
-        self._items: Optional[Iterator[Item]] = iter(items)
+        self._items: Optional[Iterator[Item]] = peekable(items)
         self._rescheduled_items: Set[Handle[Item]] = set()
         self._in_progress: Set[Handle[Item]] = set()
 
@@ -59,6 +61,21 @@ class SmartQueue(Generic[Item], object):
         self._lock = Lock()
         self._new_items = Condition(lock=self._lock)
         self._eof = Condition(lock=self._lock)
+
+    def has_new_items(self) -> bool:
+        """Check whether this queue has any items that were not retrieved by any consumer yet."""
+        return bool(self._items)
+
+    def has_unassigned_items(self) -> bool:
+        """Check whether this queue has any unassigned items.
+
+        An item is _unassigned_ if it's new (hasn't been retrieved yet by any consumer)
+        or it has been rescheduled and is not in progress.
+
+        A queue has unassigned items iff `get()` will immediately return some item,
+        without waiting for an item that is currently "in progress" to be rescheduled.
+        """
+        return self.has_new_items() or bool(self._rescheduled_items)
 
     def new_consumer(self) -> "Consumer[Item]":
         return Consumer(self)
@@ -86,7 +103,7 @@ class SmartQueue(Generic[Item], object):
                     handle.assign_consumer(consumer)
                     return handle
 
-                if self._items:
+                if self._items is not None:
                     next_elem = next(self._items, None)
                     if next_elem is None:
                         self._items = None
