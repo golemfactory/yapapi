@@ -53,6 +53,19 @@ async def test_smart_queue_empty():
 
 
 @pytest.mark.asyncio
+async def test_items_available():
+    q = SmartQueue([1, 2, 3])
+    with q.new_consumer() as c:
+        async for handle in c:
+            if not q.items_available:
+                assert handle.data == 3
+                break
+        assert not q.items_available
+        await q.reschedule_all(c)
+        assert q.items_available
+
+
+@pytest.mark.asyncio
 async def test_smart_queue_retry(caplog):
     loop = asyncio.get_event_loop()
 

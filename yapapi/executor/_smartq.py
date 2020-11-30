@@ -12,7 +12,6 @@ from typing import (
     AsyncIterator,
     Set,
     Optional,
-    Iterator,
     ContextManager,
     Type,
     Dict,
@@ -20,6 +19,9 @@ from typing import (
 from typing_extensions import AsyncIterable
 import asyncio
 import logging
+
+from yapapi.executor.utils import LookaheadIterator
+
 
 _logger = logging.getLogger("yapapi.executor")
 Item = TypeVar("Item")
@@ -51,7 +53,7 @@ class Handle(Generic[Item], object):
 
 class SmartQueue(Generic[Item], object):
     def __init__(self, items: Iterable[Item], *, retry_cnt: int = 2):
-        self._items: Optional[Iterator[Item]] = iter(items)
+        self._items: Optional[LookaheadIterator[Item]] = LookaheadIterator(items)
         self._rescheduled_items: Set[Handle[Item]] = set()
         self._in_progress: Set[Handle[Item]] = set()
 
@@ -59,6 +61,18 @@ class SmartQueue(Generic[Item], object):
         self._lock = Lock()
         self._new_items = Condition(lock=self._lock)
         self._eof = Condition(lock=self._lock)
+
+    @property
+    def items_available(self) -> bool:
+        """Check whether this queue has any items available.
+
+        An item is _available_ if it's new (hasn't been retrieved yet by any consumer)
+        or it has been rescheduled but is not in progress.
+
+        A queue has items available iff `get()` will immediately return some item,
+        without waiting for an item that is currently "in progress" to be rescheduled.
+        """
+        return (self._items is not None and not self._items.empty) or bool(self._rescheduled_items)
 
     def new_consumer(self) -> "Consumer[Item]":
         return Consumer(self)
