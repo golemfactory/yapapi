@@ -17,7 +17,7 @@ import utils  # noqa
 
 
 def write_hash(hash):
-    with open("in.hash", "w") as f:
+    with open("in.hash", "w", newline="\n") as f:
         f.write(hash)
 
 
