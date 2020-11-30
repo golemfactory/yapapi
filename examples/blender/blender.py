@@ -120,7 +120,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print(
             f"{utils.TEXT_COLOR_YELLOW}"
-            "Shutting down gracefully, please wait a few seconds "
+            "Shutting down gracefully, please wait a short while "
             "or press Ctrl+C to exit immediately..."
             f"{utils.TEXT_COLOR_DEFAULT}"
         )
