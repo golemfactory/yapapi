@@ -41,8 +41,6 @@ class AsyncWrapper:
                 self._args_buffer.task_done()
         except (asyncio.CancelledError, KeyboardInterrupt):
             logger.debug("AsyncWorker interrupted")
-        except Exception:
-            logger.debug("Unexpected error in AsyncWorker", exc_info=True)
 
     async def stop(self) -> None:
         await self._args_buffer.join()
