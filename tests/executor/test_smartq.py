@@ -53,16 +53,18 @@ async def test_smart_queue_empty():
 
 
 @pytest.mark.asyncio
-async def test_items_available():
+async def test_unassigned_items():
     q = SmartQueue([1, 2, 3])
     with q.new_consumer() as c:
         async for handle in c:
-            if not q.items_available:
+            assert q.has_new_items() == q.has_unassigned_items()
+            if not q.has_unassigned_items():
                 assert handle.data == 3
                 break
-        assert not q.items_available
+        assert not q.has_unassigned_items()
         await q.reschedule_all(c)
-        assert q.items_available
+        assert q.has_unassigned_items()
+        assert not q.has_new_items()
 
 
 @pytest.mark.asyncio

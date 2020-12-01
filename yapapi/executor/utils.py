@@ -1,7 +1,7 @@
 """Utility functions and classes used within the `yapapi.executor` package."""
 import asyncio
 import logging
-from typing import Callable, Generic, Iterable, Iterator, Optional, TypeVar
+from typing import Callable, Optional
 
 
 logger = logging.getLogger(__name__)
@@ -57,45 +57,3 @@ class AsyncWrapper:
         if not self._task:
             raise RuntimeError("AsyncWrapper is closed")
         self._args_buffer.put_nowait((args, kwargs))
-
-
-E = TypeVar("E")
-
-
-class LookaheadIterator(Generic[E]):
-    """A wrapper iterator that adds `first` and `empty` properties to the wrapped iterator."""
-
-    def __init__(self, base: Iterable[E]):
-        self._base: Optional[Iterator[E]] = iter(base)
-        self._first: Optional[E] = None
-        self._forward()
-
-    def _forward(self) -> None:
-        if self.empty:
-            return
-        assert self._base
-        try:
-            self._first = next(self._base)
-        except StopIteration:
-            self._first = None
-            self._base = None
-
-    @property
-    def empty(self) -> bool:
-        """Return `True` iff this iterator is empty."""
-        return self._base is None
-
-    @property
-    def first(self) -> E:
-        """Return the first element if there is any, otherwise raise `StopIteration`."""
-        if self.empty:
-            raise StopIteration
-        return self._first  # type: ignore
-
-    def __next__(self) -> E:
-        first = self.first
-        self._forward()
-        return first
-
-    def __iter__(self) -> Iterator[E]:
-        return self

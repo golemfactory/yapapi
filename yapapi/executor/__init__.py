@@ -408,7 +408,7 @@ class Executor(AsyncContextManager):
                 if (
                     offer_buffer
                     and len(workers) < self._conf.max_workers
-                    and work_queue.items_available
+                    and work_queue.has_unassigned_items()
                 ):
                     provider_id, b = random.choice(list(offer_buffer.items()))
                     del offer_buffer[provider_id]
