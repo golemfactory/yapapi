@@ -63,6 +63,8 @@ E = TypeVar("E")
 
 
 class LookaheadIterator(Generic[E]):
+    """A wrapper iterator that adds `first` and `empty` properties to the wrapped iterator."""
+
     def __init__(self, base: Iterable[E]):
         self._base: Optional[Iterator[E]] = iter(base)
         self._first: Optional[E] = None
@@ -80,14 +82,15 @@ class LookaheadIterator(Generic[E]):
 
     @property
     def empty(self) -> bool:
+        """Return `True` iff this iterator is empty."""
         return self._base is None
 
     @property
     def first(self) -> E:
+        """Return the first element if there is any, otherwise raise `StopIteration`."""
         if self.empty:
             raise StopIteration
-        assert self._first
-        return self._first
+        return self._first  # type: ignore
 
     def __next__(self) -> E:
         first = self.first

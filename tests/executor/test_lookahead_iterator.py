@@ -1,5 +1,4 @@
-import random
-
+"""Unit tests for the class `yapapi.executor.utils.LookaheadIterator`."""
 import pytest
 
 from yapapi.executor.utils import LookaheadIterator
