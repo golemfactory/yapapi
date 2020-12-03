@@ -7,8 +7,9 @@ import asyncio
 
 
 @pytest.mark.asyncio
-async def test_smart_queue():
-    q = SmartQueue(range(50))
+@pytest.mark.parametrize("length", [0, 1, 100])
+async def test_smart_queue(length: int):
+    q = SmartQueue(range(length))
 
     async def worker(i, queue):
         print(f"worker {i} started")
