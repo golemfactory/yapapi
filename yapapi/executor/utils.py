@@ -1,10 +1,6 @@
 """Utility functions and classes used within the `yapapi.executor` package."""
 import asyncio
-import logging
 from typing import Callable, Optional
-
-
-logger = logging.getLogger(__name__)
 
 
 class AsyncWrapper:
@@ -34,15 +30,10 @@ class AsyncWrapper:
         self._task = self._loop.create_task(self._worker())
 
     async def _worker(self) -> None:
-        try:
-            while True:
-                (args, kwargs) = await self._args_buffer.get()
-                self._wrapped(*args, **kwargs)
-                self._args_buffer.task_done()
-        except (asyncio.CancelledError, KeyboardInterrupt):
-            logger.debug("Worker task interrupted", exc_info=True)
-        except Exception:
-            logger.debug("Unexpected error in worker task", exc_info=True)
+        while True:
+            (args, kwargs) = await self._args_buffer.get()
+            self._wrapped(*args, **kwargs)
+            self._args_buffer.task_done()
 
     async def stop(self) -> None:
         await self._args_buffer.join()
@@ -50,7 +41,6 @@ class AsyncWrapper:
             self._task.cancel()
             await asyncio.gather(self._task, return_exceptions=True)
             self._task = None
-            logger.debug("AsyncWrapper stopped")
 
     def async_call(self, *args, **kwargs) -> None:
         """Schedule an asynchronous call to the wrapped callable."""
