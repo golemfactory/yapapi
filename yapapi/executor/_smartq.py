@@ -80,8 +80,8 @@ class SmartQueue(Generic[Item], object):
     def new_consumer(self) -> "Consumer[Item]":
         return Consumer(self)
 
-    def __have_data(self):
-        return self._items is not None or bool(self._rescheduled_items) or bool(self._in_progress)
+    def __has_data(self):
+        return self.has_new_items() or bool(self._rescheduled_items) or bool(self._in_progress)
 
     def __find_rescheduled_item(self, consumer: "Consumer[Item]") -> Optional[Handle[Item]]:
         return next(
@@ -95,7 +95,7 @@ class SmartQueue(Generic[Item], object):
 
     async def get(self, consumer: "Consumer[Item]") -> Handle[Item]:
         async with self._lock:
-            while self.__have_data():
+            while self.__has_data():
                 handle = self.__find_rescheduled_item(consumer)
                 if handle:
                     self._rescheduled_items.remove(handle)
@@ -153,7 +153,7 @@ class SmartQueue(Generic[Item], object):
 
     async def wait_until_done(self) -> None:
         async with self._lock:
-            while self.__have_data():
+            while self.__has_data():
                 await self._eof.wait()
 
 
