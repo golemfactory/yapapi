@@ -227,12 +227,14 @@ class Executor(AsyncContextManager):
                     allocation = self._allocation_for_invoice(invoice)
                     try:
                         await invoice.accept(amount=invoice.amount, allocation=allocation)
-                    except Exception:
+                    except (Exception, CancelledError) as e:
                         emit(
                             events.PaymentFailed(
                                 agr_id=invoice.agreement_id, exc_info=sys.exc_info()  # type: ignore
                             )
                         )
+                        if isinstance(e, CancelledError):
+                            raise
                     else:
                         agreements_to_pay.remove(invoice.agreement_id)
                         emit(
@@ -307,8 +309,10 @@ class Executor(AsyncContextManager):
                                 )
                             await proposal.respond(builder.properties, builder.constraints)
                             emit(events.ProposalResponded(prop_id=proposal.id))
-                        except Exception as ex:
+                        except (Exception, CancelledError) as ex:
                             emit(events.ProposalFailed(prop_id=proposal.id, reason=str(ex)))
+                            if isinstance(ex, CancelledError):
+                                raise
                     else:
                         emit(events.ProposalConfirmed(prop_id=proposal.id))
                         offer_buffer[proposal.issuer] = _BufferedProposal(
@@ -426,13 +430,12 @@ class Executor(AsyncContextManager):
                         emit(events.AgreementConfirmed(agr_id=agreement.id))
                         new_task = loop.create_task(start_worker(agreement))
                         workers.add(new_task)
-                        # task.add_done_callback(on_worker_stop)
-                    except Exception as e:
+                    except (Exception, CancelledError) as e:
                         if new_task:
                             new_task.cancel()
                         emit(events.ProposalFailed(prop_id=b.proposal.id, reason=str(e)))
-                    finally:
-                        pass
+                        if isinstance(e, CancelledError):
+                            raise
 
         loop = asyncio.get_event_loop()
         find_offers_task = loop.create_task(find_offers())
