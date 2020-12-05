@@ -58,7 +58,7 @@ class Agreement(object):
 
     async def confirm(self) -> bool:
         """Sign and send the agreement to the provider and then wait for it to be approved.
-        
+
         :return: True if the agreement has been confirmed, False otherwise
         """
         await self._api.confirm_agreement(self._id)
@@ -88,6 +88,10 @@ class OfferProposal(object):
         return self._proposal.proposal.properties
 
     @property
+    def state(self):
+        return self._proposal.proposal.state
+
+    @property
     def is_draft(self) -> bool:
         return self._proposal.proposal.state == "Draft"
 
@@ -97,9 +101,11 @@ class OfferProposal(object):
 
     async def respond(self, props: dict, constraints: str) -> str:
         """Create an agreeement Proposal for a received Offer, based on our Demand."""
-        proposal = models.Proposal(properties=props, constraints=constraints)
+        with_proposal = models.DemandOfferBase(
+            properties=props,
+            constraints=constraints)
         new_proposal = await self._subscription._api.counter_proposal_demand(
-            self._subscription.id, self.id, proposal
+            self._subscription.id, self.id, with_proposal
         )
         return new_proposal
 
@@ -208,7 +214,7 @@ class Market(object):
         """
         Create a subscription for a demand specified by the supplied properties and constraints.
         """
-        request = models.Demand(properties=props, constraints=constraints)
+        request = models.DemandOfferBase(properties=props, constraints=constraints)
 
         async def create() -> Subscription:
             sub_id = await self._api.subscribe_demand(request)
