@@ -92,7 +92,7 @@ async def main(subnet_tag: str):
         package=package,
         max_workers=3,
         budget=10.0,
-        timeout=executor_timeout,
+        timeout=timeout,
         subnet_tag=subnet_tag,
         event_consumer=log_summary(log_event_repr),
     ) as executor:
