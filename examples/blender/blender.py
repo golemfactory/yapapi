@@ -81,7 +81,7 @@ async def main(subnet_tag: str):
     # reach the providers.
     min_timeout, max_timeout = 6, 30
 
-    executor_timeout = timedelta(
+    timeout = timedelta(
         minutes=max(min(init_overhead + len(frames) * 2, max_timeout), min_timeout)
     )
 
