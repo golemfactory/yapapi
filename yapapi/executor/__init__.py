@@ -227,6 +227,8 @@ class Executor(AsyncContextManager):
                     allocation = self._allocation_for_invoice(invoice)
                     try:
                         await invoice.accept(amount=invoice.amount, allocation=allocation)
+                    except CancelledError:
+                        raise
                     except Exception:
                         emit(
                             events.PaymentFailed(
@@ -307,6 +309,8 @@ class Executor(AsyncContextManager):
                                 )
                             await proposal.respond(builder.properties, builder.constraints)
                             emit(events.ProposalResponded(prop_id=proposal.id))
+                        except CancelledError:
+                            raise
                         except Exception as ex:
                             emit(events.ProposalFailed(prop_id=proposal.id, reason=str(ex)))
                     else:
@@ -426,13 +430,12 @@ class Executor(AsyncContextManager):
                         agreements_confirmed += 1
                         new_task = loop.create_task(start_worker(agreement))
                         workers.add(new_task)
-                        # task.add_done_callback(on_worker_stop)
+                    except CancelledError:
+                        raise
                     except Exception as e:
                         if new_task:
                             new_task.cancel()
                         emit(events.ProposalFailed(prop_id=b.proposal.id, reason=str(e)))
-                    finally:
-                        pass
 
         loop = asyncio.get_event_loop()
         find_offers_task = loop.create_task(find_offers())
@@ -492,7 +495,7 @@ class Executor(AsyncContextManager):
 
             emit(events.ComputationFinished())
 
-        except (Exception, CancelledError, KeyboardInterrupt) as e:
+        except (Exception, CancelledError, KeyboardInterrupt):
             emit(events.ComputationFinished(exc_info=sys.exc_info()))  # type: ignore
             cancelled = True
 
