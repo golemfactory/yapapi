@@ -7,8 +7,9 @@ import asyncio
 
 
 @pytest.mark.asyncio
-async def test_smart_queue():
-    q = SmartQueue(range(50))
+@pytest.mark.parametrize("length", [0, 1, 100])
+async def test_smart_queue(length: int):
+    q = SmartQueue(range(length))
 
     async def worker(i, queue):
         print(f"worker {i} started")
@@ -50,6 +51,21 @@ async def test_smart_queue_empty():
         async for item in c:
             assert False, "Expected empty list"
     # done
+
+
+@pytest.mark.asyncio
+async def test_unassigned_items():
+    q = SmartQueue([1, 2, 3])
+    with q.new_consumer() as c:
+        async for handle in c:
+            assert q.has_new_items() == q.has_unassigned_items()
+            if not q.has_unassigned_items():
+                assert handle.data == 3
+                break
+        assert not q.has_unassigned_items()
+        await q.reschedule_all(c)
+        assert q.has_unassigned_items()
+        assert not q.has_new_items()
 
 
 @pytest.mark.asyncio

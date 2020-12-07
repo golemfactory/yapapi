@@ -212,6 +212,7 @@ class Executor(AsyncContextManager):
 
         offers_collected = 0
         proposals_confirmed = 0
+        agreements_confirmed = 0
 
         async def process_invoices() -> None:
             async for invoice in self._payment_api.incoming_invoices():
@@ -403,9 +404,14 @@ class Executor(AsyncContextManager):
             emit(events.WorkerFinished(agr_id=agreement.id))
 
         async def worker_starter() -> None:
+            nonlocal agreements_confirmed
             while True:
                 await asyncio.sleep(2)
-                if offer_buffer and len(workers) < self._conf.max_workers:
+                if (
+                    offer_buffer
+                    and len(workers) < self._conf.max_workers
+                    and work_queue.has_unassigned_items()
+                ):
                     provider_id, b = random.choice(list(offer_buffer.items()))
                     del offer_buffer[provider_id]
                     new_task = None
@@ -417,6 +423,7 @@ class Executor(AsyncContextManager):
                             emit(events.AgreementRejected(agr_id=agreement.id))
                             continue
                         emit(events.AgreementConfirmed(agr_id=agreement.id))
+                        agreements_confirmed += 1
                         new_task = loop.create_task(start_worker(agreement))
                         workers.add(new_task)
                         # task.add_done_callback(on_worker_stop)
@@ -498,6 +505,9 @@ class Executor(AsyncContextManager):
             for task in services:
                 if task is not process_invoices_job:
                     task.cancel()
+            if agreements_confirmed == 0:
+                # No need to wait for invoices
+                process_invoices_job.cancel()
             if cancelled:
                 for worker_task in workers:
                     worker_task.cancel()
