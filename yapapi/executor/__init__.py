@@ -229,7 +229,7 @@ class Executor(AsyncContextManager):
                         await invoice.accept(amount=invoice.amount, allocation=allocation)
                     except CancelledError:
                         raise
-                    except Exception as e:
+                    except Exception:
                         emit(
                             events.PaymentFailed(
                                 agr_id=invoice.agreement_id, exc_info=sys.exc_info()  # type: ignore
