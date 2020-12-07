@@ -75,6 +75,7 @@ async def main(subnet_tag: str):
     frames: range = range(0, 60, 10)
     # TODO make this more dynamic, e.g. depending on the size of files to transfer
     # worst-case time overhead for initialization, e.g. negotiation, file transfer etc.
+    # currently, the provider implementation supports timeouts in range [5:30] minutes
     init_overhead, min_timeout, max_timeout = 3, 7, 28
     executor_timeout = timedelta(
         minutes=max(min(init_overhead + len(frames) * 2, max_timeout), min_timeout)
