@@ -81,9 +81,7 @@ async def main(subnet_tag: str):
     # reach the providers.
     min_timeout, max_timeout = 6, 30
 
-    timeout = timedelta(
-        minutes=max(min(init_overhead + len(frames) * 2, max_timeout), min_timeout)
-    )
+    timeout = timedelta(minutes=max(min(init_overhead + len(frames) * 2, max_timeout), min_timeout))
 
     # By passing `event_consumer=log_summary()` we enable summary logging.
     # See the documentation of the `yapapi.log` module on how to set
