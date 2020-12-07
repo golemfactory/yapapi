@@ -71,11 +71,17 @@ async def main(subnet_tag: str):
                 )
                 raise
 
-    # iterator over the frame indices that we want to render
+    # Iterator over the frame indices that we want to render
     frames: range = range(0, 60, 10)
-    # TODO make this dynamic, e.g. depending on the size of files to transfer
-    # worst-case time overhead for initialization, e.g. negotiation, file transfer etc.
-    init_overhead: timedelta = timedelta(minutes=3)
+    # Worst-case overhead, in minutes, for initialization (negotiation, file transfer etc.)
+    # TODO: make this dynamic, e.g. depending on the size of files to transfer
+    init_overhead = 3
+    # Providers will not accept work if the timeout is outside of the [5 min, 30min] range.
+    # We increase the lower bound to 6 min to account for the time needed for our demand to
+    # reach the providers.
+    min_timeout, max_timeout = 6, 30
+
+    timeout = timedelta(minutes=max(min(init_overhead + len(frames) * 2, max_timeout), min_timeout))
 
     # By passing `event_consumer=log_summary()` we enable summary logging.
     # See the documentation of the `yapapi.log` module on how to set
@@ -84,7 +90,7 @@ async def main(subnet_tag: str):
         package=package,
         max_workers=3,
         budget=10.0,
-        timeout=init_overhead + timedelta(minutes=len(frames) * 2),
+        timeout=timeout,
         subnet_tag=subnet_tag,
         event_consumer=log_summary(log_event_repr),
     ) as executor:
