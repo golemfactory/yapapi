@@ -44,7 +44,7 @@ as an argument to `log_summary`:
 from asyncio import CancelledError
 from collections import defaultdict, Counter
 from dataclasses import asdict
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 import itertools
 import logging
 import time
@@ -334,6 +334,15 @@ class SummaryLogger:
             if self.provider_cost:
                 # This means another computation run in the current Executor instance.
                 self._print_total_cost(partial=True)
+            timeout = event.expires - datetime.now(timezone.utc)
+            if not timedelta(minutes=5, seconds=5) <= timeout <= timedelta(minutes=30):
+                min, sec = divmod(round(timeout.total_seconds()), 60)
+                self.logger.warning(
+                    f"Expiration time for your tasks is set to {min} min {sec} sec from now."
+                    " Providers will probably not respond to tasks which expire sooner than 5 min"
+                    " or later than 30 min, counting from the moment they get your demand."
+                    " Use the `timeout` parameter to `Executor()` to adjust the timeout."
+                )
 
         if isinstance(event, events.SubscriptionCreated):
             self.logger.info(event_type_to_string[type(event)])
@@ -364,7 +373,8 @@ class SummaryLogger:
                 )
             msg += (
                 " Make sure you're using the latest released versions of yagna and yapapi,"
-                " and the correct subnet."
+                " and the correct subnet. Also make sure that the timeout for computing all"
+                " tasks is within the 5 min to 30 min range."
             )
             self.logger.warning(msg)
 

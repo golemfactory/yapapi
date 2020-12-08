@@ -170,7 +170,7 @@ class Executor(AsyncContextManager):
 
         multi_payment_decoration = await self._create_allocations()
 
-        emit(events.ComputationStarted())
+        emit(events.ComputationStarted(self._expires))
 
         # Building offer
         builder = DemandBuilder()
