@@ -5,6 +5,7 @@ import asyncio
 from asyncio import CancelledError
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+import logging
 import os
 import sys
 from typing import (
@@ -50,6 +51,8 @@ else:
 
 CFG_INVOICE_TIMEOUT: Final[timedelta] = timedelta(minutes=5)
 "Time to receive invoice from provider after tasks ended."
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -148,6 +151,7 @@ class Executor(AsyncContextManager):
             all_tasks = workers.union(services)
             for task in all_tasks:
                 if not task.done():
+                    logger.debug("Cancelling task: %s", task)
                     task.cancel()
             await asyncio.gather(*all_tasks, return_exceptions=True)
 
@@ -166,7 +170,7 @@ class Executor(AsyncContextManager):
 
         multi_payment_decoration = await self._create_allocations()
 
-        emit(events.ComputationStarted())
+        emit(events.ComputationStarted(self._expires))
 
         # Building offer
         builder = DemandBuilder()
@@ -208,6 +212,7 @@ class Executor(AsyncContextManager):
 
         offers_collected = 0
         proposals_confirmed = 0
+        agreements_confirmed = 0
 
         async def process_invoices() -> None:
             async for invoice in self._payment_api.incoming_invoices():
@@ -222,6 +227,8 @@ class Executor(AsyncContextManager):
                     allocation = self._allocation_for_invoice(invoice)
                     try:
                         await invoice.accept(amount=invoice.amount, allocation=allocation)
+                    except CancelledError:
+                        raise
                     except Exception:
                         emit(
                             events.PaymentFailed(
@@ -302,6 +309,8 @@ class Executor(AsyncContextManager):
                                 )
                             await proposal.respond(builder.properties, builder.constraints)
                             emit(events.ProposalResponded(prop_id=proposal.id))
+                        except CancelledError:
+                            raise
                         except Exception as ex:
                             emit(events.ProposalFailed(prop_id=proposal.id, reason=str(ex)))
                     else:
@@ -399,9 +408,14 @@ class Executor(AsyncContextManager):
             emit(events.WorkerFinished(agr_id=agreement.id))
 
         async def worker_starter() -> None:
+            nonlocal agreements_confirmed
             while True:
                 await asyncio.sleep(2)
-                if offer_buffer and len(workers) < self._conf.max_workers:
+                if (
+                    offer_buffer
+                    and len(workers) < self._conf.max_workers
+                    and work_queue.has_unassigned_items()
+                ):
                     provider_id, b = random.choice(list(offer_buffer.items()))
                     del offer_buffer[provider_id]
                     new_task = None
@@ -413,32 +427,29 @@ class Executor(AsyncContextManager):
                             emit(events.AgreementRejected(agr_id=agreement.id))
                             continue
                         emit(events.AgreementConfirmed(agr_id=agreement.id))
+                        agreements_confirmed += 1
                         new_task = loop.create_task(start_worker(agreement))
                         workers.add(new_task)
-                        # task.add_done_callback(on_worker_stop)
+                    except CancelledError:
+                        raise
                     except Exception as e:
                         if new_task:
                             new_task.cancel()
                         emit(events.ProposalFailed(prop_id=b.proposal.id, reason=str(e)))
-                    finally:
-                        pass
 
         loop = asyncio.get_event_loop()
         find_offers_task = loop.create_task(find_offers())
         process_invoices_job = loop.create_task(process_invoices())
         wait_until_done = loop.create_task(work_queue.wait_until_done())
+        worker_starter_task = loop.create_task(worker_starter())
         # Py38: find_offers_task.set_name('find_offers_task')
 
         get_offers_deadline = datetime.now(timezone.utc) + self._conf.get_offers_timeout
         get_done_task: Optional[asyncio.Task] = None
         services.update(
-            {
-                find_offers_task,
-                loop.create_task(worker_starter()),
-                process_invoices_job,
-                wait_until_done,
-            }
+            {find_offers_task, process_invoices_job, wait_until_done, worker_starter_task,}
         )
+        cancelled = False
 
         try:
             while wait_until_done in services or not done_queue.empty():
@@ -484,30 +495,53 @@ class Executor(AsyncContextManager):
 
             emit(events.ComputationFinished())
 
-        except (Exception, CancelledError, KeyboardInterrupt) as e:
+        except (Exception, CancelledError, KeyboardInterrupt):
             emit(events.ComputationFinished(exc_info=sys.exc_info()))  # type: ignore
+            cancelled = True
 
         finally:
 
+            # When cancelled emit logs with higher priority, so e.g. after
+            # hitting Ctrl+C the user sees shutdown progress on the console
+            log_level = logging.INFO if cancelled else logging.DEBUG
             payment_closing = True
-            find_offers_task.cancel()
+            for task in services:
+                if task is not process_invoices_job:
+                    task.cancel()
+            if agreements_confirmed == 0:
+                # No need to wait for invoices
+                process_invoices_job.cancel()
+            if cancelled:
+                for worker_task in workers:
+                    worker_task.cancel()
+
+            if workers:
+                logger.log(log_level, "Waiting for %d workers to finish...", len(workers))
+                await asyncio.wait(
+                    workers.union(services), timeout=10, return_when=asyncio.ALL_COMPLETED
+                )
             try:
-                if workers:
-                    for worker_task in workers:
-                        worker_task.cancel()
-                    await asyncio.wait(workers, timeout=15, return_when=asyncio.ALL_COMPLETED)
+                logger.log(log_level, "Waiting for all services to finish...")
+                _, pending = await asyncio.wait(
+                    workers.union(services), timeout=10, return_when=asyncio.ALL_COMPLETED
+                )
+                if pending:
+                    logger.debug("Services still running: %s", pending)
             except Exception:
                 if self._conf.traceback:
                     traceback.print_exc()
-            await asyncio.wait(
-                workers.union({find_offers_task, process_invoices_job}),
-                timeout=5,
-                return_when=asyncio.ALL_COMPLETED,
-            )
+
             if agreements_to_pay:
-                await asyncio.wait(
-                    {process_invoices_job}, timeout=15, return_when=asyncio.ALL_COMPLETED
+                logger.log(
+                    log_level,
+                    "%d agreements still unpaid, waiting for invoices...",
+                    len(agreements_to_pay),
                 )
+                await asyncio.wait(
+                    {process_invoices_job}, timeout=10, return_when=asyncio.ALL_COMPLETED
+                )
+                if agreements_to_pay:
+                    logger.debug("Unpaid agreements  %s", agreements_to_pay)
 
     async def _create_allocations(self) -> rest.payment.MarketDecoration:
         if not self._budget_allocations:
@@ -581,3 +615,5 @@ class Executor(AsyncContextManager):
             emit(events.ShutdownFinished())
         except Exception:
             emit(events.ShutdownFinished(exc_info=sys.exc_info()))
+        finally:
+            await self._wrapped_consumer.stop()

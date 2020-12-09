@@ -33,7 +33,10 @@ def read_keyspace():
 
 def read_password(ranges):
     for r in ranges:
-        with open(f"hashcat_{r}.potfile", "r") as f:
+        path = pathlib.Path(f"hashcat_{r}.potfile")
+        if not path.is_file():
+            continue
+        with open(path, "r") as f:
             line = f.readline()
         split_list = line.split(":")
         if len(split_list) >= 2:
@@ -67,13 +70,14 @@ async def main(args):
 
             # Commands to be run on the provider
             commands = (
-                "touch /golem/work/hashcat.potfile; "
-                f"hashcat -a 3 -m 400 /golem/work/in.hash --skip {skip} --limit {limit} {args.mask} -o /golem/work/hashcat.potfile"
+                "rm -f /golem/work/*.potfile ~/.hashcat/hashcat.potfile; "
+                f"touch /golem/work/hashcat_{skip}.potfile; "
+                f"hashcat -a 3 -m 400 /golem/work/in.hash {args.mask} --skip={skip} --limit={limit} --self-test-disable -o /golem/work/hashcat_{skip}.potfile || true"
             )
             ctx.run(f"/bin/sh", "-c", commands)
 
             output_file = f"hashcat_{skip}.potfile"
-            ctx.download_file(f"/golem/work/hashcat.potfile", output_file)
+            ctx.download_file(f"/golem/work/hashcat_{skip}.potfile", output_file)
             yield ctx.commit()
             task.accept_result(result=output_file)
 
@@ -163,7 +167,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print(
             f"{utils.TEXT_COLOR_YELLOW}"
-            "Shutting down gracefully, please wait a few seconds "
+            "Shutting down gracefully, please wait a short while "
             "or press Ctrl+C to exit immediately..."
             f"{utils.TEXT_COLOR_DEFAULT}"
         )

@@ -1,6 +1,6 @@
 """Representing events in Golem computation."""
 import dataclasses
-from datetime import timedelta
+from datetime import datetime, timedelta
 from dataclasses import dataclass
 from types import TracebackType
 from typing import Any, Optional, Type, Tuple, List
@@ -42,7 +42,7 @@ class HasExcInfo(Event):
 
 @dataclass
 class ComputationStarted(Event):
-    pass
+    expires: datetime
 
 
 @dataclass
