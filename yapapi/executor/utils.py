@@ -1,9 +1,9 @@
 """Utility functions and classes used within the `yapapi.executor` package."""
 import asyncio
-from typing import AsyncContextManager, Callable, Optional
+from typing import Callable, Optional
 
 
-class AsyncWrapper(AsyncContextManager):
+class AsyncWrapper:
     """Wraps a given callable to provide asynchronous calls.
 
     Example usage:
@@ -27,6 +27,7 @@ class AsyncWrapper(AsyncContextManager):
         self._args_buffer = asyncio.Queue()
         self._task = None
         self._loop = event_loop or asyncio.get_event_loop()
+        self._task = self._loop.create_task(self._worker())
 
     async def _worker(self) -> None:
         while True:
@@ -34,15 +35,15 @@ class AsyncWrapper(AsyncContextManager):
             self._wrapped(*args, **kwargs)
             self._args_buffer.task_done()
 
-    async def __aenter__(self):
-        self._task = self._loop.create_task(self._worker())
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def stop(self) -> None:
         await self._args_buffer.join()
         if self._task:
             self._task.cancel()
-        self._task = None
+            await asyncio.gather(self._task, return_exceptions=True)
+            self._task = None
 
     def async_call(self, *args, **kwargs) -> None:
         """Schedule an asynchronous call to the wrapped callable."""
+        if not self._task:
+            raise RuntimeError("AsyncWrapper is closed")
         self._args_buffer.put_nowait((args, kwargs))

@@ -154,7 +154,7 @@ async def main(subnet_tag: str):
 
 enable_default_logger()
 loop = asyncio.get_event_loop()
-task = loop.create_task(main(subnet_tag="devnet-alpha.2"))
+task = loop.create_task(main(subnet_tag="community.3"))
 try:
     asyncio.get_event_loop().run_until_complete(task)
 except (Exception, KeyboardInterrupt) as e:
