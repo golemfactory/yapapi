@@ -416,7 +416,10 @@ class Executor(AsyncContextManager):
                     and len(workers) < self._conf.max_workers
                     and work_queue.has_unassigned_items()
                 ):
-                    provider_id, b = random.choice(list(offer_buffer.items()))
+                    provider_id, b = max(
+                        random.sample(list(offer_buffer.items()), len(offer_buffer)),
+                        key=lambda el: el[1].score,
+                    )
                     del offer_buffer[provider_id]
                     new_task = None
                     try:
