@@ -116,6 +116,7 @@ event_type_to_string = {
     events.AgreementCreated: "Agreement proposal sent to provider",
     events.AgreementConfirmed: "Agreement approved by provider",
     events.AgreementRejected: "Agreement rejected by provider",
+    events.AgreementTerminated: "Agreement terminated",
     events.PaymentAccepted: "Payment accepted",  # by who?
     events.PaymentFailed: "Payment failed",
     events.PaymentPrepared: "Payment prepared",
