@@ -41,7 +41,7 @@ from .. import rest
 from ..rest.activity import CommandExecutionError
 from ..storage import gftp
 from ._smartq import SmartQueue, Handle
-from .strategy import DummyMS, MarketStrategy, SCORE_NEUTRAL
+from .strategy import LeastExpensiveLinearPayuMS, MarketStrategy, SCORE_NEUTRAL
 
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
@@ -87,7 +87,7 @@ class Executor(AsyncContextManager):
         max_workers: int = 5,
         timeout: timedelta = timedelta(minutes=5),
         budget: Union[float, Decimal],
-        strategy: MarketStrategy = DummyMS(),
+        strategy: MarketStrategy = LeastExpensiveLinearPayuMS(),
         subnet_tag: Optional[str] = None,
         event_consumer: Optional[Callable[[Event], None]] = None,
     ):
