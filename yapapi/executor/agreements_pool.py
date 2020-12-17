@@ -108,11 +108,3 @@ class AgreementsPool:
             # 1. Check wether agreement has multi activity enabled
             if not buffered_agreement.has_multi_activity:
                 del self._agreements[agreement_id]
-
-    async def terminate_agreements(self, reason):
-        raise NotImplementedError()
-        async with self._lock:
-            for buffered_agreement in self._agreements:
-                await buffered_agreement.agreement.terminate(reason)
-            while self._offer_buffer:
-                await self._offer_buffer.popitem()[1].proposal.reject()
