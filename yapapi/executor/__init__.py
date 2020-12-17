@@ -402,12 +402,12 @@ class Executor(AsyncContextManager):
             while True:
                 await asyncio.sleep(2)
                 await agreements_pool.cycle()
-                if (len(workers) < self._conf.max_workers
-                    and work_queue.has_unassigned_items()
-                ):
+                if len(workers) < self._conf.max_workers and work_queue.has_unassigned_items():
                     new_task = None
                     try:
-                        new_task = await agreements_pool.use_agreement(lambda a: loop.create_task(start_worker(a)))
+                        new_task = await agreements_pool.use_agreement(
+                            lambda a: loop.create_task(start_worker(a))
+                        )
                         if new_task is None:
                             continue
                         workers.add(new_task)

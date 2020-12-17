@@ -26,8 +26,8 @@ class AgreementsPool:
 
     def __init__(self, emitter):
         self.emitter = emitter
-        self._offer_buffer:Dict[str, _BufferedProposal] = {}  # provider_id -> Proposal
-        self._agreements:Dict[str, BufferedAgreement] = {}  # agreement_id -> Agreement
+        self._offer_buffer: Dict[str, _BufferedProposal] = {}  # provider_id -> Proposal
+        self._agreements: Dict[str, BufferedAgreement] = {}  # agreement_id -> Agreement
         self._lock = asyncio.Lock()
         self.confirmed = 0
 
@@ -43,7 +43,9 @@ class AgreementsPool:
 
     async def add_proposal(self, score: float, proposal: OfferProposal) -> None:
         async with self._lock:
-            self._offer_buffer[proposal.issuer] = _BufferedProposal(datetime.datetime.now(), score, proposal)
+            self._offer_buffer[proposal.issuer] = _BufferedProposal(
+                datetime.datetime.now(), score, proposal
+            )
 
     async def use_agreement(self, cbk):
         async with self._lock:
@@ -66,7 +68,9 @@ class AgreementsPool:
         emit = self.emitter
 
         try:
-            buffered_agreement = random.choice([ba for ba in self._agreements.values() if ba.worker_task is None])
+            buffered_agreement = random.choice(
+                [ba for ba in self._agreements.values() if ba.worker_task is None]
+            )
             return buffered_agreement.agreement
         except IndexError:  # empty pool
             pass

@@ -121,6 +121,7 @@ class AgreementConfirmed(AgreementEvent):
 class AgreementRejected(AgreementEvent):
     pass
 
+
 @dataclass
 class AgreementTerminated(AgreementEvent):
     reason: str
