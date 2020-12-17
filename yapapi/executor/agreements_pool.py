@@ -23,13 +23,13 @@ class BufferedAgreement:
 
 class AgreementsPool:
     """Manages proposals and agreements pool"""
-    _offer_buffer:Dict[str, _BufferedProposal] = {}  # provider_id -> Proposal
-    _agreements:Dict[str, BufferedAgreement] = {}  # agreement_id -> Agreement
-    _lock = asyncio.Lock()
-    confirmed = 0
 
     def __init__(self, emitter):
         self.emitter = emitter
+        self._offer_buffer:Dict[str, _BufferedProposal] = {}  # provider_id -> Proposal
+        self._agreements:Dict[str, BufferedAgreement] = {}  # agreement_id -> Agreement
+        self._lock = asyncio.Lock()
+        self.confirmed = 0
 
     async def cycle(self):
         for agreement_id in set(self._agreements):
