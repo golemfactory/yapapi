@@ -169,19 +169,19 @@ class Payment(object):
         )
 
     async def accounts(self) -> AsyncIterator[Account]:
-        for account_obj in cast(Iterable[Account], await self._api.get_send_accounts()):
+        for account_obj in cast(Iterable[Account], await self._api.get_requestor_accounts()):
             yield account_obj
 
     async def decorate_demand(self, ids: List[str]) -> yap.MarketDecoration:
-        return await self._api.decorate_demand(ids)
+        return await self._api.get_demand_decorations(ids)
 
     async def invoices(self) -> AsyncIterator[Invoice]:
 
-        for invoice_obj in cast(Iterable[yap.Invoice], await self._api.get_received_invoices()):
+        for invoice_obj in cast(Iterable[yap.Invoice], await self._api.get_invoices()):
             yield Invoice(_api=self._api, _base=invoice_obj)
 
     async def invoice(self, invoice_id: str) -> Invoice:
-        invoice_obj = await self._api.get_received_invoice(invoice_id)
+        invoice_obj = await self._api.get_invoice(invoice_id)
         return Invoice(_api=self._api, _base=invoice_obj)
 
     def incoming_invoices(self) -> AsyncIterator[Invoice]:
@@ -193,11 +193,11 @@ class Payment(object):
             while True:
                 items = cast(
                     Iterable[yap.InvoiceEvent],
-                    await api.get_requestor_invoice_events(timeout=5, later_than=ts),
+                    await api.get_invoice_events(timeout=5, later_than=ts),
                 )
                 for ev in items:
-                    ts = ev.timestamp
-                    if ev.event_type == yap.EventType.RECEIVED:
+                    ts = ev.eventDate
+                    if ev.event_type == yap.InvoiceStatus.Received:
                         invoice = await self.invoice(ev.invoice_id)
                         yield invoice
 
