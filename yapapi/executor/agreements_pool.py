@@ -109,6 +109,6 @@ class AgreementsPool:
             except KeyError:
                 return
             buffered_agreement.worker_task = None
-            # 1. Check wether agreement has multi activity enabled
+            # Check whether agreement has multi activity enabled
             if not buffered_agreement.has_multi_activity:
                 del self._agreements[agreement_id]
