@@ -9,6 +9,8 @@ from yapapi.rest.market import Agreement, OfferProposal
 
 
 class _BufferedProposal(NamedTuple):
+    """Providers' proposal with additional local metadata"""
+
     ts: datetime.datetime
     score: float
     proposal: OfferProposal
@@ -16,8 +18,12 @@ class _BufferedProposal(NamedTuple):
 
 @dataclass
 class BufferedAgreement:
+    """Confirmed agreement with additional local metadata"""
+
     agreement: Agreement
-    worker_task: Optional[asyncio.Task]
+    worker_task: Optional[
+        asyncio.Task
+    ]  # A Task that uses agreement. Agreement won't be reused until this task is .done()
     has_multi_activity: bool
 
 
@@ -32,6 +38,10 @@ class AgreementsPool:
         self.confirmed = 0
 
     async def cycle(self):
+        """Performs cyclic tasks.
+
+        Should be called regularly.
+        """
         for agreement_id in set(self._agreements):
             try:
                 buffered_agreement = self._agreements[agreement_id]
@@ -42,12 +52,14 @@ class AgreementsPool:
                 await self.release_agreement(buffered_agreement.agreement.id)
 
     async def add_proposal(self, score: float, proposal: OfferProposal) -> None:
+        """Adds providers' proposal to the pool of available proposals"""
         async with self._lock:
             self._offer_buffer[proposal.issuer] = _BufferedProposal(
                 datetime.datetime.now(), score, proposal
             )
 
     async def use_agreement(self, cbk):
+        """Gets an agreement and performs cbk() on it"""
         async with self._lock:
             agreement = await self._get_agreement()
             if agreement is None:
@@ -65,6 +77,11 @@ class AgreementsPool:
         buffered_agreement.worker_task = task
 
     async def _get_agreement(self) -> Optional[Agreement]:
+        """Returns an Agreement
+
+        Firstly it tries to reuse agreement from a pool of available agreements (no active worker_task).
+        If that fails it tries to convert offer into agreement.
+        """
         emit = self.emitter
 
         try:
@@ -103,6 +120,7 @@ class AgreementsPool:
         return agreement
 
     async def release_agreement(self, agreement_id: str) -> None:
+        """Marks agreement as ready for reuse"""
         async with self._lock:
             try:
                 buffered_agreement = self._agreements[agreement_id]
