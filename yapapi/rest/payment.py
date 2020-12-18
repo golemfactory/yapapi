@@ -1,3 +1,6 @@
+import asyncio
+import logging
+
 from ya_payment import Account, ApiClient, RequestorApi
 import ya_payment.models as yap
 from typing import Optional, AsyncIterator, cast, Iterable, Union, List
@@ -5,6 +8,9 @@ from decimal import Decimal
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass
 from .resource import ResourceCtx
+
+
+logger = logging.getLogger(__name__)
 
 
 class Invoice(yap.Invoice):
@@ -193,12 +199,15 @@ class Payment(object):
             while True:
                 items = cast(
                     Iterable[yap.InvoiceEvent],
-                    await api.get_invoice_events(timeout=5, later_than=ts),
+                    await api.get_invoice_events(timeout=5, after_timestamp=ts),
                 )
                 for ev in items:
-                    ts = ev.eventDate
+                    logger.debug("Received invoice event: %r", ev)
+                    ts = ev.event_date
                     if ev.event_type == yap.InvoiceStatus.Received:
                         invoice = await self.invoice(ev.invoice_id)
                         yield invoice
+                if not items:
+                    await asyncio.sleep(1)
 
         return fetch(ts)

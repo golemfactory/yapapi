@@ -24,6 +24,22 @@ def env_or_fail(key: str, description: str) -> str:
     return val
 
 
+# A temporary (?) workaround to disable client side validation in the Market API
+market_getattr = ya_market.Configuration.__getattribute__
+ya_market.Configuration.__getattribute__ = lambda obj, name: (
+    False if name == "client_side_validation" else market_getattr(obj, name)
+)
+
+# Another workaround for yagna using snake_case attribute names
+# for InvoiceEvent when the API spec requires camelCase
+import ya_payment.models.invoice_event
+
+ya_payment.models.invoice_event.InvoiceEvent.attribute_map = {
+    "event_type": "event_type",
+    "event_date": "event_date",
+}
+
+
 class Configuration(object):
     """
     REST API's setup and top-level access utility.
