@@ -413,12 +413,12 @@ class Executor(AsyncContextManager):
                         workers.add(new_task)
                     except CancelledError:
                         raise
-                    except Exception as e:
+                    except Exception:
                         if self._conf.traceback:
                             traceback.print_exc()
                         if new_task:
                             new_task.cancel()
-                        emit(events.ProposalFailed(prop_id="<unknown>", reason=str(e)))
+                        logger.exception("There was a problem during use_agreement")
 
         loop = asyncio.get_event_loop()
         find_offers_task = loop.create_task(find_offers())
