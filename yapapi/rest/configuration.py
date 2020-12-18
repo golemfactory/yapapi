@@ -32,12 +32,15 @@ ya_market.Configuration.__getattribute__ = lambda obj, name: (
 
 # Another workaround for yagna using snake_case attribute names
 # for InvoiceEvent when the API spec requires camelCase
-import ya_payment.models.invoice_event
+from ya_payment.models import invoice_event
+from ya_payment.models import invoice_received_event
 
-ya_payment.models.invoice_event.InvoiceEvent.attribute_map = {
+invoice_event.InvoiceEvent.discriminator_value_class_map["RECEIVED"] = "InvoiceReceivedEvent"
+invoice_event.InvoiceEvent.attribute_map = {
     "event_type": "event_type",
     "event_date": "event_date",
 }
+invoice_received_event.InvoiceReceivedEvent.attribute_map = {"invoice_id": "invoice_id"}
 
 
 class Configuration(object):

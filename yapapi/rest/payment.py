@@ -197,17 +197,15 @@ class Payment(object):
         async def fetch(init_ts: datetime):
             ts = init_ts
             while True:
-                items = cast(
-                    Iterable[yap.InvoiceEvent],
-                    await api.get_invoice_events(timeout=5, after_timestamp=ts),
-                )
-                for ev in items:
+                events = await api.get_invoice_events(timeout=5, after_timestamp=ts)
+                for ev in events:
                     logger.debug("Received invoice event: %r", ev)
-                    ts = ev.event_date
-                    if ev.event_type == yap.InvoiceStatus.Received:
+                    # How to get this timestamp?
+                    # ts = ev.event_date
+                    if isinstance(ev, yap.InvoiceReceivedEvent):
                         invoice = await self.invoice(ev.invoice_id)
                         yield invoice
-                if not items:
+                if not events:
                     await asyncio.sleep(1)
 
         return fetch(ts)
