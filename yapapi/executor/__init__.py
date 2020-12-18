@@ -418,7 +418,7 @@ class Executor(AsyncContextManager):
                             traceback.print_exc()
                         if new_task:
                             new_task.cancel()
-                        logger.exception("There was a problem during use_agreement")
+                        logger.debug("There was a problem during use_agreement", exc_info=True)
 
         loop = asyncio.get_event_loop()
         find_offers_task = loop.create_task(find_offers())
