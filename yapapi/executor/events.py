@@ -123,6 +123,11 @@ class AgreementRejected(AgreementEvent):
 
 
 @dataclass
+class AgreementTerminated(AgreementEvent):
+    reason: str
+
+
+@dataclass
 class PaymentAccepted(AgreementEvent):
     inv_id: str
     amount: str
