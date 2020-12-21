@@ -1,3 +1,6 @@
+import asyncio
+import logging
+
 from ya_payment import Account, ApiClient, RequestorApi
 import ya_payment.models as yap
 from typing import Optional, AsyncIterator, cast, Iterable, Union, List
@@ -5,6 +8,9 @@ from decimal import Decimal
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass
 from .resource import ResourceCtx
+
+
+logger = logging.getLogger(__name__)
 
 
 class Invoice(yap.Invoice):
@@ -169,19 +175,19 @@ class Payment(object):
         )
 
     async def accounts(self) -> AsyncIterator[Account]:
-        for account_obj in cast(Iterable[Account], await self._api.get_send_accounts()):
+        for account_obj in cast(Iterable[Account], await self._api.get_requestor_accounts()):
             yield account_obj
 
     async def decorate_demand(self, ids: List[str]) -> yap.MarketDecoration:
-        return await self._api.decorate_demand(ids)
+        return await self._api.get_demand_decorations(ids)
 
     async def invoices(self) -> AsyncIterator[Invoice]:
 
-        for invoice_obj in cast(Iterable[yap.Invoice], await self._api.get_received_invoices()):
+        for invoice_obj in cast(Iterable[yap.Invoice], await self._api.get_invoices()):
             yield Invoice(_api=self._api, _base=invoice_obj)
 
     async def invoice(self, invoice_id: str) -> Invoice:
-        invoice_obj = await self._api.get_received_invoice(invoice_id)
+        invoice_obj = await self._api.get_invoice(invoice_id)
         return Invoice(_api=self._api, _base=invoice_obj)
 
     def incoming_invoices(self) -> AsyncIterator[Invoice]:
@@ -191,14 +197,15 @@ class Payment(object):
         async def fetch(init_ts: datetime):
             ts = init_ts
             while True:
-                items = cast(
-                    Iterable[yap.InvoiceEvent],
-                    await api.get_requestor_invoice_events(timeout=5, later_than=ts),
-                )
-                for ev in items:
-                    ts = ev.timestamp
-                    if ev.event_type == yap.EventType.RECEIVED:
+                events = await api.get_invoice_events(timeout=5, after_timestamp=ts)
+                for ev in events:
+                    logger.debug("Received invoice event: %r", ev)
+                    # How to get this timestamp?
+                    # ts = ev.event_date
+                    if isinstance(ev, yap.InvoiceReceivedEvent):
                         invoice = await self.invoice(ev.invoice_id)
                         yield invoice
+                if not events:
+                    await asyncio.sleep(1)
 
         return fetch(ts)
