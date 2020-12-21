@@ -34,6 +34,7 @@ jsonrpc-base = "^1.0.3"
 
 #ya-aioclient = "0.4.0"  # FIXME Uncomment when 0.4.0 is pushed to pypi
 ya-aioclient = { path = "./ya-aioclient-0.4.0.tar.gz" }
+
 toml = "^0.10.1"
 
 
