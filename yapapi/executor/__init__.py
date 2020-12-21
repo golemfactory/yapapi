@@ -305,7 +305,11 @@ class Executor(AsyncContextManager):
                         except CancelledError:
                             raise
                         except Exception as ex:
-                            emit(events.ProposalFailed(prop_id=proposal.id, reason=str(ex)))
+                            emit(
+                                events.ProposalFailed(
+                                    prop_id=proposal.id, exc_info=sys.exc_info()  # type: ignore
+                                )
+                            )
                     else:
                         emit(events.ProposalConfirmed(prop_id=proposal.id))
                         await agreements_pool.add_proposal(score, proposal)

@@ -2,7 +2,9 @@ import asyncio
 from dataclasses import dataclass
 import datetime
 import random
+import sys
 from typing import Dict, NamedTuple, Optional
+
 from yapapi.executor import events
 from yapapi.props import NodeInfo
 from yapapi.rest.market import Agreement, OfferProposal
@@ -103,7 +105,7 @@ class AgreementsPool:
         except asyncio.CancelledError:
             raise
         except Exception as e:
-            emit(events.ProposalFailed(prop_id=b.proposal.id, reason=str(e)))
+            emit(events.ProposalFailed(prop_id=b.proposal.id, exc_info=sys.exc_info()))
             raise
         provider = (await agreement.details()).provider_view.extract(NodeInfo)
         emit(events.AgreementCreated(agr_id=agreement.id, provider_id=provider))
