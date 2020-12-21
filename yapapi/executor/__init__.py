@@ -168,7 +168,7 @@ class Executor(AsyncContextManager):
 
         # Building offer
         builder = DemandBuilder()
-        builder.add(Activity(expiration=self._expires))
+        builder.add(Activity(expiration=self._expires, multi_activity=True,))
         builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
@@ -494,6 +494,11 @@ class Executor(AsyncContextManager):
             if agreements_pool.confirmed == 0:
                 # No need to wait for invoices
                 process_invoices_job.cancel()
+            try:
+                await agreements_pool.terminate(json_reason='{"message": "Finished"}')
+            except Exception:
+                if self._conf.traceback:
+                    traceback.print_exc()
             if cancelled:
                 for worker_task in workers:
                     worker_task.cancel()

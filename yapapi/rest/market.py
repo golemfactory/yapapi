@@ -65,6 +65,12 @@ class Agreement(object):
         msg = await self._api.wait_for_approval(self._id, timeout=90, _request_timeout=100)
         return isinstance(msg, str) and msg.strip().lower() == "approved"
 
+    async def terminate(self, reason: str) -> bool:
+        """Informs provider that life cycle of this agreement ends.
+        """
+        await self._api.terminate_agreement(reason)
+        return True
+
 
 class OfferProposal(object):
     """Mid-level interface to handle the negotiation phase between the parties."""
