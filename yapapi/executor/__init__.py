@@ -416,14 +416,12 @@ class Executor(AsyncContextManager):
                     and len(workers) < self._conf.max_workers
                     and work_queue.has_unassigned_items()
                 ):
-                    provider_id, b = max(
-                        random.sample(list(offer_buffer.items()), len(offer_buffer)),
-                        key=lambda el: el[1].score,
-                    )
+                    shuffled = random.sample(list(offer_buffer.items()), len(offer_buffer))
+                    provider_id, offer = max(shuffled, key=lambda el: el[1].score)
                     del offer_buffer[provider_id]
                     new_task = None
                     try:
-                        agreement = await b.proposal.create_agreement()
+                        agreement = await offer.proposal.create_agreement()
                         provider = (await agreement.details()).provider_view.extract(NodeInfo)
                         emit(events.AgreementCreated(agr_id=agreement.id, provider_id=provider))
                         if not await agreement.confirm():
@@ -438,7 +436,7 @@ class Executor(AsyncContextManager):
                     except Exception as e:
                         if new_task:
                             new_task.cancel()
-                        emit(events.ProposalFailed(prop_id=b.proposal.id, reason=str(e)))
+                        emit(events.ProposalFailed(prop_id=offer.proposal.id, reason=str(e)))
 
         loop = asyncio.get_event_loop()
         find_offers_task = loop.create_task(find_offers())
