@@ -111,7 +111,12 @@ if __name__ == "__main__":
     # This is only required when running on Windows with Python prior to 3.8:
     windows_event_loop_fix()
 
-    enable_default_logger(log_file=args.log_file)
+    enable_default_logger(
+        log_file=args.log_file,
+        debug_activity_api=True,
+        debug_market_api=True,
+        debug_payment_api=True,
+    )
 
     loop = asyncio.get_event_loop()
 
