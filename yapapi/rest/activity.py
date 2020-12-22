@@ -89,14 +89,13 @@ class Activity(AsyncContextManager["Activity"]):
         else:
             _log.debug("Closing activity %s", self._id)
         try:
-            batch_id = await self._api.call_exec(
-                self._id, yaa.ExeScriptRequest(text='[{"terminate":{}}]')
+            deadline = datetime.now(timezone.utc) + timedelta(seconds=10)
+            batch = await self.send(
+                script=[{"terminate": {}}], stream=True, deadline=deadline
             )
-            with contextlib.suppress(asyncio.TimeoutError):
-                # wait 1sec before kill
-                await asyncio.wait_for(
-                    self._api.get_exec_batch_results(self._id, batch_id, timeout=1.0), timeout=1.0
-                )
+            async for evt_ctx in batch:
+                _log.debug("Command output for 'terminate': %r", evt_ctx)
+            _log.debug("Successfully terminated activity %s", self._id)
         except:
             _log.debug("Failed to terminate activity gracefully: %s", self._id, exc_info=True)
         finally:
