@@ -408,6 +408,13 @@ class Executor(AsyncContextManager):
             emit(events.WorkerFinished(agr_id=agreement.id))
 
         async def worker_starter() -> None:
+
+            async def _start_worker(agreement):
+                try:
+                    await start_worker(agreement)
+                finally:
+                    await agreement.terminate()
+
             nonlocal agreements_confirmed
             while True:
                 await asyncio.sleep(2)
@@ -428,7 +435,7 @@ class Executor(AsyncContextManager):
                             continue
                         emit(events.AgreementConfirmed(agr_id=agreement.id))
                         agreements_confirmed += 1
-                        new_task = loop.create_task(start_worker(agreement))
+                        new_task = loop.create_task(_start_worker(agreement))
                         workers.add(new_task)
                     except CancelledError:
                         raise
@@ -520,6 +527,7 @@ class Executor(AsyncContextManager):
                 await asyncio.wait(
                     workers.union(services), timeout=10, return_when=asyncio.ALL_COMPLETED
                 )
+
             try:
                 logger.log(log_level, "Waiting for all services to finish...")
                 _, pending = await asyncio.wait(

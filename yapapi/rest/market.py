@@ -69,7 +69,20 @@ class Agreement(object):
             await self._api.wait_for_approval(self._id, timeout=90, _request_timeout=100)
             return True
         except ApiException:
-            logger.debug("waitForApproval returned ApiException", exc_info=True)
+            logger.debug("waitForApproval(%s) raised ApiException", self._id, exc_info=True)
+            return False
+
+    async def terminate(self, reason: str = "Finished") -> bool:
+
+        try:
+            await self._api.terminate_agreement(
+                self._id,
+                request_body={"message": reason},
+            )
+            logger.debug("terminateAgreement(%s) returned successfully", self._id)
+            return True
+        except ApiException:
+            logger.debug("terminateAgreement(%s) raised ApiException", self._id, exc_info=True)
             return False
 
 
