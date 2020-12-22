@@ -197,12 +197,14 @@ class Payment(object):
         async def fetch(init_ts: datetime):
             ts = init_ts
             while True:
+                # In the current version of `ya-aioclient` the method `get_invoice_events`
+                # incorrectly accepts `timeout` parameter, while the server uses `pollTimeout`
+                # events = await api.get_invoice_events(poll_timeout=5, after_timestamp=ts)
                 events = await api.get_invoice_events(timeout=5, after_timestamp=ts)
                 for ev in events:
                     logger.debug("Received invoice event: %r", ev)
-                    # How to get this timestamp?
-                    # ts = ev.event_date
                     if isinstance(ev, yap.InvoiceReceivedEvent):
+                        ts = ev.event_date
                         invoice = await self.invoice(ev.invoice_id)
                         yield invoice
                 if not events:
