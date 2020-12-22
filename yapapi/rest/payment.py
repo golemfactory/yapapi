@@ -202,7 +202,7 @@ class Payment(object):
                 # events = await api.get_invoice_events(poll_timeout=5, after_timestamp=ts)
                 events = await api.get_invoice_events(timeout=5, after_timestamp=ts)
                 for ev in events:
-                    logger.debug("Received invoice event: %r", ev)
+                    logger.debug("Received invoice event: %r, type: %s", ev, ev.__class__)
                     if isinstance(ev, yap.InvoiceReceivedEvent):
                         ts = ev.event_date
                         invoice = await self.invoice(ev.invoice_id)

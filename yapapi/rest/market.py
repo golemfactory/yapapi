@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 from types import TracebackType
 from typing import AsyncIterator, Optional, TypeVar, Type, Generator, Any, Generic
@@ -80,8 +81,16 @@ class Agreement(object):
             )
             logger.debug("terminateAgreement(%s) returned successfully", self._id)
             return True
-        except ApiException:
-            logger.debug("terminateAgreement(%s) raised ApiException", self._id, exc_info=True)
+        except ApiException as e:
+            if e.status == 410:
+                body = json.loads(str(e.body))
+                logger.debug(
+                    "terminateAgreement(%s) raised ApiException: status = 410, message = %s",
+                    self._id,
+                    body.get("message"),
+                )
+            else:
+                logger.debug("terminateAgreement(%s) raised ApiException", self._id, exc_info=True)
             return False
 
 

@@ -55,6 +55,7 @@ class _InvoiceReceivedEventWithDate(ya_payment.models.invoice_received_event.Inv
 
 
 ya_payment.models.invoice_received_event.InvoiceReceivedEvent = _InvoiceReceivedEventWithDate
+ya_payment.models.InvoiceReceivedEvent = _InvoiceReceivedEventWithDate
 
 
 class Configuration(object):

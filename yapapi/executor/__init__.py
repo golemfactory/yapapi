@@ -408,7 +408,6 @@ class Executor(AsyncContextManager):
             emit(events.WorkerFinished(agr_id=agreement.id))
 
         async def worker_starter() -> None:
-
             async def _start_worker(agreement):
                 try:
                     await start_worker(agreement)
