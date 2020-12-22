@@ -90,9 +90,7 @@ class Activity(AsyncContextManager["Activity"]):
             _log.debug("Closing activity %s", self._id)
         try:
             deadline = datetime.now(timezone.utc) + timedelta(seconds=10)
-            batch = await self.send(
-                script=[{"terminate": {}}], stream=True, deadline=deadline
-            )
+            batch = await self.send(script=[{"terminate": {}}], stream=True, deadline=deadline)
             async for evt_ctx in batch:
                 _log.debug("Command output for 'terminate': %r", evt_ctx)
             _log.debug("Successfully terminated activity %s", self._id)

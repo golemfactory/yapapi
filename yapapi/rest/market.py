@@ -76,8 +76,7 @@ class Agreement(object):
 
         try:
             await self._api.terminate_agreement(
-                self._id,
-                request_body={"message": reason},
+                self._id, request_body={"message": reason},
             )
             logger.debug("terminateAgreement(%s) returned successfully", self._id)
             return True
