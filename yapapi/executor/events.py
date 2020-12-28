@@ -124,7 +124,7 @@ class AgreementRejected(AgreementEvent):
 
 @dataclass
 class AgreementTerminated(AgreementEvent):
-    reason: str
+    reason: dict
 
 
 @dataclass

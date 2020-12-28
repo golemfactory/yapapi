@@ -56,6 +56,9 @@ import yapapi.executor.events as events
 event_logger = logging.getLogger("yapapi.events")
 executor_logger = logging.getLogger("yapapi.executor")
 
+# Initializing loggers, so that logger.setLevel() in enable_default_logger will work.
+_agreements_pool_logger = logging.getLogger("yapapi.agreements_pool")
+
 
 def enable_default_logger(
     format_: str = "[%(asctime)s %(levelname)s %(name)s] %(message)s",
@@ -345,7 +348,7 @@ class SummaryLogger:
                     " Use the `timeout` parameter to `Executor()` to adjust the timeout."
                 )
 
-        if isinstance(event, events.SubscriptionCreated):
+        if isinstance(event, (events.SubscriptionCreated, events.AgreementTerminated)):
             self.logger.info(event_type_to_string[type(event)])
 
         elif isinstance(event, events.ProposalReceived):
