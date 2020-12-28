@@ -1,6 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 import datetime
+import logging
 import random
 import sys
 from typing import Dict, NamedTuple, Optional
@@ -8,6 +9,8 @@ from typing import Dict, NamedTuple, Optional
 from yapapi.executor import events
 from yapapi.props import Activity, NodeInfo
 from yapapi.rest.market import Agreement, OfferProposal
+
+logger = logging.getLogger(__name__)
 
 
 class _BufferedProposal(NamedTuple):
@@ -90,9 +93,7 @@ class AgreementsPool:
             buffered_agreement = random.choice(
                 [ba for ba in self._agreements.values() if ba.worker_task is None]
             )
-            print("*" * 80)  # XXX
-            print("reuse agreement", buffered_agreement.agreement.id)  # XXX
-            print("*" * 80)  # XXX
+            logger.debug("Reusing agreement. id: %s", buffered_agreement.agreement.id)
             return buffered_agreement.agreement
         except IndexError:  # empty pool
             pass
@@ -113,9 +114,8 @@ class AgreementsPool:
         agreement_details = await agreement.details()
         provider_activity = agreement_details.provider_view.extract(Activity)
         requestor_activity = agreement_details.requestor_view.extract(Activity)
-        print("Agreement provider", provider_activity.multi_activity)  # XXX
-        print("Agreement requestor", requestor_activity.multi_activity)  # XXX
         provider = agreement_details.provider_view.extract(NodeInfo)
+        logger.debug("New agreement. id: %s, provider: %s", agreement.id, provider)
         emit(events.AgreementCreated(agr_id=agreement.id, provider_id=provider))
         if not await agreement.confirm():
             emit(events.AgreementRejected(agr_id=agreement.id))
@@ -127,7 +127,6 @@ class AgreementsPool:
                 provider_activity.multi_activity and requestor_activity.multi_activity
             ),
         )
-        print("Multiactivity agreed", self._agreements[agreement.id].has_multi_activity)  # XXX
         emit(events.AgreementConfirmed(agr_id=agreement.id))
         self.confirmed += 1
         return agreement
@@ -143,19 +142,37 @@ class AgreementsPool:
             # Check whether agreement has multi activity enabled
             if not buffered_agreement.has_multi_activity:
                 del self._agreements[agreement_id]
+                logger.debug("Removed single-activity agreement. %s", agreement_id)
 
-    async def terminate(self, json_reason: str) -> None:
+    async def terminate(self, reason: dict) -> None:
         """Terminates all agreements"""
         async with self._lock:
             for agreement_id in frozenset(self._agreements):
                 buffered_agreement = self._agreements[agreement_id]
-                assert buffered_agreement.worker_task is None
+                agreement_details = await buffered_agreement.agreement.details()
+                provider = agreement_details.provider_view.extract(NodeInfo)
+                logger.debug("Terminating agreement. id: %s, provider: %s", agreement_id, provider)
+                if (
+                    buffered_agreement.worker_task is not None
+                    and not buffered_agreement.worker_task.done()
+                ):
+                    logger.debug(
+                        "Terminating agreement that still has worker. agreement_id: %s, worker: %s",
+                        buffered_agreement.agreement.id,
+                        buffered_agreement.worker_task,
+                    )
+                    buffered_agreement.worker_task.cancel()
                 if buffered_agreement.has_multi_activity:
-                    buffered_agreement.agreement.terminate(json_reason)
+                    if not await buffered_agreement.agreement.terminate(reason):
+                        logger.debug(
+                            "Couldn't terminate agreement. id=%s, provider=%s",
+                            buffered_agreement.agreement.id,
+                            provider,
+                        )
                 del self._agreements[agreement_id]
-                self.emitter(events.AgreementTerminated(agr_id=agreement_id, reason=json_reason))
+                self.emitter(events.AgreementTerminated(agr_id=agreement_id, reason=reason))
 
-    async def on_agreement_terminated(self, agr_id: str, reason: str) -> None:
+    async def on_agreement_terminated(self, agr_id: str, reason: dict) -> None:
         """Reacts to agreement termination event
 
         Should be called when AgreementTerminated event is received.

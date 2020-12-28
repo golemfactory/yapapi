@@ -499,10 +499,9 @@ class Executor(AsyncContextManager):
                 # No need to wait for invoices
                 process_invoices_job.cancel()
             try:
-                print("#"*80) #XXX
-                print("terminate") #XXX
-                await agreements_pool.terminate(json_reason='{"message": "Finished"}')
+                await agreements_pool.terminate(reason={"message": "Finished"})
             except Exception:
+                logger.debug("Problem with agreements termination", exc_info=True)
                 if self._conf.traceback:
                     traceback.print_exc()
             if cancelled:
