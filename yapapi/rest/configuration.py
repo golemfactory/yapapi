@@ -30,17 +30,32 @@ ya_market.Configuration.__getattribute__ = lambda obj, name: (
     False if name == "client_side_validation" else market_getattr(obj, name)
 )
 
-# Another workaround for yagna using snake_case attribute names
-# for InvoiceEvent when the API spec requires camelCase
-from ya_payment.models import invoice_event
-from ya_payment.models import invoice_received_event
+# Monkey-patch the `InvoiceReceivedEvent` class to include `eventType`
+# field from `InvoiceEvent` (`InvoiceReceivedEvent` inherits from `InvoiceEvent`
+# in the API spec, but the generated classes in the Python code are not related)
+import ya_payment.models.invoice_received_event
 
-invoice_event.InvoiceEvent.discriminator_value_class_map["RECEIVED"] = "InvoiceReceivedEvent"
-invoice_event.InvoiceEvent.attribute_map = {
-    "event_type": "event_type",
-    "event_date": "event_date",
-}
-invoice_received_event.InvoiceReceivedEvent.attribute_map = {"invoice_id": "invoice_id"}
+
+class _InvoiceReceivedEventWithDate(ya_payment.models.invoice_received_event.InvoiceReceivedEvent):
+    """A more correct model for InvoiceReceivedEvent message."""
+
+    openapi_types = {
+        "event_date": "datetime",
+        "invoice_id": "str",
+    }
+
+    attribute_map = {
+        "event_date": "eventDate",
+        "invoice_id": "invoiceId",
+    }
+
+    def __init__(self, event_date=None, invoice_id=None, local_vars_configuration=None):
+        super().__init__(invoice_id=invoice_id, local_vars_configuration=local_vars_configuration)
+        self.event_date = event_date
+
+
+ya_payment.models.invoice_received_event.InvoiceReceivedEvent = _InvoiceReceivedEventWithDate
+ya_payment.models.InvoiceReceivedEvent = _InvoiceReceivedEventWithDate
 
 
 class Configuration(object):

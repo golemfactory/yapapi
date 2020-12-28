@@ -92,8 +92,8 @@ class ProposalConfirmed(ProposalEvent):
 
 
 @dataclass
-class ProposalFailed(ProposalEvent):
-    reason: str
+class ProposalFailed(HasExcInfo, ProposalEvent):
+    pass
 
 
 @dataclass

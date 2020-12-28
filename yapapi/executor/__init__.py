@@ -305,7 +305,11 @@ class Executor(AsyncContextManager):
                         except CancelledError:
                             raise
                         except Exception as ex:
-                            emit(events.ProposalFailed(prop_id=proposal.id, reason=str(ex)))
+                            emit(
+                                events.ProposalFailed(
+                                    prop_id=proposal.id, exc_info=sys.exc_info()  # type: ignore
+                                )
+                            )
                     else:
                         emit(events.ProposalConfirmed(prop_id=proposal.id))
                         await agreements_pool.add_proposal(score, proposal)
@@ -510,6 +514,7 @@ class Executor(AsyncContextManager):
                 await asyncio.wait(
                     workers.union(services), timeout=10, return_when=asyncio.ALL_COMPLETED
                 )
+
             try:
                 logger.log(log_level, "Waiting for all services to finish...")
                 _, pending = await asyncio.wait(
