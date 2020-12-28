@@ -503,6 +503,7 @@ class Executor(AsyncContextManager):
                 await asyncio.wait(
                     workers.union(services), timeout=10, return_when=asyncio.ALL_COMPLETED
                 )
+
             try:
                 logger.log(log_level, "Waiting for all services to finish...")
                 _, pending = await asyncio.wait(

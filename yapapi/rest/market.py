@@ -1,15 +1,19 @@
 import asyncio
+import json
+import logging
 from types import TracebackType
 from typing import AsyncIterator, Optional, TypeVar, Type, Generator, Any, Generic
 
 from typing_extensions import Awaitable, AsyncContextManager
 
 from ..props import Model
-from ya_market import ApiClient, RequestorApi, models  # type: ignore
+from ya_market import ApiClient, ApiException, RequestorApi, models  # type: ignore
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 _ModelType = TypeVar("_ModelType", bound=Model)
+
+logger = logging.getLogger(__name__)
 
 
 class AgreementDetails(object):
@@ -62,8 +66,32 @@ class Agreement(object):
         :return: True if the agreement has been confirmed, False otherwise
         """
         await self._api.confirm_agreement(self._id)
-        msg = await self._api.wait_for_approval(self._id, timeout=90, _request_timeout=100)
-        return isinstance(msg, str) and msg.strip().lower() == "approved"
+        try:
+            await self._api.wait_for_approval(self._id, timeout=90, _request_timeout=100)
+            return True
+        except ApiException:
+            logger.debug("waitForApproval(%s) raised ApiException", self._id, exc_info=True)
+            return False
+
+    async def terminate(self, reason: str = "Finished") -> bool:
+
+        try:
+            await self._api.terminate_agreement(
+                self._id, request_body={"message": reason},
+            )
+            logger.debug("terminateAgreement(%s) returned successfully", self._id)
+            return True
+        except ApiException as e:
+            if e.status == 410:
+                body = json.loads(str(e.body))
+                logger.debug(
+                    "terminateAgreement(%s) raised ApiException: status = 410, message = %s",
+                    self._id,
+                    body.get("message"),
+                )
+            else:
+                logger.debug("terminateAgreement(%s) raised ApiException", self._id, exc_info=True)
+            return False
 
 
 class OfferProposal(object):
@@ -166,7 +194,8 @@ class Subscription(object):
         while self._open:
             proposals = await self._api.collect_offers(self._id, timeout=10, max_events=10)
             for proposal in proposals:
-                yield OfferProposal(self, proposal)
+                if isinstance(proposal, models.ProposalEvent):
+                    yield OfferProposal(self, proposal)
 
             if not proposals:
                 await asyncio.sleep(1)
