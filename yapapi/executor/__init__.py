@@ -498,15 +498,22 @@ class Executor(AsyncContextManager):
             if agreements_pool.confirmed == 0:
                 # No need to wait for invoices
                 process_invoices_job.cancel()
+            if cancelled:
+                reason = {"message": "Work cancelled", "golem.requestor.code": "Cancelled"}
+                for worker_task in workers:
+                    worker_task.cancel()
+            else:
+                reason = {
+                    "message": "Successfully finished all work",
+                    "golem.requestor.code": "Success",
+                }
+
             try:
-                await agreements_pool.terminate(reason={"message": "Finished"})
+                await agreements_pool.terminate(reason=reason)
             except Exception:
                 logger.debug("Problem with agreements termination", exc_info=True)
                 if self._conf.traceback:
                     traceback.print_exc()
-            if cancelled:
-                for worker_task in workers:
-                    worker_task.cancel()
 
             if workers:
                 logger.log(log_level, "Waiting for %d workers to finish...", len(workers))

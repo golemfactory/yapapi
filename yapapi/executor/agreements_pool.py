@@ -151,7 +151,12 @@ class AgreementsPool:
                 buffered_agreement = self._agreements[agreement_id]
                 agreement_details = await buffered_agreement.agreement.details()
                 provider = agreement_details.provider_view.extract(NodeInfo)
-                logger.debug("Terminating agreement. id: %s, provider: %s", agreement_id, provider)
+                logger.debug(
+                    "Terminating agreement. id: %s, reason: %s, provider: %s",
+                    agreement_id,
+                    reason,
+                    provider,
+                )
                 if (
                     buffered_agreement.worker_task is not None
                     and not buffered_agreement.worker_task.done()
