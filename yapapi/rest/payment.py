@@ -205,6 +205,9 @@ class Payment(object):
                     logger.debug("Received invoice event: %r, type: %s", ev, ev.__class__)
                     if isinstance(ev, yap.InvoiceReceivedEvent):
                         ts = ev.event_date
+                        if not ev.invoice_id:
+                            logger.error("Empty invoice id in event: %r", ev)
+                            continue
                         invoice = await self.invoice(ev.invoice_id)
                         yield invoice
                 if not events:

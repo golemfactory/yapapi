@@ -26,7 +26,7 @@ def env_or_fail(key: str, description: str) -> str:
 
 # A temporary (?) workaround to disable client side validation in the Market API
 market_getattr = ya_market.Configuration.__getattribute__
-ya_market.Configuration.__getattribute__ = lambda obj, name: (
+ya_market.Configuration.__getattribute__ = lambda obj, name: (  # type: ignore
     False if name == "client_side_validation" else market_getattr(obj, name)
 )
 
@@ -54,8 +54,8 @@ class _InvoiceReceivedEventWithDate(ya_payment.models.invoice_received_event.Inv
         self.event_date = event_date
 
 
-ya_payment.models.invoice_received_event.InvoiceReceivedEvent = _InvoiceReceivedEventWithDate
-ya_payment.models.InvoiceReceivedEvent = _InvoiceReceivedEventWithDate
+ya_payment.models.invoice_received_event.InvoiceReceivedEvent = _InvoiceReceivedEventWithDate  # type: ignore
+ya_payment.models.InvoiceReceivedEvent = _InvoiceReceivedEventWithDate  # type: ignore
 
 
 class Configuration(object):

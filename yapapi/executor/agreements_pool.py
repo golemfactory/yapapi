@@ -109,7 +109,8 @@ class AgreementsPool:
         except asyncio.CancelledError:
             raise
         except Exception as e:
-            emit(events.ProposalFailed(prop_id=b.proposal.id, exc_info=sys.exc_info()))
+            exc_info = (type(e), e, sys.exc_info()[2])
+            emit(events.ProposalFailed(prop_id=b.proposal.id, exc_info=exc_info))
             raise
         agreement_details = await agreement.details()
         provider_activity = agreement_details.provider_view.extract(Activity)
