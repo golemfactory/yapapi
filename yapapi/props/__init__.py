@@ -52,7 +52,10 @@ class Activity(Model):
     expiration: Optional[datetime] = field(
         default=None, metadata={"key": "golem.srv.comp.expiration"}
     )
-    """
+    multi_activity: Optional[bool] = field(
+        default=None, metadata={"key": "golem.srv.caps.multi-activity"},
+    )
+    """Whether client supports multi_activity (executing more than one activity per agreement).
     """
 
 

@@ -168,7 +168,7 @@ class Executor(AsyncContextManager):
 
         # Building offer
         builder = DemandBuilder()
-        builder.add(Activity(expiration=self._expires))
+        builder.add(Activity(expiration=self._expires, multi_activity=True,))
         builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
@@ -305,7 +305,11 @@ class Executor(AsyncContextManager):
                         except CancelledError:
                             raise
                         except Exception as ex:
-                            emit(events.ProposalFailed(prop_id=proposal.id, reason=str(ex)))
+                            emit(
+                                events.ProposalFailed(
+                                    prop_id=proposal.id, exc_info=sys.exc_info()  # type: ignore
+                                )
+                            )
                     else:
                         emit(events.ProposalConfirmed(prop_id=proposal.id))
                         await agreements_pool.add_proposal(score, proposal)
@@ -495,14 +499,28 @@ class Executor(AsyncContextManager):
                 # No need to wait for invoices
                 process_invoices_job.cancel()
             if cancelled:
+                reason = {"message": "Work cancelled", "golem.requestor.code": "Cancelled"}
                 for worker_task in workers:
                     worker_task.cancel()
+            else:
+                reason = {
+                    "message": "Successfully finished all work",
+                    "golem.requestor.code": "Success",
+                }
+
+            try:
+                await agreements_pool.terminate(reason=reason)
+            except Exception:
+                logger.debug("Problem with agreements termination", exc_info=True)
+                if self._conf.traceback:
+                    traceback.print_exc()
 
             if workers:
                 logger.log(log_level, "Waiting for %d workers to finish...", len(workers))
                 await asyncio.wait(
                     workers.union(services), timeout=10, return_when=asyncio.ALL_COMPLETED
                 )
+
             try:
                 logger.log(log_level, "Waiting for all services to finish...")
                 _, pending = await asyncio.wait(
