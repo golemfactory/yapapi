@@ -3,6 +3,10 @@ import abc
 from yapapi.props.builder import DemandBuilder
 
 
+class PackageException(Exception):
+    pass
+
+
 class Package(abc.ABC):
     """Information on task package to be used for running tasks on providers."""
 

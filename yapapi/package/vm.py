@@ -2,11 +2,13 @@ import aiohttp
 from dataclasses import dataclass
 from typing_extensions import Final
 
-from yapapi.package import Package
+from srvresolver.srv_resolver import SRVResolver, SRVRecord  # type: ignore
+
+from yapapi.package import Package, PackageException
 from yapapi.props.builder import DemandBuilder
 from yapapi.props.inf import InfVmKeys, RuntimeType, VmRequest, VmPackageFormat
 
-_DEFAULT_REPO_URL: Final = "http://3.249.139.167:8000"
+_DEFAULT_REPO_SRV: Final = "_girepo._tcp.dev.golem.network"
 
 
 @dataclass(frozen=True)
@@ -62,8 +64,16 @@ async def repo(
     - *min_storage_gib* minimal disk storage to execute tasks.
 
     """
+
     return _VmPackage(
-        repo_url=_DEFAULT_REPO_URL,
+        repo_url=resolve_repo_srv(_DEFAULT_REPO_SRV),
         image_hash=image_hash,
         constraints=_VmConstrains(min_mem_gib, min_storage_gib),
     )
+
+
+def resolve_repo_srv(repo_srv) -> str:
+    srv: SRVRecord = SRVResolver.resolve_random(repo_srv)
+    if not srv:
+        raise PackageException("Golem package repository is currently unavailable.")
+    return f"http://{srv.host}:{srv.port}"
