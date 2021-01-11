@@ -80,7 +80,8 @@ authorized_licenses = [
   "MIT",
   "LGPL",
   "LGPL-3.0-or-later",
-  "Python Software Foundation"
+  "Python Software Foundation",
+  "ISC",
 ]
 unauthorized_licenses = [
   "gpl v3"
