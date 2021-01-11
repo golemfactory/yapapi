@@ -58,7 +58,7 @@ async def main(args):
             ctx.run("/bin/sh", "/golem/work/keyspace.sh")
             output_file = "keyspace.txt"
             ctx.download_file("/golem/work/keyspace.txt", output_file)
-            yield ctx.commit()
+            yield ctx.commit(timeout=timedelta(minutes=1))
             task.accept_result()
 
     async def worker_find_password(ctx: WorkContext, tasks):
@@ -78,7 +78,7 @@ async def main(args):
 
             output_file = f"hashcat_{skip}.potfile"
             ctx.download_file(f"/golem/work/hashcat_{skip}.potfile", output_file)
-            yield ctx.commit()
+            yield ctx.commit(timeout=timedelta(minutes=10))
             task.accept_result(result=output_file)
 
     # beginning of the main flow
@@ -94,7 +94,7 @@ async def main(args):
         max_workers=args.number_of_providers,
         budget=10.0,
         # timeout should be keyspace / number of providers dependent
-        timeout=timedelta(minutes=25),
+        timeout=timedelta(minutes=10),
         subnet_tag=args.subnet_tag,
         event_consumer=log_summary(log_event_repr),
     ) as executor:
