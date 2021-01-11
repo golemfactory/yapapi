@@ -92,8 +92,8 @@ class ProposalConfirmed(ProposalEvent):
 
 
 @dataclass
-class ProposalFailed(ProposalEvent):
-    reason: str
+class ProposalFailed(HasExcInfo, ProposalEvent):
+    pass
 
 
 @dataclass
@@ -120,6 +120,11 @@ class AgreementConfirmed(AgreementEvent):
 @dataclass
 class AgreementRejected(AgreementEvent):
     pass
+
+
+@dataclass
+class AgreementTerminated(AgreementEvent):
+    reason: dict
 
 
 @dataclass

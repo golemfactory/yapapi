@@ -15,7 +15,6 @@ from typing import (
     Dict,
     Iterable,
     List,
-    NamedTuple,
     Optional,
     Set,
     TypeVar,
@@ -26,6 +25,7 @@ import traceback
 
 
 from dataclasses import dataclass
+from yapapi.executor.agreements_pool import AgreementsPool
 from typing_extensions import Final, AsyncGenerator
 
 from .ctx import CaptureContext, CommandContainer, Work, WorkContext
@@ -61,12 +61,6 @@ class _ExecutorConfig:
     timeout: timedelta = timedelta(minutes=5)
     get_offers_timeout: timedelta = timedelta(seconds=20)
     traceback: bool = bool(os.getenv("YAPAPI_TRACEBACK", 0))
-
-
-class _BufferedProposal(NamedTuple):
-    ts: datetime
-    score: float
-    proposal: rest.market.OfferProposal
 
 
 D = TypeVar("D")  # Type var for task data
@@ -174,7 +168,7 @@ class Executor(AsyncContextManager):
 
         # Building offer
         builder = DemandBuilder()
-        builder.add(Activity(expiration=self._expires))
+        builder.add(Activity(expiration=self._expires, multi_activity=True,))
         builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
@@ -184,7 +178,7 @@ class Executor(AsyncContextManager):
         await self._package.decorate_demand(builder)
         await self._strategy.decorate_demand(builder)
 
-        offer_buffer: Dict[str, _BufferedProposal] = {}
+        agreements_pool = AgreementsPool(emit)
         market_api = self._market_api
         activity_api: rest.Activity = self._activity_api
         strategy = self._strategy
@@ -212,7 +206,6 @@ class Executor(AsyncContextManager):
 
         offers_collected = 0
         proposals_confirmed = 0
-        agreements_confirmed = 0
 
         async def process_invoices() -> None:
             async for invoice in self._payment_api.incoming_invoices():
@@ -312,12 +305,14 @@ class Executor(AsyncContextManager):
                         except CancelledError:
                             raise
                         except Exception as ex:
-                            emit(events.ProposalFailed(prop_id=proposal.id, reason=str(ex)))
+                            emit(
+                                events.ProposalFailed(
+                                    prop_id=proposal.id, exc_info=sys.exc_info()  # type: ignore
+                                )
+                            )
                     else:
                         emit(events.ProposalConfirmed(prop_id=proposal.id))
-                        offer_buffer[proposal.issuer] = _BufferedProposal(
-                            datetime.now(), score, proposal
-                        )
+                        await agreements_pool.add_proposal(score, proposal)
                         proposals_confirmed += 1
 
         # aio_session = await self._stack.enter_async_context(aiohttp.ClientSession())
@@ -408,34 +403,26 @@ class Executor(AsyncContextManager):
             emit(events.WorkerFinished(agr_id=agreement.id))
 
         async def worker_starter() -> None:
-            nonlocal agreements_confirmed
             while True:
                 await asyncio.sleep(2)
-                if (
-                    offer_buffer
-                    and len(workers) < self._conf.max_workers
-                    and work_queue.has_unassigned_items()
-                ):
-                    provider_id, b = random.choice(list(offer_buffer.items()))
-                    del offer_buffer[provider_id]
+                await agreements_pool.cycle()
+                if len(workers) < self._conf.max_workers and work_queue.has_unassigned_items():
                     new_task = None
                     try:
-                        agreement = await b.proposal.create_agreement()
-                        provider = (await agreement.details()).provider_view.extract(NodeInfo)
-                        emit(events.AgreementCreated(agr_id=agreement.id, provider_id=provider))
-                        if not await agreement.confirm():
-                            emit(events.AgreementRejected(agr_id=agreement.id))
+                        new_task = await agreements_pool.use_agreement(
+                            lambda a: loop.create_task(start_worker(a))
+                        )
+                        if new_task is None:
                             continue
-                        emit(events.AgreementConfirmed(agr_id=agreement.id))
-                        agreements_confirmed += 1
-                        new_task = loop.create_task(start_worker(agreement))
                         workers.add(new_task)
                     except CancelledError:
                         raise
-                    except Exception as e:
+                    except Exception:
+                        if self._conf.traceback:
+                            traceback.print_exc()
                         if new_task:
                             new_task.cancel()
-                        emit(events.ProposalFailed(prop_id=b.proposal.id, reason=str(e)))
+                        logger.debug("There was a problem during use_agreement", exc_info=True)
 
         loop = asyncio.get_event_loop()
         find_offers_task = loop.create_task(find_offers())
@@ -508,18 +495,32 @@ class Executor(AsyncContextManager):
             for task in services:
                 if task is not process_invoices_job:
                     task.cancel()
-            if agreements_confirmed == 0:
+            if agreements_pool.confirmed == 0:
                 # No need to wait for invoices
                 process_invoices_job.cancel()
             if cancelled:
+                reason = {"message": "Work cancelled", "golem.requestor.code": "Cancelled"}
                 for worker_task in workers:
                     worker_task.cancel()
+            else:
+                reason = {
+                    "message": "Successfully finished all work",
+                    "golem.requestor.code": "Success",
+                }
+
+            try:
+                await agreements_pool.terminate(reason=reason)
+            except Exception:
+                logger.debug("Problem with agreements termination", exc_info=True)
+                if self._conf.traceback:
+                    traceback.print_exc()
 
             if workers:
                 logger.log(log_level, "Waiting for %d workers to finish...", len(workers))
                 await asyncio.wait(
                     workers.union(services), timeout=10, return_when=asyncio.ALL_COMPLETED
                 )
+
             try:
                 logger.log(log_level, "Waiting for all services to finish...")
                 _, pending = await asyncio.wait(
