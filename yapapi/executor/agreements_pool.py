@@ -98,19 +98,22 @@ class AgreementsPool:
         except IndexError:  # empty pool
             pass
 
-        offer_buffer = self._offer_buffer
         try:
-            provider_id, b = random.choice(list(offer_buffer.items()))
+            offers = list(self._offer_buffer.items())
+            # Shuffle the offers before picking one with the max score,
+            # in case there's more than one with this score.
+            random.shuffle(offers)
+            provider_id, offer = max(offers, key=lambda elem: elem[1].score)
         except IndexError:  # empty pool
             return None
-        del offer_buffer[provider_id]
+        del self._offer_buffer[provider_id]
         try:
-            agreement = await b.proposal.create_agreement()
+            agreement = await offer.proposal.create_agreement()
         except asyncio.CancelledError:
             raise
         except Exception as e:
             exc_info = (type(e), e, sys.exc_info()[2])
-            emit(events.ProposalFailed(prop_id=b.proposal.id, exc_info=exc_info))
+            emit(events.ProposalFailed(prop_id=offer.proposal.id, exc_info=exc_info))
             raise
         agreement_details = await agreement.details()
         provider_activity = agreement_details.provider_view.extract(Activity)
