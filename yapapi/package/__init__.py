@@ -4,6 +4,8 @@ from yapapi.props.builder import DemandBuilder
 
 
 class PackageException(Exception):
+    """Exception raised on any problems related to the package repository."""
+
     pass
 
 

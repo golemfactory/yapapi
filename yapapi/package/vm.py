@@ -1,7 +1,8 @@
 import aiohttp
+from dns.exception import DNSException
 from dataclasses import dataclass
+from typing import Optional
 from typing_extensions import Final
-
 from srvresolver.srv_resolver import SRVResolver, SRVRecord  # type: ignore
 
 from yapapi.package import Package, PackageException
@@ -57,7 +58,7 @@ async def repo(
     *, image_hash: str, min_mem_gib: float = 0.5, min_storage_gib: float = 2.0
 ) -> Package:
     """
-    Builds reference to application package.
+    Build reference to application package.
 
     - *image_hash*: finds package by its contents hash.
     - *min_mem_gib*: minimal memory required to execute application code.
@@ -73,7 +74,19 @@ async def repo(
 
 
 def resolve_repo_srv(repo_srv) -> str:
-    srv: SRVRecord = SRVResolver.resolve_random(repo_srv)
+    """
+    Get the url of the package repository based on its SRV record address.
+
+    :param repo_srv: the SRV domain name
+    :return: the url of the package repository containing the port
+    :raises: PackageException if no valid service could be reached
+    """
+    try:
+        srv: Optional[SRVRecord] = SRVResolver.resolve_random(repo_srv)
+    except DNSException as e:
+        raise PackageException(f"Could not resolve Golem package repository address [{e}].")
+
     if not srv:
         raise PackageException("Golem package repository is currently unavailable.")
+
     return f"http://{srv.host}:{srv.port}"
