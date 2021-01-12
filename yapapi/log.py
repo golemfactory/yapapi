@@ -348,9 +348,6 @@ class SummaryLogger:
                     " Use the `timeout` parameter to `Executor()` to adjust the timeout."
                 )
 
-        if isinstance(event, (events.SubscriptionCreated, events.AgreementTerminated)):
-            self.logger.info(event_type_to_string[type(event)])
-
         elif isinstance(event, events.ProposalReceived):
             self.received_proposals[event.prop_id] = event.provider_id
 

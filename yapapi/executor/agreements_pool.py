@@ -104,7 +104,7 @@ class AgreementsPool:
             # in case there's more than one with this score.
             random.shuffle(offers)
             provider_id, offer = max(offers, key=lambda elem: elem[1].score)
-        except IndexError:  # empty pool
+        except ValueError:  # empty pool
             return None
         del self._offer_buffer[provider_id]
         try:
