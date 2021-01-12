@@ -1,12 +1,15 @@
 import aiohttp
+from dns.exception import DNSException
 from dataclasses import dataclass
+from typing import Optional
 from typing_extensions import Final
+from srvresolver.srv_resolver import SRVResolver, SRVRecord  # type: ignore
 
-from yapapi.package import Package
+from yapapi.package import Package, PackageException
 from yapapi.props.builder import DemandBuilder
 from yapapi.props.inf import InfVmKeys, RuntimeType, VmRequest, VmPackageFormat
 
-_DEFAULT_REPO_URL: Final = "http://3.249.139.167:8000"
+_DEFAULT_REPO_SRV: Final = "_girepo._tcp.dev.golem.network"
 
 
 @dataclass(frozen=True)
@@ -55,15 +58,35 @@ async def repo(
     *, image_hash: str, min_mem_gib: float = 0.5, min_storage_gib: float = 2.0
 ) -> Package:
     """
-    Builds reference to application package.
+    Build reference to application package.
 
     - *image_hash*: finds package by its contents hash.
     - *min_mem_gib*: minimal memory required to execute application code.
     - *min_storage_gib* minimal disk storage to execute tasks.
 
     """
+
     return _VmPackage(
-        repo_url=_DEFAULT_REPO_URL,
+        repo_url=resolve_repo_srv(_DEFAULT_REPO_SRV),
         image_hash=image_hash,
         constraints=_VmConstrains(min_mem_gib, min_storage_gib),
     )
+
+
+def resolve_repo_srv(repo_srv) -> str:
+    """
+    Get the url of the package repository based on its SRV record address.
+
+    :param repo_srv: the SRV domain name
+    :return: the url of the package repository containing the port
+    :raises: PackageException if no valid service could be reached
+    """
+    try:
+        srv: Optional[SRVRecord] = SRVResolver.resolve_random(repo_srv)
+    except DNSException as e:
+        raise PackageException(f"Could not resolve Golem package repository address [{e}].")
+
+    if not srv:
+        raise PackageException("Golem package repository is currently unavailable.")
+
+    return f"http://{srv.host}:{srv.port}"

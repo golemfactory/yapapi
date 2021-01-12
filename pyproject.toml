@@ -34,6 +34,7 @@ jsonrpc-base = "^1.0.3"
 
 ya-aioclient = "^0.4.0"
 toml = "^0.10.1"
+srvresolver = "^0.3.5"
 
 
 [tool.poetry.extras]
@@ -79,7 +80,8 @@ authorized_licenses = [
   "MIT",
   "LGPL",
   "LGPL-3.0-or-later",
-  "Python Software Foundation"
+  "Python Software Foundation",
+  "ISC",
 ]
 unauthorized_licenses = [
   "gpl v3"
