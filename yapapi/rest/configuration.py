@@ -24,12 +24,6 @@ def env_or_fail(key: str, description: str) -> str:
     return val
 
 
-# A temporary (?) workaround to disable client side validation in the Market API
-market_getattr = ya_market.Configuration.__getattribute__
-ya_market.Configuration.__getattribute__ = lambda obj, name: (  # type: ignore
-    False if name == "client_side_validation" else market_getattr(obj, name)
-)
-
 # Monkey-patch the `InvoiceReceivedEvent` class to include `eventType`
 # field from `InvoiceEvent` (`InvoiceReceivedEvent` inherits from `InvoiceEvent`
 # in the API spec, but the generated classes in the Python code are not related)
