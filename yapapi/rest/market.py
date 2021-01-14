@@ -125,7 +125,7 @@ class OfferProposal(object):
 
     async def respond(self, props: dict, constraints: str) -> str:
         """Create an agreeement Proposal for a received Offer, based on our Demand."""
-        proposal = models.Proposal(properties=props, constraints=constraints)
+        proposal = models.DemandOfferBase(properties=props, constraints=constraints)
         new_proposal = await self._subscription._api.counter_proposal_demand(
             self._subscription.id, self.id, proposal
         )
@@ -237,7 +237,7 @@ class Market(object):
         """
         Create a subscription for a demand specified by the supplied properties and constraints.
         """
-        request = models.Demand(properties=props, constraints=constraints)
+        request = models.DemandOfferBase(properties=props, constraints=constraints)
 
         async def create() -> Subscription:
             sub_id = await self._api.subscribe_demand(request)

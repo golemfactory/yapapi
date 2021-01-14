@@ -3,7 +3,6 @@ from unittest import mock
 
 import pytest
 
-
 from yapapi.executor import agreements_pool
 
 
@@ -87,3 +86,16 @@ async def test_use_agreement_shuffles_proposals():
 
     # Make sure that each proposal id with the highest score has been chosen
     assert chosen_proposal_ids == {n for n in all_proposal_ids if n != 0}
+
+
+@pytest.mark.asyncio
+async def test_use_agreement_no_proposals():
+    """Test that `AgreementPool.use_agreement()` returns `None` when there are no proposals."""
+
+    pool = agreements_pool.AgreementsPool(lambda _event: None)
+
+    def use_agreement_cb(_agreement):
+        assert False, "use_agreement callback called"
+
+    result = await pool.use_agreement(use_agreement_cb)
+    assert result is None
