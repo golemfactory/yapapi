@@ -40,12 +40,8 @@ class ActivityService(object):
                  and allows to query and control its state
         :rtype: Activity
         """
-        try:
-            activity_id = await self._api.create_activity(agreement_id)
-            return Activity(self._api, self._state, activity_id)
-        except yexc.ApiException:
-            _log.error("Failed to create activity for agreement %s", agreement_id)
-            raise
+        activity_id = await self._api.create_activity(agreement_id)
+        return Activity(self._api, self._state, activity_id)
 
 
 class Activity(AsyncContextManager["Activity"]):
@@ -80,27 +76,18 @@ class Activity(AsyncContextManager["Activity"]):
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        # w/o for some buggy providers which do not kill exe-unit
-        # on destroy_activity event.
+        """Call DestroyActivity API operation."""
         if exc_type:
             _log.debug(
-                "Closing activity %s on error:", self._id, exc_info=(exc_type, exc_val, exc_tb)
+                "Destroying activity %s on error:", self._id, exc_info=(exc_type, exc_val, exc_tb)
             )
         else:
-            _log.debug("Closing activity %s", self._id)
+            _log.debug("Destroying activity %s", self._id)
         try:
-            deadline = datetime.now(timezone.utc) + timedelta(seconds=10)
-            batch = await self.send(script=[{"terminate": {}}], stream=True, deadline=deadline)
-            async for evt_ctx in batch:
-                _log.debug("Command output for 'terminate': %r", evt_ctx)
-            _log.debug("Successfully terminated activity %s", self._id)
-        except:
-            _log.debug("Failed to terminate activity gracefully: %s", self._id, exc_info=True)
-        finally:
-            with contextlib.suppress(yexc.ApiException):
-                _log.debug("Destroying activity %s...", self._id)
-                await self._api.destroy_activity(self._id)
-            _log.debug("Activity %s closed", self._id)
+            await self._api.destroy_activity(self._id)
+            _log.debug("Activity %s destroyed successfully", self._id)
+        except yexc.ApiException:
+            _log.debug("Got API Exception when destroying activity %s", self._id, exc_info=True)
 
 
 @dataclass

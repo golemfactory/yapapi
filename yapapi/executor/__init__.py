@@ -339,6 +339,7 @@ class Executor(AsyncContextManager):
                         agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
                     )
                 )
+                emit(events.WorkerFinished(agr_id=agreement.id))
                 raise
             async with act:
                 emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
@@ -508,18 +509,18 @@ class Executor(AsyncContextManager):
                     "golem.requestor.code": "Success",
                 }
 
+            if workers:
+                logger.log(log_level, "Waiting for %d workers to finish...", len(workers))
+                await asyncio.wait(
+                    workers.union(services), timeout=10, return_when=asyncio.ALL_COMPLETED
+                )
+
             try:
                 await agreements_pool.terminate(reason=reason)
             except Exception:
                 logger.debug("Problem with agreements termination", exc_info=True)
                 if self._conf.traceback:
                     traceback.print_exc()
-
-            if workers:
-                logger.log(log_level, "Waiting for %d workers to finish...", len(workers))
-                await asyncio.wait(
-                    workers.union(services), timeout=10, return_when=asyncio.ALL_COMPLETED
-                )
 
             try:
                 logger.log(log_level, "Waiting for all services to finish...")
@@ -539,10 +540,10 @@ class Executor(AsyncContextManager):
                     len(agreements_to_pay),
                 )
                 await asyncio.wait(
-                    {process_invoices_job}, timeout=10, return_when=asyncio.ALL_COMPLETED
+                    {process_invoices_job}, timeout=20, return_when=asyncio.ALL_COMPLETED
                 )
                 if agreements_to_pay:
-                    logger.debug("Unpaid agreements  %s", agreements_to_pay)
+                    logger.warning("Unpaid agreements  %s", agreements_to_pay)
 
     async def _create_allocations(self) -> rest.payment.MarketDecoration:
         if not self._budget_allocations:
