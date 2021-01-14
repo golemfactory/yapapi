@@ -40,12 +40,8 @@ class ActivityService(object):
                  and allows to query and control its state
         :rtype: Activity
         """
-        try:
-            activity_id = await self._api.create_activity(agreement_id)
-            return Activity(self._api, self._state, activity_id)
-        except yexc.ApiException:
-            _log.debug("Failed to create activity for agreement %s", agreement_id, exc_info=True)
-            raise
+        activity_id = await self._api.create_activity(agreement_id)
+        return Activity(self._api, self._state, activity_id)
 
 
 class Activity(AsyncContextManager["Activity"]):

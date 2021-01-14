@@ -339,6 +339,7 @@ class Executor(AsyncContextManager):
                         agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
                     )
                 )
+                emit(events.WorkerFinished(agr_id=agreement.id))
                 raise
             async with act:
                 emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
