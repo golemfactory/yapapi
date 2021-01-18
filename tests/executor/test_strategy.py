@@ -12,23 +12,24 @@ from tests.factories.rest.market import OfferProposalFactory
 async def test_LeastExpensiveLinearPauyuMS_score(expected_time):
     prices = [0.0, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0]
 
-    triples = product(prices, repeat=3)  # get triples of (cpu_price, time_price, fixed_price)
+    triples = list(product(prices, repeat=3))  # get triples of (cpu_price, time_price, fixed_price)
 
     strategy = LeastExpensiveLinearPayuMS(expected_time_secs=expected_time)
 
     def cost(coeffs):
-        return coeffs[0] * expected_time + coeffs[1] * expected_time + coeffs[2], coeffs
+        return round(coeffs[0] * expected_time + coeffs[1] * expected_time + coeffs[2], 11)
 
     scores = {coeffs:
-        await strategy.score_offer(
+        round(await strategy.score_offer(
             OfferProposalFactory(**{"proposal__proposal__properties__linear_coeffs": coeffs})
-        ) for coeffs in triples
+        ), 11)
+        for coeffs in triples
     }
 
     # Sort coeffs by cost, from the most expensive to the least expensive
-    triples_by_cost = sorted(triples, key=lambda coeffs: (cost(coeffs), coeffs), reverse=True)
+    triples_by_cost = sorted(triples, key=lambda coeffs: (cost(coeffs), coeffs))
     # Sort coeffs by strategy score, from the lowest (worst) to the highest (best)
-    triples_by_score = sorted(triples, key=lambda coeffs: (scores[coeffs], coeffs))
+    triples_by_score = sorted(triples, key=lambda coeffs: (-scores[coeffs], coeffs))
 
     assert triples_by_cost == triples_by_score
     assert all(SCORE_NEUTRAL < score < SCORE_TRUSTED for score in scores.values())
