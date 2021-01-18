@@ -1,7 +1,12 @@
 from itertools import product
 import pytest
 
-from yapapi.executor.strategy import LeastExpensiveLinearPayuMS, SCORE_TRUSTED, SCORE_REJECTED, SCORE_NEUTRAL
+from yapapi.executor.strategy import (
+    LeastExpensiveLinearPayuMS,
+    SCORE_TRUSTED,
+    SCORE_REJECTED,
+    SCORE_NEUTRAL,
+)
 from yapapi.props import com
 
 from tests.factories.rest.market import OfferProposalFactory
@@ -19,10 +24,13 @@ async def test_LeastExpensiveLinearPauyuMS_score(expected_time):
     def cost(coeffs):
         return round(coeffs[0] * expected_time + coeffs[1] * expected_time + coeffs[2], 11)
 
-    scores = {coeffs:
-        round(await strategy.score_offer(
-            OfferProposalFactory(**{"proposal__proposal__properties__linear_coeffs": coeffs})
-        ), 11)
+    scores = {
+        coeffs: round(
+            await strategy.score_offer(
+                OfferProposalFactory(**{"proposal__proposal__properties__linear_coeffs": coeffs})
+            ),
+            11,
+        )
         for coeffs in triples
     }
 
@@ -50,17 +58,20 @@ class TestLeastExpensiveLinearPayuMS:
 
     @pytest.mark.asyncio
     async def test_score_unknown_price(self):
-        offer = OfferProposalFactory(**{"proposal__proposal__properties__defined_usages": [com.Counter.MAXMEM.value, com.Counter.TIME.value]})
+        offer = OfferProposalFactory(
+            **{
+                "proposal__proposal__properties__defined_usages": [
+                    com.Counter.MAXMEM.value,
+                    com.Counter.TIME.value,
+                ]
+            }
+        )
         assert await self.strategy.score_offer(offer) == SCORE_REJECTED
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("coeffs", [
-        [-0.001, 0.002, 0.1],
-        [0.001, -0.002, 0.1],
-        [0.001, 0.002, -0.1]
-    ])
+    @pytest.mark.parametrize(
+        "coeffs", [[-0.001, 0.002, 0.1], [0.001, -0.002, 0.1], [0.001, 0.002, -0.1]]
+    )
     async def test_score_negative_coeff(self, coeffs):
         offer = OfferProposalFactory(**{"proposal__proposal__properties__linear_coeffs": coeffs})
         assert await self.strategy.score_offer(offer) == SCORE_REJECTED
-
-
