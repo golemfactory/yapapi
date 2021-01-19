@@ -58,7 +58,7 @@ async def main(args):
             ctx.run("/bin/sh", "/golem/work/keyspace.sh")
             output_file = "keyspace.txt"
             ctx.download_file("/golem/work/keyspace.txt", output_file)
-            yield ctx.commit(timeout=timedelta(minutes=1))
+            yield ctx.commit(timeout=timedelta(minutes=10))
             task.accept_result()
 
     async def worker_find_password(ctx: WorkContext, tasks):
