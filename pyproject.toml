@@ -32,7 +32,7 @@ rich = { version = "^2.2.5", optional = true }
 async_exit_stack = "^1.0.1"
 jsonrpc-base = "^1.0.3"
 
-ya-aioclient = "^0.4.0"
+ya-aioclient = "0.4.1"
 toml = "^0.10.1"
 srvresolver = "^0.3.5"
 
