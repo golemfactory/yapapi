@@ -96,7 +96,9 @@ def resolve_repo_srv(repo_srv, fallback_url=_FALLBACK_REPO_URL) -> str:
             raise PackageException("Golem package repository is currently unavailable.")
     except Exception as e:
         # this is a temporary fallback for a problem resolving the SRV record
-        logger.warning("Problem resolving %s, falling back to %s, exception: %s", repo_srv, fallback_url, e)
+        logger.warning(
+            "Problem resolving %s, falling back to %s, exception: %s", repo_srv, fallback_url, e
+        )
         return fallback_url
 
     return f"http://{srv.host}:{srv.port}"
