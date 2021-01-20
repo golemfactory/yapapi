@@ -168,7 +168,12 @@ class Executor(AsyncContextManager):
 
         # Building offer
         builder = DemandBuilder()
-        builder.add(Activity(expiration=self._expires, multi_activity=True,))
+        builder.add(
+            Activity(
+                expiration=self._expires,
+                multi_activity=True,
+            )
+        )
         builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
@@ -241,6 +246,10 @@ class Executor(AsyncContextManager):
                     invoices[invoice.agreement_id] = invoice
                 if payment_closing and not agreements_to_pay:
                     break
+
+        async def process_debit_notes() -> None:
+            async for debit_note in self._payment_api.incoming_debit_notes():
+                pass
 
         async def accept_payment_for_agreement(agreement_id: str, *, partial: bool = False) -> None:
             emit(events.PaymentPrepared(agr_id=agreement_id))
@@ -430,12 +439,19 @@ class Executor(AsyncContextManager):
         process_invoices_job = loop.create_task(process_invoices())
         wait_until_done = loop.create_task(work_queue.wait_until_done())
         worker_starter_task = loop.create_task(worker_starter())
+        debit_notes_job = loop.create_task(process_debit_notes())
         # Py38: find_offers_task.set_name('find_offers_task')
 
         get_offers_deadline = datetime.now(timezone.utc) + self._conf.get_offers_timeout
         get_done_task: Optional[asyncio.Task] = None
         services.update(
-            {find_offers_task, process_invoices_job, wait_until_done, worker_starter_task,}
+            {
+                find_offers_task,
+                process_invoices_job,
+                wait_until_done,
+                worker_starter_task,
+                debit_notes_job,
+            }
         )
         cancelled = False
 
