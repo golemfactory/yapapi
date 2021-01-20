@@ -4,7 +4,7 @@ from datetime import timedelta
 import pathlib
 import sys
 
-from yapapi import Executor, Task, WorkContext, windows_event_loop_fix
+from yapapi import Executor, NoPaymentAccountError, Task, WorkContext, windows_event_loop_fix
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.package import vm
 
@@ -98,6 +98,8 @@ async def main(args):
         # timeout should be keyspace / number of providers dependent
         timeout=timedelta(minutes=10),
         subnet_tag=args.subnet_tag,
+        driver=args.driver,
+        network=args.network,
         event_consumer=log_summary(log_event_repr),
     ) as executor:
 
@@ -158,6 +160,13 @@ if __name__ == "__main__":
 
     try:
         loop.run_until_complete(task)
+    except NoPaymentAccountError as e:
+        print(
+            f"{TEXT_COLOR_RED}"
+            f"No payment account initialized for driver `{e.required_driver}` "
+            f"and network `{e.required_network}`. Did you run `yagna payment init -r`?"
+            f"{TEXT_COLOR_DEFAULT}"
+        )
     except KeyboardInterrupt:
         print(
             f"{TEXT_COLOR_YELLOW}"

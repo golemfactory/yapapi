@@ -16,6 +16,8 @@ TEXT_COLOR_DEFAULT = "\033[0m"
 
 def build_parser(description: str):
     parser = argparse.ArgumentParser(description=description)
+    parser.add_argument("--driver", help="Payment driver name, for example `zksync`")
+    parser.add_argument("--network", help="Network name, for example `rinkeby`")
     parser.add_argument(
         "--subnet-tag", default="community.3", help="Subnet name; default: %(default)s"
     )

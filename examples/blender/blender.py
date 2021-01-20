@@ -6,6 +6,7 @@ import sys
 
 from yapapi import (
     Executor,
+    NoPaymentAccountError,
     Task,
     __version__ as yapapi_version,
     WorkContext,
@@ -27,7 +28,7 @@ from examples.utils import (
 script_dir = pathlib.Path(__file__).resolve().parent
 
 
-async def main(subnet_tag):
+async def main(subnet_tag, driver=None, network=None):
     package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         min_mem_gib=0.5,
@@ -96,6 +97,8 @@ async def main(subnet_tag):
         budget=10.0,
         timeout=timeout,
         subnet_tag=subnet_tag,
+        driver=driver,
+        network=network,
         event_consumer=log_summary(log_event_repr),
     ) as executor:
 
@@ -131,6 +134,13 @@ if __name__ == "__main__":
 
     try:
         loop.run_until_complete(task)
+    except NoPaymentAccountError as e:
+        print(
+            f"{TEXT_COLOR_RED}"
+            f"No payment account initialized for driver `{e.required_driver}` "
+            f"and network `{e.required_network}`. Did you run `yagna payment init -r`?"
+            f"{TEXT_COLOR_DEFAULT}"
+        )
     except KeyboardInterrupt:
         print(
             f"{TEXT_COLOR_YELLOW}"
