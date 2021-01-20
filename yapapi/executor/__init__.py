@@ -283,7 +283,7 @@ class Executor(AsyncContextManager):
                     if score < SCORE_NEUTRAL:
                         with contextlib.suppress(Exception):
                             await proposal.reject()
-                        emit(events.ProposalRejected(prop_id=proposal.id))
+                        emit(events.ProposalRejected(prop_id=proposal.id, reason="Score too low"))
                     elif not proposal.is_draft:
                         try:
                             common_platforms = self._get_common_payment_platforms(proposal)
