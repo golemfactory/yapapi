@@ -151,6 +151,14 @@ class Executor(AsyncContextManager):
         # that emitting events will not block
         self._wrapped_consumer = AsyncWrapper(event_consumer)
 
+    @property
+    def driver(self):
+        return self._driver
+
+    @property
+    def network(self):
+        return self._network
+
     async def submit(
         self,
         worker: Callable[[WorkContext, AsyncIterator[Task[D, R]]], AsyncGenerator[Work, None]],
