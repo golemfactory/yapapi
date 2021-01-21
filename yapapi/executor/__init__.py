@@ -168,7 +168,12 @@ class Executor(AsyncContextManager):
 
         # Building offer
         builder = DemandBuilder()
-        builder.add(Activity(expiration=self._expires, multi_activity=True,))
+        builder.add(
+            Activity(
+                expiration=self._expires,
+                multi_activity=True,
+            )
+        )
         builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")

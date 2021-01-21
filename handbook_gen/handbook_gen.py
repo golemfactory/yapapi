@@ -27,7 +27,10 @@ def get_md_files(md_root):
     root = md_root
     return sorted(
         [
-            (dirname, sorted([f for f in files if f.endswith(".md")]),)
+            (
+                dirname,
+                sorted([f for f in files if f.endswith(".md")]),
+            )
             for dirname, _, files in os.walk(root)
         ]
     )

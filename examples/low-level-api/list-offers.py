@@ -44,7 +44,13 @@ def main():
     enable_default_logger()
     try:
         asyncio.get_event_loop().run_until_complete(
-            asyncio.wait_for(list_offers(Configuration(), subnet_tag=subnet,), timeout=4,)
+            asyncio.wait_for(
+                list_offers(
+                    Configuration(),
+                    subnet_tag=subnet,
+                ),
+                timeout=4,
+            )
         )
     except TimeoutError:
         pass

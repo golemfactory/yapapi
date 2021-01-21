@@ -144,19 +144,25 @@ class Configuration(object):
         """Return a REST client for the Market API."""
         cfg = ya_market.Configuration(host=self.market_url)
         return ya_market.ApiClient(
-            configuration=cfg, header_name="authorization", header_value=f"Bearer {self.app_key}",
+            configuration=cfg,
+            header_name="authorization",
+            header_value=f"Bearer {self.app_key}",
         )
 
     def payment(self) -> ya_payment.ApiClient:
         """Return a REST client for the Payment API."""
         cfg = ya_payment.Configuration(host=self.payment_url)
         return ya_payment.ApiClient(
-            configuration=cfg, header_name="authorization", header_value=f"Bearer {self.app_key}",
+            configuration=cfg,
+            header_name="authorization",
+            header_value=f"Bearer {self.app_key}",
         )
 
     def activity(self) -> ya_activity.ApiClient:
         """Return a REST client for the Activity API."""
         cfg = ya_activity.Configuration(host=self.activity_url)
         return ya_activity.ApiClient(
-            configuration=cfg, header_name="authorization", header_value=f"Bearer {self.app_key}",
+            configuration=cfg,
+            header_name="authorization",
+            header_value=f"Bearer {self.app_key}",
         )
