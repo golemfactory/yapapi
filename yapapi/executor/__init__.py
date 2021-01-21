@@ -225,7 +225,7 @@ class Executor(AsyncContextManager):
                             amount=invoice.amount,
                         )
                     )
-                    allocation = self._allocation_for_invoice(invoice)
+                    allocation = self._get_allocation(invoice)
                     try:
                         await invoice.accept(amount=invoice.amount, allocation=allocation)
                     except CancelledError:
@@ -260,7 +260,7 @@ class Executor(AsyncContextManager):
                             note_id=debit_note.debit_note_id,
                         )
                     )
-                    allocation = self._allocation_for_debit_note(debit_note)
+                    allocation = self._get_allocation(debit_note)
                     try:
                         await debit_note.accept(
                             amount=debit_note.total_amount_due, allocation=allocation
@@ -284,7 +284,7 @@ class Executor(AsyncContextManager):
                 emit(events.PaymentQueued(agr_id=agreement_id))
                 return
             del invoices[agreement_id]
-            allocation = self._allocation_for_invoice(inv)
+            allocation = self._get_allocation(inv)
             await inv.accept(amount=inv.amount, allocation=allocation)
             emit(
                 events.PaymentAccepted(
@@ -631,33 +631,18 @@ class Executor(AsyncContextManager):
         }
         return req_platforms.intersection(prov_platforms)
 
-    def _allocation_for_invoice(self, invoice: rest.payment.Invoice) -> rest.payment.Allocation:
-        try:
-            return next(
-                allocation
-                for allocation in self._budget_allocations
-                if allocation.payment_address == invoice.payer_addr
-                and allocation.payment_platform == invoice.payment_platform
-            )
-        except:
-            raise RuntimeError(
-                f"No allocation for {invoice.payment_platform} {invoice.payer_addr}."
-            )
-
-    def _allocation_for_debit_note(
-        self, debit_note: rest.payment.DebitNote
+    def _get_allocation(
+        self, item: Union[rest.payment.DebitNote, rest.payment.Invoice]
     ) -> rest.payment.Allocation:
         try:
             return next(
                 allocation
                 for allocation in self._budget_allocations
-                if allocation.payment_address == debit_note.payer_addr
-                and allocation.payment_platform == debit_note.payment_platform
+                if allocation.payment_address == item.payer_addr
+                and allocation.payment_platform == item.payment_platform
             )
         except:
-            raise RuntimeError(
-                f"No allocation for {debit_note.payment_platform} {debit_note.payer_addr}."
-            )
+            raise RuntimeError(f"No allocation for {item.payment_platform} {item.payer_addr}.")
 
     async def __aenter__(self) -> "Executor":
         stack = self._stack
