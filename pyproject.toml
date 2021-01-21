@@ -52,6 +52,7 @@ poethepoet = "^0.8.0"
 pytest-cov = "^2.10.1"
 pydoc-markdown = "^3.5.0"
 factory-boy = "^3.2.0"
+asynctest = "^0.13.0"
 
 [tool.portray]
 
