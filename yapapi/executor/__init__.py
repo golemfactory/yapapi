@@ -52,6 +52,9 @@ else:
 CFG_INVOICE_TIMEOUT: Final[timedelta] = timedelta(minutes=5)
 "Time to receive invoice from provider after tasks ended."
 
+CFG_ACCEPTANCE_DEADLINE: Final[int] = 120  # in seconds
+"Maximum timeframe within which the requestor should accept a debit note."
+
 logger = logging.getLogger(__name__)
 
 
@@ -325,6 +328,10 @@ class Executor(AsyncContextManager):
                                         prop_id=proposal.id, reason="No common payment platforms"
                                     )
                                 )
+                            deadline = self._get_acceptance_deadline(proposal)
+                            builder.properties[
+                                "golem.com.payment.debit-notes.acceptance-deadline"
+                            ] = deadline
                             await proposal.respond(builder.properties, builder.constraints)
                             emit(events.ProposalResponded(prop_id=proposal.id))
                         except CancelledError:
@@ -597,6 +604,11 @@ class Executor(AsyncContextManager):
         ), "No payment accounts. Did you forget to run 'yagna payment init -r'?"
         allocation_ids = [allocation.id for allocation in self._budget_allocations]
         return await self._payment_api.decorate_demand(allocation_ids)
+
+    def _get_acceptance_deadline(self, proposal: rest.market.OfferProposal) -> int:
+        prop_id = "golem.com.payment.debit-notes.acceptance-deadline"
+        prov_deadline = proposal.props.get(prop_id) or CFG_ACCEPTANCE_DEADLINE
+        return min(prov_deadline, CFG_ACCEPTANCE_DEADLINE)
 
     def _get_common_payment_platforms(self, proposal: rest.market.OfferProposal) -> Set[str]:
         prov_platforms = {
