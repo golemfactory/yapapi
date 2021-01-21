@@ -87,57 +87,30 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
         """Score `offer` according to cost for expected computation time."""
 
         linear: com.ComLinear = com.ComLinear.from_properties(offer.props)
-        provider = offer.props.get("golem.node.id.name", "unspecified")
-
+        self._logger.debug("Scoring %s: %s", offer.id, linear)
         if linear.scheme != com.BillingScheme.PAYU:
-            self._logger.debug(
-                "Rejected offer %s from '%s': unsupported billing scheme '%s'",
-                offer.id,
-                provider,
-                linear.scheme,
-            )
+            self._logger.debug("Scoring %s: unsupported scheme '%s'", offer.id, linear.scheme)
             return SCORE_REJECTED
 
         known_time_prices = {com.Counter.TIME, com.Counter.CPU}
 
         for counter in linear.price_for.keys():
             if counter not in known_time_prices:
-                self._logger.debug(
-                    "Rejected offer %s from '%s': unsupported counter '%s'",
-                    offer.id,
-                    provider,
-                    counter,
-                )
+                self._logger.debug("Scoring %s: unsupported counter '%s'", offer.id, counter)
                 return SCORE_REJECTED
 
         if linear.fixed_price < 0:
-            self._logger.debug(
-                "Rejected offer %s from '%s': negative fixed price", offer.id, provider,
-            )
+            self._logger.debug("Scoring %s: negative fixed price", offer.id)
             return SCORE_REJECTED
         expected_price = linear.fixed_price
 
         for resource in known_time_prices:
             if linear.price_for[resource] < 0:
-                self._logger.debug(
-                    "Rejected offer %s from '%s': negative price for '%s'",
-                    offer.id,
-                    provider,
-                    resource,
-                )
+                self._logger.debug("Scoring %s: negative price for '%s'", offer.id, resource)
                 return SCORE_REJECTED
             expected_price += linear.price_for[resource] * self._expected_time_secs
 
         # The higher the expected price value, the lower the score.
         # The score is always lower than SCORE_TRUSTED and is always higher than 0.
         score = SCORE_TRUSTED * 1.0 / (expected_price + 1.01)
-        coeffs = offer.props.get("golem.com.pricing.model.linear.coeffs", "missing")
-        self._logger.debug(
-            "Scored offer %s from '%s', coefficients: %s, estimated price: %f, score: %f",
-            offer.id,
-            provider,
-            coeffs,
-            expected_price,
-            score,
-        )
         return score

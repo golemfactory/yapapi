@@ -277,6 +277,13 @@ class Executor(AsyncContextManager):
                     offers_collected += 1
                     try:
                         score = await strategy.score_offer(proposal)
+                        logger.debug(
+                            "Scored offer %s, provider: %s, strategy: %s, score: %f",
+                            proposal.id,
+                            proposal.props.get("golem.node.id.name"),
+                            type(strategy).__name__,
+                            score,
+                        )
                     except InvalidPropertiesError as err:
                         emit(events.ProposalRejected(prop_id=proposal.id, reason=str(err)))
                         continue
