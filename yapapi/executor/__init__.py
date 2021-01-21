@@ -253,7 +253,13 @@ class Executor(AsyncContextManager):
         async def process_debit_notes() -> None:
             async for debit_note in self._payment_api.incoming_debit_notes():
                 if debit_note.agreement_id in agreements_to_pay:
-                    # TODO emit event
+                    emit(
+                        events.DebitNoteReceived(
+                            agr_id=debit_note.agreement_id,
+                            amount=debit_note.total_amount_due,
+                            note_id=debit_note.debit_note_id,
+                        )
+                    )
                     allocation = self._allocation_for_debit_note(debit_note)
                     try:
                         await debit_note.accept(
