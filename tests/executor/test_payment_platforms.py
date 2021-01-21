@@ -2,16 +2,17 @@
 import os
 from unittest import mock
 
-import asynctest
 import pytest
 
+from ya_payment import RequestorApi
+
 from yapapi.executor import Executor, NoPaymentAccountError, DEFAULT_NETWORK, DEFAULT_DRIVER
-from yapapi.rest.payment import Account
+from yapapi.rest.payment import Account, Payment
 
 
 @pytest.fixture(autouse=True)
-def _set_app_key():
-    os.environ["YAGNA_APPKEY"] = "mock-appkey"
+def _set_app_key(monkeypatch):
+    monkeypatch.setenv("YAGNA_APPKEY", "mock-appkey")
 
 
 def _mock_accounts_iterator(*account_specs):
@@ -40,10 +41,35 @@ def _mock_accounts_iterator(*account_specs):
     return _mock
 
 
+class _StopExecutor(Exception):
+    """An exception raised to stop the test when reaching an expected checkpoint in executor."""
+
+
+@pytest.fixture()
+def _mock_decorate_demand(monkeypatch):
+    """Make `Payment.decorate_demand()` stop the test."""
+    monkeypatch.setattr(
+        Payment,
+        "decorate_demand",
+        mock.Mock(side_effect=_StopExecutor("decorate_demand() called")),
+    )
+
+
+@pytest.fixture()
+def _mock_create_allocation(monkeypatch):
+    """Make `RequestorApi.create_allocation()` stop the test."""
+    monkeypatch.setattr(
+        RequestorApi,
+        "create_allocation",
+        mock.Mock(side_effect=_StopExecutor("create_allocation() called")),
+    )
+
+
 @pytest.mark.asyncio
-@mock.patch("yapapi.executor.rest.Payment.accounts", _mock_accounts_iterator())
-async def test_no_accounts_raises():
+async def test_no_accounts_raises(monkeypatch):
     """Test that exception is raised if `Payment.accounts()` returns empty list."""
+
+    monkeypatch.setattr(Payment, "accounts", _mock_accounts_iterator())
 
     async with Executor(package=mock.Mock(), budget=10.0) as executor:
         with pytest.raises(NoPaymentAccountError):
@@ -52,16 +78,18 @@ async def test_no_accounts_raises():
 
 
 @pytest.mark.asyncio
-@mock.patch(
-    "yapapi.executor.rest.Payment.accounts",
-    _mock_accounts_iterator(
-        ("other-driver", "other-network"),
-        ("matching-driver", "other-network"),
-        ("other-driver", "matching-network"),
-    ),
-)
-async def test_no_matching_account_raises():
+async def test_no_matching_account_raises(monkeypatch):
     """Test that exception is raised if `Payment.accounts()` returns no matching accounts."""
+
+    monkeypatch.setattr(
+        Payment,
+        "accounts",
+        _mock_accounts_iterator(
+            ("other-driver", "other-network"),
+            ("matching-driver", "other-network"),
+            ("other-driver", "matching-network"),
+        ),
+    )
 
     async with Executor(
         package=mock.Mock(), budget=10.0, driver="matching-driver", network="matching-network"
@@ -74,54 +102,47 @@ async def test_no_matching_account_raises():
         assert exc.required_network == "matching-network"
 
 
-class _StopExecutor(Exception):
-    """An exception raised to stop the test when reaching an expected checkpoint in executor."""
-
-
 @pytest.mark.asyncio
-@mock.patch(
-    "yapapi.executor.rest.Payment.accounts",
-    _mock_accounts_iterator(
-        ("other-driver", "other-network"),
-        ("matching-driver", "matching-network", {"platform": "platform-1"}),
-        ("matching-driver", "other-network"),
-        ("other-driver", "matching-network"),
-        ("matching-driver", "matching-network", {"platform": "platform-2"}),
-    ),
-)
-@mock.patch(
-    "yapapi.executor.rest.Payment.decorate_demand",
-    mock.Mock(side_effect=_StopExecutor("decorate_demand() called")),
-)
-async def test_matching_account_creates_allocation():
+async def test_matching_account_creates_allocation(monkeypatch, _mock_decorate_demand):
     """Test that matching accounts are correctly selected and allocations are created for them."""
 
-    with mock.patch(
-        "ya_payment.RequestorApi.create_allocation", asynctest.CoroutineMock()
-    ) as mock_create_allocation:
-        with pytest.raises(_StopExecutor):
-            async with Executor(
-                package=mock.Mock(),
-                budget=10.0,
-                driver="matching-driver",
-                network="matching-network",
-            ) as executor:
-                async for _ in executor.submit(worker=mock.Mock(), data=mock.Mock()):
-                    pass
+    monkeypatch.setattr(
+        Payment,
+        "accounts",
+        _mock_accounts_iterator(
+            ("other-driver", "other-network"),
+            ("matching-driver", "matching-network", {"platform": "platform-1"}),
+            ("matching-driver", "other-network"),
+            ("other-driver", "matching-network"),
+            ("matching-driver", "matching-network", {"platform": "platform-2"}),
+        ),
+    )
 
-    assert len(mock_create_allocation.call_args_list) == 2
-    assert mock_create_allocation.call_args_list[0].args[0].payment_platform == "platform-1"
-    assert mock_create_allocation.call_args_list[1].args[0].payment_platform == "platform-2"
+    create_allocation_args = []
+
+    async def mock_create_allocation(_self, model):
+        create_allocation_args.append(model)
+        return mock.Mock()
+
+    monkeypatch.setattr(RequestorApi, "create_allocation", mock_create_allocation)
+
+    with pytest.raises(_StopExecutor):
+        async with Executor(
+            package=mock.Mock(), budget=10.0, driver="matching-driver", network="matching-network",
+        ) as executor:
+            async for _ in executor.submit(worker=mock.Mock(), data=mock.Mock()):
+                pass
+
+    assert len(create_allocation_args) == 2
+    assert create_allocation_args[0].payment_platform == "platform-1"
+    assert create_allocation_args[1].payment_platform == "platform-2"
 
 
 @pytest.mark.asyncio
-@mock.patch("yapapi.executor.rest.Payment.accounts", _mock_accounts_iterator(("dRIVER", "NetWORK")))
-@mock.patch(
-    "ya_payment.RequestorApi.create_allocation",
-    mock.Mock(side_effect=_StopExecutor("create_allocation() called")),
-)
-async def test_driver_network_case_insensitive():
+async def test_driver_network_case_insensitive(monkeypatch, _mock_create_allocation):
     """Test that matching driver and network names is not case sensitive."""
+
+    monkeypatch.setattr(Payment, "accounts", _mock_accounts_iterator(("dRIVER", "NetWORK")))
 
     with pytest.raises(_StopExecutor):
         async with Executor(
@@ -132,16 +153,12 @@ async def test_driver_network_case_insensitive():
 
 
 @pytest.mark.asyncio
-@mock.patch(
-    "yapapi.executor.rest.Payment.accounts",
-    _mock_accounts_iterator((DEFAULT_DRIVER, DEFAULT_NETWORK)),
-)
-@mock.patch(
-    "ya_payment.RequestorApi.create_allocation",
-    mock.Mock(side_effect=_StopExecutor("create_allocation() called")),
-)
-async def test_default_driver_network():
+async def test_default_driver_network(monkeypatch, _mock_create_allocation):
     """Test that defaults are used if driver and network are not specified."""
+
+    monkeypatch.setattr(
+        Payment, "accounts", _mock_accounts_iterator((DEFAULT_DRIVER, DEFAULT_NETWORK))
+    )
 
     with pytest.raises(_StopExecutor):
         async with Executor(package=mock.Mock(), budget=10.0) as executor:
