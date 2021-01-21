@@ -168,12 +168,7 @@ class Executor(AsyncContextManager):
 
         # Building offer
         builder = DemandBuilder()
-        builder.add(
-            Activity(
-                expiration=self._expires,
-                multi_activity=True,
-            )
-        )
+        builder.add(Activity(expiration=self._expires, multi_activity=True,))
         builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
@@ -249,7 +244,23 @@ class Executor(AsyncContextManager):
 
         async def process_debit_notes() -> None:
             async for debit_note in self._payment_api.incoming_debit_notes():
-                pass
+                if debit_note.agreement_id in agreements_to_pay:
+                    # TODO emit event
+                    allocation = self._allocation_for_debit_note(debit_note)
+                    try:
+                        await debit_note.accept(
+                            amount=debit_note.total_amount_due, allocation=allocation
+                        )
+                    except CancelledError:
+                        raise
+                    except Exception:
+                        emit(
+                            events.PaymentFailed(
+                                agr_id=debit_note.agreement_id, exc_info=sys.exc_info()  # type: ignore
+                            )
+                        )
+                if payment_closing and not agreements_to_pay:
+                    break
 
         async def accept_payment_for_agreement(agreement_id: str, *, partial: bool = False) -> None:
             emit(events.PaymentPrepared(agr_id=agreement_id))
@@ -608,6 +619,21 @@ class Executor(AsyncContextManager):
         except:
             raise RuntimeError(
                 f"No allocation for {invoice.payment_platform} {invoice.payer_addr}."
+            )
+
+    def _allocation_for_debit_note(
+        self, debit_note: rest.payment.DebitNote
+    ) -> rest.payment.Allocation:
+        try:
+            return next(
+                allocation
+                for allocation in self._budget_allocations
+                if allocation.payment_address == debit_note.payer_addr
+                and allocation.payment_platform == debit_note.payment_platform
+            )
+        except:
+            raise RuntimeError(
+                f"No allocation for {debit_note.payment_platform} {debit_note.payer_addr}."
             )
 
     async def __aenter__(self) -> "Executor":
