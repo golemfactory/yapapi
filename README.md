@@ -130,7 +130,7 @@ async def main(subnet_tag: str):
             yield ctx.commit()
             task.accept_result(result=output_file)
 
-        ctx.log("no more frames to render")
+        print(f"Worker {ctx.id} on {ctx.provider_name}: No more frames to render")
 
     # iterator over the frame indices that we want to render
     frames: range = range(0, 60, 10)
