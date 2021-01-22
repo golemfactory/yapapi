@@ -27,7 +27,7 @@ from examples.utils import (
 script_dir = pathlib.Path(__file__).resolve().parent
 
 
-async def main(subnet_tag: str):
+async def main(subnet_tag):
     package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         min_mem_gib=0.5,
