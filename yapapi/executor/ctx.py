@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union
 
 from .events import DownloadStarted, DownloadFinished
+from ..props import NodeInfo
 from ..storage import StorageProvider, Source, Destination
 
 
@@ -189,17 +190,27 @@ class _Steps(Work):
 class WorkContext:
     """An object used to schedule commands to be sent to provider."""
 
+    id: str
+    """Unique identifier for this work context."""
+
     def __init__(
         self,
         ctx_id: str,
+        node_info: NodeInfo,
         storage: StorageProvider,
         emitter: Optional[Callable[[StorageEvent], None]] = None,
     ):
-        self._id = ctx_id
+        self.id = ctx_id
+        self._node_info = node_info
         self._storage: StorageProvider = storage
         self._pending_steps: List[Work] = []
         self._started: bool = False
         self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
+
+    @property
+    def provider_name(self) -> Optional[str]:
+        """Return the name of the provider associated with this work context."""
+        return self._node_info.name
 
     def __prepare(self):
         if not self._started:
@@ -254,9 +265,6 @@ class WorkContext:
         """
         self.__prepare()
         self._pending_steps.append(_RecvFile(self._storage, src_path, dst_path, self._emitter))
-
-    def log(self, *args):
-        print(f"W{self._id}: ", *args)
 
     def commit(self, timeout: Optional[timedelta] = None) -> Work:
         """Creates sequence of commands to be sent to provider.

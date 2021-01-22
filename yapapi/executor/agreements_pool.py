@@ -4,7 +4,7 @@ import datetime
 import logging
 import random
 import sys
-from typing import Dict, NamedTuple, Optional
+from typing import Dict, NamedTuple, Optional, Tuple
 
 from yapapi.executor import events
 from yapapi.props import Activity, NodeInfo
@@ -26,6 +26,7 @@ class BufferedAgreement:
     """Confirmed agreement with additional local metadata"""
 
     agreement: Agreement
+    node_info: NodeInfo
     worker_task: Optional[
         asyncio.Task
     ]  # A Task that uses agreement. Agreement won't be reused until this task is .done()
@@ -66,10 +67,11 @@ class AgreementsPool:
     async def use_agreement(self, cbk):
         """Gets an agreement and performs cbk() on it"""
         async with self._lock:
-            agreement = await self._get_agreement()
-            if agreement is None:
+            agreement_with_info = await self._get_agreement()
+            if agreement_with_info is None:
                 return None
-            task = cbk(agreement)
+            agreement, node_info = agreement_with_info
+            task = cbk(agreement, node_info)
             await self._set_worker(agreement.id, task)
             return task
 
@@ -81,11 +83,11 @@ class AgreementsPool:
         assert buffered_agreement.worker_task is None
         buffered_agreement.worker_task = task
 
-    async def _get_agreement(self) -> Optional[Agreement]:
+    async def _get_agreement(self) -> Optional[Tuple[Agreement, NodeInfo]]:
         """Returns an Agreement
 
-        Firstly it tries to reuse agreement from a pool of available agreements (no active worker_task).
-        If that fails it tries to convert offer into agreement.
+        Firstly it tries to reuse agreement from a pool of available agreements
+        (no active worker_task). If that fails it tries to convert offer into agreement.
         """
         emit = self.emitter
 
@@ -94,7 +96,7 @@ class AgreementsPool:
                 [ba for ba in self._agreements.values() if ba.worker_task is None]
             )
             logger.debug("Reusing agreement. id: %s", buffered_agreement.agreement.id)
-            return buffered_agreement.agreement
+            return buffered_agreement.agreement, buffered_agreement.node_info
         except IndexError:  # empty pool
             pass
 
@@ -118,14 +120,15 @@ class AgreementsPool:
         agreement_details = await agreement.details()
         provider_activity = agreement_details.provider_view.extract(Activity)
         requestor_activity = agreement_details.requestor_view.extract(Activity)
-        provider = agreement_details.provider_view.extract(NodeInfo)
-        logger.debug("New agreement. id: %s, provider: %s", agreement.id, provider)
-        emit(events.AgreementCreated(agr_id=agreement.id, provider_id=provider))
+        node_info = agreement_details.provider_view.extract(NodeInfo)
+        logger.debug("New agreement. id: %s, provider: %s", agreement.id, node_info)
+        emit(events.AgreementCreated(agr_id=agreement.id, provider_id=node_info))
         if not await agreement.confirm():
             emit(events.AgreementRejected(agr_id=agreement.id))
             return None
         self._agreements[agreement.id] = BufferedAgreement(
             agreement=agreement,
+            node_info=node_info,
             worker_task=None,
             has_multi_activity=bool(
                 provider_activity.multi_activity and requestor_activity.multi_activity
@@ -133,7 +136,7 @@ class AgreementsPool:
         )
         emit(events.AgreementConfirmed(agr_id=agreement.id))
         self.confirmed += 1
-        return agreement
+        return agreement, node_info
 
     async def release_agreement(self, agreement_id: str) -> None:
         """Marks agreement as ready for reuse"""

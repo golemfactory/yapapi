@@ -69,7 +69,7 @@ async def main(subnet_tag, driver=None, network=None):
             except BatchTimeoutError:
                 print(
                     f"{TEXT_COLOR_RED}"
-                    f"Task timed out: {task}, time: {task.running_time}"
+                    f"Task {task} timed out on {ctx.provider_name}, time: {task.running_time}"
                     f"{TEXT_COLOR_DEFAULT}"
                 )
                 raise
