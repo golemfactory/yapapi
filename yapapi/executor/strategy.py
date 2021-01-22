@@ -87,26 +87,28 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
         """Score `offer` according to cost for expected computation time."""
 
         linear: com.ComLinear = com.ComLinear.from_properties(offer.props)
-        self._logger.debug("Scoring %s: %s", offer.id, linear)
+        self._logger.debug("Scoring offer %s, parameters: %s", offer.id, linear)
         if linear.scheme != com.BillingScheme.PAYU:
-            self._logger.debug("Scoring %s: unsupported scheme '%s'", offer.id, linear.scheme)
+            self._logger.debug(
+                "Rejected offer %s: unsupported scheme '%s'", offer.id, linear.scheme
+            )
             return SCORE_REJECTED
 
         known_time_prices = {com.Counter.TIME, com.Counter.CPU}
 
         for counter in linear.price_for.keys():
             if counter not in known_time_prices:
-                self._logger.debug("Scoring %s: unsupported counter '%s'", offer.id, counter)
+                self._logger.debug("Rejected offer %s: unsupported counter '%s'", offer.id, counter)
                 return SCORE_REJECTED
 
         if linear.fixed_price < 0:
-            self._logger.debug("Scoring %s: negative fixed price", offer.id)
+            self._logger.debug("Rejected offer %s: negative fixed price", offer.id)
             return SCORE_REJECTED
         expected_price = linear.fixed_price
 
         for resource in known_time_prices:
             if linear.price_for[resource] < 0:
-                self._logger.debug("Scoring %s: negative price for '%s'", offer.id, resource)
+                self._logger.debug("Rejected offer %s: negative price for '%s'", offer.id, resource)
                 return SCORE_REJECTED
             expected_price += linear.price_for[resource] * self._expected_time_secs
 
