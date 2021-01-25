@@ -116,7 +116,7 @@ async def main(subnet_tag, driver=None, network=None):
 
 
 if __name__ == "__main__":
-    parser = build_parser("Render blender scene")
+    parser = build_parser("Render a Blender scene")
     parser.set_defaults(log_file="blender-yapapi.log")
     args = parser.parse_args()
 
