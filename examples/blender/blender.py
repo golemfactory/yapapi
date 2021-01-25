@@ -16,10 +16,10 @@ from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noq
 from yapapi.package import vm
 from yapapi.rest.activity import BatchTimeoutError
 
-root_dir = pathlib.Path(__file__).resolve().parent.parent.parent
-sys.path.append(str(root_dir))
+examples_dir = pathlib.Path(__file__).resolve().parent.parent
+sys.path.append(str(examples_dir))
 
-from examples.utils import (
+from utils import (
     build_parser,
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
