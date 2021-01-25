@@ -8,6 +8,9 @@ from yapapi import Executor, NoPaymentAccountError, Task, WorkContext, windows_e
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.package import vm
 
+root_dir = pathlib.Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(root_dir))
+
 from examples.utils import (
     build_parser,
     TEXT_COLOR_CYAN,
