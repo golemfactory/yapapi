@@ -48,16 +48,38 @@ if sys.version_info >= (3, 7):
 else:
     from async_exit_stack import AsyncExitStack  # type: ignore
 
-
-CFG_INVOICE_TIMEOUT: Final[timedelta] = timedelta(minutes=5)
-"Time to receive invoice from provider after tasks ended."
-
-ACCEPTANCE_TIMEOUT_MIN_VALUE: Final[int] = 30 # in seconds
+ACCEPTANCE_TIMEOUT_MIN_VALUE: Final[int] = 30  # in seconds
 "Shortest debit note acceptance deadline the requestor will accept."
 
 ACCEPTANCE_TIMEOUT_PROP_NAME: Final[str] = "golem.com.payment.debit-notes.acceptance-timeout"
 
+CFG_INVOICE_TIMEOUT: Final[timedelta] = timedelta(minutes=5)
+"Time to receive invoice from provider after tasks ended."
+
+DEFAULT_DRIVER = "zksync"
+DEFAULT_NETWORK = "rinkeby"
+
 logger = logging.getLogger(__name__)
+
+
+class NoPaymentAccountError(Exception):
+    """The error raised if no payment account for the required driver/network is available."""
+
+    required_driver: str
+    """Payment driver required for the account."""
+
+    required_network: str
+    """Network required for the account."""
+
+    def __init__(self, required_driver: str, required_network: str):
+        self.required_driver: str = required_driver
+        self.required_network: str = required_network
+
+    def __str__(self) -> str:
+        return (
+            f"No payment account available for driver `{self.required_driver}`"
+            f" and network `{self.required_network}`"
+        )
 
 
 @dataclass
@@ -88,23 +110,31 @@ class Executor(AsyncContextManager):
         budget: Union[float, Decimal],
         strategy: MarketStrategy = LeastExpensiveLinearPayuMS(),
         subnet_tag: Optional[str] = None,
+        driver: Optional[str] = None,
+        network: Optional[str] = None,
         event_consumer: Optional[Callable[[Event], None]] = None,
     ):
         """Create a new executor.
 
         :param package: a package common for all tasks; vm.repo() function may be
-                        used to return package from a repository
+            used to return package from a repository
         :param max_workers: maximum number of workers doing the computation
         :param timeout: timeout for the whole computation
         :param budget: maximum budget for payments
         :param strategy: market strategy used to select providers from the market
-                         (e.g. LeastExpensiveLinearPayuMS or DummyMS)
+            (e.g. LeastExpensiveLinearPayuMS or DummyMS)
         :param subnet_tag: use only providers in the subnet with the subnet_tag name
+        :param driver: name of the payment driver to use or `None` to use the default driver;
+            only payment platforms with the specified driver will be used
+        :param network: name of the network to use or `None` to use the default network;
+            only payment platforms with the specified network will be used
         :param event_consumer: a callable that processes events related to the
-                              computation; by default it is a function that logs all events
+            computation; by default it is a function that logs all events
         """
 
         self._subnet: Optional[str] = subnet_tag
+        self._driver = driver.lower() if driver else DEFAULT_DRIVER
+        self._network = network.lower() if network else DEFAULT_NETWORK
         self._stream_output = True
         self._strategy = strategy
         self._api_config = rest.Configuration()
@@ -125,6 +155,14 @@ class Executor(AsyncContextManager):
         # that emitting events will not block
         self._wrapped_consumer = AsyncWrapper(event_consumer)
 
+    @property
+    def driver(self):
+        return self._driver
+
+    @property
+    def network(self):
+        return self._network
+
     async def submit(
         self,
         worker: Callable[[WorkContext, AsyncIterator[Task[D, R]]], AsyncGenerator[Work, None]],
@@ -144,7 +182,6 @@ class Executor(AsyncContextManager):
         try:
             async for result in self._submit(worker, data, services, workers):
                 yield result
-
         finally:
             # Cancel and gather all tasks to make sure all exceptions are retrieved.
             all_tasks = workers.union(services)
@@ -162,7 +199,6 @@ class Executor(AsyncContextManager):
         workers: Set[asyncio.Task],
     ) -> AsyncIterator[Task[D, R]]:
         import contextlib
-        import random
 
         stack = self._stack
         emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
@@ -354,9 +390,7 @@ class Executor(AsyncContextManager):
                                         )
                                     )
                                 else:
-                                    builder.properties[
-                                        ACCEPTANCE_TIMEOUT_PROP_NAME
-                                    ] = timeout
+                                    builder.properties[ACCEPTANCE_TIMEOUT_PROP_NAME] = timeout
                             await proposal.respond(builder.properties, builder.constraints)
                             emit(events.ProposalResponded(prop_id=proposal.id))
                         except CancelledError:
@@ -381,7 +415,7 @@ class Executor(AsyncContextManager):
         # )
         storage_manager = await self._stack.enter_async_context(gftp.provider())
 
-        async def start_worker(agreement: rest.market.Agreement) -> None:
+        async def start_worker(agreement: rest.market.Agreement, node_info: NodeInfo) -> None:
             nonlocal last_wid
             wid = last_wid
             last_wid += 1
@@ -401,7 +435,9 @@ class Executor(AsyncContextManager):
             async with act:
                 emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
 
-                work_context = WorkContext(f"worker-{wid}", storage_manager, emitter=emit)
+                work_context = WorkContext(
+                    f"worker-{wid}", node_info, storage_manager, emitter=emit
+                )
                 with work_queue.new_consumer() as consumer:
 
                     command_generator = worker(
@@ -468,7 +504,7 @@ class Executor(AsyncContextManager):
                     new_task = None
                     try:
                         new_task = await agreements_pool.use_agreement(
-                            lambda a: loop.create_task(start_worker(a))
+                            lambda agreement, node: loop.create_task(start_worker(agreement, node))
                         )
                         if new_task is None:
                             continue
@@ -610,8 +646,23 @@ class Executor(AsyncContextManager):
                     logger.warning("Unpaid agreements  %s", agreements_to_pay)
 
     async def _create_allocations(self) -> rest.payment.MarketDecoration:
+
         if not self._budget_allocations:
             async for account in self._payment_api.accounts():
+                driver = account.driver.lower()
+                network = account.network.lower()
+                if (driver, network) != (self._driver, self._network):
+                    logger.debug(
+                        f"Not using payment platform `%s`, platform's driver/network "
+                        f"`%s`/`%s` is different than requested driver/network `%s`/`%s`",
+                        account.platform,
+                        driver,
+                        network,
+                        self._driver,
+                        self._network,
+                    )
+                    continue
+                logger.debug("Creating allocation using payment platform `%s`", account.platform)
                 allocation = cast(
                     rest.payment.Allocation,
                     await self._stack.enter_async_context(
@@ -624,9 +675,10 @@ class Executor(AsyncContextManager):
                     ),
                 )
                 self._budget_allocations.append(allocation)
-        assert (
-            self._budget_allocations
-        ), "No payment accounts. Did you forget to run 'yagna payment init -r'?"
+
+            if not self._budget_allocations:
+                raise NoPaymentAccountError(self._driver, self._network)
+
         allocation_ids = [allocation.id for allocation in self._budget_allocations]
         return await self._payment_api.decorate_demand(allocation_ids)
 

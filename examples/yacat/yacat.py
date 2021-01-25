@@ -4,7 +4,7 @@ from datetime import timedelta
 import pathlib
 import sys
 
-from yapapi import Executor, Task, WorkContext, windows_event_loop_fix
+from yapapi import Executor, NoPaymentAccountError, Task, WorkContext, windows_event_loop_fix
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.package import vm
 
@@ -98,8 +98,16 @@ async def main(args):
         # timeout should be keyspace / number of providers dependent
         timeout=timedelta(minutes=10),
         subnet_tag=args.subnet_tag,
+        driver=args.driver,
+        network=args.network,
         event_consumer=log_summary(log_event_repr),
     ) as executor:
+
+        sys.stderr.write(
+            f"Using subnet: {TEXT_COLOR_YELLOW}{args.subnet_tag}{TEXT_COLOR_DEFAULT}, "
+            f"payment driver: {TEXT_COLOR_YELLOW}{executor.driver}{TEXT_COLOR_DEFAULT}, "
+            f"and network: {TEXT_COLOR_YELLOW}{executor.network}{TEXT_COLOR_DEFAULT}\n"
+        )
 
         keyspace_computed = False
         # This is not a typical use of executor.submit as there is only one task, with no data:
@@ -151,13 +159,18 @@ if __name__ == "__main__":
 
     enable_default_logger(log_file=args.log_file)
 
-    sys.stderr.write(f"Using subnet: {TEXT_COLOR_YELLOW}{args.subnet_tag}{TEXT_COLOR_DEFAULT}\n")
-
     loop = asyncio.get_event_loop()
     task = loop.create_task(main(args))
 
     try:
         loop.run_until_complete(task)
+    except NoPaymentAccountError as e:
+        print(
+            f"{TEXT_COLOR_RED}"
+            f"No payment account initialized for driver `{e.required_driver}` "
+            f"and network `{e.required_network}`. Did you run `yagna payment init -r`?"
+            f"{TEXT_COLOR_DEFAULT}"
+        )
     except KeyboardInterrupt:
         print(
             f"{TEXT_COLOR_YELLOW}"
@@ -169,9 +182,7 @@ if __name__ == "__main__":
         try:
             loop.run_until_complete(task)
             print(
-                f"{TEXT_COLOR_YELLOW}"
-                "Shutdown completed, thank you for waiting!"
-                f"{TEXT_COLOR_DEFAULT}"
+                f"{TEXT_COLOR_YELLOW}Shutdown completed, thank you for waiting!{TEXT_COLOR_DEFAULT}"
             )
         except KeyboardInterrupt:
             pass

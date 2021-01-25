@@ -6,6 +6,7 @@ import sys
 
 from yapapi import (
     Executor,
+    NoPaymentAccountError,
     Task,
     __version__ as yapapi_version,
     WorkContext,
@@ -24,10 +25,7 @@ from examples.utils import (
 )
 
 
-script_dir = pathlib.Path(__file__).resolve().parent
-
-
-async def main(subnet_tag):
+async def main(subnet_tag, driver=None, network=None):
     package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         min_mem_gib=0.5,
@@ -35,6 +33,7 @@ async def main(subnet_tag):
     )
 
     async def worker(ctx: WorkContext, tasks):
+        script_dir = pathlib.Path(__file__).resolve().parent
         scene_path = str(script_dir / "cubes.blend")
         ctx.send_file(scene_path, "/golem/resource/scene.blend")
         async for task in tasks:
@@ -70,7 +69,7 @@ async def main(subnet_tag):
             except BatchTimeoutError:
                 print(
                     f"{TEXT_COLOR_RED}"
-                    f"Task timed out: {task}, time: {task.running_time}"
+                    f"Task {task} timed out on {ctx.provider_name}, time: {task.running_time}"
                     f"{TEXT_COLOR_DEFAULT}"
                 )
                 raise
@@ -96,8 +95,17 @@ async def main(subnet_tag):
         budget=10.0,
         timeout=timeout,
         subnet_tag=subnet_tag,
+        driver=driver,
+        network=network,
         event_consumer=log_summary(log_event_repr),
     ) as executor:
+
+        sys.stderr.write(
+            f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n"
+            f"Using subnet: {TEXT_COLOR_YELLOW}{subnet_tag}{TEXT_COLOR_DEFAULT}, "
+            f"payment driver: {TEXT_COLOR_YELLOW}{executor.driver}{TEXT_COLOR_DEFAULT}, "
+            f"and network: {TEXT_COLOR_YELLOW}{executor.network}{TEXT_COLOR_DEFAULT}\n"
+        )
 
         async for task in executor.submit(worker, [Task(data=frame) for frame in frames]):
             print(
@@ -108,7 +116,7 @@ async def main(subnet_tag):
 
 
 if __name__ == "__main__":
-    parser = build_parser("Render blender scene")
+    parser = build_parser("Render a Blender scene")
     parser.set_defaults(log_file="blender-yapapi.log")
     args = parser.parse_args()
 
@@ -123,14 +131,19 @@ if __name__ == "__main__":
     )
 
     loop = asyncio.get_event_loop()
-
-    subnet = args.subnet_tag
-    sys.stderr.write(f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n")
-    sys.stderr.write(f"Using subnet: {TEXT_COLOR_YELLOW}{subnet}{TEXT_COLOR_DEFAULT}\n")
-    task = loop.create_task(main(subnet_tag=args.subnet_tag))
+    task = loop.create_task(
+        main(subnet_tag=args.subnet_tag, driver=args.driver, network=args.network)
+    )
 
     try:
         loop.run_until_complete(task)
+    except NoPaymentAccountError as e:
+        print(
+            f"{TEXT_COLOR_RED}"
+            f"No payment account initialized for driver `{e.required_driver}` "
+            f"and network `{e.required_network}`. Did you run `yagna payment init -r`?"
+            f"{TEXT_COLOR_DEFAULT}"
+        )
     except KeyboardInterrupt:
         print(
             f"{TEXT_COLOR_YELLOW}"
@@ -142,9 +155,7 @@ if __name__ == "__main__":
         try:
             loop.run_until_complete(task)
             print(
-                f"{TEXT_COLOR_YELLOW}"
-                "Shutdown completed, thank you for waiting!"
-                f"{TEXT_COLOR_DEFAULT}"
+                f"{TEXT_COLOR_YELLOW}Shutdown completed, thank you for waiting!{TEXT_COLOR_DEFAULT}"
             )
         except (asyncio.CancelledError, KeyboardInterrupt):
             pass
