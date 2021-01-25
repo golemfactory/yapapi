@@ -3,11 +3,14 @@ import asyncio
 from asyncio import TimeoutError
 from datetime import datetime, timezone
 import json
+import sys
 
 from yapapi import props as yp
 from yapapi.log import enable_default_logger
 from yapapi.props.builder import DemandBuilder
 from yapapi.rest import Configuration, Market, Activity, Payment  # noqa
+
+from examples import utils
 
 
 async def list_offers(conf: Configuration, subnet_tag: str):
@@ -27,14 +30,6 @@ async def list_offers(conf: Configuration, subnet_tag: str):
 
 
 def main():
-    import pathlib
-    import sys
-
-    parent_directory = pathlib.Path(__file__).resolve().parent.parent
-    sys.stderr.write(f"Adding {parent_directory} to sys.path.\n")
-    sys.path.append(str(parent_directory))
-    import utils
-
     parser = utils.build_parser("List offers")
     args = parser.parse_args()
 
