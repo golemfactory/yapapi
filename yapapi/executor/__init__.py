@@ -48,10 +48,10 @@ if sys.version_info >= (3, 7):
 else:
     from async_exit_stack import AsyncExitStack  # type: ignore
 
-ACCEPTANCE_TIMEOUT_MIN_VALUE: Final[int] = 30  # in seconds
-"Shortest debit note acceptance deadline the requestor will accept."
+DEBIT_NOTE_MIN_TIMEOUT: Final[int] = 30  # in seconds
+"Shortest debit note acceptance timeout the requestor will accept."
 
-ACCEPTANCE_TIMEOUT_PROP_NAME: Final[str] = "golem.com.payment.debit-notes.acceptance-timeout"
+DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: Final[str] = "golem.com.payment.debit-notes.acceptance-timeout"
 
 CFG_INVOICE_TIMEOUT: Final[timedelta] = timedelta(minutes=5)
 "Time to receive invoice from provider after tasks ended."
@@ -209,12 +209,7 @@ class Executor(AsyncContextManager):
 
         # Building offer
         builder = DemandBuilder()
-        builder.add(
-            Activity(
-                expiration=self._expires,
-                multi_activity=True,
-            )
-        )
+        builder.add(Activity(expiration=self._expires, multi_activity=True))
         builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
@@ -288,6 +283,7 @@ class Executor(AsyncContextManager):
                 if payment_closing and not agreements_to_pay:
                     break
 
+        # TODO Consider processing invoices and debit notes together
         async def process_debit_notes() -> None:
             async for debit_note in self._payment_api.incoming_debit_notes():
                 if debit_note.agreement_id in agreements_to_pay:
@@ -379,18 +375,19 @@ class Executor(AsyncContextManager):
                                         prop_id=proposal.id, reason="No common payment platforms"
                                     )
                                 )
-                            if timeout := proposal.props.get(ACCEPTANCE_TIMEOUT_PROP_NAME):
-                                if timeout < ACCEPTANCE_TIMEOUT_MIN_VALUE:
+                            timeout = proposal.props.get(DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP)
+                            if timeout:
+                                if timeout < DEBIT_NOTE_MIN_TIMEOUT:
                                     with contextlib.suppress(Exception):
                                         await proposal.reject()
                                     emit(
                                         events.ProposalRejected(
                                             prop_id=proposal.id,
-                                            reason="Proposed acceptance timeout was too short",
+                                            reason="Debit note acceptance timeout too short",
                                         )
                                     )
                                 else:
-                                    builder.properties[ACCEPTANCE_TIMEOUT_PROP_NAME] = timeout
+                                    builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
                             await proposal.respond(builder.properties, builder.constraints)
                             emit(events.ProposalResponded(prop_id=proposal.id))
                         except CancelledError:
