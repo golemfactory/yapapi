@@ -368,7 +368,7 @@ class Executor(AsyncContextManager):
         # )
         storage_manager = await self._stack.enter_async_context(gftp.provider())
 
-        async def start_worker(agreement: rest.market.Agreement) -> None:
+        async def start_worker(agreement: rest.market.Agreement, node_info: NodeInfo) -> None:
             nonlocal last_wid
             wid = last_wid
             last_wid += 1
@@ -388,7 +388,9 @@ class Executor(AsyncContextManager):
             async with act:
                 emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
 
-                work_context = WorkContext(f"worker-{wid}", storage_manager, emitter=emit)
+                work_context = WorkContext(
+                    f"worker-{wid}", node_info, storage_manager, emitter=emit
+                )
                 with work_queue.new_consumer() as consumer:
 
                     command_generator = worker(
@@ -455,7 +457,7 @@ class Executor(AsyncContextManager):
                     new_task = None
                     try:
                         new_task = await agreements_pool.use_agreement(
-                            lambda a: loop.create_task(start_worker(a))
+                            lambda agreement, node: loop.create_task(start_worker(agreement, node))
                         )
                         if new_task is None:
                             continue
