@@ -457,7 +457,7 @@ class Executor(AsyncContextManager):
                     new_task = None
                     try:
                         new_task = await agreements_pool.use_agreement(
-                            lambda agr, node: loop.create_task(start_worker(agr, node))
+                            lambda agreement, node: loop.create_task(start_worker(agreement, node))
                         )
                         if new_task is None:
                             continue
