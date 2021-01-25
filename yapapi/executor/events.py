@@ -128,6 +128,12 @@ class AgreementTerminated(AgreementEvent):
 
 
 @dataclass
+class DebitNoteReceived(AgreementEvent):
+    note_id: str
+    amount: str
+
+
+@dataclass
 class PaymentAccepted(AgreementEvent):
     inv_id: str
     amount: str

@@ -98,7 +98,10 @@ class Model(abc.ABC):
         initialized from the same dictionary and all models will only load their own data.
         """
         field_map = dict(
-            (f.metadata["key"], _PyField(name=f.name, type=f.type, required=f.default is MISSING),)
+            (
+                f.metadata["key"],
+                _PyField(name=f.name, type=f.type, required=f.default is MISSING),
+            )
             for f in fields(cls)
             if "key" in f.metadata
         )

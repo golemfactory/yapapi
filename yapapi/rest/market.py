@@ -62,7 +62,7 @@ class Agreement(object):
 
     async def confirm(self) -> bool:
         """Sign and send the agreement to the provider and then wait for it to be approved.
-        
+
         :return: True if the agreement has been confirmed, False otherwise
         """
         await self._api.confirm_agreement(self._id)
@@ -77,7 +77,8 @@ class Agreement(object):
 
         try:
             await self._api.terminate_agreement(
-                self._id, request_body=reason,
+                self._id,
+                request_body=reason,
             )
             logger.debug("terminateAgreement(%s) returned successfully", self._id)
             return True
@@ -135,7 +136,8 @@ class OfferProposal(object):
     async def create_agreement(self, timeout=timedelta(hours=1)) -> Agreement:
         """Create an Agreement based on this Proposal."""
         proposal = models.AgreementProposal(
-            proposal_id=self.id, valid_to=datetime.now(timezone.utc) + timeout,
+            proposal_id=self.id,
+            valid_to=datetime.now(timezone.utc) + timeout,
         )
         api: RequestorApi = self._subscription._api
         agreement_id = await api.create_agreement(proposal)
@@ -154,7 +156,10 @@ class Subscription(object):
     """Mid-level interface to REST API's Subscription model."""
 
     def __init__(
-        self, api: RequestorApi, subscription_id: str, _details: Optional[models.Demand] = None,
+        self,
+        api: RequestorApi,
+        subscription_id: str,
+        _details: Optional[models.Demand] = None,
     ):
         self._api: RequestorApi = api
         self._id: str = subscription_id

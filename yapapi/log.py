@@ -120,6 +120,7 @@ event_type_to_string = {
     events.AgreementConfirmed: "Agreement approved by provider",
     events.AgreementRejected: "Agreement rejected by provider",
     events.AgreementTerminated: "Agreement terminated",
+    events.DebitNoteReceived: "Debit note received",
     events.PaymentAccepted: "Payment accepted",  # by who?
     events.PaymentFailed: "Payment failed",
     events.PaymentPrepared: "Payment prepared",

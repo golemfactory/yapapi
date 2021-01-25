@@ -48,12 +48,16 @@ if sys.version_info >= (3, 7):
 else:
     from async_exit_stack import AsyncExitStack  # type: ignore
 
+DEBIT_NOTE_MIN_TIMEOUT: Final[int] = 30  # in seconds
+"Shortest debit note acceptance timeout the requestor will accept."
+
+DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: Final[str] = "golem.com.payment.debit-notes.acceptance-timeout"
 
 CFG_INVOICE_TIMEOUT: Final[timedelta] = timedelta(minutes=5)
 "Time to receive invoice from provider after tasks ended."
 
-DEFAULT_NETWORK = "rinkeby"
 DEFAULT_DRIVER = "zksync"
+DEFAULT_NETWORK = "rinkeby"
 
 logger = logging.getLogger(__name__)
 
@@ -205,7 +209,7 @@ class Executor(AsyncContextManager):
 
         # Building offer
         builder = DemandBuilder()
-        builder.add(Activity(expiration=self._expires, multi_activity=True,))
+        builder.add(Activity(expiration=self._expires, multi_activity=True))
         builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
@@ -254,7 +258,7 @@ class Executor(AsyncContextManager):
                             amount=invoice.amount,
                         )
                     )
-                    allocation = self._allocation_for_invoice(invoice)
+                    allocation = self._get_allocation(invoice)
                     try:
                         await invoice.accept(amount=invoice.amount, allocation=allocation)
                     except CancelledError:
@@ -279,6 +283,33 @@ class Executor(AsyncContextManager):
                 if payment_closing and not agreements_to_pay:
                     break
 
+        # TODO Consider processing invoices and debit notes together
+        async def process_debit_notes() -> None:
+            async for debit_note in self._payment_api.incoming_debit_notes():
+                if debit_note.agreement_id in agreements_to_pay:
+                    emit(
+                        events.DebitNoteReceived(
+                            agr_id=debit_note.agreement_id,
+                            amount=debit_note.total_amount_due,
+                            note_id=debit_note.debit_note_id,
+                        )
+                    )
+                    allocation = self._get_allocation(debit_note)
+                    try:
+                        await debit_note.accept(
+                            amount=debit_note.total_amount_due, allocation=allocation
+                        )
+                    except CancelledError:
+                        raise
+                    except Exception:
+                        emit(
+                            events.PaymentFailed(
+                                agr_id=debit_note.agreement_id, exc_info=sys.exc_info()  # type: ignore
+                            )
+                        )
+                if payment_closing and not agreements_to_pay:
+                    break
+
         async def accept_payment_for_agreement(agreement_id: str, *, partial: bool = False) -> None:
             emit(events.PaymentPrepared(agr_id=agreement_id))
             inv = invoices.get(agreement_id)
@@ -287,7 +318,7 @@ class Executor(AsyncContextManager):
                 emit(events.PaymentQueued(agr_id=agreement_id))
                 return
             del invoices[agreement_id]
-            allocation = self._allocation_for_invoice(inv)
+            allocation = self._get_allocation(inv)
             await inv.accept(amount=inv.amount, allocation=allocation)
             emit(
                 events.PaymentAccepted(
@@ -344,6 +375,19 @@ class Executor(AsyncContextManager):
                                         prop_id=proposal.id, reason="No common payment platforms"
                                     )
                                 )
+                            timeout = proposal.props.get(DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP)
+                            if timeout:
+                                if timeout < DEBIT_NOTE_MIN_TIMEOUT:
+                                    with contextlib.suppress(Exception):
+                                        await proposal.reject()
+                                    emit(
+                                        events.ProposalRejected(
+                                            prop_id=proposal.id,
+                                            reason="Debit note acceptance timeout too short",
+                                        )
+                                    )
+                                else:
+                                    builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
                             await proposal.respond(builder.properties, builder.constraints)
                             emit(events.ProposalResponded(prop_id=proposal.id))
                         except CancelledError:
@@ -476,12 +520,19 @@ class Executor(AsyncContextManager):
         process_invoices_job = loop.create_task(process_invoices())
         wait_until_done = loop.create_task(work_queue.wait_until_done())
         worker_starter_task = loop.create_task(worker_starter())
+        debit_notes_job = loop.create_task(process_debit_notes())
         # Py38: find_offers_task.set_name('find_offers_task')
 
         get_offers_deadline = datetime.now(timezone.utc) + self._conf.get_offers_timeout
         get_done_task: Optional[asyncio.Task] = None
         services.update(
-            {find_offers_task, process_invoices_job, wait_until_done, worker_starter_task,}
+            {
+                find_offers_task,
+                process_invoices_job,
+                wait_until_done,
+                worker_starter_task,
+                debit_notes_job,
+            }
         )
         cancelled = False
 
@@ -643,18 +694,18 @@ class Executor(AsyncContextManager):
         }
         return req_platforms.intersection(prov_platforms)
 
-    def _allocation_for_invoice(self, invoice: rest.payment.Invoice) -> rest.payment.Allocation:
+    def _get_allocation(
+        self, item: Union[rest.payment.DebitNote, rest.payment.Invoice]
+    ) -> rest.payment.Allocation:
         try:
             return next(
                 allocation
                 for allocation in self._budget_allocations
-                if allocation.payment_address == invoice.payer_addr
-                and allocation.payment_platform == invoice.payment_platform
+                if allocation.payment_address == item.payer_addr
+                and allocation.payment_platform == item.payment_platform
             )
         except:
-            raise RuntimeError(
-                f"No allocation for {invoice.payment_platform} {invoice.payer_addr}."
-            )
+            raise RuntimeError(f"No allocation for {item.payment_platform} {item.payer_addr}.")
 
     async def __aenter__(self) -> "Executor":
         stack = self._stack

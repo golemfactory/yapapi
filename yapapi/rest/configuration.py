@@ -52,6 +52,32 @@ ya_payment.models.invoice_received_event.InvoiceReceivedEvent = _InvoiceReceived
 ya_payment.models.InvoiceReceivedEvent = _InvoiceReceivedEventWithDate  # type: ignore
 
 
+class _DebitNoteReceivedEventWithDate(
+    ya_payment.models.debit_note_received_event.DebitNoteReceivedEvent
+):
+    """A more correct model for DebitNoteReceivedEvent message."""
+
+    openapi_types = {
+        "event_date": "datetime",
+        "debit_note_id": "str",
+    }
+
+    attribute_map = {
+        "event_date": "eventDate",
+        "debit_note_id": "debitNoteId",
+    }
+
+    def __init__(self, event_date=None, debit_note_id=None, local_vars_configuration=None):
+        super().__init__(
+            debit_note_id=debit_note_id, local_vars_configuration=local_vars_configuration
+        )
+        self.event_date = event_date
+
+
+ya_payment.models.debit_note_received_event.DebitNoteReceivedEvent = _DebitNoteReceivedEventWithDate  # type: ignore
+ya_payment.models.DebitNoteReceivedEvent = _DebitNoteReceivedEventWithDate  # type: ignore
+
+
 class Configuration(object):
     """
     REST API's setup and top-level access utility.
@@ -118,19 +144,25 @@ class Configuration(object):
         """Return a REST client for the Market API."""
         cfg = ya_market.Configuration(host=self.market_url)
         return ya_market.ApiClient(
-            configuration=cfg, header_name="authorization", header_value=f"Bearer {self.app_key}",
+            configuration=cfg,
+            header_name="authorization",
+            header_value=f"Bearer {self.app_key}",
         )
 
     def payment(self) -> ya_payment.ApiClient:
         """Return a REST client for the Payment API."""
         cfg = ya_payment.Configuration(host=self.payment_url)
         return ya_payment.ApiClient(
-            configuration=cfg, header_name="authorization", header_value=f"Bearer {self.app_key}",
+            configuration=cfg,
+            header_name="authorization",
+            header_value=f"Bearer {self.app_key}",
         )
 
     def activity(self) -> ya_activity.ApiClient:
         """Return a REST client for the Activity API."""
         cfg = ya_activity.Configuration(host=self.activity_url)
         return ya_activity.ApiClient(
-            configuration=cfg, header_name="authorization", header_value=f"Bearer {self.app_key}",
+            configuration=cfg,
+            header_name="authorization",
+            header_value=f"Bearer {self.app_key}",
         )

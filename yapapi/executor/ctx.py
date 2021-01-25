@@ -241,7 +241,10 @@ class WorkContext:
         self._pending_steps.append(_SendFile(self._storage, src_path, dst_path))
 
     def run(
-        self, cmd: str, *args: Iterable[str], env: Optional[Dict[str, str]] = None,
+        self,
+        cmd: str,
+        *args: Iterable[str],
+        env: Optional[Dict[str, str]] = None,
     ):
         """Schedule running a command.
 
@@ -311,7 +314,10 @@ class CaptureContext:
 
     @classmethod
     def _build(
-        cls, mode: CaptureMode, limit: Optional[int] = None, fmt: Optional[str] = None,
+        cls,
+        mode: CaptureMode,
+        limit: Optional[int] = None,
+        fmt: Optional[str] = None,
     ) -> "CaptureContext":
         cap_fmt: Optional[CaptureFormat] = CaptureFormat(fmt) if fmt else None
         return cls(mode=mode, fmt=cap_fmt, limit=limit)

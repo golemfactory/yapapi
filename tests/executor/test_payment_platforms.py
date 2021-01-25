@@ -128,7 +128,10 @@ async def test_matching_account_creates_allocation(monkeypatch, _mock_decorate_d
 
     with pytest.raises(_StopExecutor):
         async with Executor(
-            package=mock.Mock(), budget=10.0, driver="matching-driver", network="matching-network",
+            package=mock.Mock(),
+            budget=10.0,
+            driver="matching-driver",
+            network="matching-network",
         ) as executor:
             async for _ in executor.submit(worker=mock.Mock(), data=mock.Mock()):
                 pass
@@ -146,7 +149,10 @@ async def test_driver_network_case_insensitive(monkeypatch, _mock_create_allocat
 
     with pytest.raises(_StopExecutor):
         async with Executor(
-            package=mock.Mock(), budget=10.0, driver="dRiVeR", network="NeTwOrK",
+            package=mock.Mock(),
+            budget=10.0,
+            driver="dRiVeR",
+            network="NeTwOrK",
         ) as executor:
             async for _ in executor.submit(worker=mock.Mock(), data=mock.Mock()):
                 pass

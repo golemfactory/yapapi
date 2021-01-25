@@ -30,7 +30,8 @@ class Task(Generic[TaskData, TaskResult]):
     ids: ClassVar[Iterator[int]] = itertools.count(1)
 
     def __init__(
-        self, data: TaskData,
+        self,
+        data: TaskData,
     ):
         """Create a new Task object.
 
