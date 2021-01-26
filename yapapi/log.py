@@ -112,20 +112,20 @@ event_type_to_string = {
     events.CollectFailed: "Failed to collect proposals for demand",
     events.NoProposalsConfirmed: "No proposals confirmed by providers",
     events.ProposalReceived: "Proposal received from the market",
-    events.ProposalRejected: "Proposal rejected",  # by who? alt: Rejected a proposal?
+    events.ProposalRejected: "Proposal rejected",
     events.ProposalResponded: "Responded to a proposal",
     events.ProposalFailed: "Failed to respond to proposal",
-    events.ProposalConfirmed: "Proposal confirmed by provider",  # ... negotiated with provider?
+    events.ProposalConfirmed: "Proposal confirmed by provider",
     events.AgreementCreated: "Agreement proposal sent to provider",
     events.AgreementConfirmed: "Agreement approved by provider",
     events.AgreementRejected: "Agreement rejected by provider",
     events.AgreementTerminated: "Agreement terminated",
     events.DebitNoteReceived: "Debit note received",
-    events.PaymentAccepted: "Payment accepted",  # by who?
+    events.PaymentAccepted: "Payment accepted",
     events.PaymentFailed: "Payment failed",
     events.PaymentPrepared: "Payment prepared",
     events.PaymentQueued: "Payment queued",
-    events.InvoiceReceived: "Invoice received",  # by who?
+    events.InvoiceReceived: "Invoice received",
     events.WorkerStarted: "Worker started for agreement",
     events.ActivityCreated: "Activity created on provider",
     events.ActivityCreateFailed: "Failed to create activity",
@@ -137,8 +137,8 @@ event_type_to_string = {
     events.CommandExecuted: "Script command executed",
     events.GettingResults: "Getting script results",
     events.ScriptFinished: "Script finished",
-    events.TaskAccepted: "Task accepted",  # by who?
-    events.TaskRejected: "Task rejected",  # by who?
+    events.TaskAccepted: "Task accepted",
+    events.TaskRejected: "Task rejected",
     events.WorkerFinished: "Worker finished",
     events.DownloadStarted: "Download started",
     events.DownloadFinished: "Download finished",
@@ -310,8 +310,8 @@ class SummaryLogger:
             len(self.confirmed_agreements),
             num_providers,
         )
-        for provider_name, tasks in self.provider_tasks.items():
-            self.logger.info("Provider '%s' computed %d tasks", provider_name, len(tasks))
+        for info, tasks in self.provider_tasks.items():
+            self.logger.info("Provider '%s' computed %d tasks", info.provider_name, len(tasks))
         for info in set(self.agreement_provider_info.values()):
             if info not in self.provider_tasks:
                 self.logger.info("Provider '%s' did not compute any tasks", info.provider_name)
