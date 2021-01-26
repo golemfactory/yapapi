@@ -249,9 +249,6 @@ class SummaryLogger:
     # Maps task id to task data
     task_data: Dict[str, Any]
 
-    # Maps provider ids to names
-    # provider_name: Dict[str, str]
-
     # Maps a provider info to the list of task ids computed by the provider
     provider_tasks: Dict[ProviderInfo, List[str]]
 
@@ -293,7 +290,6 @@ class SummaryLogger:
         self.agreement_provider_info = {}
         self.confirmed_agreements = set()
         self.task_data = {}
-        # self.provider_name = {}
         self.provider_tasks = defaultdict(list)
         self.provider_failures = Counter()
         self.cancelled = False
