@@ -43,7 +43,7 @@ as an argument to `log_summary`:
 """
 from asyncio import CancelledError
 from collections import defaultdict, Counter
-from dataclasses import asdict
+from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta, timezone
 import itertools
 import logging
@@ -198,6 +198,13 @@ def log_event_repr(event: events.Event) -> None:
     event_logger.debug("%r", event, exc_info=exc_info)
 
 
+@dataclass(frozen=True)
+class ProviderInfo:
+    provider_id: str
+    provider_name: str
+    provider_subnet: Optional[str]
+
+
 class SummaryLogger:
     """Aggregates information from computation events to provide a high-level summary.
 
@@ -233,8 +240,8 @@ class SummaryLogger:
     # Set of confirmed proposal ids
     confirmed_proposals: Set[str]
 
-    # Maps agreement ids to provider names
-    agreement_provider_name: Dict[str, str]
+    # Maps agreement ids to provider infos
+    agreement_provider_info: Dict[str, ProviderInfo]
 
     # Set of agreements confirmed by providers
     confirmed_agreements: Set[str]
@@ -242,14 +249,17 @@ class SummaryLogger:
     # Maps task id to task data
     task_data: Dict[str, Any]
 
-    # Maps a provider name to the list of task ids computed by the provider
-    provider_tasks: Dict[str, List[str]]
+    # Maps provider ids to names
+    # provider_name: Dict[str, str]
 
-    # Map a provider name to the sum of amounts in this provider's invoices
-    provider_cost: Dict[str, float]
+    # Maps a provider info to the list of task ids computed by the provider
+    provider_tasks: Dict[ProviderInfo, List[str]]
+
+    # Map a provider info to the sum of amounts in this provider's invoices
+    provider_cost: Dict[ProviderInfo, float]
 
     # Count how many times a worker failed on a provider
-    provider_failures: Dict[str, int]
+    provider_failures: Dict[ProviderInfo, int]
 
     # Has computation been cancelled?
     cancelled: bool
@@ -280,9 +290,10 @@ class SummaryLogger:
         self.start_time = time.time()
         self.received_proposals = {}
         self.confirmed_proposals = set()
-        self.agreement_provider_name = {}
+        self.agreement_provider_info = {}
         self.confirmed_agreements = set()
         self.task_data = {}
+        # self.provider_name = {}
         self.provider_tasks = defaultdict(list)
         self.provider_failures = Counter()
         self.cancelled = False
@@ -295,21 +306,21 @@ class SummaryLogger:
 
         total_time = time.time() - self.start_time
         self.logger.info(f"Computation finished in {total_time:.1f}s")
-        agreement_providers = {
-            self.agreement_provider_name[agr_id] for agr_id in self.confirmed_agreements
-        }
+        num_providers = len(
+            {self.agreement_provider_info[agr_id] for agr_id in self.confirmed_agreements}
+        )
         self.logger.info(
             "Negotiated %d agreements with %d providers",
             len(self.confirmed_agreements),
-            len(agreement_providers),
+            num_providers,
         )
         for provider_name, tasks in self.provider_tasks.items():
             self.logger.info("Provider '%s' computed %d tasks", provider_name, len(tasks))
-        for provider_name in set(self.agreement_provider_name.values()):
-            if provider_name not in self.provider_tasks:
-                self.logger.info("Provider '%s' did not compute any tasks", provider_name)
-        for provider_name, count in self.provider_failures.items():
-            self.logger.info("Activity failed %d time(s) on provider '%s'", count, provider_name)
+        for info in set(self.agreement_provider_info.values()):
+            if info not in self.provider_tasks:
+                self.logger.info("Provider '%s' did not compute any tasks", info.provider_name)
+        for info, num in self.provider_failures.items():
+            self.logger.info("Activity failed %d time(s) on provider '%s'", num, info.provider_name)
 
     def _print_total_cost(self, partial: bool = False) -> None:
         """Print the sum of all accepted invoices."""
@@ -381,15 +392,16 @@ class SummaryLogger:
             self.logger.warning(msg)
 
         elif isinstance(event, events.AgreementCreated):
-            provider_name = event.provider_id.name
-            if not provider_name:
-                provider_name = f"provider-{next(self.numbers)}"
+            provider_name = event.provider_info.name or event.provider_id
             self.logger.info("Agreement proposed to provider '%s'", provider_name)
-            self.agreement_provider_name[event.agr_id] = provider_name
+            self.agreement_provider_info[event.agr_id] = ProviderInfo(
+                event.provider_id, provider_name, event.provider_info.subnet_tag
+            )
 
         elif isinstance(event, events.AgreementConfirmed):
             self.logger.info(
-                "Agreement confirmed by provider '%s'", self.agreement_provider_name[event.agr_id]
+                "Agreement confirmed by provider '%s'",
+                self.agreement_provider_info[event.agr_id].provider_name,
             )
             self.confirmed_agreements.add(event.agr_id)
 
@@ -397,45 +409,45 @@ class SummaryLogger:
             self.task_data[event.task_id] = event.task_data
 
         elif isinstance(event, events.ScriptSent):
-            provider_name = self.agreement_provider_name[event.agr_id]
+            provider_info = self.agreement_provider_info[event.agr_id]
             self.logger.info(
                 "Task sent to provider '%s', task data: %s",
-                provider_name,
+                provider_info.provider_name,
                 self.task_data[event.task_id] if event.task_id else "<initialization>",
             )
 
         elif isinstance(event, events.ScriptFinished):
-            provider_name = self.agreement_provider_name[event.agr_id]
+            provider_info = self.agreement_provider_info[event.agr_id]
             self.logger.info(
                 "Task computed by provider '%s', task data: %s",
-                provider_name,
+                provider_info.provider_name,
                 self.task_data[event.task_id] if event.task_id else "<initialization>",
             )
             if event.task_id:
-                self.provider_tasks[provider_name].append(event.task_id)
+                self.provider_tasks[provider_info].append(event.task_id)
 
         elif isinstance(event, events.PaymentAccepted):
-            provider_name = self.agreement_provider_name[event.agr_id]
-            cost = self.provider_cost.get(provider_name, 0.0)
+            provider_info = self.agreement_provider_info[event.agr_id]
+            cost = self.provider_cost.get(provider_info, 0.0)
             cost += float(event.amount)
-            self.provider_cost[provider_name] = cost
+            self.provider_cost[provider_info] = cost
 
         elif isinstance(event, events.PaymentFailed):
             assert event.exc_info
             _exc_type, exc, _tb = event.exc_info
-            provider_name = self.agreement_provider_name[event.agr_id]
+            provider_info = self.agreement_provider_info[event.agr_id]
             reason = str(exc) or repr(exc) or "unexpected error"
-            self.logger.error("Payment for provider '%s' failed, reason: %s", provider_name, reason)
+            self.logger.error("Payment for provider '%s' failed, reason: %s", provider_info, reason)
 
         elif isinstance(event, events.WorkerFinished):
             if event.exc_info is None or self.cancelled:
                 return
             _exc_type, exc, _tb = event.exc_info
-            provider_name = self.agreement_provider_name[event.agr_id]
-            self.provider_failures[provider_name] += 1
+            provider_info = self.agreement_provider_info[event.agr_id]
+            self.provider_failures[provider_info] += 1
             reason = str(exc) or repr(exc) or "unexpected error"
             self.logger.warning(
-                "Activity failed on provider '%s', reason: %s", provider_name, reason
+                "Activity failed on provider '%s', reason: %s", provider_info.provider_name, reason
             )
 
         elif isinstance(event, events.ComputationFinished):
