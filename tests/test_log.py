@@ -1,8 +1,12 @@
 """Unit tests for the `yapapi.log` module."""
 import logging
+import sys
 import tempfile
 
-from yapapi.log import enable_default_logger
+import pytest
+
+from yapapi.executor.events import ComputationFinished
+from yapapi.log import enable_default_logger, log_event, log_event_repr
 
 
 def test_log_file_encoding(capsys):
@@ -19,3 +23,22 @@ def test_log_file_encoding(capsys):
 
     err = capsys.readouterr().err
     assert "UnicodeEncodeError" not in err
+
+
+@pytest.mark.skip("See https://github.com/golemfactory/yapapi/issues/227")
+def test_log_event_emit_traceback():
+    """Test that `log.log_event()` can emit logs for events containing tracebacks arguments."""
+
+    try:
+        raise Exception("Hello!")
+    except:
+        log_event(ComputationFinished(exc_info=sys.exc_info()))
+
+
+def test_log_event_repr_emit_traceback():
+    """Test that `log.log_event_repr()` can emit logs for events containing traceback arguments."""
+
+    try:
+        raise Exception("Hello!")
+    except:
+        log_event_repr(ComputationFinished(exc_info=sys.exc_info()))
