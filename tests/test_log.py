@@ -1,5 +1,6 @@
 """Unit tests for the `yapapi.log` module."""
 import logging
+import os
 import sys
 import tempfile
 
@@ -16,13 +17,24 @@ def test_log_file_encoding(capsys):
     https://docs.pytest.org/en/stable/capture.html#accessing-captured-output-from-a-test-function.
     """
 
-    with tempfile.NamedTemporaryFile() as tmpfile:
-        enable_default_logger(log_file=tmpfile.name)
+    # We have to close the temporary file before it can be re-opened by the logging handler
+    # in Windows, hence we set `delete=False`.
+    tmp_file = tempfile.NamedTemporaryFile(delete=False)
+    try:
+        tmp_file.close()
+
+        enable_default_logger(log_file=tmp_file.name)
         logger = logging.getLogger("yapapi")
         logger.debug("| (• ◡•)| It's Adventure Time! (❍ᴥ❍ʋ)")
+        for handler in logger.handlers:
+            if isinstance(handler, logging.FileHandler):
+                if handler.baseFilename == tmp_file.name:
+                    handler.close()
 
-    err = capsys.readouterr().err
-    assert "UnicodeEncodeError" not in err
+        err = capsys.readouterr().err
+        assert "UnicodeEncodeError" not in err
+    finally:
+        os.unlink(tmp_file.name)
 
 
 @pytest.mark.skip("See https://github.com/golemfactory/yapapi/issues/227")
