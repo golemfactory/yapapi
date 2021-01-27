@@ -58,6 +58,6 @@ class AsyncWrapper:
 
     def async_call(self, *args, **kwargs) -> None:
         """Schedule an asynchronous call to the wrapped callable."""
-        if not self._task:
+        if not self._task or self._task.done():
             raise RuntimeError("AsyncWrapper is closed")
         self._args_buffer.put_nowait((args, kwargs))
