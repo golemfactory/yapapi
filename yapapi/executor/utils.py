@@ -44,7 +44,7 @@ class AsyncWrapper:
                 def raise_interrupt(ke_):
                     raise ke_
 
-                asyncio.get_running_loop().call_soon(raise_interrupt, ke)
+                asyncio.get_event_loop().call_soon(raise_interrupt, ke)
             except asyncio.CancelledError:
                 logger.debug("AsyncWrapper's worker task cancelled")
                 break
