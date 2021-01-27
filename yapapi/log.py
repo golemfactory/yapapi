@@ -200,9 +200,9 @@ def log_event_repr(event: events.Event) -> None:
 
 @dataclass(frozen=True)
 class ProviderInfo:
-    provider_id: str
-    provider_name: str
-    provider_subnet: Optional[str]
+    id: str
+    name: str
+    subnet_tag: Optional[str]
 
 
 class SummaryLogger:
@@ -311,12 +311,12 @@ class SummaryLogger:
             num_providers,
         )
         for info, tasks in self.provider_tasks.items():
-            self.logger.info("Provider '%s' computed %d tasks", info.provider_name, len(tasks))
+            self.logger.info("Provider '%s' computed %d tasks", info.name, len(tasks))
         for info in set(self.agreement_provider_info.values()):
             if info not in self.provider_tasks:
-                self.logger.info("Provider '%s' did not compute any tasks", info.provider_name)
+                self.logger.info("Provider '%s' did not compute any tasks", info.name)
         for info, num in self.provider_failures.items():
-            self.logger.info("Activity failed %d time(s) on provider '%s'", num, info.provider_name)
+            self.logger.info("Activity failed %d time(s) on provider '%s'", num, info.name)
 
     def _print_total_cost(self, partial: bool = False) -> None:
         """Print the sum of all accepted invoices."""
@@ -397,7 +397,7 @@ class SummaryLogger:
         elif isinstance(event, events.AgreementConfirmed):
             self.logger.info(
                 "Agreement confirmed by provider '%s'",
-                self.agreement_provider_info[event.agr_id].provider_name,
+                self.agreement_provider_info[event.agr_id].name,
             )
             self.confirmed_agreements.add(event.agr_id)
 
@@ -408,7 +408,7 @@ class SummaryLogger:
             provider_info = self.agreement_provider_info[event.agr_id]
             self.logger.info(
                 "Task sent to provider '%s', task data: %s",
-                provider_info.provider_name,
+                provider_info.name,
                 self.task_data[event.task_id] if event.task_id else "<initialization>",
             )
 
@@ -416,7 +416,7 @@ class SummaryLogger:
             provider_info = self.agreement_provider_info[event.agr_id]
             self.logger.info(
                 "Task computed by provider '%s', task data: %s",
-                provider_info.provider_name,
+                provider_info.name,
                 self.task_data[event.task_id] if event.task_id else "<initialization>",
             )
             if event.task_id:
@@ -443,7 +443,7 @@ class SummaryLogger:
             self.provider_failures[provider_info] += 1
             reason = str(exc) or repr(exc) or "unexpected error"
             self.logger.warning(
-                "Activity failed on provider '%s', reason: %s", provider_info.provider_name, reason
+                "Activity failed on provider '%s', reason: %s", provider_info.name, reason
             )
 
         elif isinstance(event, events.ComputationFinished):
