@@ -1,5 +1,4 @@
 """Unit tests for code that selects payment platforms based on driver/network specification."""
-import os
 from unittest import mock
 
 import pytest
