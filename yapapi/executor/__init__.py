@@ -51,7 +51,7 @@ else:
 DEBIT_NOTE_MIN_TIMEOUT: Final[int] = 30  # in seconds
 "Shortest debit note acceptance timeout the requestor will accept."
 
-DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: Final[str] = "golem.com.payment.debit-notes.acceptance-timeout"
+DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: Final[str] = "golem.com.payment.debit-notes.accept-timeout?"
 
 CFG_INVOICE_TIMEOUT: Final[timedelta] = timedelta(minutes=5)
 "Time to receive invoice from provider after tasks ended."
