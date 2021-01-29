@@ -12,7 +12,7 @@ from yapapi import (
     WorkContext,
     windows_event_loop_fix,
 )
-from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
+from yapapi.log import enable_default_logger, log_summary, log_event  # noqa
 from yapapi.package import vm
 from yapapi.rest.activity import BatchTimeoutError
 
@@ -100,7 +100,7 @@ async def main(subnet_tag, driver=None, network=None):
         subnet_tag=subnet_tag,
         driver=driver,
         network=network,
-        event_consumer=log_summary(log_event_repr),
+        event_consumer=log_summary(log_event),
     ) as executor:
 
         sys.stderr.write(
@@ -141,10 +141,15 @@ if __name__ == "__main__":
     try:
         loop.run_until_complete(task)
     except NoPaymentAccountError as e:
+        handbook_url = (
+            "https://handbook.golem.network/requestor-tutorials/"
+            "flash-tutorial-of-requestor-development"
+        )
         print(
             f"{TEXT_COLOR_RED}"
             f"No payment account initialized for driver `{e.required_driver}` "
-            f"and network `{e.required_network}`. Did you run `yagna payment init -r`?"
+            f"and network `{e.required_network}`.\n\n"
+            f"See {handbook_url} on how to initialize payment accounts for a requestor node."
             f"{TEXT_COLOR_DEFAULT}"
         )
     except KeyboardInterrupt:
