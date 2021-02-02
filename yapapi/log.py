@@ -170,30 +170,22 @@ _check_event_type_to_string()
 
 
 def log_event(event: events.Event) -> None:
-    """Log an event in human-readable representation."""
+    """Log `event` with a human-readable description."""
 
     loglevel = logging.DEBUG
-
-    def _format(obj: Any, max_len: int = 200) -> str:
-        # This will also escape control characters, in particular,
-        # newline characters in `obj` will be replaced by r"\n".
-        text = repr(obj)
-        if len(text) > max_len:
-            text = text[: max_len - 3] + "..."
-        return text
 
     if not event_logger.isEnabledFor(loglevel):
         return
 
-    msg = event_type_to_string[type(event)]
-    info = "; ".join(f"{name} = {_format(value)}" for name, value in asdict(event).items())
-    if info:
-        msg += "; " + info
-    event_logger.log(loglevel, msg)
+    exc_info, _ = event.extract_exc_info()
+    descr = event_type_to_string[type(event)]
+    msg = "; ".join([descr, *(f"{name} = {value}" for name, value in event.__dict__.items())])
+    event_logger.log(loglevel, msg, exc_info=exc_info)
 
 
 def log_event_repr(event: events.Event) -> None:
-    """Log the result of calling `__repr__()` for the `event`."""
+    """Log the result of calling `repr(event)`."""
+
     exc_info, _ = event.extract_exc_info()
     event_logger.debug("%r", event, exc_info=exc_info)
 

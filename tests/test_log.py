@@ -37,7 +37,6 @@ def test_log_file_encoding(capsys):
         os.unlink(tmp_file.name)
 
 
-@pytest.mark.skip("See https://github.com/golemfactory/yapapi/issues/227")
 def test_log_event_emit_traceback():
     """Test that `log.log_event()` can emit logs for events containing tracebacks arguments."""
 
