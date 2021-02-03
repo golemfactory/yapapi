@@ -43,15 +43,17 @@ as an argument to `log_summary`:
 """
 from asyncio import CancelledError
 from collections import defaultdict, Counter
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import itertools
 import logging
+import os
+import sys
 import time
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set
 
 import yapapi.executor.events as events
-
+from yapapi import __version__ as yapapi_version
 
 event_logger = logging.getLogger("yapapi.events")
 executor_logger = logging.getLogger("yapapi.executor")
@@ -88,7 +90,13 @@ def enable_default_logger(
         file_handler.setLevel(logging.DEBUG)
         logger.addHandler(file_handler)
 
-        executor_logger.info(
+        logger.debug(
+            "Yapapi version: %s, script: %s, working directory: %s",
+            yapapi_version,
+            sys.argv[0],
+            os.getcwd(),
+        )
+        logger.info(
             "Using log file `%s`; in case of errors look for additional information there", log_file
         )
 

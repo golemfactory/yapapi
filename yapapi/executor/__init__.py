@@ -131,6 +131,7 @@ class Executor(AsyncContextManager):
         :param event_consumer: a callable that processes events related to the
             computation; by default it is a function that logs all events
         """
+        logger.debug("Creating Executor instance; parameters: %s", locals())
 
         self._subnet: Optional[str] = subnet_tag
         self._driver = driver.lower() if driver else DEFAULT_DRIVER
@@ -151,6 +152,7 @@ class Executor(AsyncContextManager):
             from ..log import log_event_repr
 
             event_consumer = log_event_repr
+
         # Add buffering to the provided event emitter to make sure
         # that emitting events will not block
         self._wrapped_consumer = AsyncWrapper(event_consumer)
