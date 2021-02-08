@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
-from datetime import timedelta
+from datetime import datetime, timedelta
 import pathlib
 import sys
 
@@ -12,7 +12,7 @@ from yapapi import (
     WorkContext,
     windows_event_loop_fix,
 )
-from yapapi.log import enable_default_logger, log_summary, log_event  # noqa
+from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.package import vm
 from yapapi.rest.activity import BatchTimeoutError
 
@@ -100,7 +100,7 @@ async def main(subnet_tag, driver=None, network=None):
         subnet_tag=subnet_tag,
         driver=driver,
         network=network,
-        event_consumer=log_summary(log_event),
+        event_consumer=log_summary(log_event_repr),
     ) as executor:
 
         sys.stderr.write(
@@ -110,12 +110,22 @@ async def main(subnet_tag, driver=None, network=None):
             f"and network: {TEXT_COLOR_YELLOW}{executor.network}{TEXT_COLOR_DEFAULT}\n"
         )
 
+        num_tasks = 0
+        start_time = datetime.now()
+
         async for task in executor.submit(worker, [Task(data=frame) for frame in frames]):
+            num_tasks += 1
             print(
                 f"{TEXT_COLOR_CYAN}"
                 f"Task computed: {task}, result: {task.result}, time: {task.running_time}"
                 f"{TEXT_COLOR_DEFAULT}"
             )
+
+        print(
+            f"{TEXT_COLOR_CYAN}"
+            f"{num_tasks} tasks computed, total time: {datetime.now() - start_time}"
+            f"{TEXT_COLOR_DEFAULT}"
+        )
 
 
 if __name__ == "__main__":
