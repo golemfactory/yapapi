@@ -461,8 +461,7 @@ class SummaryLogger:
             self._print_total_cost()
             self.provider_cost = {}
             if not event.exc_info:
-                total_time = time.time() - self.start_time
-                self.logger.info(f"Executor shut down, total time: {total_time:.1f}s")
+                self.logger.info(f"Executor has shut down")
             else:
                 _exc_type, exc, _tb = event.exc_info
                 reason = str(exc) or repr(exc) or "unexpected error"

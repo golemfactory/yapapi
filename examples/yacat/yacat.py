@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
-from datetime import timedelta
+from datetime import datetime, timedelta
 import pathlib
 import sys
 
@@ -113,6 +113,8 @@ async def main(args):
         )
 
         keyspace_computed = False
+        start_time = datetime.now()
+
         # This is not a typical use of executor.submit as there is only one task, with no data:
         async for _task in executor.submit(worker_check_keyspace, [Task(data=None)]):
             keyspace_computed = True
@@ -146,6 +148,8 @@ async def main(args):
             print(f"{TEXT_COLOR_RED}No password found{TEXT_COLOR_DEFAULT}")
         else:
             print(f"{TEXT_COLOR_GREEN}Password found: {password}{TEXT_COLOR_DEFAULT}")
+
+        print(f"{TEXT_COLOR_CYAN}Total time: {datetime.now() - start_time}{TEXT_COLOR_DEFAULT}")
 
 
 if __name__ == "__main__":
