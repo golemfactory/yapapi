@@ -19,7 +19,7 @@ def build_parser(description: str):
     parser.add_argument("--driver", help="Payment driver name, for example `zksync`")
     parser.add_argument("--network", help="Network name, for example `rinkeby`")
     parser.add_argument(
-        "--subnet-tag", default="devnet-alpha.4", help="Subnet name; default: %(default)s"
+        "--subnet-tag", default="community.4", help="Subnet name; default: %(default)s"
     )
     parser.add_argument(
         "--log-file", default=None, help="Log file for YAPAPI; default: %(default)s"

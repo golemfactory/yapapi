@@ -35,8 +35,10 @@ class AsyncWrapper:
         while True:
             try:
                 (args, kwargs) = await self._args_buffer.get()
-                self._wrapped(*args, **kwargs)
-                self._args_buffer.task_done()
+                try:
+                    self._wrapped(*args, **kwargs)
+                finally:
+                    self._args_buffer.task_done()
             except KeyboardInterrupt as ke:
                 # Don't stop on KeyboardInterrupt, but pass it to the event loop
                 logger.debug("Caught KeybordInterrupt in AsyncWrapper's worker task")
@@ -48,13 +50,18 @@ class AsyncWrapper:
             except asyncio.CancelledError:
                 logger.debug("AsyncWrapper's worker task cancelled")
                 break
+            except Exception:
+                logger.exception("Unhandled exception in wrapped callable")
 
     async def stop(self) -> None:
-        await self._args_buffer.join()
+        """Stop the wrapper, process queued calls but do not accept any new ones."""
         if self._task:
-            self._task.cancel()
-            await asyncio.gather(self._task, return_exceptions=True)
+            # Set self._task to None so we don't accept any more calls in `async_call()`
+            worker_task = self._task
             self._task = None
+            await self._args_buffer.join()
+            worker_task.cancel()
+            await asyncio.gather(worker_task, return_exceptions=True)
 
     def async_call(self, *args, **kwargs) -> None:
         """Schedule an asynchronous call to the wrapped callable."""
