@@ -41,7 +41,12 @@ from .. import rest
 from ..rest.activity import CommandExecutionError
 from ..storage import gftp
 from ._smartq import SmartQueue, Handle
-from .strategy import LeastExpensiveLinearPayuMS, MarketStrategy, SCORE_NEUTRAL
+from .strategy import (
+    DecreaseScoreForUnconfirmedAgreement,
+    LeastExpensiveLinearPayuMS,
+    MarketStrategy,
+    SCORE_NEUTRAL,
+)
 
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
@@ -108,7 +113,7 @@ class Executor(AsyncContextManager):
         max_workers: int = 5,
         timeout: timedelta = timedelta(minutes=5),
         budget: Union[float, Decimal],
-        strategy: MarketStrategy = LeastExpensiveLinearPayuMS(),
+        strategy: Optional[MarketStrategy] = None,
         subnet_tag: Optional[str] = None,
         driver: Optional[str] = None,
         network: Optional[str] = None,
@@ -137,7 +142,12 @@ class Executor(AsyncContextManager):
         self._driver = driver.lower() if driver else DEFAULT_DRIVER
         self._network = network.lower() if network else DEFAULT_NETWORK
         self._stream_output = True
-        self._strategy = strategy
+        self._strategy = (
+            # The factor 0.5 below means that an offer for a provider that failed to confirm
+            # the last agreement proposed to them will have it's score multiplied by 0.5.
+            strategy
+            or DecreaseScoreForUnconfirmedAgreement(LeastExpensiveLinearPayuMS(), 0.5)
+        )
         self._api_config = rest.Configuration()
         self._stack = AsyncExitStack()
         self._package = package
@@ -346,7 +356,7 @@ class Executor(AsyncContextManager):
                     emit(events.ProposalReceived(prop_id=proposal.id, provider_id=proposal.issuer))
                     offers_collected += 1
                     try:
-                        score = await strategy.score_offer(proposal)
+                        score = await strategy.score_offer(proposal, agreements_pool)
                         logger.debug(
                             "Scored offer %s, provider: %s, strategy: %s, score: %f",
                             proposal.id,
