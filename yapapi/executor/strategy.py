@@ -142,6 +142,7 @@ class DecreaseScoreForUnconfirmedAgreement(MarketStrategy):
     def __init__(self, base_strategy, factor):
         self._base_strategy = base_strategy
         self._factor = factor
+        self._logger = logging.getLogger(f"{__name__}.{type(self).__name__}")
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
         """Decorate `demand` using the base strategy."""
@@ -157,5 +158,6 @@ class DecreaseScoreForUnconfirmedAgreement(MarketStrategy):
         """
         score = await self._base_strategy.score_offer(offer)
         if history and history.last_agreement_rejected(offer.issuer):
+            self._logger.debug("Decreasing score for offer %s from '%s'", offer.id, offer.issuer)
             score *= self._factor
         return score
