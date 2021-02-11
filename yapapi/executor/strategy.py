@@ -7,11 +7,12 @@ from types import MappingProxyType
 from typing import Mapping, Optional
 
 from dataclasses import dataclass, field
-from typing_extensions import Final
+from typing_extensions import Final, Protocol
 
 from ..props import com, Activity
 from ..props.builder import DemandBuilder
 from .. import rest
+from .agreements_pool import AgreementsPool
 
 
 SCORE_NEUTRAL: Final[float] = 0.0
@@ -23,13 +24,23 @@ CFF_DEFAULT_PRICE_FOR_COUNTER: Final[Mapping[com.Counter, Decimal]] = MappingPro
 )
 
 
+class ComputationHistory(Protocol):
+    """A protocol for objects that provide information about the history of current computation."""
+
+    def last_agreement_rejected(self, issuer_id) -> bool:
+        """Return True iff the previous agreement proposed to `issuer_id` has been rejected."""
+        ...
+
+
 class MarketStrategy(abc.ABC):
     """Abstract market strategy."""
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
         """Optionally add relevant constraints to a Demand."""
 
-    async def score_offer(self, offer: rest.market.OfferProposal) -> float:
+    async def score_offer(
+        self, offer: rest.market.OfferProposal, history: Optional[ComputationHistory] = None
+    ) -> float:
         """Score `offer`. Better offers should get higher scores."""
         return SCORE_REJECTED
 
@@ -52,7 +63,9 @@ class DummyMS(MarketStrategy, object):
         demand.ensure(f"({com.PRICE_MODEL}={com.PriceModel.LINEAR.value})")
         self._activity = Activity.from_properties(demand.properties)
 
-    async def score_offer(self, offer: rest.market.OfferProposal) -> float:
+    async def score_offer(
+        self, offer: rest.market.OfferProposal, history: Optional[ComputationHistory] = None
+    ) -> float:
         """Score `offer`. Returns either `SCORE_REJECTED` or `SCORE_NEUTRAL`."""
 
         linear: com.ComLinear = com.ComLinear.from_properties(offer.props)
@@ -83,7 +96,9 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
         """Ensure that the offer uses `PriceModel.LINEAR` price model."""
         demand.ensure(f"({com.PRICE_MODEL}={com.PriceModel.LINEAR.value})")
 
-    async def score_offer(self, offer: rest.market.OfferProposal) -> float:
+    async def score_offer(
+        self, offer: rest.market.OfferProposal, history: Optional[ComputationHistory] = None
+    ) -> float:
         """Score `offer` according to cost for expected computation time."""
 
         linear: com.ComLinear = com.ComLinear.from_properties(offer.props)
@@ -115,4 +130,32 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
         # The higher the expected price value, the lower the score.
         # The score is always lower than SCORE_TRUSTED and is always higher than 0.
         score = SCORE_TRUSTED * 1.0 / (expected_price + 1.01)
+        return score
+
+
+class DecreaseScoreForUnconfirmedAgreement(MarketStrategy):
+    """A market strategy that modifies a base strategy based on history of agreements."""
+
+    _base_strategy: MarketStrategy
+    _factor: float
+
+    def __init__(self, base_strategy, factor):
+        self._base_strategy = base_strategy
+        self._factor = factor
+
+    async def decorate_demand(self, demand: DemandBuilder) -> None:
+        """Decorate `demand` using the base strategy."""
+        await self._base_strategy.decorate_demand(demand)
+
+    async def score_offer(
+        self, offer: rest.market.OfferProposal, history: Optional[ComputationHistory] = None
+    ) -> float:
+        """Score `offer` using the base strategy and apply penalty if needed.
+
+        If the offer issuer failed to approve the previous agreement (if any)
+        then the base score is multiplied by `self._factor`.
+        """
+        score = await self._base_strategy.score_offer(offer)
+        if history and history.last_agreement_rejected(offer.issuer):
+            score *= self._factor
         return score
