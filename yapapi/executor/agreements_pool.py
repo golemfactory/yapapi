@@ -133,7 +133,7 @@ class AgreementsPool:
             emit(events.AgreementRejected(agr_id=agreement.id))
             self._failed_agreements.add(provider_id)
             return None
-        self._failed_agreements.remove(provider_id)
+        self._failed_agreements.discard(provider_id)
         self._agreements[agreement.id] = BufferedAgreement(
             agreement=agreement,
             node_info=node_info,
