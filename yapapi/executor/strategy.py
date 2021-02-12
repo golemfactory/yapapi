@@ -12,7 +12,6 @@ from typing_extensions import Final, Protocol
 from ..props import com, Activity
 from ..props.builder import DemandBuilder
 from .. import rest
-from .agreements_pool import AgreementsPool
 
 
 SCORE_NEUTRAL: Final[float] = 0.0
@@ -27,7 +26,7 @@ CFF_DEFAULT_PRICE_FOR_COUNTER: Final[Mapping[com.Counter, Decimal]] = MappingPro
 class ComputationHistory(Protocol):
     """A protocol for objects that provide information about the history of current computation."""
 
-    def last_agreement_rejected(self, issuer_id) -> bool:
+    def rejected_last_agreement(self, issuer_id) -> bool:
         """Return True iff the previous agreement proposed to `issuer_id` has been rejected."""
         ...
 
@@ -157,7 +156,7 @@ class DecreaseScoreForUnconfirmedAgreement(MarketStrategy):
         then the base score is multiplied by `self._factor`.
         """
         score = await self._base_strategy.score_offer(offer)
-        if history and history.last_agreement_rejected(offer.issuer):
+        if history and history.rejected_last_agreement(offer.issuer) and score > 0:
             self._logger.debug("Decreasing score for offer %s from '%s'", offer.id, offer.issuer)
             score *= self._factor
         return score
