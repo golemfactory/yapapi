@@ -41,8 +41,8 @@ class AgreementsPool:
         self._offer_buffer: Dict[str, _BufferedProposal] = {}  # provider_id -> Proposal
         self._agreements: Dict[str, BufferedAgreement] = {}  # agreement_id -> Agreement
         self._lock = asyncio.Lock()
-        # The set of provider ids for which agreement creation failed
-        self._failed_agreements: Set[str] = set()
+        # The set of provider ids for which the last agreement creation failed
+        self._rejecting_providers: Set[str] = set()
         self.confirmed = 0
 
     async def cycle(self):
@@ -131,9 +131,9 @@ class AgreementsPool:
         )
         if not await agreement.confirm():
             emit(events.AgreementRejected(agr_id=agreement.id))
-            self._failed_agreements.add(provider_id)
+            self._rejecting_providers.add(provider_id)
             return None
-        self._failed_agreements.discard(provider_id)
+        self._rejecting_providers.discard(provider_id)
         self._agreements[agreement.id] = BufferedAgreement(
             agreement=agreement,
             node_info=node_info,
@@ -207,6 +207,6 @@ class AgreementsPool:
             del self._agreements[agr_id]
             self.emitter(events.AgreementTerminated(agr_id=agr_id, reason=reason))
 
-    def last_agreement_rejected(self, provider_id: str) -> bool:
+    def rejected_last_agreement(self, provider_id: str) -> bool:
         """Return `True` iff the last agreement proposed to `provider_id` has been rejected."""
-        return provider_id in self._failed_agreements
+        return provider_id in self._rejecting_providers
