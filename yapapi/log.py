@@ -311,12 +311,14 @@ class SummaryLogger:
             num_providers,
         )
         for info, tasks in self.provider_tasks.items():
-            self.logger.info("Provider '%s' computed %d tasks", info.name, len(tasks))
+            self.logger.info("Provider '%s' computed %s", info.name, pluralize(len(tasks), "task"))
         for info in set(self.agreement_provider_info.values()):
             if info not in self.provider_tasks:
                 self.logger.info("Provider '%s' did not compute any tasks", info.name)
         for info, num in self.provider_failures.items():
-            self.logger.info("Activity failed %d time(s) on provider '%s'", num, info.name)
+            self.logger.info(
+                "Activity failed %s on provider '%s'", pluralize(num, "time"), info.name
+            )
 
     def _print_total_cost(self, partial: bool = False) -> None:
         """Print the sum of all accepted invoices."""
@@ -365,7 +367,7 @@ class SummaryLogger:
                 self.received_proposals[prop_id] for prop_id in self.confirmed_proposals
             )
             self.logger.info(
-                "Received proposals from %s providers so far", len(confirmed_providers)
+                "Received proposals from %s so far", pluralize(len(confirmed_providers), "provider")
             )
 
         elif isinstance(event, events.NoProposalsConfirmed):
@@ -377,8 +379,8 @@ class SummaryLogger:
                 )
             else:
                 msg = (
-                    f"{event.num_offers} offers have been collected from the market, but"
-                    f" no provider has responded for {self.time_waiting_for_proposals.seconds}s."
+                    f"{pluralize(event.num_offers, 'offer')} have been collected from the market, "
+                    f"but no provider has responded for {self.time_waiting_for_proposals.seconds}s."
                 )
             msg += (
                 " Make sure you're using the latest released versions of yagna and yapapi,"
@@ -427,13 +429,16 @@ class SummaryLogger:
             cost = self.provider_cost.get(provider_info, 0.0)
             cost += float(event.amount)
             self.provider_cost[provider_info] = cost
+            self.logger.info("Accepted invoice from '%s', amount: %f", provider_info.name, cost)
 
         elif isinstance(event, events.PaymentFailed):
             assert event.exc_info
             _exc_type, exc, _tb = event.exc_info
             provider_info = self.agreement_provider_info[event.agr_id]
             reason = str(exc) or repr(exc) or "unexpected error"
-            self.logger.error("Payment for provider '%s' failed, reason: %s", provider_info, reason)
+            self.logger.error(
+                "Failed to accept invoice from '%s', reason: %s", provider_info, reason
+            )
 
         elif isinstance(event, events.WorkerFinished):
             if event.exc_info is None or self.cancelled:
@@ -478,3 +483,8 @@ def log_summary(wrapped_emitter: Optional[Callable[[events.Event], None]] = None
     """
     summary_logger = SummaryLogger(wrapped_emitter)
     return summary_logger.log
+
+
+def pluralize(num: int, thing: str) -> str:
+    """Return the string f"1 {thing}" or f"{num} {thing}s", depending on `num`."""
+    return f"1 {thing}" if num == 1 else f"{num} {thing}s"
