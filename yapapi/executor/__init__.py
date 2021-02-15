@@ -3,6 +3,7 @@ An implementation of the new Golem's task executor.
 """
 import asyncio
 from asyncio import CancelledError
+import contextlib
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import logging
@@ -210,9 +211,7 @@ class Executor(AsyncContextManager):
         services: Set[asyncio.Task],
         workers: Set[asyncio.Task],
     ) -> AsyncIterator[Task[D, R]]:
-        import contextlib
 
-        stack = self._stack
         emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
 
         multi_payment_decoration = await self._create_allocations()
@@ -597,10 +596,9 @@ class Executor(AsyncContextManager):
             cancelled = True
 
         finally:
+            # Importing this at the beginning would cause circular dependencies
+            from ..log import pluralize
 
-            # When cancelled emit logs with higher priority, so e.g. after
-            # hitting Ctrl+C the user sees shutdown progress on the console
-            log_level = logging.INFO if cancelled else logging.DEBUG
             payment_closing = True
             for task in services:
                 if task is not process_invoices_job:
@@ -619,12 +617,15 @@ class Executor(AsyncContextManager):
                 }
 
             if workers:
-                logger.log(log_level, "Waiting for %d workers to finish...", len(workers))
-                await asyncio.wait(
-                    workers.union(services), timeout=10, return_when=asyncio.ALL_COMPLETED
+                _, pending = await asyncio.wait(
+                    workers, timeout=1, return_when=asyncio.ALL_COMPLETED
                 )
+                if pending:
+                    logger.info("Waiting for %s to finish...", pluralize(len(pending), "worker"))
+                    await asyncio.wait(workers, timeout=9, return_when=asyncio.ALL_COMPLETED)
 
             try:
+                logger.debug("Terminating agreements...")
                 await agreements_pool.terminate(reason=reason)
             except Exception:
                 logger.debug("Problem with agreements termination", exc_info=True)
@@ -632,27 +633,28 @@ class Executor(AsyncContextManager):
                     traceback.print_exc()
 
             try:
-                logger.log(log_level, "Waiting for all services to finish...")
+                logger.info("Waiting for all services to finish...")
                 _, pending = await asyncio.wait(
                     workers.union(services), timeout=10, return_when=asyncio.ALL_COMPLETED
                 )
                 if pending:
-                    logger.debug("Services still running: %s", pending)
+                    logger.debug(
+                        "%s still running: %s", pluralize(len(pending), "service"), pending
+                    )
             except Exception:
                 if self._conf.traceback:
                     traceback.print_exc()
 
             if agreements_to_pay:
-                logger.log(
-                    log_level,
-                    "%d agreements still unpaid, waiting for invoices...",
-                    len(agreements_to_pay),
+                logger.info(
+                    "%s still unpaid, waiting for invoices...",
+                    pluralize(len(agreements_to_pay), "agreement"),
                 )
                 await asyncio.wait(
-                    {process_invoices_job}, timeout=20, return_when=asyncio.ALL_COMPLETED
+                    {process_invoices_job}, timeout=30, return_when=asyncio.ALL_COMPLETED
                 )
                 if agreements_to_pay:
-                    logger.warning("Unpaid agreements  %s", agreements_to_pay)
+                    logger.warning("Unpaid agreements: %s", agreements_to_pay)
 
     async def _create_allocations(self) -> rest.payment.MarketDecoration:
 
