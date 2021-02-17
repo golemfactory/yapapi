@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
-from datetime import timedelta
+from datetime import datetime, timedelta
 import pathlib
 import sys
 
@@ -113,6 +113,8 @@ async def main(args):
         )
 
         keyspace_computed = False
+        start_time = datetime.now()
+
         # This is not a typical use of executor.submit as there is only one task, with no data:
         async for _task in executor.submit(worker_check_keyspace, [Task(data=None)]):
             keyspace_computed = True
@@ -147,6 +149,8 @@ async def main(args):
         else:
             print(f"{TEXT_COLOR_GREEN}Password found: {password}{TEXT_COLOR_DEFAULT}")
 
+        print(f"{TEXT_COLOR_CYAN}Total time: {datetime.now() - start_time}{TEXT_COLOR_DEFAULT}")
+
 
 if __name__ == "__main__":
     parser = build_parser("yacat")
@@ -168,10 +172,15 @@ if __name__ == "__main__":
     try:
         loop.run_until_complete(task)
     except NoPaymentAccountError as e:
+        handbook_url = (
+            "https://handbook.golem.network/requestor-tutorials/"
+            "flash-tutorial-of-requestor-development"
+        )
         print(
             f"{TEXT_COLOR_RED}"
             f"No payment account initialized for driver `{e.required_driver}` "
-            f"and network `{e.required_network}`. Did you run `yagna payment init -r`?"
+            f"and network `{e.required_network}`.\n\n"
+            f"See {handbook_url} on how to initialize payment accounts for a requestor node."
             f"{TEXT_COLOR_DEFAULT}"
         )
     except KeyboardInterrupt:

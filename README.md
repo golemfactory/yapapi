@@ -8,34 +8,34 @@
 
 ## What's Golem, btw?
 
-[Golem](https://golem.network) is a global, open-source, decentralized supercomputer 
-that anyone can access. It connects individual machines - be that laptops, home PCs or 
-even data centers - to form a vast network, the purpose of which is to provide a way to 
-distribute computations to its provider nodes and allow requestors to utilize its unique 
-potential - which can lie in its combined computing power, the geographical distribution 
+[Golem](https://golem.network) is a global, open-source, decentralized supercomputer
+that anyone can access. It connects individual machines - be that laptops, home PCs or
+even data centers - to form a vast network, the purpose of which is to provide a way to
+distribute computations to its provider nodes and allow requestors to utilize its unique
+potential - which can lie in its combined computing power, the geographical distribution
 or its censorship resistance.
 
 ## Golem's requestor setup
 
 Golem's requestor-side configuration consists of two separate components:
-* the [`yagna` daemon](https://github.com/golemfactory/yagna) - your node in the 
-  new Golem network, responsible for communication with the other nodes, running the 
+* the [`yagna` daemon](https://github.com/golemfactory/yagna) - your node in the
+  new Golem network, responsible for communication with the other nodes, running the
   market and providing easy access to the payment mechanisms.
 * the requestor agent - the part that the developer of the specific Golem application
   is responsible for.
 
-The daemon and the requestor agent communicate using three REST APIs which 
-`yapapi` - Golem's Python high-level API - aims to abstract to large extent to make 
+The daemon and the requestor agent communicate using three REST APIs which
+`yapapi` - Golem's Python high-level API - aims to abstract to large extent to make
 application development on Golem as easy as possible.
 
 ## How to use this API?
 
-Assuming you have your Golem node up and running (you can find instructions on how to 
-do that in the [yagna repository](https://github.com/golemfactory/yagna) and in our 
+Assuming you have your Golem node up and running (you can find instructions on how to
+do that in the [yagna repository](https://github.com/golemfactory/yagna) and in our
 [handbook](https://handbook.golem.network)), what you need to do is:
 * **prepare your payload** - this needs to be a Docker image containing your application
   that will be executed on the provider's end. This image needs to have its volumes
-  mapped in a way that will allow the supervisor module to exchange data (write and 
+  mapped in a way that will allow the supervisor module to exchange data (write and
   read files) with it. This image needs to be packed and uploaded into Golem's image repository
   using our dedicated tool - [`gvmkit-build`](https://pypi.org/project/gvmkit-build/).
 * **create your requestor agent** - this is where `yapapi` comes in. Utilizing our high-level
@@ -58,8 +58,8 @@ Finally, you feed it the worker script and a list of `Task` objects to execute o
 The `worker` will most likely be the very core of your requestor app. You need to define
 this function in your agent code and then you pass it to the Executor.
 
-It receives a `WorkContext` (`yapapi.WorkContext`) object that serves 
-as an interface between your script and the execution unit within the provider. 
+It receives a `WorkContext` (`yapapi.WorkContext`) object that serves
+as an interface between your script and the execution unit within the provider.
 Using the work context, you define the steps that the provider needs to execute in order
 to complete the job you're giving them - e.g. transferring files to and from the provider
 or running commands within the execution unit on the provider's end.
@@ -80,7 +80,7 @@ to carry out.
 
 The Executor will feed an instance of your worker - bound to a single provider node -
 with `Task` objects. The worker will be responsible for completing those tasks. Typically,
-it will turn each task into a sequence of steps to be executed in a single run 
+it will turn each task into a sequence of steps to be executed in a single run
 of the execution script on a provider's machine, in order to compute the task's result.
 
 
@@ -154,7 +154,7 @@ async def main(subnet_tag: str):
 
 enable_default_logger()
 loop = asyncio.get_event_loop()
-task = loop.create_task(main(subnet_tag="community.3"))
+task = loop.create_task(main(subnet_tag="devnet-alpha.4"))
 try:
     asyncio.get_event_loop().run_until_complete(task)
 except (Exception, KeyboardInterrupt) as e:

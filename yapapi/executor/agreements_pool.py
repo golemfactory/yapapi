@@ -122,7 +122,11 @@ class AgreementsPool:
         requestor_activity = agreement_details.requestor_view.extract(Activity)
         node_info = agreement_details.provider_view.extract(NodeInfo)
         logger.debug("New agreement. id: %s, provider: %s", agreement.id, node_info)
-        emit(events.AgreementCreated(agr_id=agreement.id, provider_id=node_info))
+        emit(
+            events.AgreementCreated(
+                agr_id=agreement.id, provider_id=provider_id, provider_info=node_info
+            )
+        )
         if not await agreement.confirm():
             emit(events.AgreementRejected(agr_id=agreement.id))
             return None

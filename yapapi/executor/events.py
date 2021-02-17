@@ -109,7 +109,8 @@ class AgreementEvent(Event):
 
 @dataclass
 class AgreementCreated(AgreementEvent):
-    provider_id: NodeInfo
+    provider_id: str
+    provider_info: NodeInfo
 
 
 @dataclass

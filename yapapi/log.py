@@ -43,15 +43,17 @@ as an argument to `log_summary`:
 """
 from asyncio import CancelledError
 from collections import defaultdict, Counter
-from dataclasses import asdict
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import itertools
 import logging
+import os
+import sys
 import time
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set
 
 import yapapi.executor.events as events
-
+from yapapi import __version__ as yapapi_version
 
 event_logger = logging.getLogger("yapapi.events")
 executor_logger = logging.getLogger("yapapi.executor")
@@ -83,12 +85,18 @@ def enable_default_logger(
     logger.addHandler(console_handler)
 
     if log_file:
-        file_handler = logging.FileHandler(filename=log_file, mode="w")
+        file_handler = logging.FileHandler(filename=log_file, mode="w", encoding="utf-8")
         file_handler.setFormatter(formatter)
         file_handler.setLevel(logging.DEBUG)
         logger.addHandler(file_handler)
 
-        executor_logger.info(
+        logger.debug(
+            "Yapapi version: %s, script: %s, working directory: %s",
+            yapapi_version,
+            sys.argv[0],
+            os.getcwd(),
+        )
+        logger.info(
             "Using log file `%s`; in case of errors look for additional information there", log_file
         )
 
@@ -112,20 +120,20 @@ event_type_to_string = {
     events.CollectFailed: "Failed to collect proposals for demand",
     events.NoProposalsConfirmed: "No proposals confirmed by providers",
     events.ProposalReceived: "Proposal received from the market",
-    events.ProposalRejected: "Proposal rejected",  # by who? alt: Rejected a proposal?
+    events.ProposalRejected: "Proposal rejected",
     events.ProposalResponded: "Responded to a proposal",
     events.ProposalFailed: "Failed to respond to proposal",
-    events.ProposalConfirmed: "Proposal confirmed by provider",  # ... negotiated with provider?
+    events.ProposalConfirmed: "Proposal confirmed by provider",
     events.AgreementCreated: "Agreement proposal sent to provider",
     events.AgreementConfirmed: "Agreement approved by provider",
     events.AgreementRejected: "Agreement rejected by provider",
     events.AgreementTerminated: "Agreement terminated",
     events.DebitNoteReceived: "Debit note received",
-    events.PaymentAccepted: "Payment accepted",  # by who?
+    events.PaymentAccepted: "Payment accepted",
     events.PaymentFailed: "Payment failed",
     events.PaymentPrepared: "Payment prepared",
     events.PaymentQueued: "Payment queued",
-    events.InvoiceReceived: "Invoice received",  # by who?
+    events.InvoiceReceived: "Invoice received",
     events.WorkerStarted: "Worker started for agreement",
     events.ActivityCreated: "Activity created on provider",
     events.ActivityCreateFailed: "Failed to create activity",
@@ -137,8 +145,8 @@ event_type_to_string = {
     events.CommandExecuted: "Script command executed",
     events.GettingResults: "Getting script results",
     events.ScriptFinished: "Script finished",
-    events.TaskAccepted: "Task accepted",  # by who?
-    events.TaskRejected: "Task rejected",  # by who?
+    events.TaskAccepted: "Task accepted",
+    events.TaskRejected: "Task rejected",
     events.WorkerFinished: "Worker finished",
     events.DownloadStarted: "Download started",
     events.DownloadFinished: "Download finished",
@@ -170,32 +178,31 @@ _check_event_type_to_string()
 
 
 def log_event(event: events.Event) -> None:
-    """Log an event in human-readable representation."""
+    """Log `event` with a human-readable description."""
 
     loglevel = logging.DEBUG
-
-    def _format(obj: Any, max_len: int = 200) -> str:
-        # This will also escape control characters, in particular,
-        # newline characters in `obj` will be replaced by r"\n".
-        text = repr(obj)
-        if len(text) > max_len:
-            text = text[: max_len - 3] + "..."
-        return text
 
     if not event_logger.isEnabledFor(loglevel):
         return
 
-    msg = event_type_to_string[type(event)]
-    info = "; ".join(f"{name} = {_format(value)}" for name, value in asdict(event).items())
-    if info:
-        msg += "; " + info
-    event_logger.log(loglevel, msg)
+    exc_info, _ = event.extract_exc_info()
+    descr = event_type_to_string[type(event)]
+    msg = "; ".join([descr, *(f"{name} = {value}" for name, value in event.__dict__.items())])
+    event_logger.log(loglevel, msg, exc_info=exc_info)
 
 
 def log_event_repr(event: events.Event) -> None:
-    """Log the result of calling `__repr__()` for the `event`."""
+    """Log the result of calling `repr(event)`."""
+
     exc_info, _ = event.extract_exc_info()
     event_logger.debug("%r", event, exc_info=exc_info)
+
+
+@dataclass(frozen=True)
+class ProviderInfo:
+    id: str
+    name: str
+    subnet_tag: Optional[str]
 
 
 class SummaryLogger:
@@ -233,8 +240,8 @@ class SummaryLogger:
     # Set of confirmed proposal ids
     confirmed_proposals: Set[str]
 
-    # Maps agreement ids to provider names
-    agreement_provider_name: Dict[str, str]
+    # Maps agreement ids to provider infos
+    agreement_provider_info: Dict[str, ProviderInfo]
 
     # Set of agreements confirmed by providers
     confirmed_agreements: Set[str]
@@ -242,14 +249,14 @@ class SummaryLogger:
     # Maps task id to task data
     task_data: Dict[str, Any]
 
-    # Maps a provider name to the list of task ids computed by the provider
-    provider_tasks: Dict[str, List[str]]
+    # Maps a provider info to the list of task ids computed by the provider
+    provider_tasks: Dict[ProviderInfo, List[str]]
 
-    # Map a provider name to the sum of amounts in this provider's invoices
-    provider_cost: Dict[str, float]
+    # Map a provider info to the sum of amounts in this provider's invoices
+    provider_cost: Dict[ProviderInfo, float]
 
     # Count how many times a worker failed on a provider
-    provider_failures: Dict[str, int]
+    provider_failures: Dict[ProviderInfo, int]
 
     # Has computation been cancelled?
     cancelled: bool
@@ -280,7 +287,7 @@ class SummaryLogger:
         self.start_time = time.time()
         self.received_proposals = {}
         self.confirmed_proposals = set()
-        self.agreement_provider_name = {}
+        self.agreement_provider_info = {}
         self.confirmed_agreements = set()
         self.task_data = {}
         self.provider_tasks = defaultdict(list)
@@ -295,21 +302,21 @@ class SummaryLogger:
 
         total_time = time.time() - self.start_time
         self.logger.info(f"Computation finished in {total_time:.1f}s")
-        agreement_providers = {
-            self.agreement_provider_name[agr_id] for agr_id in self.confirmed_agreements
-        }
+        num_providers = len(
+            {self.agreement_provider_info[agr_id] for agr_id in self.confirmed_agreements}
+        )
         self.logger.info(
             "Negotiated %d agreements with %d providers",
             len(self.confirmed_agreements),
-            len(agreement_providers),
+            num_providers,
         )
-        for provider_name, tasks in self.provider_tasks.items():
-            self.logger.info("Provider '%s' computed %d tasks", provider_name, len(tasks))
-        for provider_name in set(self.agreement_provider_name.values()):
-            if provider_name not in self.provider_tasks:
-                self.logger.info("Provider '%s' did not compute any tasks", provider_name)
-        for provider_name, count in self.provider_failures.items():
-            self.logger.info("Activity failed %d time(s) on provider '%s'", count, provider_name)
+        for info, tasks in self.provider_tasks.items():
+            self.logger.info("Provider '%s' computed %d tasks", info.name, len(tasks))
+        for info in set(self.agreement_provider_info.values()):
+            if info not in self.provider_tasks:
+                self.logger.info("Provider '%s' did not compute any tasks", info.name)
+        for info, num in self.provider_failures.items():
+            self.logger.info("Activity failed %d time(s) on provider '%s'", num, info.name)
 
     def _print_total_cost(self, partial: bool = False) -> None:
         """Print the sum of all accepted invoices."""
@@ -381,15 +388,16 @@ class SummaryLogger:
             self.logger.warning(msg)
 
         elif isinstance(event, events.AgreementCreated):
-            provider_name = event.provider_id.name
-            if not provider_name:
-                provider_name = f"provider-{next(self.numbers)}"
+            provider_name = event.provider_info.name or event.provider_id
             self.logger.info("Agreement proposed to provider '%s'", provider_name)
-            self.agreement_provider_name[event.agr_id] = provider_name
+            self.agreement_provider_info[event.agr_id] = ProviderInfo(
+                event.provider_id, provider_name, event.provider_info.subnet_tag
+            )
 
         elif isinstance(event, events.AgreementConfirmed):
             self.logger.info(
-                "Agreement confirmed by provider '%s'", self.agreement_provider_name[event.agr_id]
+                "Agreement confirmed by provider '%s'",
+                self.agreement_provider_info[event.agr_id].name,
             )
             self.confirmed_agreements.add(event.agr_id)
 
@@ -397,45 +405,45 @@ class SummaryLogger:
             self.task_data[event.task_id] = event.task_data
 
         elif isinstance(event, events.ScriptSent):
-            provider_name = self.agreement_provider_name[event.agr_id]
+            provider_info = self.agreement_provider_info[event.agr_id]
             self.logger.info(
                 "Task sent to provider '%s', task data: %s",
-                provider_name,
+                provider_info.name,
                 self.task_data[event.task_id] if event.task_id else "<initialization>",
             )
 
         elif isinstance(event, events.ScriptFinished):
-            provider_name = self.agreement_provider_name[event.agr_id]
+            provider_info = self.agreement_provider_info[event.agr_id]
             self.logger.info(
                 "Task computed by provider '%s', task data: %s",
-                provider_name,
+                provider_info.name,
                 self.task_data[event.task_id] if event.task_id else "<initialization>",
             )
             if event.task_id:
-                self.provider_tasks[provider_name].append(event.task_id)
+                self.provider_tasks[provider_info].append(event.task_id)
 
         elif isinstance(event, events.PaymentAccepted):
-            provider_name = self.agreement_provider_name[event.agr_id]
-            cost = self.provider_cost.get(provider_name, 0.0)
+            provider_info = self.agreement_provider_info[event.agr_id]
+            cost = self.provider_cost.get(provider_info, 0.0)
             cost += float(event.amount)
-            self.provider_cost[provider_name] = cost
+            self.provider_cost[provider_info] = cost
 
         elif isinstance(event, events.PaymentFailed):
             assert event.exc_info
             _exc_type, exc, _tb = event.exc_info
-            provider_name = self.agreement_provider_name[event.agr_id]
+            provider_info = self.agreement_provider_info[event.agr_id]
             reason = str(exc) or repr(exc) or "unexpected error"
-            self.logger.error("Payment for provider '%s' failed, reason: %s", provider_name, reason)
+            self.logger.error("Payment for provider '%s' failed, reason: %s", provider_info, reason)
 
         elif isinstance(event, events.WorkerFinished):
             if event.exc_info is None or self.cancelled:
                 return
             _exc_type, exc, _tb = event.exc_info
-            provider_name = self.agreement_provider_name[event.agr_id]
-            self.provider_failures[provider_name] += 1
+            provider_info = self.agreement_provider_info[event.agr_id]
+            self.provider_failures[provider_info] += 1
             reason = str(exc) or repr(exc) or "unexpected error"
             self.logger.warning(
-                "Activity failed on provider '%s', reason: %s", provider_name, reason
+                "Activity failed on provider '%s', reason: %s", provider_info.name, reason
             )
 
         elif isinstance(event, events.ComputationFinished):
@@ -453,8 +461,7 @@ class SummaryLogger:
             self._print_total_cost()
             self.provider_cost = {}
             if not event.exc_info:
-                total_time = time.time() - self.start_time
-                self.logger.info(f"Executor shut down, total time: {total_time:.1f}s")
+                self.logger.info(f"Executor has shut down")
             else:
                 _exc_type, exc, _tb = event.exc_info
                 reason = str(exc) or repr(exc) or "unexpected error"

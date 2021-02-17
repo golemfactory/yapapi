@@ -51,7 +51,7 @@ else:
 DEBIT_NOTE_MIN_TIMEOUT: Final[int] = 30  # in seconds
 "Shortest debit note acceptance timeout the requestor will accept."
 
-DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: Final[str] = "golem.com.payment.debit-notes.acceptance-timeout"
+DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: Final[str] = "golem.com.payment.debit-notes.accept-timeout?"
 
 CFG_INVOICE_TIMEOUT: Final[timedelta] = timedelta(minutes=5)
 "Time to receive invoice from provider after tasks ended."
@@ -131,6 +131,7 @@ class Executor(AsyncContextManager):
         :param event_consumer: a callable that processes events related to the
             computation; by default it is a function that logs all events
         """
+        logger.debug("Creating Executor instance; parameters: %s", locals())
 
         self._subnet: Optional[str] = subnet_tag
         self._driver = driver.lower() if driver else DEFAULT_DRIVER
@@ -148,9 +149,10 @@ class Executor(AsyncContextManager):
         if not event_consumer:
             # Use local import to avoid cyclic imports when yapapi.log
             # is imported by client code
-            from ..log import log_event
+            from ..log import log_event_repr
 
-            event_consumer = log_event
+            event_consumer = log_event_repr
+
         # Add buffering to the provided event emitter to make sure
         # that emitting events will not block
         self._wrapped_consumer = AsyncWrapper(event_consumer)

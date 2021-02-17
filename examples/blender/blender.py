@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
-from datetime import timedelta
+from datetime import datetime, timedelta
 import pathlib
 import sys
 
@@ -110,12 +110,22 @@ async def main(subnet_tag, driver=None, network=None):
             f"and network: {TEXT_COLOR_YELLOW}{executor.network}{TEXT_COLOR_DEFAULT}\n"
         )
 
+        num_tasks = 0
+        start_time = datetime.now()
+
         async for task in executor.submit(worker, [Task(data=frame) for frame in frames]):
+            num_tasks += 1
             print(
                 f"{TEXT_COLOR_CYAN}"
                 f"Task computed: {task}, result: {task.result}, time: {task.running_time}"
                 f"{TEXT_COLOR_DEFAULT}"
             )
+
+        print(
+            f"{TEXT_COLOR_CYAN}"
+            f"{num_tasks} tasks computed, total time: {datetime.now() - start_time}"
+            f"{TEXT_COLOR_DEFAULT}"
+        )
 
 
 if __name__ == "__main__":
@@ -141,10 +151,15 @@ if __name__ == "__main__":
     try:
         loop.run_until_complete(task)
     except NoPaymentAccountError as e:
+        handbook_url = (
+            "https://handbook.golem.network/requestor-tutorials/"
+            "flash-tutorial-of-requestor-development"
+        )
         print(
             f"{TEXT_COLOR_RED}"
             f"No payment account initialized for driver `{e.required_driver}` "
-            f"and network `{e.required_network}`. Did you run `yagna payment init -r`?"
+            f"and network `{e.required_network}`.\n\n"
+            f"See {handbook_url} on how to initialize payment accounts for a requestor node."
             f"{TEXT_COLOR_DEFAULT}"
         )
     except KeyboardInterrupt:
