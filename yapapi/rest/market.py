@@ -67,7 +67,7 @@ class Agreement(object):
         """
         await self._api.confirm_agreement(self._id)
         try:
-            await self._api.wait_for_approval(self._id, timeout=90, _request_timeout=100)
+            await self._api.wait_for_approval(self._id, timeout=15, _request_timeout=16)
             return True
         except ApiException:
             logger.debug("waitForApproval(%s) raised ApiException", self._id, exc_info=True)
