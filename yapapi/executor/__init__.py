@@ -62,6 +62,9 @@ DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: Final[str] = "golem.com.payment.debit-notes.
 CFG_INVOICE_TIMEOUT: Final[timedelta] = timedelta(minutes=5)
 "Time to receive invoice from provider after tasks ended."
 
+DEFAULT_EXECUTOR_TIMEOUT: Final[timedelta] = timedelta(minutes=15)
+"Joint timeout for all tasks submitted to an executor."
+
 DEFAULT_DRIVER = "zksync"
 DEFAULT_NETWORK = "rinkeby"
 
@@ -91,7 +94,7 @@ class NoPaymentAccountError(Exception):
 @dataclass
 class _ExecutorConfig:
     max_workers: int = 5
-    timeout: timedelta = timedelta(minutes=5)
+    timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT
     get_offers_timeout: timedelta = timedelta(seconds=20)
     traceback: bool = bool(os.getenv("YAPAPI_TRACEBACK", 0))
 
@@ -112,7 +115,7 @@ class Executor(AsyncContextManager):
         *,
         package: Package,
         max_workers: int = 5,
-        timeout: timedelta = timedelta(minutes=5),
+        timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
         budget: Union[float, Decimal],
         strategy: Optional[MarketStrategy] = None,
         subnet_tag: Optional[str] = None,
