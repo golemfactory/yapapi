@@ -170,6 +170,9 @@ class Executor(AsyncContextManager):
         # Add buffering to the provided event emitter to make sure
         # that emitting events will not block
         self._wrapped_consumer = AsyncWrapper(event_consumer)
+        # Each call to `submit()` will add an instance of `asyncio.Event` to this set.
+        # This event can be used to wait until the call to `submit()` is finished.
+        self._active_computations: Set[asyncio.Event] = set()
 
     @property
     def driver(self):
@@ -192,12 +195,23 @@ class Executor(AsyncContextManager):
         :return: yields computation progress events
         """
 
+        computation_finished = asyncio.Event()
+        self._active_computations.add(computation_finished)
+
         services: Set[asyncio.Task] = set()
         workers: Set[asyncio.Task] = set()
 
         try:
-            async for result in self._submit(worker, data, services, workers):
+            generator = self._submit(worker, data, services, workers)
+            async for result in generator:
                 yield result
+        except GeneratorExit:
+            logger.debug("Early exit from submit(), cancelling the computation")
+            try:
+                # Cancel `generator`. It should then exit by raising `StopAsyncIteration`.
+                await generator.athrow(CancelledError)
+            except StopAsyncIteration:
+                pass
         finally:
             # Cancel and gather all tasks to make sure all exceptions are retrieved.
             all_tasks = workers.union(services)
@@ -206,6 +220,9 @@ class Executor(AsyncContextManager):
                     logger.debug("Cancelling task: %s", task)
                     task.cancel()
             await asyncio.gather(*all_tasks, return_exceptions=True)
+            # Signal that this computation is finished
+            computation_finished.set()
+            self._active_computations.remove(computation_finished)
 
     async def _submit(
         self,
@@ -213,7 +230,7 @@ class Executor(AsyncContextManager):
         data: Iterable[Task[D, R]],
         services: Set[asyncio.Task],
         workers: Set[asyncio.Task],
-    ) -> AsyncIterator[Task[D, R]]:
+    ) -> AsyncGenerator[Task[D, R], None]:
 
         emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
 
@@ -741,7 +758,11 @@ class Executor(AsyncContextManager):
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        logger.debug("Executor is shutting down...")
         emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
+        # Wait until all computations are finished
+        await asyncio.gather(*[event.wait() for event in self._active_computations])
+        # TODO: prevent new computations at this point (if it's even possible to start one)
         try:
             await self._stack.aclose()
             emit(events.ShutdownFinished())
