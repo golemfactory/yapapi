@@ -301,8 +301,6 @@ class SummaryLogger:
     def _print_summary(self) -> None:
         """Print a summary at the end of computation."""
 
-        total_time = time.time() - self.start_time
-        self.logger.info(f"Computation finished in {total_time:.1f}s")
         num_providers = len(
             {self.agreement_provider_info[agr_id] for agr_id in self.confirmed_agreements}
         )
@@ -459,14 +457,18 @@ class SummaryLogger:
 
         elif isinstance(event, events.ComputationFinished):
             if not event.exc_info:
+                total_time = time.time() - self.start_time
+                self.logger.info(f"Computation finished in {total_time:.1f}s")
                 self.finished = True
-                self._print_summary()
             else:
                 _exc_type, exc, _tb = event.exc_info
-                reason = str(exc) or repr(exc) or "unexpected error"
-                self.logger.error(f"Computation failed, reason: %s", reason)
                 if isinstance(exc, CancelledError):
                     self.cancelled = True
+                    self.logger.warning("Computation cancelled")
+                else:
+                    reason = str(exc) or repr(exc) or "unexpected error"
+                    self.logger.error(f"Computation failed, reason: %s", reason)
+            self._print_summary()
 
         elif isinstance(event, events.ShutdownFinished):
             self._print_total_cost()
