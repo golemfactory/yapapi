@@ -1,13 +1,18 @@
+from decimal import Decimal
 from itertools import product
 import pytest
+from unittest.mock import Mock
 
+from yapapi.executor import Executor
 from yapapi.executor.strategy import (
+    DecreaseScoreForUnconfirmedAgreement,
     LeastExpensiveLinearPayuMS,
     SCORE_TRUSTED,
     SCORE_REJECTED,
     SCORE_NEUTRAL,
 )
-from yapapi.props import com
+from yapapi.props.com import Counter
+import yapapi.rest.configuration
 
 from tests.factories.rest.market import OfferProposalFactory
 
@@ -43,6 +48,99 @@ async def test_LeastExpensiveLinearPauyuMS_score(expected_time):
     assert all(SCORE_NEUTRAL < score < SCORE_TRUSTED for score in scores.values())
 
 
+@pytest.mark.asyncio
+async def test_LeastExpensiveLinearPayuMS_price_caps():
+    """Test if LeastExpenciveLinearPayuMS correctly handles price caps."""
+
+    prices = [Decimal(p) for p in [0.0, 0.01, 1.0, 100.0]]
+    epsilon = Decimal(0.0000001)
+
+    triples = list(product(prices, repeat=3))  # get triples of (cpu_price, time_price, fixed_price)
+
+    for cpu_price, time_price, fixed_price in triples:
+
+        offer = OfferProposalFactory(
+            **{"proposal__proposal__properties__linear_coeffs": (cpu_price, time_price, fixed_price)}
+        )
+
+        async def _test_strategy(strategy, cpu_price_cap, time_price_cap, fixed_price_cap):
+            score = await strategy.score_offer(offer)
+            should_reject = (
+                (cpu_price_cap is not None and cpu_price > cpu_price_cap) or
+                (time_price_cap is not None and time_price > time_price_cap) or
+                (fixed_price_cap is not None and fixed_price > fixed_price_cap)
+            )
+            assert should_reject == (score == SCORE_REJECTED), (
+                f"failed for cpu_price_cap = {cpu_price_cap}, cpu_price = {cpu_price}, "
+                f"time_price_cap = {time_price_cap}, time_price = {time_price}, "
+                f"fixed_price_cap = {fixed_price_cap}, fixed_price = {fixed_price}, "
+                f"score = {score}"
+            )
+
+        for cpu_price_cap, time_price_cap, fixed_price_cap in product(
+            (None, cpu_price - epsilon, cpu_price, cpu_price + epsilon),
+            (None, time_price - epsilon, time_price, time_price + epsilon),
+            (None, fixed_price - epsilon, fixed_price, fixed_price + epsilon),
+        ):
+            if cpu_price_cap == time_price_cap == fixed_price_cap == None:
+                strategies = (
+                    LeastExpensiveLinearPayuMS(),
+                    LeastExpensiveLinearPayuMS(max_price_for={}),
+                )
+            elif cpu_price_cap == time_price_cap == None:
+                strategies = (
+                    LeastExpensiveLinearPayuMS(max_fixed_price=fixed_price_cap),
+                    LeastExpensiveLinearPayuMS(max_fixed_price=fixed_price_cap, max_price_for={}),
+                )
+            else:
+                counter_caps = {}
+                if cpu_price_cap is not None:
+                    counter_caps[Counter.CPU] = cpu_price_cap
+                if time_price_cap is not None:
+                    counter_caps[Counter.TIME] = time_price_cap
+
+                if fixed_price_cap is None:
+                    strategies = (
+                        LeastExpensiveLinearPayuMS(max_price_for=counter_caps),
+                        # Also add a mock cap for an unrelated counter
+                        LeastExpensiveLinearPayuMS(
+                            max_price_for={**counter_caps, Counter.STORAGE: Decimal(0.0)}
+                        ),
+                    )
+                else:
+                    strategies = (
+                        LeastExpensiveLinearPayuMS(
+                            max_fixed_price=fixed_price_cap, max_price_for=counter_caps
+                        ),
+                    )
+
+            for strategy in strategies:
+                await _test_strategy(strategy, cpu_price_cap, time_price_cap, fixed_price_cap)
+
+
+@pytest.mark.asyncio
+async def test_default_strategy_type(monkeypatch):
+    """Test if the default strategy is composed of appropriate `MarketStrategy` subclasses."""
+
+    monkeypatch.setattr(yapapi.rest, "Configuration", Mock)
+
+    executor = Executor(package=Mock(), budget=1.0)
+    default_strategy = executor.strategy
+    assert isinstance(default_strategy, DecreaseScoreForUnconfirmedAgreement)
+    assert isinstance(default_strategy.base_strategy, LeastExpensiveLinearPayuMS)
+
+
+@pytest.mark.asyncio
+async def test_user_strategy_not_modified(monkeypatch):
+    """Test that a user strategy is not wrapped in `DecreaseScoreForUnconfirmedAgreement`."""
+
+    monkeypatch.setattr(yapapi.rest, "Configuration", Mock)
+
+    user_strategy = Mock()
+    executor = Executor(package=Mock(), budget=1.0, strategy=user_strategy)
+    assert executor.strategy == user_strategy
+
+
 class TestLeastExpensiveLinearPayuMS:
     @pytest.fixture(autouse=True)
     def _strategy(self):
@@ -61,8 +159,8 @@ class TestLeastExpensiveLinearPayuMS:
         offer = OfferProposalFactory(
             **{
                 "proposal__proposal__properties__defined_usages": [
-                    com.Counter.MAXMEM.value,
-                    com.Counter.TIME.value,
+                    Counter.MAXMEM.value,
+                    Counter.TIME.value,
                 ]
             }
         )

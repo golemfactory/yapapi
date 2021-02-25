@@ -5,7 +5,7 @@ from collections import defaultdict
 from decimal import Decimal
 import logging
 from types import MappingProxyType
-from typing import Mapping, Optional
+from typing import Dict, Mapping, Optional
 
 from dataclasses import dataclass, field
 from typing_extensions import Final, Protocol
@@ -89,15 +89,14 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
     def __init__(
         self,
         expected_time_secs: int = 60,
-        max_fixed_price: Optional[Decimal] = None,
-        max_price_for: Optional[Mapping[com.Counter, Decimal]] = None,
+        max_fixed_price: Decimal = Decimal("inf"),
+        max_price_for: Mapping[com.Counter, Decimal] = MappingProxyType({}),
     ):
         self._expected_time_secs = expected_time_secs
         self._logger = logging.getLogger(f"{__name__}.{type(self).__name__}")
         self._max_fixed_price = max_fixed_price if max_fixed_price is not None else Decimal("inf")
-        self._max_price_for: Mapping[com.Counter, Decimal] = defaultdict(lambda: Decimal("inf"))
-        if max_price_for:
-            self._max_price_for.update(max_price_for)
+        self._max_price_for: Dict[com.Counter, Decimal] = defaultdict(lambda: Decimal("inf"))
+        self._max_price_for.update(max_price_for)
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
         """Ensure that the offer uses `PriceModel.LINEAR` price model."""
@@ -123,7 +122,7 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
                 self._logger.debug("Rejected offer %s: unsupported counter '%s'", offer.id, counter)
                 return SCORE_REJECTED
 
-        if linear.fixed_price >= self._max_fixed_price:
+        if linear.fixed_price > self._max_fixed_price:
             self._logger.debug(
                 "Rejected offer %s: fixed price higher than fixed price cap %f.",
                 offer.id,
@@ -162,17 +161,17 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
 class DecreaseScoreForUnconfirmedAgreement(MarketStrategy):
     """A market strategy that modifies a base strategy based on history of agreements."""
 
-    _base_strategy: MarketStrategy
-    _factor: float
+    base_strategy: MarketStrategy
+    factor: float
 
     def __init__(self, base_strategy, factor):
-        self._base_strategy = base_strategy
-        self._factor = factor
+        self.base_strategy = base_strategy
+        self.factor = factor
         self._logger = logging.getLogger(f"{__name__}.{type(self).__name__}")
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
         """Decorate `demand` using the base strategy."""
-        await self._base_strategy.decorate_demand(demand)
+        await self.base_strategy.decorate_demand(demand)
 
     async def score_offer(
         self, offer: rest.market.OfferProposal, history: Optional[ComputationHistory] = None
@@ -182,8 +181,8 @@ class DecreaseScoreForUnconfirmedAgreement(MarketStrategy):
         If the offer issuer failed to approve the previous agreement (if any)
         then the base score is multiplied by `self._factor`.
         """
-        score = await self._base_strategy.score_offer(offer)
+        score = await self.base_strategy.score_offer(offer)
         if history and history.rejected_last_agreement(offer.issuer) and score > 0:
             self._logger.debug("Decreasing score for offer %s from '%s'", offer.id, offer.issuer)
-            score *= self._factor
+            score *= self.factor
         return score

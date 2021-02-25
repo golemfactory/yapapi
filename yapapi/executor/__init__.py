@@ -153,7 +153,7 @@ class Executor(AsyncContextManager):
             )
             # The factor 0.5 below means that an offer for a provider that failed to confirm
             # the last agreement proposed to them will have it's score multiplied by 0.5.
-            DecreaseScoreForUnconfirmedAgreement(strategy, 0.5)
+            strategy = DecreaseScoreForUnconfirmedAgreement(strategy, 0.5)
         self._strategy = strategy
         self._api_config = rest.Configuration()
         self._stack = AsyncExitStack()
@@ -178,12 +178,16 @@ class Executor(AsyncContextManager):
         self._active_computations: Set[asyncio.Event] = set()
 
     @property
-    def driver(self):
+    def driver(self) -> str:
         return self._driver
 
     @property
-    def network(self):
+    def network(self) -> str:
         return self._network
+
+    @property
+    def strategy(self) -> MarketStrategy:
+        return self._strategy
 
     async def submit(
         self,
