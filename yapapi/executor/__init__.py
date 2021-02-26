@@ -35,7 +35,7 @@ from . import events
 from .task import Task, TaskStatus
 from .utils import AsyncWrapper
 from ..package import Package
-from ..props import Activity, NodeInfo, NodeInfoKeys
+from ..props import Activity, com, NodeInfo, NodeInfoKeys
 from ..props.base import InvalidPropertiesError
 from ..props.builder import DemandBuilder
 from .. import rest
@@ -146,12 +146,15 @@ class Executor(AsyncContextManager):
         self._driver = driver.lower() if driver else DEFAULT_DRIVER
         self._network = network.lower() if network else DEFAULT_NETWORK
         self._stream_output = True
-        self._strategy = (
+        if not strategy:
+            strategy = LeastExpensiveLinearPayuMS(
+                max_fixed_price=Decimal("1.0"),
+                max_price_for={com.Counter.CPU: Decimal("0.2"), com.Counter.TIME: Decimal("0.1")},
+            )
             # The factor 0.5 below means that an offer for a provider that failed to confirm
             # the last agreement proposed to them will have it's score multiplied by 0.5.
-            strategy
-            or DecreaseScoreForUnconfirmedAgreement(LeastExpensiveLinearPayuMS(), 0.5)
-        )
+            strategy = DecreaseScoreForUnconfirmedAgreement(strategy, 0.5)
+        self._strategy = strategy
         self._api_config = rest.Configuration()
         self._stack = AsyncExitStack()
         self._package = package
@@ -175,12 +178,16 @@ class Executor(AsyncContextManager):
         self._active_computations: Set[asyncio.Event] = set()
 
     @property
-    def driver(self):
+    def driver(self) -> str:
         return self._driver
 
     @property
-    def network(self):
+    def network(self) -> str:
         return self._network
+
+    @property
+    def strategy(self) -> MarketStrategy:
+        return self._strategy
 
     async def submit(
         self,
@@ -388,7 +395,7 @@ class Executor(AsyncContextManager):
                         continue
                     if score < SCORE_NEUTRAL:
                         with contextlib.suppress(Exception):
-                            await proposal.reject()
+                            await proposal.reject(reason="Score too low")
                         emit(events.ProposalRejected(prop_id=proposal.id, reason="Score too low"))
                     elif not proposal.is_draft:
                         try:
@@ -400,7 +407,7 @@ class Executor(AsyncContextManager):
                             else:
                                 # reject proposal if there are no common payment platforms
                                 with contextlib.suppress(Exception):
-                                    await proposal.reject()
+                                    await proposal.reject(reason="No common payment platform")
                                 emit(
                                     events.ProposalRejected(
                                         prop_id=proposal.id, reason="No common payment platforms"
@@ -410,7 +417,7 @@ class Executor(AsyncContextManager):
                             if timeout:
                                 if timeout < DEBIT_NOTE_MIN_TIMEOUT:
                                     with contextlib.suppress(Exception):
-                                        await proposal.reject()
+                                        await proposal.reject(reason="Debit note timeout too low")
                                     emit(
                                         events.ProposalRejected(
                                             prop_id=proposal.id,
