@@ -106,7 +106,7 @@ async def main(args):
         event_consumer=log_summary(log_event_repr),
     ) as executor:
 
-        sys.stderr.write(
+        print(
             f"Using subnet: {TEXT_COLOR_YELLOW}{args.subnet_tag}{TEXT_COLOR_DEFAULT}, "
             f"payment driver: {TEXT_COLOR_YELLOW}{executor.driver}{TEXT_COLOR_DEFAULT}, "
             f"and network: {TEXT_COLOR_YELLOW}{executor.network}{TEXT_COLOR_DEFAULT}\n"
