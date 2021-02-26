@@ -60,15 +60,21 @@ async def test_LeastExpensiveLinearPayuMS_price_caps():
     for cpu_price, time_price, fixed_price in triples:
 
         offer = OfferProposalFactory(
-            **{"proposal__proposal__properties__linear_coeffs": (cpu_price, time_price, fixed_price)}
+            **{
+                "proposal__proposal__properties__linear_coeffs": (
+                    cpu_price,
+                    time_price,
+                    fixed_price,
+                )
+            }
         )
 
         async def _test_strategy(strategy, cpu_price_cap, time_price_cap, fixed_price_cap):
             score = await strategy.score_offer(offer)
             should_reject = (
-                (cpu_price_cap is not None and cpu_price > cpu_price_cap) or
-                (time_price_cap is not None and time_price > time_price_cap) or
-                (fixed_price_cap is not None and fixed_price > fixed_price_cap)
+                (cpu_price_cap is not None and cpu_price > cpu_price_cap)
+                or (time_price_cap is not None and time_price > time_price_cap)
+                or (fixed_price_cap is not None and fixed_price > fixed_price_cap)
             )
             assert should_reject == (score == SCORE_REJECTED), (
                 f"failed for cpu_price_cap = {cpu_price_cap}, cpu_price = {cpu_price}, "
