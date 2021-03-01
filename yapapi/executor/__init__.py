@@ -579,7 +579,7 @@ class Executor(AsyncContextManager):
 
                 now = datetime.now(timezone.utc)
                 if now > self._expires:
-                    raise TimeoutError(f"task timeout exceeded. timeout={self._conf.timeout}")
+                    raise TimeoutError(f"Computation timed out after {self._conf.timeout}")
                 if now > get_offers_deadline and proposals_confirmed == 0:
                     emit(
                         events.NoProposalsConfirmed(
