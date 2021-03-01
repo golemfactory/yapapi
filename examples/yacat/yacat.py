@@ -99,7 +99,7 @@ async def main(args):
         max_workers=args.number_of_providers,
         budget=10.0,
         # timeout should be keyspace / number of providers dependent
-        timeout=timedelta(minutes=10),
+        timeout=timedelta(minutes=30),
         subnet_tag=args.subnet_tag,
         driver=args.driver,
         network=args.network,
