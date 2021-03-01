@@ -1,7 +1,7 @@
 """Utilities for yapapi example scripts."""
 import argparse
 
-import colorama
+import colorama  # type: ignore
 
 
 TEXT_COLOR_RED = "\033[31;1m"
