@@ -103,7 +103,7 @@ async def main(subnet_tag, driver=None, network=None):
         event_consumer=log_summary(log_event_repr),
     ) as executor:
 
-        sys.stderr.write(
+        print(
             f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n"
             f"Using subnet: {TEXT_COLOR_YELLOW}{subnet_tag}{TEXT_COLOR_DEFAULT}, "
             f"payment driver: {TEXT_COLOR_YELLOW}{executor.driver}{TEXT_COLOR_DEFAULT}, "

@@ -1,7 +1,8 @@
 """Utilities for yapapi example scripts."""
 import argparse
-import asyncio
-import sys
+
+import colorama  # type: ignore
+
 
 TEXT_COLOR_RED = "\033[31;1m"
 TEXT_COLOR_GREEN = "\033[32;1m"
@@ -12,6 +13,8 @@ TEXT_COLOR_CYAN = "\033[36;1m"
 TEXT_COLOR_WHITE = "\033[37;1m"
 
 TEXT_COLOR_DEFAULT = "\033[0m"
+
+colorama.init()
 
 
 def build_parser(description: str):

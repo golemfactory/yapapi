@@ -4,7 +4,7 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "yapapi"
-version = "0.5.1-alpha.3"
+version = "0.5.1-alpha.4"
 description = "High-level Python API for the New Golem"
 authors = ["Przemysław K. Rekucki <przemyslaw.rekucki@golem.network>", "GolemFactory <contact@golem.network>"]
 license = "LGPL-3.0-or-later"
@@ -52,6 +52,7 @@ poethepoet = "^0.8.0"
 pytest-cov = "^2.10.1"
 pydoc-markdown = "^3.5.0"
 factory-boy = "^3.2.0"
+colorama = "^0.4.0"
 
 [tool.portray]
 
