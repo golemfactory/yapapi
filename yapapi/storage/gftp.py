@@ -4,6 +4,7 @@ Golem File Transfer Storage Provider
 
 import asyncio
 import contextlib
+import hashlib
 import json
 import os
 import sys
@@ -243,22 +244,28 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
         with open(file_name, "wb") as f:
             async for chunk in stream:
                 f.write(chunk)
-        process = await self.__get_process()
-        links = await process.publish(files=[str(file_name)])
-        assert len(links) == 1, "invalid gftp publish response"
-        link = links[0]
-        return GftpSource(length, link)
+        return await self.upload_file(file_name)
 
     async def upload_file(self, path: os.PathLike) -> Source:
+        hasher = hashlib.sha3_256()
+        with open(path, "rb") as f:
+            while True:
+                bytes = f.read(4096)
+                if not bytes:
+                    break
+                hasher.update(bytes)
+        digest = hasher.hexdigest()
+        if digest in self._registered_sources:
+            _logger.debug("File %s already published, digest: %s", path, digest)
+            return self._registered_sources[digest]
+        _logger.debug("Publishing file %s, digest: %s", path, digest)
+
         process = await self.__get_process()
-        path_str = str(path)
-        if path_str in self._registered_sources:
-            return self._registered_sources[path_str]
-        links = await process.publish(files=[path_str])
+        links = await process.publish(files=[str(path)])
         length = Path(path).stat().st_size
         assert len(links) == 1, "invalid gftp publish response"
         source = GftpSource(length, links[0])
-        self._registered_sources[path_str] = source
+        self._registered_sources[digest] = source
         return source
 
     async def new_destination(self, destination_file: Optional[PathLike] = None) -> Destination:

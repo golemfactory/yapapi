@@ -4,7 +4,7 @@ import datetime
 import logging
 import random
 import sys
-from typing import Dict, NamedTuple, Optional, Tuple
+from typing import Dict, NamedTuple, Optional, Set, Tuple
 
 from yapapi.executor import events
 from yapapi.props import Activity, NodeInfo
@@ -41,6 +41,8 @@ class AgreementsPool:
         self._offer_buffer: Dict[str, _BufferedProposal] = {}  # provider_id -> Proposal
         self._agreements: Dict[str, BufferedAgreement] = {}  # agreement_id -> Agreement
         self._lock = asyncio.Lock()
+        # The set of provider ids for which the last agreement creation failed
+        self._rejecting_providers: Set[str] = set()
         self.confirmed = 0
 
     async def cycle(self):
@@ -129,7 +131,9 @@ class AgreementsPool:
         )
         if not await agreement.confirm():
             emit(events.AgreementRejected(agr_id=agreement.id))
+            self._rejecting_providers.add(provider_id)
             return None
+        self._rejecting_providers.discard(provider_id)
         self._agreements[agreement.id] = BufferedAgreement(
             agreement=agreement,
             node_info=node_info,
@@ -202,3 +206,7 @@ class AgreementsPool:
             buffered_agreement.worker_task and buffered_agreement.worker_task.cancel()
             del self._agreements[agr_id]
             self.emitter(events.AgreementTerminated(agr_id=agr_id, reason=reason))
+
+    def rejected_last_agreement(self, provider_id: str) -> bool:
+        """Return `True` iff the last agreement proposed to `provider_id` has been rejected."""
+        return provider_id in self._rejecting_providers

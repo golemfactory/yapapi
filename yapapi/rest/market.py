@@ -67,7 +67,7 @@ class Agreement(object):
         """
         await self._api.confirm_agreement(self._id)
         try:
-            await self._api.wait_for_approval(self._id, timeout=90, _request_timeout=100)
+            await self._api.wait_for_approval(self._id, timeout=15, _request_timeout=16)
             return True
         except ApiException:
             logger.debug("waitForApproval(%s) raised ApiException", self._id, exc_info=True)
@@ -120,9 +120,11 @@ class OfferProposal(object):
     def is_draft(self) -> bool:
         return self._proposal.proposal.state == "Draft"
 
-    async def reject(self, reason: Optional[str] = None):
+    async def reject(self, reason: str = "Rejected"):
         """Reject the Offer."""
-        await self._subscription._api.reject_proposal_offer(self._subscription.id, self.id)
+        await self._subscription._api.reject_proposal_offer(
+            self._subscription.id, self.id, request_body={"message": reason}
+        )
 
     async def respond(self, props: dict, constraints: str) -> str:
         """Create an agreeement Proposal for a received Offer, based on our Demand."""

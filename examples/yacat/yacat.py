@@ -99,14 +99,14 @@ async def main(args):
         max_workers=args.number_of_providers,
         budget=10.0,
         # timeout should be keyspace / number of providers dependent
-        timeout=timedelta(minutes=10),
+        timeout=timedelta(minutes=30),
         subnet_tag=args.subnet_tag,
         driver=args.driver,
         network=args.network,
         event_consumer=log_summary(log_event_repr),
     ) as executor:
 
-        sys.stderr.write(
+        print(
             f"Using subnet: {TEXT_COLOR_YELLOW}{args.subnet_tag}{TEXT_COLOR_DEFAULT}, "
             f"payment driver: {TEXT_COLOR_YELLOW}{executor.driver}{TEXT_COLOR_DEFAULT}, "
             f"and network: {TEXT_COLOR_YELLOW}{executor.network}{TEXT_COLOR_DEFAULT}\n"

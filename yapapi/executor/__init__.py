@@ -3,6 +3,7 @@ An implementation of the new Golem's task executor.
 """
 import asyncio
 from asyncio import CancelledError
+import contextlib
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import logging
@@ -34,14 +35,19 @@ from . import events
 from .task import Task, TaskStatus
 from .utils import AsyncWrapper
 from ..package import Package
-from ..props import Activity, NodeInfo, NodeInfoKeys
+from ..props import Activity, com, NodeInfo, NodeInfoKeys
 from ..props.base import InvalidPropertiesError
 from ..props.builder import DemandBuilder
 from .. import rest
 from ..rest.activity import CommandExecutionError
 from ..storage import gftp
 from ._smartq import SmartQueue, Handle
-from .strategy import LeastExpensiveLinearPayuMS, MarketStrategy, SCORE_NEUTRAL
+from .strategy import (
+    DecreaseScoreForUnconfirmedAgreement,
+    LeastExpensiveLinearPayuMS,
+    MarketStrategy,
+    SCORE_NEUTRAL,
+)
 
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
@@ -55,6 +61,9 @@ DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: Final[str] = "golem.com.payment.debit-notes.
 
 CFG_INVOICE_TIMEOUT: Final[timedelta] = timedelta(minutes=5)
 "Time to receive invoice from provider after tasks ended."
+
+DEFAULT_EXECUTOR_TIMEOUT: Final[timedelta] = timedelta(minutes=15)
+"Joint timeout for all tasks submitted to an executor."
 
 DEFAULT_DRIVER = "zksync"
 DEFAULT_NETWORK = "rinkeby"
@@ -85,7 +94,7 @@ class NoPaymentAccountError(Exception):
 @dataclass
 class _ExecutorConfig:
     max_workers: int = 5
-    timeout: timedelta = timedelta(minutes=5)
+    timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT
     get_offers_timeout: timedelta = timedelta(seconds=20)
     traceback: bool = bool(os.getenv("YAPAPI_TRACEBACK", 0))
 
@@ -106,9 +115,9 @@ class Executor(AsyncContextManager):
         *,
         package: Package,
         max_workers: int = 5,
-        timeout: timedelta = timedelta(minutes=5),
+        timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
         budget: Union[float, Decimal],
-        strategy: MarketStrategy = LeastExpensiveLinearPayuMS(),
+        strategy: Optional[MarketStrategy] = None,
         subnet_tag: Optional[str] = None,
         driver: Optional[str] = None,
         network: Optional[str] = None,
@@ -137,6 +146,14 @@ class Executor(AsyncContextManager):
         self._driver = driver.lower() if driver else DEFAULT_DRIVER
         self._network = network.lower() if network else DEFAULT_NETWORK
         self._stream_output = True
+        if not strategy:
+            strategy = LeastExpensiveLinearPayuMS(
+                max_fixed_price=Decimal("1.0"),
+                max_price_for={com.Counter.CPU: Decimal("0.2"), com.Counter.TIME: Decimal("0.1")},
+            )
+            # The factor 0.5 below means that an offer for a provider that failed to confirm
+            # the last agreement proposed to them will have it's score multiplied by 0.5.
+            strategy = DecreaseScoreForUnconfirmedAgreement(strategy, 0.5)
         self._strategy = strategy
         self._api_config = rest.Configuration()
         self._stack = AsyncExitStack()
@@ -156,14 +173,21 @@ class Executor(AsyncContextManager):
         # Add buffering to the provided event emitter to make sure
         # that emitting events will not block
         self._wrapped_consumer = AsyncWrapper(event_consumer)
+        # Each call to `submit()` will add an instance of `asyncio.Event` to this set.
+        # This event can be used to wait until the call to `submit()` is finished.
+        self._active_computations: Set[asyncio.Event] = set()
 
     @property
-    def driver(self):
+    def driver(self) -> str:
         return self._driver
 
     @property
-    def network(self):
+    def network(self) -> str:
         return self._network
+
+    @property
+    def strategy(self) -> MarketStrategy:
+        return self._strategy
 
     async def submit(
         self,
@@ -178,12 +202,23 @@ class Executor(AsyncContextManager):
         :return: yields computation progress events
         """
 
+        computation_finished = asyncio.Event()
+        self._active_computations.add(computation_finished)
+
         services: Set[asyncio.Task] = set()
         workers: Set[asyncio.Task] = set()
 
         try:
-            async for result in self._submit(worker, data, services, workers):
+            generator = self._submit(worker, data, services, workers)
+            async for result in generator:
                 yield result
+        except GeneratorExit:
+            logger.debug("Early exit from submit(), cancelling the computation")
+            try:
+                # Cancel `generator`. It should then exit by raising `StopAsyncIteration`.
+                await generator.athrow(CancelledError)
+            except StopAsyncIteration:
+                pass
         finally:
             # Cancel and gather all tasks to make sure all exceptions are retrieved.
             all_tasks = workers.union(services)
@@ -192,6 +227,9 @@ class Executor(AsyncContextManager):
                     logger.debug("Cancelling task: %s", task)
                     task.cancel()
             await asyncio.gather(*all_tasks, return_exceptions=True)
+            # Signal that this computation is finished
+            computation_finished.set()
+            self._active_computations.remove(computation_finished)
 
     async def _submit(
         self,
@@ -199,10 +237,8 @@ class Executor(AsyncContextManager):
         data: Iterable[Task[D, R]],
         services: Set[asyncio.Task],
         workers: Set[asyncio.Task],
-    ) -> AsyncIterator[Task[D, R]]:
-        import contextlib
+    ) -> AsyncGenerator[Task[D, R], None]:
 
-        stack = self._stack
         emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
 
         multi_payment_decoration = await self._create_allocations()
@@ -346,7 +382,7 @@ class Executor(AsyncContextManager):
                     emit(events.ProposalReceived(prop_id=proposal.id, provider_id=proposal.issuer))
                     offers_collected += 1
                     try:
-                        score = await strategy.score_offer(proposal)
+                        score = await strategy.score_offer(proposal, agreements_pool)
                         logger.debug(
                             "Scored offer %s, provider: %s, strategy: %s, score: %f",
                             proposal.id,
@@ -359,7 +395,7 @@ class Executor(AsyncContextManager):
                         continue
                     if score < SCORE_NEUTRAL:
                         with contextlib.suppress(Exception):
-                            await proposal.reject()
+                            await proposal.reject(reason="Score too low")
                         emit(events.ProposalRejected(prop_id=proposal.id, reason="Score too low"))
                     elif not proposal.is_draft:
                         try:
@@ -371,7 +407,7 @@ class Executor(AsyncContextManager):
                             else:
                                 # reject proposal if there are no common payment platforms
                                 with contextlib.suppress(Exception):
-                                    await proposal.reject()
+                                    await proposal.reject(reason="No common payment platform")
                                 emit(
                                     events.ProposalRejected(
                                         prop_id=proposal.id, reason="No common payment platforms"
@@ -381,7 +417,7 @@ class Executor(AsyncContextManager):
                             if timeout:
                                 if timeout < DEBIT_NOTE_MIN_TIMEOUT:
                                     with contextlib.suppress(Exception):
-                                        await proposal.reject()
+                                        await proposal.reject(reason="Debit note timeout too low")
                                     emit(
                                         events.ProposalRejected(
                                             prop_id=proposal.id,
@@ -543,7 +579,7 @@ class Executor(AsyncContextManager):
 
                 now = datetime.now(timezone.utc)
                 if now > self._expires:
-                    raise TimeoutError(f"task timeout exceeded. timeout={self._conf.timeout}")
+                    raise TimeoutError(f"Computation timed out after {self._conf.timeout}")
                 if now > get_offers_deadline and proposals_confirmed == 0:
                     emit(
                         events.NoProposalsConfirmed(
@@ -587,10 +623,9 @@ class Executor(AsyncContextManager):
             cancelled = True
 
         finally:
+            # Importing this at the beginning would cause circular dependencies
+            from ..log import pluralize
 
-            # When cancelled emit logs with higher priority, so e.g. after
-            # hitting Ctrl+C the user sees shutdown progress on the console
-            log_level = logging.INFO if cancelled else logging.DEBUG
             payment_closing = True
             for task in services:
                 if task is not process_invoices_job:
@@ -609,12 +644,15 @@ class Executor(AsyncContextManager):
                 }
 
             if workers:
-                logger.log(log_level, "Waiting for %d workers to finish...", len(workers))
-                await asyncio.wait(
-                    workers.union(services), timeout=10, return_when=asyncio.ALL_COMPLETED
+                _, pending = await asyncio.wait(
+                    workers, timeout=1, return_when=asyncio.ALL_COMPLETED
                 )
+                if pending:
+                    logger.info("Waiting for %s to finish...", pluralize(len(pending), "worker"))
+                    await asyncio.wait(workers, timeout=9, return_when=asyncio.ALL_COMPLETED)
 
             try:
+                logger.debug("Terminating agreements...")
                 await agreements_pool.terminate(reason=reason)
             except Exception:
                 logger.debug("Problem with agreements termination", exc_info=True)
@@ -622,27 +660,28 @@ class Executor(AsyncContextManager):
                     traceback.print_exc()
 
             try:
-                logger.log(log_level, "Waiting for all services to finish...")
+                logger.info("Waiting for all services to finish...")
                 _, pending = await asyncio.wait(
                     workers.union(services), timeout=10, return_when=asyncio.ALL_COMPLETED
                 )
                 if pending:
-                    logger.debug("Services still running: %s", pending)
+                    logger.debug(
+                        "%s still running: %s", pluralize(len(pending), "service"), pending
+                    )
             except Exception:
                 if self._conf.traceback:
                     traceback.print_exc()
 
             if agreements_to_pay:
-                logger.log(
-                    log_level,
-                    "%d agreements still unpaid, waiting for invoices...",
-                    len(agreements_to_pay),
+                logger.info(
+                    "%s still unpaid, waiting for invoices...",
+                    pluralize(len(agreements_to_pay), "agreement"),
                 )
                 await asyncio.wait(
-                    {process_invoices_job}, timeout=20, return_when=asyncio.ALL_COMPLETED
+                    {process_invoices_job}, timeout=30, return_when=asyncio.ALL_COMPLETED
                 )
                 if agreements_to_pay:
-                    logger.warning("Unpaid agreements  %s", agreements_to_pay)
+                    logger.warning("Unpaid agreements: %s", agreements_to_pay)
 
     async def _create_allocations(self) -> rest.payment.MarketDecoration:
 
@@ -726,7 +765,11 @@ class Executor(AsyncContextManager):
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        logger.debug("Executor is shutting down...")
         emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
+        # Wait until all computations are finished
+        await asyncio.gather(*[event.wait() for event in self._active_computations])
+        # TODO: prevent new computations at this point (if it's even possible to start one)
         try:
             await self._stack.aclose()
             emit(events.ShutdownFinished())

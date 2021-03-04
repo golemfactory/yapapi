@@ -90,14 +90,24 @@ An example Golem application, using a Docker image containing the Blender render
 
 ```python
 import asyncio
+from datetime import datetime, timedelta
+import pathlib
+import sys
 
-from yapapi import Executor, Task, WorkContext
-from yapapi.log import enable_default_logger, log_summary, log_event_repr
+from yapapi import (
+    Executor,
+    NoPaymentAccountError,
+    Task,
+    __version__ as yapapi_version,
+    WorkContext,
+    windows_event_loop_fix,
+)
+from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.package import vm
-from datetime import timedelta
+from yapapi.rest.activity import BatchTimeoutError
 
 
-async def main(subnet_tag: str):
+async def main(subnet_tag, driver=None, network=None):
     package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         min_mem_gib=0.5,
@@ -105,7 +115,9 @@ async def main(subnet_tag: str):
     )
 
     async def worker(ctx: WorkContext, tasks):
-        ctx.send_file("./scene.blend", "/golem/resource/scene.blend")
+        script_dir = pathlib.Path(__file__).resolve().parent
+        scene_path = str(script_dir / "cubes.blend")
+        ctx.send_file(scene_path, "/golem/resource/scene.blend")
         async for task in tasks:
             frame = task.data
             crops = [{"outfilebasename": "out", "borders_x": [0.0, 1.0], "borders_y": [0.0, 1.0]}]
@@ -127,38 +139,93 @@ async def main(subnet_tag: str):
             ctx.run("/golem/entrypoints/run-blender.sh")
             output_file = f"output_{frame}.png"
             ctx.download_file(f"/golem/output/out{frame:04d}.png", output_file)
-            yield ctx.commit()
-            task.accept_result(result=output_file)
+            try:
+                # Set timeout for executing the script on the provider. Two minutes is plenty
+                # of time for computing a single frame, for other tasks it may be not enough.
+                # If the timeout is exceeded, this worker instance will be shut down and all
+                # remaining tasks, including the current one, will be computed by other providers.
+                yield ctx.commit(timeout=timedelta(seconds=120))
+                # TODO: Check if job results are valid
+                # and reject by: task.reject_task(reason = 'invalid file')
+                task.accept_result(result=output_file)
+            except BatchTimeoutError:
+                print(
+                    f"Task {task} timed out on {ctx.provider_name}, time: {task.running_time}"
+                )
+                raise
 
-        print(f"Worker {ctx.id} on {ctx.provider_name}: No more frames to render")
-
-    # iterator over the frame indices that we want to render
     frames: range = range(0, 60, 10)
-    init_overhead: timedelta = timedelta(minutes=3)
+    init_overhead = 3
+    min_timeout, max_timeout = 6, 30
 
-    # By passing `event_consumer=log_summary()` we enable summary logging.
-    # See the documentation of the `yapapi.log` module on how to set
-    # the level of detail and format of the logged information.
+    timeout = timedelta(minutes=max(min(init_overhead + len(frames) * 2, max_timeout), min_timeout))
+
     async with Executor(
         package=package,
         max_workers=3,
         budget=10.0,
-        timeout=init_overhead + timedelta(minutes=len(frames) * 2),
+        timeout=timeout,
         subnet_tag=subnet_tag,
+        driver=driver,
+        network=network,
         event_consumer=log_summary(),
     ) as executor:
 
+        sys.stderr.write(
+            f"yapapi version: {yapapi_version}\n"
+            f"Using subnet: {subnet_tag}, "
+            f"payment driver: {executor.driver}, "
+            f"and network: {executor.network}\n"
+        )
+
+        num_tasks = 0
+        start_time = datetime.now()
+
         async for task in executor.submit(worker, [Task(data=frame) for frame in frames]):
-            print(f"Task computed: {task}, result: {task.result}")
+            num_tasks += 1
+            print(
+                f"Task computed: {task}, result: {task.result}, time: {task.running_time}"
+            )
+
+        print(
+            f"{num_tasks} tasks computed, total time: {datetime.now() - start_time}"
+        )
 
 
-enable_default_logger()
-loop = asyncio.get_event_loop()
-task = loop.create_task(main(subnet_tag="devnet-alpha.4"))
-try:
-    asyncio.get_event_loop().run_until_complete(task)
-except (Exception, KeyboardInterrupt) as e:
-    print(e)
-    task.cancel()
-    asyncio.get_event_loop().run_until_complete(task)
+if __name__ == "__main__":
+    # This is only required when running on Windows with Python prior to 3.8:
+    windows_event_loop_fix()
+
+    enable_default_logger()
+
+    loop = asyncio.get_event_loop()
+    task = loop.create_task(
+        main(subnet_tag="community.4", driver="zksync", network="rinkeby")
+    )
+
+    try:
+        loop.run_until_complete(task)
+    except NoPaymentAccountError as e:
+        handbook_url = (
+            "https://handbook.golem.network/requestor-tutorials/"
+            "flash-tutorial-of-requestor-development"
+        )
+        print(
+            f"No payment account initialized for driver `{e.required_driver}` "
+            f"and network `{e.required_network}`.\n\n"
+            f"See {handbook_url} on how to initialize payment accounts for a requestor node."
+        )
+    except KeyboardInterrupt:
+        print(
+            "Shutting down gracefully, please wait a short while "
+            "or press Ctrl+C to exit immediately..."
+        )
+        task.cancel()
+        try:
+            loop.run_until_complete(task)
+            print(
+                f"Shutdown completed, thank you for waiting!"
+            )
+        except (asyncio.CancelledError, KeyboardInterrupt):
+            pass
 ```
