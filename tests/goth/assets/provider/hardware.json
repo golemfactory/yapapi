@@ -1,0 +1,10 @@
+{
+  "active": "default",
+  "profiles": {
+    "default": {
+      "cpu_threads": 1,
+      "mem_gib": 1.0,
+      "storage_gib": 2.0
+    }
+  }
+}

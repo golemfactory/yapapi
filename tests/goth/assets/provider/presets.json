@@ -1,0 +1,28 @@
+{
+  "active": [
+    "wasmtime",
+    "vm"
+  ],
+  "presets": [
+    {
+      "name": "wasmtime",
+      "exeunit-name": "wasmtime",
+      "pricing-model": "linear",
+      "usage-coeffs": {
+        "initial": 0.0,
+        "duration": 0.0002777777777777778,
+        "cpu": 0.001388888888888889
+      }
+    },
+    {
+      "name": "vm",
+      "exeunit-name": "vm",
+      "pricing-model": "linear",
+      "usage-coeffs": {
+        "initial": 0.0,
+        "cpu": 0.001388888888888889,
+        "duration": 0.0002777777777777778
+      }
+    }
+  ]
+}
