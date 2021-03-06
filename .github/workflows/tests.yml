@@ -15,7 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [3.8, 3.9]
+        python-version: [3.6, 3.7, 3.8, 3.9]
         os:
           - ubuntu-latest
           - macos-latest
@@ -39,10 +39,6 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         name: Enable extended checks
         id: extended-checks
-      - run: echo "::set-output name=ENABLE::1"
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.8' }}
-        name: Enable goth tests
-        id: goth-tests
       - run: poetry install -E cli
       - run: poetry run poe test
       - run: poetry run poe typecheck
@@ -50,5 +46,3 @@ jobs:
         if: ${{ steps.extended-checks.outputs.ENABLE }}
       - run: poetry run poe liccheck
         if: ${{ steps.extended-checks.outputs.ENABLE }}
-      - run: poetry run poe goth-tests
-        if: ${{ steps.goth-tests.outputs.ENABLE }}
