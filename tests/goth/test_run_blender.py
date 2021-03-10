@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from goth.configuration import Configuration, load_yaml
+from goth.configuration import load_yaml
 from goth.runner.log import configure_logging
 from goth.runner import Runner
 from goth.runner.probe import RequestorProbe
@@ -14,31 +14,14 @@ from goth.runner.probe import RequestorProbe
 logger = logging.getLogger("goth.test")
 
 
-@pytest.fixture()
-def project_dir() -> Path:
-    package_dir = Path(__file__).parent.parent
-    return package_dir.parent.resolve()
-
-
-@pytest.fixture()
-def configuration() -> Configuration:
-    return load_yaml(Path(__file__).parent / "assets" / "goth-config.yml")
-
-
-@pytest.fixture()
-def log_dir() -> Path:
-    # dir = Path(__file__).parent / "logs"
-    dir = Path("/", "tmp", "goth-tests")
-    dir.mkdir(exist_ok=True)
-    return dir
-
-
 @pytest.mark.asyncio
 async def test_run_blender(
-    configuration: Configuration,
     log_dir: Path,
     project_dir: Path,
 ) -> None:
+
+    # This is the default configuration with 2 wasm/VM providers
+    goth_config = load_yaml(Path(__file__).parent / "assets" / "goth-config.yml")
 
     blender_path = project_dir / "examples" / "blender" / "blender.py"
 
@@ -46,10 +29,10 @@ async def test_run_blender(
 
     runner = Runner(
         base_log_dir=log_dir,
-        compose_config=configuration.compose_config,
+        compose_config=goth_config.compose_config,
     )
 
-    async with runner(configuration.containers):
+    async with runner(goth_config.containers):
 
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
