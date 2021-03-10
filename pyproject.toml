@@ -1,6 +1,6 @@
 [build-system]
-requires = ["poetry"]
-build-backend = "poetry.masonry.api"
+requires = ["poetry_core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "yapapi"
@@ -19,7 +19,7 @@ documentation = "https://handbook.golem.network/yapapi/"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.8.0"
+python = "^3.6.1"
 aiohttp = "^3.6"
 aiohttp-sse-client = "^0.1.7"
 dataclasses = { version = "^0.7", python = ">=3.6, <3.7"}
@@ -37,8 +37,8 @@ toml = "^0.10.1"
 srvresolver = "^0.3.5"
 colorama = "^0.4.4"
 
-goth = {git = "https://github.com/golemfactory/goth.git", branch = "az/yapapi-ci", optional = true}
-# goth = {path = "../goth", develop = true, optional = true}
+goth = {git = "https://github.com/golemfactory/goth.git", branch = "az/yapapi-ci", optional = true, python = "^3.8.0"}
+# goth = {path = "../goth", develop = true, optional = true, python = "^3.8.0"}
 
 [tool.poetry.extras]
 cli = ['fire', 'rich']
