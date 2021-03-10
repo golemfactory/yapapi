@@ -11,7 +11,7 @@ from yapapi.props.builder import DemandBuilder
 from yapapi.props.inf import InfVmKeys, RuntimeType, VmRequest, VmPackageFormat
 
 _DEFAULT_REPO_SRV: Final = "_girepo._tcp.dev.golem.network"
-_FALLBACK_REPO_URL: Final = "http://3.249.139.167:8000"
+_FALLBACK_REPO_URL: Final = "http://yacn2.dev.golem.network:8000"
 
 logger = logging.getLogger(__name__)
 
