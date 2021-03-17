@@ -347,7 +347,7 @@ class Executor(AsyncContextManager):
                                 agr_id=debit_note.agreement_id, exc_info=sys.exc_info()  # type: ignore
                             )
                         )
-                if payment_closing and not debit_notes_accepted:
+                if payment_closing and not agreements_to_pay:
                     break
 
         async def accept_payment_for_agreement(agreement_id: str, *, partial: bool = False) -> None:
