@@ -280,7 +280,7 @@ class Executor(AsyncContextManager):
         last_wid = 0
 
         agreements_to_pay: Set[str] = set()
-        debit_notes_accepted: Set[str] = set()
+        agreements_accepting_debit_notes: Set[str] = set()
         invoices: Dict[str, rest.payment.Invoice] = dict()
         payment_closing: bool = False
 
@@ -310,8 +310,8 @@ class Executor(AsyncContextManager):
                         )
                     else:
                         agreements_to_pay.remove(invoice.agreement_id)
-                        assert invoice.agreement_id in debit_notes_accepted
-                        debit_notes_accepted.remove(invoice.agreement_id)
+                        assert invoice.agreement_id in agreements_accepting_debit_notes
+                        agreements_accepting_debit_notes.remove(invoice.agreement_id)
                         emit(
                             events.PaymentAccepted(
                                 agr_id=invoice.agreement_id,
@@ -327,7 +327,7 @@ class Executor(AsyncContextManager):
         # TODO Consider processing invoices and debit notes together
         async def process_debit_notes() -> None:
             async for debit_note in self._payment_api.incoming_debit_notes():
-                if debit_note.agreement_id in debit_notes_accepted:
+                if debit_note.agreement_id in agreements_accepting_debit_notes:
                     emit(
                         events.DebitNoteReceived(
                             agr_id=debit_note.agreement_id,
@@ -472,7 +472,7 @@ class Executor(AsyncContextManager):
                 raise
             async with act:
                 emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
-                debit_notes_accepted.add(agreement.id)
+                agreements_accepting_debit_notes.add(agreement.id)
                 work_context = WorkContext(
                     f"worker-{wid}", node_info, storage_manager, emitter=emit
                 )
