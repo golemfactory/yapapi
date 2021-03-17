@@ -310,6 +310,7 @@ class Executor(AsyncContextManager):
                         )
                     else:
                         agreements_to_pay.remove(invoice.agreement_id)
+                        assert invoice.agreement_id in debit_notes_accepted
                         debit_notes_accepted.remove(invoice.agreement_id)
                         emit(
                             events.PaymentAccepted(
