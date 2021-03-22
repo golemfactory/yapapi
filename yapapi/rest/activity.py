@@ -40,7 +40,11 @@ class ActivityService(object):
                  and allows to query and control its state
         :rtype: Activity
         """
-        activity_id = await self._api.create_activity(agreement_id)
+        activity_id = await self._api.create_activity(
+            agreement_id,
+            _request_timeout=30000,
+            timeout=25,
+        )
         return Activity(self._api, self._state, activity_id)
 
 
