@@ -146,18 +146,23 @@ class AgreementsPool:
         self.confirmed += 1
         return agreement, node_info
 
-    async def release_agreement(self, agreement_id: str) -> None:
-        """Marks agreement as ready for reuse"""
+    async def release_agreement(self, agreement_id: str, allow_reuse: bool = True) -> None:
+        """Marks agreement as unused.
+
+        If the agreement supports multiple activities and `allow_reuse` is set then
+        it will be returned to the pool and will be available for reuse.
+        Otherwise it will be removed from the pool.
+        """
         async with self._lock:
             try:
                 buffered_agreement = self._agreements[agreement_id]
             except KeyError:
                 return
             buffered_agreement.worker_task = None
-            # Check whether agreement has multi activity enabled
-            if not buffered_agreement.has_multi_activity:
+            # Check whether agreement can be reused
+            if not allow_reuse or not buffered_agreement.has_multi_activity:
                 del self._agreements[agreement_id]
-                logger.debug("Removed single-activity agreement. %s", agreement_id)
+                logger.debug("Removed agreement from the pool. %s", agreement_id)
 
     async def terminate(self, reason: dict) -> None:
         """Terminates all agreements"""
