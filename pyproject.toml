@@ -37,8 +37,7 @@ toml = "^0.10.1"
 srvresolver = "^0.3.5"
 colorama = "^0.4.4"
 
-goth = {git = "https://github.com/golemfactory/goth.git", branch = "az/yapapi-ci", optional = true, python = "^3.8.0"}
-# goth = {path = "../goth", develop = true, optional = true, python = "^3.8.0"}
+goth = {git = "https://github.com/golemfactory/goth.git", branch = "master", optional = true, python = "^3.8.0"}
 
 [tool.poetry.extras]
 cli = ['fire', 'rich']
