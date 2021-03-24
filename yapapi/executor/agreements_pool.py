@@ -57,7 +57,9 @@ class AgreementsPool:
                 continue
             task = buffered_agreement.worker_task
             if task is not None and task.done():
-                await self.release_agreement(buffered_agreement.agreement.id)
+                await self.release_agreement(
+                    buffered_agreement.agreement.id, allow_reuse=task.exception() is None
+                )
 
     async def add_proposal(self, score: float, proposal: OfferProposal) -> None:
         """Adds providers' proposal to the pool of available proposals"""

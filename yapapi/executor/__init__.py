@@ -471,8 +471,6 @@ class Executor(AsyncContextManager):
                     )
                 )
                 emit(events.WorkerFinished(agr_id=agreement.id))
-                # Don't reuse the agreement after activity creation failed
-                await agreements_pool.release_agreement(agreement.id, allow_reuse=False)
                 raise
             async with act:
                 emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
@@ -533,11 +531,7 @@ class Executor(AsyncContextManager):
                                         agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
                                     )
                                 )
-                                # Don't reuse the agreement after failure
-                                await agreements_pool.release_agreement(
-                                    agreement.id, allow_reuse=False
-                                )
-                                return
+                                raise
 
             await accept_payment_for_agreement(agreement.id)
             emit(events.WorkerFinished(agr_id=agreement.id))
