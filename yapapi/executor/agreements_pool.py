@@ -161,41 +161,50 @@ class AgreementsPool:
             buffered_agreement.worker_task = None
             # Check whether agreement can be reused
             if not allow_reuse or not buffered_agreement.has_multi_activity:
-                del self._agreements[agreement_id]
-                logger.debug("Removed agreement from the pool. %s", agreement_id)
+                reason = {"message": "Work cancelled", "golem.requestor.code": "Cancelled"}
+                await self._terminate_agreement(agreement_id, reason)
 
-    async def terminate(self, reason: dict) -> None:
-        """Terminates all agreements"""
-        async with self._lock:
-            for agreement_id in frozenset(self._agreements):
-                buffered_agreement = self._agreements[agreement_id]
-                agreement_details = await buffered_agreement.agreement.details()
-                provider = agreement_details.provider_view.extract(NodeInfo)
+    async def _terminate_agreement(self, agreement_id: str, reason: dict) -> None:
+        """Terminate the agreement with given `agreement_id`."""
+
+        if agreement_id not in self._agreements:
+            logger.warning("Trying to terminate agreement not in the pool. id: %s", agreement_id)
+            return
+
+        buffered_agreement = self._agreements[agreement_id]
+        agreement_details = await buffered_agreement.agreement.details()
+        provider = agreement_details.provider_view.extract(NodeInfo)
+        logger.debug(
+            "Terminating agreement. id: %s, reason: %s, provider: %s",
+            agreement_id,
+            reason,
+            provider,
+        )
+        if buffered_agreement.worker_task is not None and not buffered_agreement.worker_task.done():
+            logger.debug(
+                "Terminating agreement that still has worker. agreement_id: %s, worker: %s",
+                buffered_agreement.agreement.id,
+                buffered_agreement.worker_task,
+            )
+            buffered_agreement.worker_task.cancel()
+
+        if buffered_agreement.has_multi_activity:
+            if not await buffered_agreement.agreement.terminate(reason):
                 logger.debug(
-                    "Terminating agreement. id: %s, reason: %s, provider: %s",
-                    agreement_id,
-                    reason,
+                    "Couldn't terminate agreement. id=%s, provider=%s",
+                    buffered_agreement.agreement.id,
                     provider,
                 )
-                if (
-                    buffered_agreement.worker_task is not None
-                    and not buffered_agreement.worker_task.done()
-                ):
-                    logger.debug(
-                        "Terminating agreement that still has worker. agreement_id: %s, worker: %s",
-                        buffered_agreement.agreement.id,
-                        buffered_agreement.worker_task,
-                    )
-                    buffered_agreement.worker_task.cancel()
-                if buffered_agreement.has_multi_activity:
-                    if not await buffered_agreement.agreement.terminate(reason):
-                        logger.debug(
-                            "Couldn't terminate agreement. id=%s, provider=%s",
-                            buffered_agreement.agreement.id,
-                            provider,
-                        )
-                del self._agreements[agreement_id]
-                self.emitter(events.AgreementTerminated(agr_id=agreement_id, reason=reason))
+
+        del self._agreements[agreement_id]
+        self.emitter(events.AgreementTerminated(agr_id=agreement_id, reason=reason))
+
+    async def terminate_all(self, reason: dict) -> None:
+        """Terminate all agreements."""
+
+        async with self._lock:
+            for agreement_id in frozenset(self._agreements):
+                await self._terminate_agreement(agreement_id, reason)
 
     async def on_agreement_terminated(self, agr_id: str, reason: dict) -> None:
         """Reacts to agreement termination event
