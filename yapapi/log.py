@@ -441,7 +441,7 @@ class SummaryLogger:
             provider_info = self.agreement_provider_info[event.agr_id]
             reason = str(exc) or repr(exc) or "unexpected error"
             self.logger.error(
-                "Failed to accept invoice from '%s', reason: %s", provider_info, reason
+                "Failed to accept Invoice or Debit Note from '%s', reason: %s", provider_info, reason
             )
 
         elif isinstance(event, events.WorkerFinished):
