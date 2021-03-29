@@ -97,6 +97,7 @@ ya-market = "0.1.0"
 
 [tool.poe.tasks]
 test = "pytest --cov=yapapi --ignore tests/goth"
+goth-assets = "python -m goth create-assets tests/goth/assets"
 goth-tests = "pytest -svx tests/goth"
 typecheck = "mypy ."
 codestyle = "black --check --diff ."
