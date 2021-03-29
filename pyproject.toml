@@ -37,11 +37,18 @@ toml = "^0.10.1"
 srvresolver = "^0.3.5"
 colorama = "^0.4.4"
 
+# Adding `goth` to dependencies causes > 40 additional packages to be installed. Given
+# that dependency resolution in `poetry` is rather slow, we'd like to avoid installing
+# `goth` for example in a CI pipeline that only runs linters/unit tests, not integration
+# tests. Therefore we specify `goth` as an "extra" dependency, with `optional = "true"`.
+# It will be then installable with `poetry install -E integration-tests`.
+# Note that putting `goth` in `poetry.dev-dependencies` instead of `poetry.dependencies`
+# would not work: see https://github.com/python-poetry/poetry/issues/129.
 goth = {git = "https://github.com/golemfactory/goth.git", branch = "master", optional = true, python = "^3.8.0"}
 
 [tool.poetry.extras]
 cli = ['fire', 'rich']
-integration-tests = ['goth']
+integration-tests = ['goth', 'pytest', 'pytest-asyncio']
 
 [tool.poetry.dev-dependencies]
 black = "^20.8b1"
