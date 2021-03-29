@@ -1,3 +1,4 @@
+#!/usr/local/bin/python
 import argparse
 from datetime import datetime
 import enum
@@ -46,6 +47,11 @@ def add(val):
 
 def plot(plot_type):
     data = _get_data()
+
+    if not data:
+        print(json.dumps(""))
+        return
+
     y = [r["val"] for r in data]
 
     if plot_type == PlotType.dist.value:
@@ -76,12 +82,12 @@ def _get_data():
 def _get_stats(data=None):
     data = data or [r["val"] for r in _get_data()]
     return {
-        "min": min(data),
-        "max": max(data),
-        "median": numpy.median(data),
-        "mean": numpy.mean(data),
-        "variance": numpy.var(data),
-        "std dev": numpy.std(data),
+        "min": min(data) if data else None,
+        "max": max(data) if data else None,
+        "median": numpy.median(data) if data else None,
+        "mean": numpy.mean(data) if data else None,
+        "variance": numpy.var(data) if data else None,
+        "std dev": numpy.std(data) if data else None,
         "size": len(data),
     }
 

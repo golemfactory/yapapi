@@ -1,3 +1,4 @@
+#!/usr/local/bin/python
 import argparse
 import os
 import subprocess
@@ -16,7 +17,7 @@ args = parser.parse_args()
 if args.start:
     if os.path.exists(PIDFILE):
         raise Exception(f"Cannot start process, {PIDFILE} exists.")
-    p = subprocess.Popen(["python", SCRIPT_FILE])
+    p = subprocess.Popen([SCRIPT_FILE])
     with open(PIDFILE, "w") as pidfile:
         pidfile.write(str(p.pid))
 elif args.stop:

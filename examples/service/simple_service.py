@@ -2,7 +2,12 @@
 import asyncio
 from datetime import datetime, timedelta
 import pathlib
+import random
+import string
 import sys
+import tempfile
+import time
+
 
 from yapapi import (
     Executor,
@@ -30,23 +35,60 @@ from utils import (
 
 async def main(subnet_tag, driver=None, network=None):
     package = await vm.repo(
-        image_hash="54169fddccc723285789278e28899edab2bb3e73514aeae20f9fc3a2",
+        image_hash="8b11df59f84358d47fc6776d0bb7290b0054c15ded2d6f54cf634488",
         min_mem_gib=0.5,
         min_storage_gib=2.0,
     )
 
-    async def service(ctx: WorkContext, tasks):
-        script_dir = pathlib.Path(__file__).resolve().parent
-        ctx.send_file(script_dir / "index.html", "/golem/html/index.html")
-        ctx.send_file(script_dir / "http_test.py", "/golem/test/http_test.py")
-
-        ctx.run("sh", "/golem/run/run-http-server.sh")
-        ctx.run("python", "/golem/out/http_test.py")
-        ctx.download_file("/golem/out/test", "test")
+    async def service(ctx: WorkContext, tasks):  #
+        print("-------------------------- 1")
+        ctx.run("/bin/sh", "-c", "echo aaa")
+        # ctx.run("/golem/run/simulate_observations_ctl.py", "--start")
+        # ctx.send_bytes("/golem/in/get_stats.sh", b"/golem/run/simple_service.py --stats > /golem/out/test")
+        # print("-------------------------- 2")
         yield ctx.commit()
 
+        await asyncio.sleep(10)
+
+        ctx.run("/bin/sh", "-c", "echo bbb")
+        ctx.run("/bin/sh", "-c", "echo ccc")
+        yield ctx.commit()
+
+        await asyncio.sleep(10)
+
+        ctx.run("/bin/sh", "-c", "echo ddd")
+        yield ctx.commit()
+
+        # print("-------------------------- 3")
+        # await asyncio.sleep(10)
+        # print("-------------------------- 4")
+        #
+        # ctx.run("/bin/sh", "/golem/in/get_stats.sh")
+        # test_filename = "".join(random.choice(string.ascii_letters) for _ in range(10)) + ".stats"
+        # ctx.download_file("/golem/out/test", pathlib.Path(__file__).resolve().parent / test_filename)
+        # ctx.run("/golem/run/simulate_observations_ctl.py", "--stop")
+        # print("-------------------------- 5")
+        # yield ctx.commit()
+        # print("-------------------------- 6")
+        #
         async for task in tasks:
+            print(f"-------------------------- 7 {task}")
             task.accept_result()
+
+        # while True:
+        #     try:
+        #         await asyncio.sleep(10)
+        #         ctx.run("sh", "/golem/run/get_stats.sh")
+        #         test_filename = "".join(random.choice(string.ascii_letters) for _ in range(10)) + ".stats"
+        #
+        #         ctx.download_file("/golem/out/test", pathlib.Path(__file__).resolve().parent / test_filename)
+        #         yield ctx.commit()
+        #     finally:
+        #         async for task in tasks:
+        #             print("!!!!!!!!!!!!!!!!!!!!!!!!!!!  task accept")
+        #             task.accept_result()
+
+
 
     # Worst-case overhead, in minutes, for initialization (negotiation, file transfer etc.)
     # TODO: make this dynamic, e.g. depending on the size of files to transfer
@@ -99,7 +141,7 @@ async def main(subnet_tag, driver=None, network=None):
 
 if __name__ == "__main__":
     parser = build_parser("Test http")
-    parser.set_defaults(log_file="http-yapapi.log")
+    parser.set_defaults(log_file="service-yapapi.log")
     args = parser.parse_args()
 
     # This is only required when running on Windows with Python prior to 3.8:
