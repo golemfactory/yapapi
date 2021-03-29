@@ -41,27 +41,21 @@ def test_command_container():
 class TestWorkContext:
     @staticmethod
     def _get_work_context(storage):
-        return WorkContext(
-            factory.Faker("pystr"),
-            node_info=NodeInfoFactory(),
-            storage=storage
-        )
+        return WorkContext(factory.Faker("pystr"), node_info=NodeInfoFactory(), storage=storage)
 
     @staticmethod
     def _assert_dst_path(steps, dst_path):
         c = CommandContainer()
         steps.register(c)
-        assert c.commands().pop()['transfer']['to'] == f"container:{dst_path}"
+        assert c.commands().pop()["transfer"]["to"] == f"container:{dst_path}"
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(
-        sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+"
-    )
+    @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
     async def test_send_json(self):
         storage = mock.AsyncMock()
         dst_path = "/test/path"
         data = {
-            'param': 'value',
+            "param": "value",
         }
         ctx = self._get_work_context(storage)
         ctx.send_json(dst_path, data)
@@ -71,9 +65,7 @@ class TestWorkContext:
         self._assert_dst_path(steps, dst_path)
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(
-        sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+"
-    )
+    @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
     async def test_send_bytes(self):
         storage = mock.AsyncMock()
         dst_path = "/test/path"
