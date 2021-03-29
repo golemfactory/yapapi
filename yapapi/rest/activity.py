@@ -169,7 +169,7 @@ class PollingBatch(Batch):
                 results: List[yaa.ExeScriptCommandResult] = await self._api.get_exec_batch_results(
                     self._activity_id,
                     self._batch_id,
-                    # , timeout=timeout  # timeout argument is currently unsupported
+                    # timeout=timeout  # timeout argument is currently unsupported
                 )
             except ApiException as err:
                 if err.status == 408:
