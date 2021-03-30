@@ -45,17 +45,22 @@ async def main(subnet_tag, driver=None, network=None):
         ctx.send_bytes("/golem/in/get_stats.sh", b"/golem/run/simple_service.py --stats > /golem/out/test")
         yield ctx.commit()
 
-        while True:
-            try:
+        try:
+            while True:
                 await asyncio.sleep(10)
+
                 ctx.run("/bin/sh", "/golem/in/get_stats.sh")
                 test_filename = "".join(random.choice(string.ascii_letters) for _ in range(10)) + ".stats"
                 ctx.download_file("/golem/out/test", pathlib.Path(__file__).resolve().parent / test_filename)
-                ctx.run("/golem/run/simulate_observations_ctl.py", "--stop")
                 yield ctx.commit()
-            finally:
-                async for task in tasks:
-                    task.accept_result()
+
+        except KeyboardInterrupt:
+            ctx.run("/golem/run/simulate_observations_ctl.py", "--stop")
+            yield ctx.commit()
+
+        finally:
+            async for task in tasks:
+                task.accept_result()
 
     # Worst-case overhead, in minutes, for initialization (negotiation, file transfer etc.)
     # TODO: make this dynamic, e.g. depending on the size of files to transfer
