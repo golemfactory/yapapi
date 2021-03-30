@@ -33,11 +33,13 @@ def _connect_db():
 
 def init():
     with _connect_db() as db:
-        db.execute("create table observations("
-                   "id integer primary key autoincrement not null, "
-                   "val float not null,"
-                   "time_added timestamp default current_timestamp not null"
-                   ")")
+        db.execute(
+            "create table observations("
+            "id integer primary key autoincrement not null, "
+            "val float not null,"
+            "time_added timestamp default current_timestamp not null"
+            ")"
+        )
 
 
 def add(val):
@@ -61,7 +63,7 @@ def plot(plot_type):
         plt.plot(x, y)
 
     plot_filename = PLOT_PATH / (
-            "".join(random.choice(string.ascii_letters) for _ in range(10)) + ".png"
+        "".join(random.choice(string.ascii_letters) for _ in range(10)) + ".png"
     )
     plt.savefig(plot_filename)
     print(json.dumps(str(plot_filename)))
@@ -73,9 +75,7 @@ def dump():
 
 def _get_data():
     with _connect_db() as db:
-        db.execute(
-            "select val, time_added from observations order by time_added asc"
-        )
+        db.execute("select val, time_added from observations order by time_added asc")
         return list(map(dict, db.fetchall()))
 
 
