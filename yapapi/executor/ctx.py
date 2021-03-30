@@ -237,7 +237,7 @@ class WorkContext:
         """Schedule sending bytes data to the provider.
 
         :param dst_path: remote (provider) path
-        :param data: dictionary representing JSON data
+        :param data: bytes to send
         :return: None
         """
         self.__prepare()
