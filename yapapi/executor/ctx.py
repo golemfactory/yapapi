@@ -76,18 +76,21 @@ class _SendWork(Work, abc.ABC):
         )
 
 
-class _SendJson(_SendWork):
-    def __init__(self, storage: StorageProvider, data: dict, dst_path: str):
+class _SendBytes(_SendWork):
+    def __init__(self, storage: StorageProvider, data: bytes, dst_path: str):
         super().__init__(storage, dst_path)
-        self._cnt = 0
-        self._data: Optional[bytes] = json.dumps(data).encode(encoding="utf-8")
+        self._data: Optional[bytes] = data
 
     async def do_upload(self, storage: StorageProvider) -> Source:
-        self._cnt += 1
-        assert self._data is not None, f"json buffer unintialized {self._cnt}"
+        assert self._data is not None, f"buffer unintialized"
         src = await storage.upload_bytes(self._data)
         self._data = None
         return src
+
+
+class _SendJson(_SendBytes):
+    def __init__(self, storage: StorageProvider, data: dict, dst_path: str):
+        super().__init__(storage, json.dumps(data).encode(encoding="utf-8"), dst_path)
 
 
 class _SendFile(_SendWork):
@@ -229,6 +232,16 @@ class WorkContext:
         """
         self.__prepare()
         self._pending_steps.append(_SendJson(self._storage, data, json_path))
+
+    def send_bytes(self, dst_path: str, data: bytes):
+        """Schedule sending bytes data to the provider.
+
+        :param dst_path: remote (provider) path
+        :param data: bytes to send
+        :return: None
+        """
+        self.__prepare()
+        self._pending_steps.append(_SendBytes(self._storage, data, dst_path))
 
     def send_file(self, src_path: str, dst_path: str):
         """Schedule sending file to the provider.
