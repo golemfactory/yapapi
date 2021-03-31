@@ -364,7 +364,7 @@ class Executor(AsyncContextManager):
 
                 # Create a new handler task
                 await semaphore.acquire()
-                asyncio.create_task(handler(proposal))
+                asyncio.get_event_loop().create_task(handler(proposal))
 
     async def _submit(
         self,
