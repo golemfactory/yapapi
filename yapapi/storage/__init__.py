@@ -12,6 +12,7 @@ import asyncio
 import aiohttp
 
 _BUF_SIZE = 40960
+DOWNLOAD_BYTES_LIMIT_DEFAULT = 1*1024*1024
 AsyncReader = Union[asyncio.streams.StreamReader, aiohttp.streams.StreamReader]
 
 
@@ -49,6 +50,20 @@ class Destination(abc.ABC):
     @abc.abstractmethod
     async def download_stream(self) -> Content:
         raise NotImplementedError
+
+    async def download_bytes(self, limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT):
+        output = b""
+        content = await self.download_stream()
+
+        async for chunk in content.stream:
+            limit_remaining = limit - len(output)
+            if limit_remaining > len(chunk):
+                output += chunk
+            else:
+                output += chunk[:limit_remaining]
+                break
+
+        return output
 
     async def download_file(self, destination_file: PathLike):
         content = await self.download_stream()

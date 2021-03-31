@@ -3,12 +3,13 @@ import enum
 import json
 from dataclasses import dataclass
 from datetime import timedelta
+from functools import partial
 from pathlib import Path
-from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union
+from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union, Any
 
 from .events import DownloadStarted, DownloadFinished
 from ..props import NodeInfo
-from ..storage import StorageProvider, Source, Destination
+from ..storage import StorageProvider, Source, Destination, DOWNLOAD_BYTES_LIMIT_DEFAULT
 
 
 class CommandContainer:
@@ -130,7 +131,41 @@ class _Run(Work):
 StorageEvent = Union[DownloadStarted, DownloadFinished]
 
 
-class _RecvFile(Work):
+class _ReceiveContent(Work):
+    def __init__(
+        self,
+        storage: StorageProvider,
+        src_path: str,
+        emitter: Optional[Callable[[StorageEvent], None]] = None,
+    ):
+        self._storage = storage
+        self._src_path: str = src_path
+        self._idx: Optional[int] = None
+        self._dst_slot: Optional[Destination] = None
+        self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
+        self._dst_path: Optional[str] = None
+
+    async def prepare(self):
+        self._dst_slot = await self._storage.new_destination(destination_file=self._dst_path)
+
+    def register(self, commands: CommandContainer):
+        assert self._dst_slot, "_ReceiveFile command creation without prepare"
+
+        self._idx = commands.transfer(
+            _from=f"container:{self._src_path}", to=self._dst_slot.upload_url
+        )
+
+    def _emit_download_start(self):
+        assert self._dst_slot, f"{self.__class__} post without prepare"
+        if self._emitter:
+            self._emitter(DownloadStarted(path=self._src_path))
+
+    def _emit_download_end(self):
+        if self._emitter:
+            self._emitter(DownloadFinished(path=str(self._dst_path)))
+
+
+class _ReceiveFile(_ReceiveContent):
     def __init__(
         self,
         storage: StorageProvider,
@@ -138,30 +173,55 @@ class _RecvFile(Work):
         dst_path: str,
         emitter: Optional[Callable[[StorageEvent], None]] = None,
     ):
-        self._storage = storage
+        super().__init__(storage, src_path, emitter)
         self._dst_path = Path(dst_path)
-        self._src_path: str = src_path
-        self._idx: Optional[int] = None
-        self._dst_slot: Optional[Destination] = None
-        self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
-
-    async def prepare(self):
-        self._dst_slot = await self._storage.new_destination(destination_file=self._dst_path)
-
-    def register(self, commands: CommandContainer):
-        assert self._dst_slot, "_RecvFile command creation without prepare"
-
-        self._idx = commands.transfer(
-            _from=f"container:{self._src_path}", to=self._dst_slot.upload_url
-        )
 
     async def post(self) -> None:
-        assert self._dst_slot, "_RecvFile post without prepare"
-        if self._emitter:
-            self._emitter(DownloadStarted(path=self._src_path))
+        self._emit_download_start()
         await self._dst_slot.download_file(self._dst_path)
-        if self._emitter:
-            self._emitter(DownloadFinished(path=str(self._dst_path)))
+        self._emit_download_end()
+
+
+class _ReceiveBytes(_ReceiveContent):
+    def __init__(
+        self,
+        storage: StorageProvider,
+        src_path: str,
+        on_download: Callable[[bytes], None],
+        limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
+        emitter: Optional[Callable[[StorageEvent], None]] = None,
+    ):
+        super().__init__(storage, src_path, emitter)
+        self._on_download = on_download
+        self._limit = limit
+
+    async def post(self) -> None:
+        self._emit_download_start()
+        output = await self._dst_slot.download_bytes(limit=self._limit)
+        self._emit_download_end()
+        self._on_download(output)
+
+
+class _ReceiveJson(_ReceiveBytes):
+    def __init__(
+        self,
+        storage: StorageProvider,
+        src_path: str,
+        on_download: Callable[[Any], None],
+        limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
+        emitter: Optional[Callable[[StorageEvent], None]] = None,
+    ):
+        super().__init__(
+            storage,
+            src_path,
+            partial(self.__on_json_download, on_download),
+            limit,
+            emitter
+        )
+
+    @staticmethod
+    def __on_json_download(on_download: Callable[[bytes], None], content: bytes):
+        on_download(json.loads(content))
 
 
 class _Steps(Work):
@@ -280,7 +340,29 @@ class WorkContext:
         :return: None
         """
         self.__prepare()
-        self._pending_steps.append(_RecvFile(self._storage, src_path, dst_path, self._emitter))
+        self._pending_steps.append(_ReceiveFile(self._storage, src_path, dst_path, self._emitter))
+
+    def download_bytes(
+            self,
+            src_path: str,
+            on_download: Callable[[bytes], None],
+            limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
+    ):
+        self.__prepare()
+        self._pending_steps.append(
+            _ReceiveBytes(self._storage, src_path, on_download, limit, self._emitter)
+        )
+
+    def download_json(
+            self,
+            src_path: str,
+            on_download: Callable[[Any], None],
+            limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
+    ):
+        self.__prepare()
+        self._pending_steps.append(
+            _ReceiveJson(self._storage, src_path, on_download, limit, self._emitter)
+        )
 
     def commit(self, timeout: Optional[timedelta] = None) -> Work:
         """Creates sequence of commands to be sent to provider.
