@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import asyncio
 from datetime import datetime, timedelta
+import json
 import pathlib
 import random
 import string
@@ -40,18 +41,37 @@ async def main(subnet_tag, driver=None, network=None):
         min_storage_gib=2.0,
     )
 
-    async def service(ctx: WorkContext, tasks):  #
+    async def service(ctx: WorkContext, tasks):
+        STATS_PATH = "/golem/out/stats"
+        PLOT_INFO_PATH = "/golem/out/plot"
+        SIMPLE_SERVICE = "/golem/run/simple_service.py"
+
         ctx.run("/golem/run/simulate_observations_ctl.py", "--start")
-        ctx.send_bytes("/golem/in/get_stats.sh", b"/golem/run/simple_service.py --stats > /golem/out/test")
+        ctx.send_bytes("/golem/in/get_stats.sh", f"{SIMPLE_SERVICE} --stats > {STATS_PATH}".encode())
+        ctx.send_bytes("/golem/in/get_plot.sh", f"{SIMPLE_SERVICE} --plot dist > {PLOT_INFO_PATH}".encode())
+
         yield ctx.commit()
+
+        plots_to_download = []
+
+        def on_plot(out: bytes):
+            fname = json.loads(out.strip())
+            print(f"{TEXT_COLOR_CYAN}plot: {fname}{TEXT_COLOR_DEFAULT}")
+            plots_to_download.append(fname)
 
         try:
             while True:
                 await asyncio.sleep(10)
 
                 ctx.run("/bin/sh", "/golem/in/get_stats.sh")
-                test_filename = "".join(random.choice(string.ascii_letters) for _ in range(10)) + ".stats"
-                ctx.download_file("/golem/out/test", pathlib.Path(__file__).resolve().parent / test_filename)
+                ctx.download_bytes(STATS_PATH, lambda out: print(f"{TEXT_COLOR_CYAN}stats: {out}{TEXT_COLOR_DEFAULT}"))
+                ctx.run("/bin/sh", "/golem/in/get_plot.sh")
+                ctx.download_bytes(PLOT_INFO_PATH, on_plot)
+                yield ctx.commit()
+
+                for plot in plots_to_download:
+                    test_filename = "".join(random.choice(string.ascii_letters) for _ in range(10)) + ".png"
+                    ctx.download_file(plot, pathlib.Path(__file__).resolve().parent / test_filename)
                 yield ctx.commit()
 
         except KeyboardInterrupt:
