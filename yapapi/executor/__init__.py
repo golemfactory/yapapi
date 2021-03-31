@@ -372,27 +372,23 @@ class Executor(AsyncContextManager):
                 try:
                     await proposal.reject(reason=reason)
                     emit(events.ProposalRejected(prop_id=proposal.id, reason=reason))
-                    return True
                 except Exception:
                     emit(
                         events.ProposalFailed(
                             prop_id=proposal.id, exc_info=sys.exc_info()  # type: ignore
                         )
                     )
-                    return False
 
             async def respond_to_proposal(proposal, builder):
                 try:
                     await proposal.respond(builder.properties, builder.constraints)
                     emit(events.ProposalResponded(prop_id=proposal.id))
-                    return True
                 except Exception:
                     emit(
                         events.ProposalFailed(
                             prop_id=proposal.id, exc_info=sys.exc_info()  # type: ignore
                         )
                     )
-                    return False
 
             nonlocal offers_collected, proposals_confirmed
             try:
@@ -438,14 +434,13 @@ class Executor(AsyncContextManager):
                             timeout = proposal.props.get(DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP)
                             if timeout:
                                 if timeout < DEBIT_NOTE_MIN_TIMEOUT:
-                                    await reject_proposal(proposal, "No common payment platform")
+                                    await reject_proposal(
+                                        proposal, "Debit note acceptance timeout too short"
+                                    )
                                     continue
                                 else:
                                     builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
-                            if await respond_to_proposal(proposal, builder):
-                                emit(events.ProposalResponded(prop_id=proposal.id))
-                            else:
-                                continue
+                            await respond_to_proposal(proposal, builder)
                         except CancelledError:
                             raise
                         except Exception:
