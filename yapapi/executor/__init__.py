@@ -368,6 +368,28 @@ class Executor(AsyncContextManager):
             )
 
         async def find_offers() -> None:
+            async def reject_proposal(proposal, reason):
+                try:
+                    await proposal.reject(reason=reason)
+                    emit(events.ProposalRejected(prop_id=proposal.id, reason=reason))
+                except Exception:
+                    emit(
+                        events.ProposalFailed(
+                            prop_id=proposal.id, exc_info=sys.exc_info()  # type: ignore
+                        )
+                    )
+
+            async def respond_to_proposal(proposal, builder):
+                try:
+                    await proposal.respond(builder.properties, builder.constraints)
+                    emit(events.ProposalResponded(prop_id=proposal.id))
+                except Exception:
+                    emit(
+                        events.ProposalFailed(
+                            prop_id=proposal.id, exc_info=sys.exc_info()  # type: ignore
+                        )
+                    )
+
             nonlocal offers_collected, proposals_confirmed
             try:
                 subscription = await builder.subscribe(market_api)
@@ -394,12 +416,10 @@ class Executor(AsyncContextManager):
                             score,
                         )
                     except InvalidPropertiesError as err:
-                        emit(events.ProposalRejected(prop_id=proposal.id, reason=str(err)))
+                        await reject_proposal(proposal, "Malformed offer")
                         continue
                     if score < SCORE_NEUTRAL:
-                        with contextlib.suppress(Exception):
-                            await proposal.reject(reason="Score too low")
-                        emit(events.ProposalRejected(prop_id=proposal.id, reason="Score too low"))
+                        await reject_proposal(proposal, "Score too low")
                     elif not proposal.is_draft:
                         try:
                             common_platforms = self._get_common_payment_platforms(proposal)
@@ -409,31 +429,21 @@ class Executor(AsyncContextManager):
                                 )
                             else:
                                 # reject proposal if there are no common payment platforms
-                                with contextlib.suppress(Exception):
-                                    await proposal.reject(reason="No common payment platform")
-                                emit(
-                                    events.ProposalRejected(
-                                        prop_id=proposal.id, reason="No common payment platforms"
-                                    )
-                                )
+                                await reject_proposal(proposal, "No common payment platform")
+                                continue
                             timeout = proposal.props.get(DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP)
                             if timeout:
                                 if timeout < DEBIT_NOTE_MIN_TIMEOUT:
-                                    with contextlib.suppress(Exception):
-                                        await proposal.reject(reason="Debit note timeout too low")
-                                    emit(
-                                        events.ProposalRejected(
-                                            prop_id=proposal.id,
-                                            reason="Debit note acceptance timeout too short",
-                                        )
+                                    await reject_proposal(
+                                        proposal, "Debit note acceptance timeout too short"
                                     )
+                                    continue
                                 else:
                                     builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
-                            await proposal.respond(builder.properties, builder.constraints)
-                            emit(events.ProposalResponded(prop_id=proposal.id))
+                            await respond_to_proposal(proposal, builder)
                         except CancelledError:
                             raise
-                        except Exception as ex:
+                        except Exception:
                             emit(
                                 events.ProposalFailed(
                                     prop_id=proposal.id, exc_info=sys.exc_info()  # type: ignore
