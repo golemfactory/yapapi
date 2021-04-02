@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 import asyncio
 from datetime import datetime, timedelta
+import itertools
 import json
 import pathlib
 import random
 import string
 import sys
-import tempfile
-import time
 
 
 from yapapi import (
@@ -54,13 +53,16 @@ async def main(subnet_tag, driver=None, network=None):
 
         plots_to_download = []
 
+        # have a look at asyncio docs and figure out whether to leave the callback or replace it with something
+        # more asyncio-ic
+
         def on_plot(out: bytes):
             fname = json.loads(out.strip())
             print(f"{TEXT_COLOR_CYAN}plot: {fname}{TEXT_COLOR_DEFAULT}")
             plots_to_download.append(fname)
 
         try:
-            while True:
+            async for task in tasks:
                 await asyncio.sleep(10)
 
                 ctx.run("/bin/sh", "/golem/in/get_stats.sh")
@@ -74,13 +76,12 @@ async def main(subnet_tag, driver=None, network=None):
                     ctx.download_file(plot, pathlib.Path(__file__).resolve().parent / test_filename)
                 yield ctx.commit()
 
+                task.accept_result()
+
         except KeyboardInterrupt:
             ctx.run("/golem/run/simulate_observations_ctl.py", "--stop")
             yield ctx.commit()
-
-        finally:
-            async for task in tasks:
-                task.accept_result()
+            raise
 
     # Worst-case overhead, in minutes, for initialization (negotiation, file transfer etc.)
     # TODO: make this dynamic, e.g. depending on the size of files to transfer
@@ -90,7 +91,7 @@ async def main(subnet_tag, driver=None, network=None):
     # reach the providers.
     min_timeout, max_timeout = 6, 30
 
-    timeout = timedelta(minutes=min_timeout)
+    timeout = timedelta(minutes=29)
 
     # By passing `event_consumer=log_summary()` we enable summary logging.
     # See the documentation of the `yapapi.log` module on how to set
@@ -98,7 +99,7 @@ async def main(subnet_tag, driver=None, network=None):
     async with Executor(
         package=package,
         max_workers=3,
-        budget=10.0,
+        budget=1.0,
         timeout=timeout,
         subnet_tag=subnet_tag,
         driver=driver,
@@ -113,20 +114,18 @@ async def main(subnet_tag, driver=None, network=None):
             f"and network: {TEXT_COLOR_YELLOW}{executor.network}{TEXT_COLOR_DEFAULT}\n"
         )
 
-        num_tasks = 0
         start_time = datetime.now()
 
-        async for task in executor.submit(service, [Task(data=None)]):
-            num_tasks += 1
+        async for task in executor.submit(service, (Task(data=n) for n in itertools.count(1))):
             print(
                 f"{TEXT_COLOR_CYAN}"
-                f"Task computed: {task}, result: {task.result}, time: {task.running_time}"
+                f"Script executed: {task}, result: {task.result}, time: {task.running_time}"
                 f"{TEXT_COLOR_DEFAULT}"
             )
 
         print(
             f"{TEXT_COLOR_CYAN}"
-            f"{num_tasks} tasks computed, total time: {datetime.now() - start_time}"
+            f"Service finished, total time: {datetime.now() - start_time}"
             f"{TEXT_COLOR_DEFAULT}"
         )
 
