@@ -224,7 +224,7 @@ class _ReceiveJson(_ReceiveBytes):
         on_download(json.loads(content))
 
 
-class _Steps(Work):
+class Steps(Work):
     def __init__(self, *steps: Work, timeout: Optional[timedelta] = None):
         self._steps: Tuple[Work, ...] = steps
         self._timeout: Optional[timedelta] = timeout
@@ -348,6 +348,12 @@ class WorkContext:
             on_download: Callable[[bytes], None],
             limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
     ):
+        """Schedule downloading a remote file as bytes
+        :param src_path: remote (provider) path
+        :param on_download: the callable to run on the received data
+        :param limit: the maximum length of the expected byte string
+        :return None
+        """
         self.__prepare()
         self._pending_steps.append(
             _ReceiveBytes(self._storage, src_path, on_download, limit, self._emitter)
@@ -359,20 +365,26 @@ class WorkContext:
             on_download: Callable[[Any], None],
             limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
     ):
+        """Schedule downloading a remote file as JSON
+        :param src_path: remote (provider) path
+        :param on_download: the callable to run on the received JSON data
+        :param limit: the maximum length of the expected remote file
+        :return None
+        """
         self.__prepare()
         self._pending_steps.append(
             _ReceiveJson(self._storage, src_path, on_download, limit, self._emitter)
         )
 
     def commit(self, timeout: Optional[timedelta] = None) -> Work:
-        """Creates sequence of commands to be sent to provider.
+        """Creates a sequence of commands to be sent to provider.
 
-        :return: Work object (the latter contains
-                 sequence commands added before calling this method)
+        :return: Work object containing the sequence of commands
+                 scheduled within this work context before calling this method)
         """
         steps = self._pending_steps
         self._pending_steps = []
-        return _Steps(*steps, timeout=timeout)
+        return Steps(*steps, timeout=timeout)
 
 
 class CaptureMode(enum.Enum):
