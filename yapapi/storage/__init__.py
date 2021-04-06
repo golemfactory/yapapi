@@ -12,7 +12,7 @@ import asyncio
 import aiohttp
 
 _BUF_SIZE = 40960
-DOWNLOAD_BYTES_LIMIT_DEFAULT = 1*1024*1024
+DOWNLOAD_BYTES_LIMIT_DEFAULT = 1 * 1024 * 1024
 AsyncReader = Union[asyncio.streams.StreamReader, aiohttp.streams.StreamReader]
 
 

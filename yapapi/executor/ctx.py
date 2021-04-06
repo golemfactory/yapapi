@@ -212,11 +212,7 @@ class _ReceiveJson(_ReceiveBytes):
         emitter: Optional[Callable[[StorageEvent], None]] = None,
     ):
         super().__init__(
-            storage,
-            src_path,
-            partial(self.__on_json_download, on_download),
-            limit,
-            emitter
+            storage, src_path, partial(self.__on_json_download, on_download), limit, emitter
         )
 
     @staticmethod
@@ -343,10 +339,10 @@ class WorkContext:
         self._pending_steps.append(_ReceiveFile(self._storage, src_path, dst_path, self._emitter))
 
     def download_bytes(
-            self,
-            src_path: str,
-            on_download: Callable[[bytes], None],
-            limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
+        self,
+        src_path: str,
+        on_download: Callable[[bytes], None],
+        limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
     ):
         """Schedule downloading a remote file as bytes
         :param src_path: remote (provider) path
@@ -360,10 +356,10 @@ class WorkContext:
         )
 
     def download_json(
-            self,
-            src_path: str,
-            on_download: Callable[[Any], None],
-            limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
+        self,
+        src_path: str,
+        on_download: Callable[[Any], None],
+        limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
     ):
         """Schedule downloading a remote file as JSON
         :param src_path: remote (provider) path

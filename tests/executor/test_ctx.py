@@ -86,7 +86,7 @@ class TestWorkContext:
     @pytest.mark.asyncio
     @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
     async def test_download_bytes(self):
-        expected = b'some byte string'
+        expected = b"some byte string"
 
         def on_download(data: bytes):
             assert data == expected
@@ -104,13 +104,15 @@ class TestWorkContext:
     @pytest.mark.asyncio
     @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
     async def test_download_json(self):
-        expected = {'key': 'val'}
+        expected = {"key": "val"}
 
         def on_download(data: bytes):
             assert data == expected
 
         storage = mock.AsyncMock()
-        storage.new_destination.return_value.download_bytes.return_value = json.dumps(expected).encode("utf-8")
+        storage.new_destination.return_value.download_bytes.return_value = json.dumps(
+            expected
+        ).encode("utf-8")
         src_path = "/test/path"
         ctx = self._get_work_context(storage)
         ctx.download_json(src_path, on_download)
