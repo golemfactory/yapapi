@@ -196,7 +196,7 @@ class PollingBatch(Batch):
                 if result.is_batch_finished:
                     break
             if not any_new:
-                delay = min(10, max(0, self.seconds_left()))
+                delay = min(3, max(0, self.seconds_left()))
                 await asyncio.sleep(delay)
 
 
