@@ -167,11 +167,13 @@ class PollingBatch(Batch):
                 raise BatchTimeoutError()
             try:
                 results: List[yaa.ExeScriptCommandResult] = await self._api.get_exec_batch_results(
-                    self._activity_id, self._batch_id, timeout=timeout
+                    self._activity_id, self._batch_id, _request_timeout=min(timeout, 5)
                 )
+            except asyncio.TimeoutError:
+                continue
             except ApiException as err:
                 if err.status == 408:
-                    raise BatchTimeoutError()
+                    continue
                 raise
             any_new: bool = False
             results = results[last_idx:]
@@ -194,7 +196,7 @@ class PollingBatch(Batch):
                 if result.is_batch_finished:
                     break
             if not any_new:
-                delay = min(10, max(0, self.seconds_left()))
+                delay = min(3, max(0, self.seconds_left()))
                 await asyncio.sleep(delay)
 
 
