@@ -149,7 +149,7 @@ class _ReceiveContent(Work):
         self._dst_slot = await self._storage.new_destination(destination_file=self._dst_path)
 
     def register(self, commands: CommandContainer):
-        assert self._dst_slot, "_ReceiveFile command creation without prepare"
+        assert self._dst_slot, f"{self.__class__} command creation without prepare"
 
         self._idx = commands.transfer(
             _from=f"container:{self._src_path}", to=self._dst_slot.upload_url
