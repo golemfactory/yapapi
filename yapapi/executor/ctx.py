@@ -3,6 +3,7 @@ import enum
 import json
 from dataclasses import dataclass
 from datetime import timedelta
+from os import PathLike
 from functools import partial
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union, Any, Awaitable
@@ -143,7 +144,7 @@ class _ReceiveContent(Work):
         self._idx: Optional[int] = None
         self._dst_slot: Optional[Destination] = None
         self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
-        self._dst_path: Optional[str] = None
+        self._dst_path: Optional[PathLike] = None
 
     async def prepare(self):
         self._dst_slot = await self._storage.new_destination(destination_file=self._dst_path)
@@ -178,6 +179,9 @@ class _ReceiveFile(_ReceiveContent):
 
     async def post(self) -> None:
         self._emit_download_start()
+        assert self._dst_path
+        assert self._dst_slot
+
         await self._dst_slot.download_file(self._dst_path)
         self._emit_download_end()
 
@@ -197,6 +201,8 @@ class _ReceiveBytes(_ReceiveContent):
 
     async def post(self) -> None:
         self._emit_download_start()
+        assert self._dst_slot
+
         output = await self._dst_slot.download_bytes(limit=self._limit)
         self._emit_download_end()
         await self._on_download(output)
@@ -341,7 +347,7 @@ class WorkContext:
     def download_bytes(
         self,
         src_path: str,
-        on_download: Callable[[bytes], None],
+        on_download: Callable[[bytes], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
     ):
         """Schedule downloading a remote file as bytes
@@ -358,7 +364,7 @@ class WorkContext:
     def download_json(
         self,
         src_path: str,
-        on_download: Callable[[Any], None],
+        on_download: Callable[[Any], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
     ):
         """Schedule downloading a remote file as JSON
