@@ -1,4 +1,5 @@
 import factory
+from functools import partial
 import json
 import pytest
 import sys
@@ -39,6 +40,10 @@ def test_command_container():
 
 
 class TestWorkContext:
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        self._on_download_executed = False
+
     @staticmethod
     def _get_work_context(storage):
         return WorkContext(factory.Faker("pystr"), node_info=NodeInfoFactory(), storage=storage)
@@ -54,6 +59,10 @@ class TestWorkContext:
         c = CommandContainer()
         steps.register(c)
         assert c.commands().pop()["transfer"]["from"] == f"container:{src_path}"
+
+    async def _on_download(self, expected, data: bytes):
+        assert data == expected
+        self._on_download_executed = True
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
@@ -88,26 +97,22 @@ class TestWorkContext:
     async def test_download_bytes(self):
         expected = b"some byte string"
 
-        def on_download(data: bytes):
-            assert data == expected
-
         storage = mock.AsyncMock()
         storage.new_destination.return_value.download_bytes.return_value = expected
+
         src_path = "/test/path"
         ctx = self._get_work_context(storage)
-        ctx.download_bytes(src_path, on_download)
+        ctx.download_bytes(src_path, partial(self._on_download, expected))
         steps = ctx.commit()
         await steps.prepare()
         await steps.post()
         self._assert_src_path(steps, src_path)
+        assert self._on_download_executed
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
     async def test_download_json(self):
         expected = {"key": "val"}
-
-        def on_download(data: bytes):
-            assert data == expected
 
         storage = mock.AsyncMock()
         storage.new_destination.return_value.download_bytes.return_value = json.dumps(
@@ -115,8 +120,9 @@ class TestWorkContext:
         ).encode("utf-8")
         src_path = "/test/path"
         ctx = self._get_work_context(storage)
-        ctx.download_json(src_path, on_download)
+        ctx.download_json(src_path, partial(self._on_download, expected))
         steps = ctx.commit()
         await steps.prepare()
         await steps.post()
         self._assert_src_path(steps, src_path)
+        assert self._on_download_executed

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from functools import partial
 from pathlib import Path
-from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union, Any
+from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union, Any, Awaitable
 
 from .events import DownloadStarted, DownloadFinished
 from ..props import NodeInfo
@@ -187,7 +187,7 @@ class _ReceiveBytes(_ReceiveContent):
         self,
         storage: StorageProvider,
         src_path: str,
-        on_download: Callable[[bytes], None],
+        on_download: Callable[[bytes], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
         emitter: Optional[Callable[[StorageEvent], None]] = None,
     ):
@@ -199,7 +199,7 @@ class _ReceiveBytes(_ReceiveContent):
         self._emit_download_start()
         output = await self._dst_slot.download_bytes(limit=self._limit)
         self._emit_download_end()
-        self._on_download(output)
+        await self._on_download(output)
 
 
 class _ReceiveJson(_ReceiveBytes):
@@ -207,7 +207,7 @@ class _ReceiveJson(_ReceiveBytes):
         self,
         storage: StorageProvider,
         src_path: str,
-        on_download: Callable[[Any], None],
+        on_download: Callable[[Any], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
         emitter: Optional[Callable[[StorageEvent], None]] = None,
     ):
@@ -216,8 +216,8 @@ class _ReceiveJson(_ReceiveBytes):
         )
 
     @staticmethod
-    def __on_json_download(on_download: Callable[[bytes], None], content: bytes):
-        on_download(json.loads(content))
+    async def __on_json_download(on_download: Callable[[bytes], Awaitable], content: bytes):
+        await on_download(json.loads(content))
 
 
 class Steps(Work):
