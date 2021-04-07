@@ -56,17 +56,21 @@ async def main(subnet_tag, driver=None, network=None):
         # have a look at asyncio docs and figure out whether to leave the callback or replace it with something
         # more asyncio-ic
 
-        def on_plot(out: bytes):
+        async def on_plot(out: bytes):
+            nonlocal plots_to_download
             fname = json.loads(out.strip())
             print(f"{TEXT_COLOR_CYAN}plot: {fname}{TEXT_COLOR_DEFAULT}")
             plots_to_download.append(fname)
+
+        async def on_stats(out: bytes):
+            print(f"{TEXT_COLOR_CYAN}stats: {out}{TEXT_COLOR_DEFAULT}")
 
         try:
             async for task in tasks:
                 await asyncio.sleep(10)
 
                 ctx.run("/bin/sh", "/golem/in/get_stats.sh")
-                ctx.download_bytes(STATS_PATH, lambda out: print(f"{TEXT_COLOR_CYAN}stats: {out}{TEXT_COLOR_DEFAULT}"))
+                ctx.download_bytes(STATS_PATH, on_stats)
                 ctx.run("/bin/sh", "/golem/in/get_plot.sh")
                 ctx.download_bytes(PLOT_INFO_PATH, on_plot)
                 yield ctx.commit()
