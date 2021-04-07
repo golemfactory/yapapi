@@ -3,9 +3,10 @@ import enum
 import json
 from dataclasses import dataclass
 from datetime import timedelta
+from os import PathLike
 from functools import partial
 from pathlib import Path
-from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union, Any
+from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union, Any, Awaitable
 
 from .events import DownloadStarted, DownloadFinished
 from ..props import NodeInfo
@@ -143,13 +144,13 @@ class _ReceiveContent(Work):
         self._idx: Optional[int] = None
         self._dst_slot: Optional[Destination] = None
         self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
-        self._dst_path: Optional[str] = None
+        self._dst_path: Optional[PathLike] = None
 
     async def prepare(self):
         self._dst_slot = await self._storage.new_destination(destination_file=self._dst_path)
 
     def register(self, commands: CommandContainer):
-        assert self._dst_slot, "_ReceiveFile command creation without prepare"
+        assert self._dst_slot, f"{self.__class__} command creation without prepare"
 
         self._idx = commands.transfer(
             _from=f"container:{self._src_path}", to=self._dst_slot.upload_url
@@ -178,6 +179,9 @@ class _ReceiveFile(_ReceiveContent):
 
     async def post(self) -> None:
         self._emit_download_start()
+        assert self._dst_path
+        assert self._dst_slot
+
         await self._dst_slot.download_file(self._dst_path)
         self._emit_download_end()
 
@@ -187,7 +191,7 @@ class _ReceiveBytes(_ReceiveContent):
         self,
         storage: StorageProvider,
         src_path: str,
-        on_download: Callable[[bytes], None],
+        on_download: Callable[[bytes], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
         emitter: Optional[Callable[[StorageEvent], None]] = None,
     ):
@@ -197,9 +201,11 @@ class _ReceiveBytes(_ReceiveContent):
 
     async def post(self) -> None:
         self._emit_download_start()
+        assert self._dst_slot
+
         output = await self._dst_slot.download_bytes(limit=self._limit)
         self._emit_download_end()
-        self._on_download(output)
+        await self._on_download(output)
 
 
 class _ReceiveJson(_ReceiveBytes):
@@ -207,24 +213,20 @@ class _ReceiveJson(_ReceiveBytes):
         self,
         storage: StorageProvider,
         src_path: str,
-        on_download: Callable[[Any], None],
+        on_download: Callable[[Any], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
         emitter: Optional[Callable[[StorageEvent], None]] = None,
     ):
         super().__init__(
-            storage,
-            src_path,
-            partial(self.__on_json_download, on_download),
-            limit,
-            emitter
+            storage, src_path, partial(self.__on_json_download, on_download), limit, emitter
         )
 
     @staticmethod
-    def __on_json_download(on_download: Callable[[bytes], None], content: bytes):
-        on_download(json.loads(content))
+    async def __on_json_download(on_download: Callable[[bytes], Awaitable], content: bytes):
+        await on_download(json.loads(content))
 
 
-class _Steps(Work):
+class Steps(Work):
     def __init__(self, *steps: Work, timeout: Optional[timedelta] = None):
         self._steps: Tuple[Work, ...] = steps
         self._timeout: Optional[timedelta] = timeout
@@ -297,7 +299,7 @@ class WorkContext:
         """Schedule sending bytes data to the provider.
 
         :param dst_path: remote (provider) path
-        :param data: dictionary representing JSON data
+        :param data: bytes to send
         :return: None
         """
         self.__prepare()
@@ -343,36 +345,48 @@ class WorkContext:
         self._pending_steps.append(_ReceiveFile(self._storage, src_path, dst_path, self._emitter))
 
     def download_bytes(
-            self,
-            src_path: str,
-            on_download: Callable[[bytes], None],
-            limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
+        self,
+        src_path: str,
+        on_download: Callable[[bytes], Awaitable],
+        limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
     ):
+        """Schedule downloading a remote file as bytes
+        :param src_path: remote (provider) path
+        :param on_download: the callable to run on the received data
+        :param limit: the maximum length of the expected byte string
+        :return None
+        """
         self.__prepare()
         self._pending_steps.append(
             _ReceiveBytes(self._storage, src_path, on_download, limit, self._emitter)
         )
 
     def download_json(
-            self,
-            src_path: str,
-            on_download: Callable[[Any], None],
-            limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
+        self,
+        src_path: str,
+        on_download: Callable[[Any], Awaitable],
+        limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
     ):
+        """Schedule downloading a remote file as JSON
+        :param src_path: remote (provider) path
+        :param on_download: the callable to run on the received JSON data
+        :param limit: the maximum length of the expected remote file
+        :return None
+        """
         self.__prepare()
         self._pending_steps.append(
             _ReceiveJson(self._storage, src_path, on_download, limit, self._emitter)
         )
 
     def commit(self, timeout: Optional[timedelta] = None) -> Work:
-        """Creates sequence of commands to be sent to provider.
+        """Creates a sequence of commands to be sent to provider.
 
-        :return: Work object (the latter contains
-                 sequence commands added before calling this method)
+        :return: Work object containing the sequence of commands
+                 scheduled within this work context before calling this method)
         """
         steps = self._pending_steps
         self._pending_steps = []
-        return _Steps(*steps, timeout=timeout)
+        return Steps(*steps, timeout=timeout)
 
 
 class CaptureMode(enum.Enum):

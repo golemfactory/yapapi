@@ -1,4 +1,5 @@
 import factory
+from functools import partial
 import json
 import pytest
 import sys
@@ -39,29 +40,37 @@ def test_command_container():
 
 
 class TestWorkContext:
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        self._on_download_executed = False
+
     @staticmethod
     def _get_work_context(storage):
-        return WorkContext(
-            factory.Faker("pystr"),
-            node_info=NodeInfoFactory(),
-            storage=storage
-        )
+        return WorkContext(factory.Faker("pystr"), node_info=NodeInfoFactory(), storage=storage)
 
     @staticmethod
     def _assert_dst_path(steps, dst_path):
         c = CommandContainer()
         steps.register(c)
-        assert c.commands().pop()['transfer']['to'] == f"container:{dst_path}"
+        assert c.commands().pop()["transfer"]["to"] == f"container:{dst_path}"
+
+    @staticmethod
+    def _assert_src_path(steps, src_path):
+        c = CommandContainer()
+        steps.register(c)
+        assert c.commands().pop()["transfer"]["from"] == f"container:{src_path}"
+
+    async def _on_download(self, expected, data: bytes):
+        assert data == expected
+        self._on_download_executed = True
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(
-        sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+"
-    )
+    @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
     async def test_send_json(self):
         storage = mock.AsyncMock()
         dst_path = "/test/path"
         data = {
-            'param': 'value',
+            "param": "value",
         }
         ctx = self._get_work_context(storage)
         ctx.send_json(dst_path, data)
@@ -71,9 +80,7 @@ class TestWorkContext:
         self._assert_dst_path(steps, dst_path)
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(
-        sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+"
-    )
+    @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
     async def test_send_bytes(self):
         storage = mock.AsyncMock()
         dst_path = "/test/path"
@@ -84,3 +91,38 @@ class TestWorkContext:
         await steps.prepare()
         storage.upload_bytes.assert_called_with(data)
         self._assert_dst_path(steps, dst_path)
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
+    async def test_download_bytes(self):
+        expected = b"some byte string"
+
+        storage = mock.AsyncMock()
+        storage.new_destination.return_value.download_bytes.return_value = expected
+
+        src_path = "/test/path"
+        ctx = self._get_work_context(storage)
+        ctx.download_bytes(src_path, partial(self._on_download, expected))
+        steps = ctx.commit()
+        await steps.prepare()
+        await steps.post()
+        self._assert_src_path(steps, src_path)
+        assert self._on_download_executed
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
+    async def test_download_json(self):
+        expected = {"key": "val"}
+
+        storage = mock.AsyncMock()
+        storage.new_destination.return_value.download_bytes.return_value = json.dumps(
+            expected
+        ).encode("utf-8")
+        src_path = "/test/path"
+        ctx = self._get_work_context(storage)
+        ctx.download_json(src_path, partial(self._on_download, expected))
+        steps = ctx.commit()
+        await steps.prepare()
+        await steps.post()
+        self._assert_src_path(steps, src_path)
+        assert self._on_download_executed
