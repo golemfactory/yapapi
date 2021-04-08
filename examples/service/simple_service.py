@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+"""
+the requestor agent controlling and interacting with the "simple service"
+"""
 import asyncio
 from datetime import datetime, timedelta
 import itertools

@@ -1,4 +1,7 @@
 #!/usr/local/bin/python
+"""
+a helper, control script that starts and stops our example `simulate_observations` service
+"""
 import argparse
 import os
 import subprocess
