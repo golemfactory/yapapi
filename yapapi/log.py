@@ -482,6 +482,13 @@ class SummaryLogger:
                 reason = str(exc) or repr(exc) or "unexpected error"
                 self.logger.error("Error when shutting down Executor: %s", reason)
 
+        elif isinstance(event, events.AgreementTerminated):
+            if event.reason.get("golem.requestor.code") == "Success":
+                pass
+            else:
+                prov_info = self.agreement_provider_info[event.agr_id]
+                self.logger.info(f"Terminated agreement with {prov_info.name}")
+
 
 def log_summary(wrapped_emitter: Optional[Callable[[events.Event], None]] = None):
     """Output a summary of computation.
