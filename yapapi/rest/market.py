@@ -69,6 +69,9 @@ class Agreement(object):
         try:
             await self._api.wait_for_approval(self._id, timeout=15, _request_timeout=16)
             return True
+        except asyncio.TimeoutError:
+            logger.debug("waitForApproval(%s): client-side timeout", self._id, exc_info=True)
+            return False
         except ApiException:
             logger.debug("waitForApproval(%s) raised ApiException", self._id, exc_info=True)
             return False
