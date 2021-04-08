@@ -122,6 +122,7 @@ class Executor(AsyncContextManager):
         driver: Optional[str] = None,
         network: Optional[str] = None,
         event_consumer: Optional[Callable[[Event], None]] = None,
+        stream_output: bool = False,
     ):
         """Create a new executor.
 
@@ -139,13 +140,14 @@ class Executor(AsyncContextManager):
             only payment platforms with the specified network will be used
         :param event_consumer: a callable that processes events related to the
             computation; by default it is a function that logs all events
+        :param stream_output: stream computation output from providers
         """
         logger.debug("Creating Executor instance; parameters: %s", locals())
 
         self._subnet: Optional[str] = subnet_tag
         self._driver = driver.lower() if driver else DEFAULT_DRIVER
         self._network = network.lower() if network else DEFAULT_NETWORK
-        self._stream_output = True
+        self._stream_output = stream_output
         if not strategy:
             strategy = LeastExpensiveLinearPayuMS(
                 max_fixed_price=Decimal("1.0"),
