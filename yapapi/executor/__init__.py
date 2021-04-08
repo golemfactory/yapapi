@@ -531,7 +531,7 @@ class Executor(AsyncContextManager):
                                         agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
                                     )
                                 )
-                                return
+                                raise
 
             await accept_payment_for_agreement(agreement.id)
             emit(events.WorkerFinished(agr_id=agreement.id))
@@ -658,7 +658,7 @@ class Executor(AsyncContextManager):
 
             try:
                 logger.debug("Terminating agreements...")
-                await agreements_pool.terminate(reason=reason)
+                await agreements_pool.terminate_all(reason=reason)
             except Exception:
                 logger.debug("Problem with agreements termination", exc_info=True)
                 if self._conf.traceback:
