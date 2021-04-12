@@ -44,7 +44,7 @@ colorama = "^0.4.4"
 # It will be then installable with `poetry install -E integration-tests`.
 # Note that putting `goth` in `poetry.dev-dependencies` instead of `poetry.dependencies`
 # would not work: see https://github.com/python-poetry/poetry/issues/129.
-goth = { version = "^0.1.0", optional = true, python = "^3.8.0" }
+goth = { version = "^0.2.0", optional = true, python = "^3.8.0" }
 
 [tool.poetry.extras]
 cli = ['fire', 'rich']
