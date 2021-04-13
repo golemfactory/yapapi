@@ -49,8 +49,12 @@ async def main(subnet_tag, driver=None, network=None):
         SIMPLE_SERVICE = "/golem/run/simple_service.py"
 
         ctx.run("/golem/run/simulate_observations_ctl.py", "--start")
-        ctx.send_bytes("/golem/in/get_stats.sh", f"{SIMPLE_SERVICE} --stats > {STATS_PATH}".encode())
-        ctx.send_bytes("/golem/in/get_plot.sh", f"{SIMPLE_SERVICE} --plot dist > {PLOT_INFO_PATH}".encode())
+        ctx.send_bytes(
+            "/golem/in/get_stats.sh", f"{SIMPLE_SERVICE} --stats > {STATS_PATH}".encode()
+        )
+        ctx.send_bytes(
+            "/golem/in/get_plot.sh", f"{SIMPLE_SERVICE} --plot dist > {PLOT_INFO_PATH}".encode()
+        )
 
         yield ctx.commit()
 
@@ -79,13 +83,17 @@ async def main(subnet_tag, driver=None, network=None):
                 yield ctx.commit()
 
                 for plot in plots_to_download:
-                    test_filename = "".join(random.choice(string.ascii_letters) for _ in range(10)) + ".png"
+                    test_filename = (
+                        "".join(random.choice(string.ascii_letters) for _ in range(10)) + ".png"
+                    )
                     ctx.download_file(plot, pathlib.Path(__file__).resolve().parent / test_filename)
                 yield ctx.commit()
 
                 task.accept_result()
 
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, asyncio.CancelledError):
+            # with the current implementation it won't work correctly
+            # because at this stage, the Executor is shutting down anyway
             ctx.run("/golem/run/simulate_observations_ctl.py", "--stop")
             yield ctx.commit()
             raise
