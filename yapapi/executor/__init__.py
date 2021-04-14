@@ -122,6 +122,7 @@ class Executor(AsyncContextManager):
         driver: Optional[str] = None,
         network: Optional[str] = None,
         event_consumer: Optional[Callable[[Event], None]] = None,
+        stream_output: bool = False,
     ):
         """Create a new executor.
 
@@ -139,13 +140,14 @@ class Executor(AsyncContextManager):
             only payment platforms with the specified network will be used
         :param event_consumer: a callable that processes events related to the
             computation; by default it is a function that logs all events
+        :param stream_output: stream computation output from providers
         """
         logger.debug("Creating Executor instance; parameters: %s", locals())
 
         self._subnet: Optional[str] = subnet_tag
         self._driver = driver.lower() if driver else DEFAULT_DRIVER
         self._network = network.lower() if network else DEFAULT_NETWORK
-        self._stream_output = True
+        self._stream_output = stream_output
         if not strategy:
             strategy = LeastExpensiveLinearPayuMS(
                 max_fixed_price=Decimal("1.0"),
@@ -368,20 +370,30 @@ class Executor(AsyncContextManager):
             )
 
         async def find_offers() -> None:
+            """Subscribe to offers and process them continuously."""
+
+            async def reject_proposal(proposal, reason):
+                await proposal.reject(reason=reason)
+                emit(events.ProposalRejected(prop_id=proposal.id, reason=reason))
+
             nonlocal offers_collected, proposals_confirmed
             try:
                 subscription = await builder.subscribe(market_api)
             except Exception as ex:
                 emit(events.SubscriptionFailed(reason=str(ex)))
                 raise
+
             async with subscription:
+
                 emit(events.SubscriptionCreated(sub_id=subscription.id))
                 try:
                     proposals = subscription.events()
                 except Exception as ex:
                     emit(events.CollectFailed(sub_id=subscription.id, reason=str(ex)))
                     raise
+
                 async for proposal in proposals:
+
                     emit(events.ProposalReceived(prop_id=proposal.id, provider_id=proposal.issuer))
                     offers_collected += 1
                     try:
@@ -393,15 +405,11 @@ class Executor(AsyncContextManager):
                             type(strategy).__name__,
                             score,
                         )
-                    except InvalidPropertiesError as err:
-                        emit(events.ProposalRejected(prop_id=proposal.id, reason=str(err)))
-                        continue
-                    if score < SCORE_NEUTRAL:
-                        with contextlib.suppress(Exception):
-                            await proposal.reject(reason="Score too low")
-                        emit(events.ProposalRejected(prop_id=proposal.id, reason="Score too low"))
-                    elif not proposal.is_draft:
-                        try:
+
+                        if score < SCORE_NEUTRAL:
+                            await reject_proposal(proposal, "Score too low")
+
+                        elif not proposal.is_draft:
                             common_platforms = self._get_common_payment_platforms(proposal)
                             if common_platforms:
                                 builder.properties["golem.com.payment.chosen-platform"] = next(
@@ -409,40 +417,34 @@ class Executor(AsyncContextManager):
                                 )
                             else:
                                 # reject proposal if there are no common payment platforms
-                                with contextlib.suppress(Exception):
-                                    await proposal.reject(reason="No common payment platform")
-                                emit(
-                                    events.ProposalRejected(
-                                        prop_id=proposal.id, reason="No common payment platforms"
-                                    )
-                                )
+                                await reject_proposal(proposal, "No common payment platform")
+                                continue
                             timeout = proposal.props.get(DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP)
                             if timeout:
                                 if timeout < DEBIT_NOTE_MIN_TIMEOUT:
-                                    with contextlib.suppress(Exception):
-                                        await proposal.reject(reason="Debit note timeout too low")
-                                    emit(
-                                        events.ProposalRejected(
-                                            prop_id=proposal.id,
-                                            reason="Debit note acceptance timeout too short",
-                                        )
+                                    await reject_proposal(
+                                        proposal, "Debit note acceptance timeout too short"
                                     )
+                                    continue
                                 else:
                                     builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
+
                             await proposal.respond(builder.properties, builder.constraints)
                             emit(events.ProposalResponded(prop_id=proposal.id))
-                        except CancelledError:
-                            raise
-                        except Exception as ex:
-                            emit(
-                                events.ProposalFailed(
-                                    prop_id=proposal.id, exc_info=sys.exc_info()  # type: ignore
-                                )
+
+                        else:
+                            emit(events.ProposalConfirmed(prop_id=proposal.id))
+                            await agreements_pool.add_proposal(score, proposal)
+                            proposals_confirmed += 1
+
+                    except CancelledError:
+                        raise
+                    except Exception:
+                        emit(
+                            events.ProposalFailed(
+                                prop_id=proposal.id, exc_info=sys.exc_info()  # type: ignore
                             )
-                    else:
-                        emit(events.ProposalConfirmed(prop_id=proposal.id))
-                        await agreements_pool.add_proposal(score, proposal)
-                        proposals_confirmed += 1
+                        )
 
         # aio_session = await self._stack.enter_async_context(aiohttp.ClientSession())
         # storage_manager = await DavStorageProvider.for_directory(
@@ -529,7 +531,7 @@ class Executor(AsyncContextManager):
                                         agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
                                     )
                                 )
-                                return
+                                raise
 
             await accept_payment_for_agreement(agreement.id)
             emit(events.WorkerFinished(agr_id=agreement.id))
@@ -656,7 +658,7 @@ class Executor(AsyncContextManager):
 
             try:
                 logger.debug("Terminating agreements...")
-                await agreements_pool.terminate(reason=reason)
+                await agreements_pool.terminate_all(reason=reason)
             except Exception:
                 logger.debug("Problem with agreements termination", exc_info=True)
                 if self._conf.traceback:

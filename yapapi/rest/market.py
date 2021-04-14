@@ -69,6 +69,9 @@ class Agreement(object):
         try:
             await self._api.wait_for_approval(self._id, timeout=15, _request_timeout=16)
             return True
+        except asyncio.TimeoutError:
+            logger.debug("waitForApproval(%s): client-side timeout", self._id, exc_info=True)
+            return False
         except ApiException:
             logger.debug("waitForApproval(%s) raised ApiException", self._id, exc_info=True)
             return False
@@ -123,14 +126,14 @@ class OfferProposal(object):
     async def reject(self, reason: str = "Rejected"):
         """Reject the Offer."""
         await self._subscription._api.reject_proposal_offer(
-            self._subscription.id, self.id, request_body={"message": reason}
+            self._subscription.id, self.id, request_body={"message": reason}, _request_timeout=5
         )
 
     async def respond(self, props: dict, constraints: str) -> str:
         """Create an agreeement Proposal for a received Offer, based on our Demand."""
         proposal = models.DemandOfferBase(properties=props, constraints=constraints)
         new_proposal = await self._subscription._api.counter_proposal_demand(
-            self._subscription.id, self.id, proposal
+            self._subscription.id, self.id, proposal, _request_timeout=5
         )
         return new_proposal
 
