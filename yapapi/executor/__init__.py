@@ -306,7 +306,7 @@ class Executor(AsyncContextManager):
             await state.agreements_pool.add_proposal(score, proposal)
             return events.ProposalConfirmed(prop_id=proposal.id)
 
-    async def find_offers(self, state: "Executor.SubmissionState") -> None:
+    async def _find_offers(self, state: "Executor.SubmissionState") -> None:
         """Create a market subscription and repeatedly collect offer proposals for it.
 
         Collected proposals are processed concurrently using a bounded number
@@ -607,7 +607,7 @@ class Executor(AsyncContextManager):
                         logger.debug("There was a problem during use_agreement", exc_info=True)
 
         loop = asyncio.get_event_loop()
-        find_offers_task = loop.create_task(self.find_offers(state))
+        find_offers_task = loop.create_task(self._find_offers(state))
         process_invoices_job = loop.create_task(process_invoices())
         wait_until_done = loop.create_task(work_queue.wait_until_done())
         worker_starter_task = loop.create_task(worker_starter())
