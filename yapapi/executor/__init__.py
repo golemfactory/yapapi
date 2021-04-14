@@ -259,6 +259,12 @@ class Executor(AsyncContextManager):
         a counter-proposal or stored in an agreements pool to be used
         for negotiating an agreement.
         """
+
+        async def reject_proposal(reason: str) -> events.ProposalRejected:
+            """Reject `proposal` due to given `reason`."""
+            await proposal.reject(reason)
+            return events.ProposalRejected(prop_id=proposal.id, reason=reason)
+
         score = await self._strategy.score_offer(proposal, state.agreements_pool)
         logger.debug(
             "Scored offer %s, provider: %s, strategy: %s, score: %f",
@@ -269,9 +275,7 @@ class Executor(AsyncContextManager):
         )
 
         if score < SCORE_NEUTRAL:
-            reason = "Score too low"
-            await proposal.reject(reason=reason)
-            return events.ProposalRejected(prop_id=proposal.id, reason=reason)
+            return await reject_proposal("Score too low")
 
         if not proposal.is_draft:
             # Proposal is not yet a draft of an agreement
@@ -284,17 +288,13 @@ class Executor(AsyncContextManager):
                 )
             else:
                 # reject proposal if there are no common payment platforms
-                reason = "No common payment platform"
-                await proposal.reject(reason=reason)
-                return events.ProposalRejected(prop_id=proposal.id, reason=reason)
+                return await reject_proposal("No common payment platform")
 
             # Check if the timeout for debit note acceptance is not too low
             timeout = proposal.props.get(DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP)
             if timeout:
                 if timeout < DEBIT_NOTE_MIN_TIMEOUT:
-                    reason = "Debit note acceptance timeout is too short"
-                    await proposal.reject(reason=reason)
-                    return events.ProposalRejected(prop_id=proposal.id, reason=reason)
+                    return await reject_proposal("Debit note acceptance timeout is too short")
                 else:
                     state.builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
 
