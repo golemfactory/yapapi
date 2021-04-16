@@ -36,7 +36,6 @@ from .task import Task, TaskStatus
 from .utils import AsyncWrapper
 from ..package import Package
 from ..props import Activity, com, NodeInfo, NodeInfoKeys
-from ..props.base import InvalidPropertiesError
 from ..props.builder import DemandBuilder
 from .. import rest
 from ..rest.activity import CommandExecutionError
@@ -337,8 +336,8 @@ class Executor(AsyncContextManager):
                             note_id=debit_note.debit_note_id,
                         )
                     )
-                    allocation = self._get_allocation(debit_note)
                     try:
+                        allocation = self._get_allocation(debit_note)
                         await debit_note.accept(
                             amount=debit_note.total_amount_due, allocation=allocation
                         )
@@ -751,7 +750,7 @@ class Executor(AsyncContextManager):
                 and allocation.payment_platform == item.payment_platform
             )
         except:
-            raise RuntimeError(f"No allocation for {item.payment_platform} {item.payer_addr}.")
+            raise ValueError(f"No allocation for {item.payment_platform} {item.payer_addr}.")
 
     async def __aenter__(self) -> "Executor":
         stack = self._stack
