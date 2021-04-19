@@ -79,7 +79,7 @@ class Create:
         min_storage_gib: float = 2.0,
         timeout=timedelta(minutes=5),
     ):
-        from yapapi.package import vm
+        from yapapi.payload import vm
 
         console = Console()
         now = datetime.now(timezone.utc)
