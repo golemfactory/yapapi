@@ -3,7 +3,6 @@ An implementation of the new Golem's task executor.
 """
 import asyncio
 from asyncio import CancelledError
-import contextlib
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import logging
@@ -39,6 +38,7 @@ from ..props import Activity, com, NodeInfo, NodeInfoKeys
 from ..props.builder import DemandBuilder
 from .. import rest
 from ..rest.activity import CommandExecutionError
+from ..rest.market import Subscription
 from ..storage import gftp
 from ._smartq import SmartQueue, Handle
 from .strategy import (
@@ -368,7 +368,7 @@ class Executor(AsyncContextManager):
                 )
             )
 
-        async def find_offers() -> None:
+        async def find_offers_for_subscription(subscription: Subscription) -> None:
             """Subscribe to offers and process them continuously."""
 
             async def reject_proposal(proposal, reason):
@@ -376,74 +376,81 @@ class Executor(AsyncContextManager):
                 emit(events.ProposalRejected(prop_id=proposal.id, reason=reason))
 
             nonlocal offers_collected, proposals_confirmed
+
+            emit(events.SubscriptionCreated(sub_id=subscription.id))
             try:
-                subscription = await builder.subscribe(market_api)
+                proposals = subscription.events()
             except Exception as ex:
-                emit(events.SubscriptionFailed(reason=str(ex)))
+                emit(events.CollectFailed(sub_id=subscription.id, reason=str(ex)))
                 raise
 
-            async with subscription:
+            async for proposal in proposals:
 
-                emit(events.SubscriptionCreated(sub_id=subscription.id))
+                emit(events.ProposalReceived(prop_id=proposal.id, provider_id=proposal.issuer))
+                offers_collected += 1
                 try:
-                    proposals = subscription.events()
-                except Exception as ex:
-                    emit(events.CollectFailed(sub_id=subscription.id, reason=str(ex)))
-                    raise
+                    score = await strategy.score_offer(proposal, agreements_pool)
+                    logger.debug(
+                        "Scored offer %s, provider: %s, strategy: %s, score: %f",
+                        proposal.id,
+                        proposal.props.get("golem.node.id.name"),
+                        type(strategy).__name__,
+                        score,
+                    )
 
-                async for proposal in proposals:
+                    if score < SCORE_NEUTRAL:
+                        await reject_proposal(proposal, "Score too low")
 
-                    emit(events.ProposalReceived(prop_id=proposal.id, provider_id=proposal.issuer))
-                    offers_collected += 1
-                    try:
-                        score = await strategy.score_offer(proposal, agreements_pool)
-                        logger.debug(
-                            "Scored offer %s, provider: %s, strategy: %s, score: %f",
-                            proposal.id,
-                            proposal.props.get("golem.node.id.name"),
-                            type(strategy).__name__,
-                            score,
-                        )
-
-                        if score < SCORE_NEUTRAL:
-                            await reject_proposal(proposal, "Score too low")
-
-                        elif not proposal.is_draft:
-                            common_platforms = self._get_common_payment_platforms(proposal)
-                            if common_platforms:
-                                builder.properties["golem.com.payment.chosen-platform"] = next(
-                                    iter(common_platforms)
-                                )
-                            else:
-                                # reject proposal if there are no common payment platforms
-                                await reject_proposal(proposal, "No common payment platform")
-                                continue
-                            timeout = proposal.props.get(DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP)
-                            if timeout:
-                                if timeout < DEBIT_NOTE_MIN_TIMEOUT:
-                                    await reject_proposal(
-                                        proposal, "Debit note acceptance timeout too short"
-                                    )
-                                    continue
-                                else:
-                                    builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
-
-                            await proposal.respond(builder.properties, builder.constraints)
-                            emit(events.ProposalResponded(prop_id=proposal.id))
-
-                        else:
-                            emit(events.ProposalConfirmed(prop_id=proposal.id))
-                            await agreements_pool.add_proposal(score, proposal)
-                            proposals_confirmed += 1
-
-                    except CancelledError:
-                        raise
-                    except Exception:
-                        emit(
-                            events.ProposalFailed(
-                                prop_id=proposal.id, exc_info=sys.exc_info()  # type: ignore
+                    elif not proposal.is_draft:
+                        common_platforms = self._get_common_payment_platforms(proposal)
+                        if common_platforms:
+                            builder.properties["golem.com.payment.chosen-platform"] = next(
+                                iter(common_platforms)
                             )
+                        else:
+                            # reject proposal if there are no common payment platforms
+                            await reject_proposal(proposal, "No common payment platform")
+                            continue
+                        timeout = proposal.props.get(DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP)
+                        if timeout:
+                            if timeout < DEBIT_NOTE_MIN_TIMEOUT:
+                                await reject_proposal(
+                                    proposal, "Debit note acceptance timeout too short"
+                                )
+                                continue
+                            else:
+                                builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
+
+                        await proposal.respond(builder.properties, builder.constraints)
+                        emit(events.ProposalResponded(prop_id=proposal.id))
+
+                    else:
+                        emit(events.ProposalConfirmed(prop_id=proposal.id))
+                        await agreements_pool.add_proposal(score, proposal)
+                        proposals_confirmed += 1
+
+                except CancelledError:
+                    raise
+                except Exception:
+                    emit(
+                        events.ProposalFailed(
+                            prop_id=proposal.id, exc_info=sys.exc_info()  # type: ignore
                         )
+                    )
+
+        async def find_offers() -> None:
+            """Create demand subscription and process offers.
+
+            When the subscription expires, create a new one. And so on...
+            """
+            while True:
+                try:
+                    subscription = await builder.subscribe(market_api)
+                except Exception as ex:
+                    emit(events.SubscriptionFailed(reason=str(ex)))
+                    raise
+                async with subscription:
+                    await find_offers_for_subscription(subscription)
 
         # aio_session = await self._stack.enter_async_context(aiohttp.ClientSession())
         # storage_manager = await DavStorageProvider.for_directory(
