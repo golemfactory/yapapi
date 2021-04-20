@@ -106,7 +106,7 @@ async def test_run_yacat(
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
-            f"{yacat_path} '?a?a' '$P$5ZDzPE45CigTC6EY4cXbyJSLj/pGee0' --number-of-providers 2 --log-file yacat-debug.log  --subnet-tag goth",
+            f"{yacat_path} ?a?a $P$5ZDzPE45CigTC6EY4cXbyJSLj/pGee0 --number-of-providers 2 --log-file yacat-debug.log  --subnet-tag goth",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor):
 
