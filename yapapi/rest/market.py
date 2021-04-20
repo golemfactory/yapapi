@@ -207,9 +207,10 @@ class Subscription(object):
             try:
                 proposals = await self._api.collect_offers(self._id, timeout=10, max_events=10)
             except ApiException as ex:
-                if ex.status == 404 and re.search("Subscription .* expired", ex.body or ""):
-                    logger.warning(
-                        "Subscription has expired, no new offers will be collected from now on"
+                if ex.status == 404:
+                    logger.debug(
+                        "Offer unsubscribed or its subscription expired, subscription_id: %s",
+                        self._id,
                     )
                     self._open = False
                     # Prevent calling `unsubscribe` which would result in API error

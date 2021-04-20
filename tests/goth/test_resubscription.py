@@ -4,7 +4,7 @@ import logging
 import os
 from pathlib import Path
 import time
-from typing import Dict, Set
+from typing import Dict, Set, Type
 from unittest.mock import Mock
 
 import colors
@@ -16,7 +16,7 @@ from goth.assertions.operators import eventually
 
 from goth.configuration import load_yaml
 from goth.runner import Runner
-from goth.runner.log import configure_logging, monitored_logger
+from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
 
 from yapapi import Executor, Task
@@ -91,9 +91,45 @@ def patch_collect_offers(monkeypatch):
     monkeypatch.setattr(yapapi.rest.market, "RequestorApi", RequestorApi)
 
 
+async def unsubscribe_demand(sub_id: str) -> None:
+    """Auxiliary function that calls `unsubscribeDemand` operation for given `sub_id`."""
+    config = yapapi.rest.Configuration()
+    market_client = config.market()
+    requestor_api = yapapi.rest.market.RequestorApi(market_client)
+    await requestor_api.unsubscribe_demand(sub_id)
+
+
+async def assertion(events: "EventStream[Event]"):
+    """A temporal assertion that the requestor will have to satisfy."""
+
+    subscription_ids: Set[str] = set()
+
+    async def wait_for_event(event_type: Type[Event], timeout: float):
+        e = await eventually(events, lambda e: isinstance(e, event_type), timeout)
+        assert e, f"Timed out waiting for {event_type}"
+        logger.info(colors.cyan(str(e)))
+        return e
+
+    e = await wait_for_event(ComputationStarted, 10)
+
+    # Make sure new subscriptions are created at least three times
+    while len(subscription_ids) < 3:
+        e = await wait_for_event(SubscriptionCreated, SUBSCRIPTION_EXPIRATION_TIME + 10)
+        assert e.sub_id not in subscription_ids
+        subscription_ids.add(e.sub_id)
+
+    # Unsubscribe and make sure new subscription is created
+    await unsubscribe_demand(e.sub_id)
+    logger.info("Demand unsubscribed")
+    await wait_for_event(SubscriptionCreated, 5)
+
+    # Enough checking, wait until the computation finishes
+    await wait_for_event(ComputationFinished, 20)
+
+
 @pytest.mark.asyncio
 async def test_resubmission(log_dir: Path, monkeypatch) -> None:
-    """Test that a demand is re-submitted after the previous submission expires."""
+    """Test that checks that a demand is re-submitted after its previous submission expires."""
 
     configure_logging(log_dir)
 
@@ -107,32 +143,10 @@ async def test_resubmission(log_dir: Path, monkeypatch) -> None:
 
     runner = Runner(base_log_dir=log_dir, compose_config=goth_config.compose_config)
 
+    # One provider would be enough, let's not waste time for starting the second one.
     containers = [
         container for container in goth_config.containers if container.name != "provider-2"
     ]
-
-    async def assertion(events: "EventStream[Event]"):
-        """A temporal assertion that the requestor has to satisfy.
-
-        It states that a `SubscriptionCreated` event occurs at least
-        three times during requestor execution.
-        """
-        subscription_ids: Set[str] = set()
-
-        e = await eventually(events, lambda e: isinstance(e, ComputationStarted), 10)
-        assert e, "Timed out waiting for ComputationStarted"
-        logger.info(colors.cyan(str(e)))
-
-        while len(subscription_ids) < 3:
-            e = await eventually(events, lambda e: isinstance(e, SubscriptionCreated), 15)
-            assert isinstance(e, SubscriptionCreated), "Timed out waiting for SubscriptionCreated"
-            logger.info(colors.cyan(str(e)))
-            assert e.sub_id not in subscription_ids
-            subscription_ids.add(e.sub_id)
-
-        e = await eventually(events, lambda e: isinstance(e, ComputationFinished), 20)
-        assert e, "Timed out waiting for ComputationFailed"
-        logger.info(colors.cyan(str(e)))
 
     async with runner(containers):
 
@@ -162,7 +176,7 @@ async def test_resubmission(log_dir: Path, monkeypatch) -> None:
             budget=10.0,
             package=vm_package,
             max_workers=1,
-            timeout=timedelta(seconds=25),
+            timeout=timedelta(seconds=30),
             event_consumer=monitor.add_event_sync,
         ) as executor:
 
