@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 from types import TracebackType
 from typing import AsyncIterator, Optional, TypeVar, Type, Generator, Any, Generic
 
@@ -202,7 +203,23 @@ class Subscription(object):
     async def events(self) -> AsyncIterator[OfferProposal]:
         """Yield counter-proposals based on the incoming, matching Offers."""
         while self._open:
-            proposals = await self._api.collect_offers(self._id, timeout=10, max_events=10)
+
+            try:
+                proposals = await self._api.collect_offers(self._id, timeout=10, max_events=10)
+            except ApiException as ex:
+                if ex.status == 404:
+                    logger.debug(
+                        "Offer unsubscribed or its subscription expired, subscription_id: %s",
+                        self._id,
+                    )
+                    self._open = False
+                    # Prevent calling `unsubscribe` which would result in API error
+                    # for expired demand subscriptione
+                    self._deleted = True
+                    continue
+                else:
+                    raise
+
             for proposal in proposals:
                 if isinstance(proposal, models.ProposalEvent):
                     yield OfferProposal(self, proposal)
