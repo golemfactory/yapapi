@@ -120,11 +120,8 @@ async def test_run_yacat(
             await cmd_monitor.wait_for_pattern(".*Received proposals from 2 ", timeout=20)
             logger.info("Received proposals")
 
-            await cmd_monitor.wait_for_pattern(".*Agreement proposed ", timeout=10)
-            logger.info("Agreement proposed")
-
-            await cmd_monitor.wait_for_pattern(".*Agreement confirmed ", timeout=10)
-            logger.info("Agreement confirmed")
+            await cmd_monitor.wait_for_pattern(".*The keyspace size is 95", timeout=10)
+            logger.info("Keyspace found")
 
             await all_sent.wait_for_result(timeout=60)
             logger.info("All tasks sent")
