@@ -38,7 +38,7 @@ async def assert_keyspace_found(output_lines: EventStream[str]):
 
 
 async def assert_password_found(output_lines: EventStream[str]):
-    """Assert that there is a line `Password found: pas`."""
+    """Assert that there is a line `Password found: yo`."""
     async for line in output_lines:
         if "Password found: yo" in line:
             return
