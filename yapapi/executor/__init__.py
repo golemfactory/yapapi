@@ -3,6 +3,7 @@ An implementation of the new Golem's task executor.
 """
 import asyncio
 from asyncio import CancelledError
+import contextlib
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import logging
@@ -24,7 +25,7 @@ from typing import (
 import traceback
 
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from yapapi.executor.agreements_pool import AgreementsPool
 from typing_extensions import Final, AsyncGenerator
 
@@ -38,7 +39,7 @@ from ..props import Activity, com, NodeInfo, NodeInfoKeys
 from ..props.builder import DemandBuilder
 from .. import rest
 from ..rest.activity import CommandExecutionError
-from ..rest.market import Subscription
+from ..rest.market import OfferProposal, Subscription
 from ..storage import gftp
 from ._smartq import SmartQueue, Handle
 from .strategy import (
@@ -232,6 +233,146 @@ class Executor(AsyncContextManager):
             computation_finished.set()
             self._active_computations.remove(computation_finished)
 
+    @dataclass
+    class SubmissionState:
+        """Variables related to a single call to `Executor.submit()`.
+
+        One day this will be a fully-fledged and mature class with
+        methods of its own. But for now it only includes the variables
+        required by `find_offers()`.
+        """
+
+        builder: DemandBuilder
+        agreements_pool: AgreementsPool
+        offers_collected: int = field(default=0)
+        proposals_confirmed: int = field(default=0)
+
+    async def _handle_proposal(
+        self,
+        state: "Executor.SubmissionState",
+        proposal: OfferProposal,
+    ) -> events.Event:
+        """Handle a single `OfferProposal`.
+
+        A `proposal` is scored and then can be rejected, responded with
+        a counter-proposal or stored in an agreements pool to be used
+        for negotiating an agreement.
+        """
+
+        async def reject_proposal(reason: str) -> events.ProposalRejected:
+            """Reject `proposal` due to given `reason`."""
+            await proposal.reject(reason)
+            return events.ProposalRejected(prop_id=proposal.id, reason=reason)
+
+        score = await self._strategy.score_offer(proposal, state.agreements_pool)
+        logger.debug(
+            "Scored offer %s, provider: %s, strategy: %s, score: %f",
+            proposal.id,
+            proposal.props.get("golem.node.id.name"),
+            type(self._strategy).__name__,
+            score,
+        )
+
+        if score < SCORE_NEUTRAL:
+            return await reject_proposal("Score too low")
+
+        if not proposal.is_draft:
+            # Proposal is not yet a draft of an agreement
+
+            # Check if any of the supported payment platforms matches the proposal
+            common_platforms = self._get_common_payment_platforms(proposal)
+            if common_platforms:
+                state.builder.properties["golem.com.payment.chosen-platform"] = next(
+                    iter(common_platforms)
+                )
+            else:
+                # reject proposal if there are no common payment platforms
+                return await reject_proposal("No common payment platform")
+
+            # Check if the timeout for debit note acceptance is not too low
+            timeout = proposal.props.get(DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP)
+            if timeout:
+                if timeout < DEBIT_NOTE_MIN_TIMEOUT:
+                    return await reject_proposal("Debit note acceptance timeout is too short")
+                else:
+                    state.builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
+
+            await proposal.respond(state.builder.properties, state.builder.constraints)
+            return events.ProposalResponded(prop_id=proposal.id)
+
+        else:
+            # It's a draft agreement
+            await state.agreements_pool.add_proposal(score, proposal)
+            return events.ProposalConfirmed(prop_id=proposal.id)
+
+    async def _find_offers_for_subscription(
+        self, state: "Executor.SubmissionState", subscription: Subscription
+    ) -> None:
+        """Create a market subscription and repeatedly collect offer proposals for it.
+
+        Collected proposals are processed concurrently using a bounded number
+        of asyncio tasks.
+
+        :param state: A state related to a call to `Executor.submit()`
+        """
+        max_number_of_tasks = 5
+
+        emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
+
+        try:
+            proposals = subscription.events()
+        except Exception as ex:
+            emit(events.CollectFailed(sub_id=subscription.id, reason=str(ex)))
+            raise
+
+        # A semaphore is used to limit the number of handler tasks
+        semaphore = asyncio.Semaphore(max_number_of_tasks)
+
+        async for proposal in proposals:
+
+            emit(events.ProposalReceived(prop_id=proposal.id, provider_id=proposal.issuer))
+            state.offers_collected += 1
+
+            async def handler(proposal_):
+                """A coroutine that wraps `_handle_proposal()` method with error handling."""
+                try:
+                    event = await self._handle_proposal(state, proposal_)
+                    assert isinstance(event, events.ProposalEvent)
+                    emit(event)
+                    if isinstance(event, events.ProposalConfirmed):
+                        state.proposals_confirmed += 1
+                except CancelledError:
+                    raise
+                except Exception:
+                    with contextlib.suppress(Exception):
+                        emit(
+                            events.ProposalFailed(
+                                prop_id=proposal_.id, exc_info=sys.exc_info()  # type: ignore
+                            )
+                        )
+                finally:
+                    semaphore.release()
+
+            # Create a new handler task
+            await semaphore.acquire()
+            asyncio.get_event_loop().create_task(handler(proposal))
+
+    async def _find_offers(self, state: "Executor.SubmissionState") -> None:
+        """Create demand subscription and process offers.
+        When the subscription expires, create a new one. And so on...
+        """
+        emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
+
+        while True:
+            try:
+                subscription = await state.builder.subscribe(self._market_api)
+                emit(events.SubscriptionCreated(sub_id=subscription.id))
+            except Exception as ex:
+                emit(events.SubscriptionFailed(reason=str(ex)))
+                raise
+            async with subscription:
+                await self._find_offers_for_subscription(state, subscription)
+
     async def _submit(
         self,
         worker: Callable[[WorkContext, AsyncIterator[Task[D, R]]], AsyncGenerator[Work, None]],
@@ -259,9 +400,11 @@ class Executor(AsyncContextManager):
         await self._strategy.decorate_demand(builder)
 
         agreements_pool = AgreementsPool(emit)
+
+        state = Executor.SubmissionState(builder, agreements_pool)
+
         market_api = self._market_api
         activity_api: rest.Activity = self._activity_api
-        strategy = self._strategy
 
         done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
         stream_output = self._stream_output
@@ -284,9 +427,6 @@ class Executor(AsyncContextManager):
         agreements_accepting_debit_notes: Set[str] = set()
         invoices: Dict[str, rest.payment.Invoice] = dict()
         payment_closing: bool = False
-
-        offers_collected = 0
-        proposals_confirmed = 0
 
         async def process_invoices() -> None:
             async for invoice in self._payment_api.incoming_invoices():
@@ -368,97 +508,6 @@ class Executor(AsyncContextManager):
                 )
             )
 
-        async def find_offers_for_subscription(subscription: Subscription) -> None:
-            """Subscribe to offers and process them continuously."""
-
-            async def reject_proposal(proposal, reason):
-                await proposal.reject(reason=reason)
-                emit(events.ProposalRejected(prop_id=proposal.id, reason=reason))
-
-            nonlocal offers_collected, proposals_confirmed
-
-            emit(events.SubscriptionCreated(sub_id=subscription.id))
-            try:
-                proposals = subscription.events()
-            except Exception as ex:
-                emit(events.CollectFailed(sub_id=subscription.id, reason=str(ex)))
-                raise
-
-            async for proposal in proposals:
-
-                emit(events.ProposalReceived(prop_id=proposal.id, provider_id=proposal.issuer))
-                offers_collected += 1
-                try:
-                    score = await strategy.score_offer(proposal, agreements_pool)
-                    logger.debug(
-                        "Scored offer %s, provider: %s, strategy: %s, score: %f",
-                        proposal.id,
-                        proposal.props.get("golem.node.id.name"),
-                        type(strategy).__name__,
-                        score,
-                    )
-
-                    if score < SCORE_NEUTRAL:
-                        await reject_proposal(proposal, "Score too low")
-
-                    elif not proposal.is_draft:
-                        common_platforms = self._get_common_payment_platforms(proposal)
-                        if common_platforms:
-                            builder.properties["golem.com.payment.chosen-platform"] = next(
-                                iter(common_platforms)
-                            )
-                        else:
-                            # reject proposal if there are no common payment platforms
-                            await reject_proposal(proposal, "No common payment platform")
-                            continue
-                        timeout = proposal.props.get(DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP)
-                        if timeout:
-                            if timeout < DEBIT_NOTE_MIN_TIMEOUT:
-                                await reject_proposal(
-                                    proposal, "Debit note acceptance timeout too short"
-                                )
-                                continue
-                            else:
-                                builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
-
-                        await proposal.respond(builder.properties, builder.constraints)
-                        emit(events.ProposalResponded(prop_id=proposal.id))
-
-                    else:
-                        emit(events.ProposalConfirmed(prop_id=proposal.id))
-                        await agreements_pool.add_proposal(score, proposal)
-                        proposals_confirmed += 1
-
-                except CancelledError:
-                    raise
-                except Exception:
-                    emit(
-                        events.ProposalFailed(
-                            prop_id=proposal.id, exc_info=sys.exc_info()  # type: ignore
-                        )
-                    )
-
-        async def find_offers() -> None:
-            """Create demand subscription and process offers.
-
-            When the subscription expires, create a new one. And so on...
-            """
-            while True:
-                try:
-                    subscription = await builder.subscribe(market_api)
-                except Exception as ex:
-                    emit(events.SubscriptionFailed(reason=str(ex)))
-                    raise
-                async with subscription:
-                    await find_offers_for_subscription(subscription)
-
-        # aio_session = await self._stack.enter_async_context(aiohttp.ClientSession())
-        # storage_manager = await DavStorageProvider.for_directory(
-        #    aio_session,
-        #    "http://127.0.0.1:8077/",
-        #    "test1",
-        #    auth=aiohttp.BasicAuth("alice", "secret1234"),
-        # )
         storage_manager = await self._stack.enter_async_context(gftp.provider())
 
         async def start_worker(agreement: rest.market.Agreement, node_info: NodeInfo) -> None:
@@ -565,7 +614,7 @@ class Executor(AsyncContextManager):
                         logger.debug("There was a problem during use_agreement", exc_info=True)
 
         loop = asyncio.get_event_loop()
-        find_offers_task = loop.create_task(find_offers())
+        find_offers_task = loop.create_task(self._find_offers(state))
         process_invoices_job = loop.create_task(process_invoices())
         wait_until_done = loop.create_task(work_queue.wait_until_done())
         worker_starter_task = loop.create_task(worker_starter())
@@ -591,10 +640,10 @@ class Executor(AsyncContextManager):
                 now = datetime.now(timezone.utc)
                 if now > self._expires:
                     raise TimeoutError(f"Computation timed out after {self._conf.timeout}")
-                if now > get_offers_deadline and proposals_confirmed == 0:
+                if now > get_offers_deadline and state.proposals_confirmed == 0:
                     emit(
                         events.NoProposalsConfirmed(
-                            num_offers=offers_collected, timeout=self._conf.get_offers_timeout
+                            num_offers=state.offers_collected, timeout=self._conf.get_offers_timeout
                         )
                     )
                     get_offers_deadline += self._conf.get_offers_timeout
