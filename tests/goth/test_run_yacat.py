@@ -117,19 +117,19 @@ async def test_run_yacat(
             all_sent = cmd_monitor.add_assertion(assert_all_tasks_sent)
             all_computed = cmd_monitor.add_assertion(assert_all_tasks_computed)
 
-            await cmd_monitor.wait_for_pattern(".*Received proposals from 2 ", timeout=10)
+            await cmd_monitor.wait_for_pattern(".*Received proposals from 2 ", timeout=1000)
             logger.info("Received proposals")
 
-            await cmd_monitor.wait_for_pattern(".*Agreement proposed ", timeout=10)
+            await cmd_monitor.wait_for_pattern(".*Agreement proposed ", timeout=1000)
             logger.info("Agreement proposed")
 
-            await cmd_monitor.wait_for_pattern(".*Agreement confirmed ", timeout=10)
+            await cmd_monitor.wait_for_pattern(".*Agreement confirmed ", timeout=1000)
             logger.info("Agreement confirmed")
 
-            await all_sent.wait_for_result(timeout=60)
+            await all_sent.wait_for_result(timeout=600)
             logger.info("All tasks sent")
 
-            await all_computed.wait_for_result(timeout=30)
+            await all_computed.wait_for_result(timeout=300)
             logger.info("All tasks computed, waiting for Executor shutdown")
 
             await cmd_monitor.wait_for_pattern(".*Executor has shut down", timeout=120)
