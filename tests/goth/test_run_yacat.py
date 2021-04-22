@@ -28,24 +28,6 @@ async def assert_no_errors(output_lines: EventStream[str]):
             raise AssertionError("Command reported ERROR")
 
 
-async def assert_keyspace_found(output_lines: EventStream[str]):
-    """Assert that there is a line `The keyspace size is 95`."""
-    async for line in output_lines:
-        if "The keyspace size is 95" in line:
-            return
-
-    raise AssertionError("Keyspace not found")
-
-
-async def assert_password_found(output_lines: EventStream[str]):
-    """Assert that there is a line `Password found: yo`."""
-    async for line in output_lines:
-        if "Password found: yo" in line:
-            return
-
-    raise AssertionError("Password not found")
-
-
 async def assert_all_tasks_processed(status: str, output_lines: EventStream[str]):
     """Assert that for every task in `ALL_TASKS` a line with `Task {status}` will appear."""
     remaining_tasks = ALL_TASKS.copy()
@@ -121,21 +103,25 @@ async def test_run_yacat(
 
             # Add assertions to the command output monitor `cmd_monitor`:
             cmd_monitor.add_assertion(assert_no_errors)
-            cmd_monitor.add_assertion(assert_keyspace_found)
-            cmd_monitor.add_assertion(assert_password_found)
             cmd_monitor.add_assertion(assert_all_invoices_accepted)
             all_sent = cmd_monitor.add_assertion(assert_all_tasks_sent)
             all_computed = cmd_monitor.add_assertion(assert_all_tasks_computed)
 
-            await cmd_monitor.wait_for_pattern(".*Received proposals from 2 ", timeout=20)
+
+            await cmd_monitor.wait_for_pattern(".*The keyspace size is 95", timeout=20)
+            logger.info("Keyspace found")
+
+            await cmd_monitor.wait_for_pattern(".*Received proposals from 2 ", timeout=10)
             logger.info("Received proposals")
 
-            await all_sent.wait_for_result(timeout=60)
+            await all_sent.wait_for_result(timeout=30)
             logger.info("All tasks sent")
 
             await all_computed.wait_for_result(timeout=30)
-            logger.info("All tasks computed, waiting for Executor shutdown")
+            logger.info("All tasks computed")
+            
+            await cmd_monitor.wait_for_pattern(".*Password found: yo", timeout=10)
+            logger.info("Password found, waiting for Executor shutdown")
 
             await cmd_monitor.wait_for_pattern(".*Executor has shut down", timeout=120)
-
             logger.info("Requestor script finished")
