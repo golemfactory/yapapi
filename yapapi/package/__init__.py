@@ -1,5 +1,4 @@
-import abc
-from deprecated import deprecated
+from deprecated import deprecated  # type: ignore
 from yapapi.payload.package import Package as _Package, PackageException as _PackageException
 
 

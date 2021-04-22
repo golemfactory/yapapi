@@ -1,14 +1,17 @@
 import aiohttp
 from dns.exception import DNSException
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import Enum
 import logging
 from typing import Optional
 from typing_extensions import Final
 from srvresolver.srv_resolver import SRVResolver, SRVRecord  # type: ignore
 
 from yapapi.payload.package import Package, PackageException
+from yapapi.props import base as prop_base
 from yapapi.props.builder import DemandBuilder
-from yapapi.props.inf import InfVmKeys, RUNTIME_VM, VmRequest, VmPackageFormat
+from yapapi.props import inf
+from yapapi.props.inf import InfBase, INF_CORES, RUNTIME_VM, ExeUnitRequest
 
 _DEFAULT_REPO_SRV: Final = "_girepo._tcp.dev.golem.network"
 _FALLBACK_REPO_URL: Final = "http://yacn2.dev.golem.network:8000"
@@ -16,31 +19,43 @@ _FALLBACK_REPO_URL: Final = "http://yacn2.dev.golem.network:8000"
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class InfVm(InfBase):
+    runtime = RUNTIME_VM
+    cores: int = prop_base.prop(INF_CORES, default=1)
+
+
+InfVmKeys = InfVm.keys()
+
+
+class VmPackageFormat(Enum):
+    UNKNOWN = None
+    GVMKIT_SQUASH = "gvmkit-squash"
+
+
+@dataclass
+class VmRequest(ExeUnitRequest):
+    package_format: VmPackageFormat = prop_base.prop("golem.srv.comp.vm.package_format")
+
+
 @dataclass(frozen=True)
-class _VmConstrains:
-    min_mem_gib: float
-    min_storage_gib: float
-    cores: int = 1
+class _VmConstraints:
+    min_mem_gib: float = prop_base.constraint(inf.INF_MEM, operator=">=")
+    min_storage_gib: float = prop_base.constraint(inf.INF_STORAGE, operator=">=")
+    # cores: int = prop_base.constraint(inf.INF_CORES, operator=">=")
+    runtime: str = prop_base.constraint(inf.INF_RUNTIME_NAME, operator="=", default=RUNTIME_VM)
 
     def __str__(self):
-        rules = "\n\t".join(
-            [
-                f"({InfVmKeys.mem}>={self.min_mem_gib})",
-                f"({InfVmKeys.storage}>={self.min_storage_gib})",
-                # TODO: provider should report cores.
-                #
-                #  f"({inf.InfVmKeys.cores}>={self.cores})",
-                f"({InfVmKeys.runtime}={RUNTIME_VM})",
-            ]
+        return prop_base.join_str_constraints(
+            prop_base.constraint_model_serialize(self)
         )
-        return f"(&{rules})"
 
 
 @dataclass
 class _VmPackage(Package):
     repo_url: str
     image_hash: str
-    constraints: _VmConstrains
+    constraints: _VmConstraints
 
     async def resolve_url(self) -> str:
         async with aiohttp.ClientSession() as client:
@@ -62,18 +77,18 @@ async def repo(
     *, image_hash: str, min_mem_gib: float = 0.5, min_storage_gib: float = 2.0
 ) -> Package:
     """
-    Build reference to application package.
+    Build a reference to application package.
 
-    - *image_hash*: finds package by its contents hash.
-    - *min_mem_gib*: minimal memory required to execute application code.
-    - *min_storage_gib* minimal disk storage to execute tasks.
+    - *image_hash*: hash of the package's image
+    - *min_mem_gib*: minimal memory required to execute application code
+    - *min_storage_gib* minimal disk storage to execute tasks
 
     """
 
     return _VmPackage(
         repo_url=resolve_repo_srv(_DEFAULT_REPO_SRV),
         image_hash=image_hash,
-        constraints=_VmConstrains(min_mem_gib, min_storage_gib),
+        constraints=_VmConstraints(min_mem_gib, min_storage_gib),
     )
 
 

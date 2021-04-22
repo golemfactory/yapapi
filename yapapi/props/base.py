@@ -1,12 +1,21 @@
 from typing import Dict, Type, Any, Union, List, cast, TypeVar
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal  # type: ignore
+
 import typing
 import abc
 import enum
 import json
-from dataclasses import dataclass, fields, MISSING
+from dataclasses import dataclass, fields, MISSING, field, Field
 from datetime import datetime, timezone
 
 Props = Dict[str, str]
+
+PROP_KEY = "key"
+PROP_OPERATOR = "operator"
+PROP_MODEL_FIELD_TYPE = "model_field_type"
 
 
 def as_list(data: Union[str, List[str]]) -> List[str]:
@@ -70,6 +79,7 @@ class InvalidPropertiesError(Exception):
         return msg
 
 
+@dataclass
 class Model(abc.ABC):
     """
     Base class from which all property models inherit.
@@ -86,6 +96,15 @@ class Model(abc.ABC):
         pass
 
     @classmethod
+    def property_fields(cls):
+        return (
+            f
+            for f in fields(cls)
+            if PROP_KEY in f.metadata
+               and f.metadata.get(PROP_MODEL_FIELD_TYPE, ModelFieldType.property) == ModelFieldType.property
+        )
+
+    @classmethod
     def from_properties(cls: Type[ME], props: Props) -> ME:
         """
         Initialize the model from a dictionary representation.
@@ -99,11 +118,10 @@ class Model(abc.ABC):
         """
         field_map = dict(
             (
-                f.metadata["key"],
+                f.metadata[PROP_KEY],
                 _PyField(name=f.name, type=f.type, required=f.default is MISSING),
             )
-            for f in fields(cls)
-            if "key" in f.metadata
+            for f in cls.property_fields()
         )
         data = dict(
             (field_map[key].encode(val) for (key, val) in props.items() if key in field_map)
@@ -123,7 +141,7 @@ class Model(abc.ABC):
             raise InvalidPropertiesError(msg) from exc
 
     @classmethod
-    def keys(cls):
+    def keys(cls):  # change to `property_keys` ?
         """
         :return: a mapping between the model's field names and the property keys
 
@@ -131,7 +149,7 @@ class Model(abc.ABC):
         ```python
         >>> import dataclasses
         >>> import typing
-        >>> from yapapi.properties.base import Model
+        >>> from yapapi.props.base import Model
         >>> @dataclasses.dataclass
         ... class NodeInfo(Model):
         ...     name: typing.Optional[str] = \
@@ -149,7 +167,74 @@ class Model(abc.ABC):
             def names(self):
                 return self.__dict__.keys()
 
-        return _Keys((f.name, f.metadata["key"]) for f in fields(cls))
+        return _Keys((f.name, f.metadata["key"]) for f in cls.property_fields())
+
+
+class ConstraintException(Exception):
+    pass
+
+
+CONSTRAINT_VAL_ANY = "*"
+
+ConstraintOperator = Literal['=', ">=", "<="]
+ConstraintGroupOperator = Literal["&", "|", "!"]
+
+
+class ModelFieldType(enum.Enum):
+    constraint = "constraint"
+    property = "property"
+
+
+def constraint(key: str, *, operator: ConstraintOperator = "=", default=MISSING):
+    """return a contraint-type dataclass field"""
+    return field(
+        default=default,
+        metadata={
+            PROP_KEY: key,
+            PROP_OPERATOR: operator,
+            PROP_MODEL_FIELD_TYPE: ModelFieldType.constraint,
+        }
+    )
+
+
+def prop(key: str, *, default=MISSING):
+    """return a property-type dataclass field"""
+    return field(
+        default=default,
+        metadata={
+            PROP_KEY: key,
+            PROP_MODEL_FIELD_TYPE: ModelFieldType.property
+        }
+    )
+
+
+def constraint_to_str(value, f: Field) -> str:
+    return f"({f.metadata[PROP_KEY]}{f.metadata[PROP_OPERATOR]}{value})"
+
+
+def constraint_model_serialize(m: Model) -> List[str]:
+    return [
+        constraint_to_str(getattr(m, f.name), f)
+        for f in fields(type(m))
+        if f.metadata.get(PROP_MODEL_FIELD_TYPE, "") == ModelFieldType.constraint
+    ]
+
+
+def join_str_constraints(constraints: List[str], operator: ConstraintGroupOperator = "&"):
+    if not constraints:
+        return "()"
+
+    if operator == "!":
+       if len(constraints) == 1:
+           return f"({operator}({constraints[0]}))"
+       else:
+           raise ConstraintException(f"{operator} requires exactly one component.")
+
+    if len(constraints) == 1:
+        return f"({constraints[0]})"
+
+    rules = "\n\t".join(constraints)
+    return f"({operator}{rules})"
 
 
 __all__ = ("Model", "as_list", "Props")

@@ -1,15 +1,16 @@
 """Infrastructural properties."""
 
 from typing import Optional, List
-from dataclasses import dataclass, field
-from deprecated import deprecated
+from dataclasses import dataclass
+from deprecated import deprecated  # type: ignore
 from enum import Enum
-from .base import Model
+from .base import Model, prop
 
 INF_MEM: str = "golem.inf.mem.gib"
 INF_STORAGE: str = "golem.inf.storage.gib"
 INF_CORES: str = "golem.inf.cpu.cores"
 TRANSFER_CAPS: str = "golem.activity.caps.transfer.protocol"
+INF_RUNTIME_NAME = "golem.runtime.name"
 
 RUNTIME_WASMTIME = "wasmtime"
 RUNTIME_EMSCRIPTEN = "emscripten"
@@ -32,17 +33,22 @@ class WasmInterface(Enum):
 
 @dataclass
 class InfBase(Model):
-    runtime: str = field(metadata={"key": "golem.runtime.name"})
+    runtime: str = prop(INF_RUNTIME_NAME)
 
-    mem: float = field(metadata={"key": INF_MEM})
-    storage: Optional[float] = field(default=None, metadata={"key": INF_STORAGE})
-    transfers: Optional[List[str]] = field(default=None, metadata={"key": TRANSFER_CAPS})
+    mem: float = prop(INF_MEM)
+    storage: Optional[float] = prop(INF_STORAGE, default=None)
+    transfers: Optional[List[str]] = prop(TRANSFER_CAPS, default=None)
 
 
 @dataclass
+@deprecated(version="0.6.0", reason="this is part of yapapi.payload.vm now")
 class InfVm(InfBase):
     runtime = RUNTIME_VM
-    cores: int = field(default=1, metadata={"key": INF_CORES})
+    cores: int = prop(INF_CORES, default=1)
+
+    @classmethod
+    def keys(cls):
+        return super().keys()
 
 
 InfVmKeys = InfVm.keys()
@@ -50,14 +56,16 @@ InfVmKeys = InfVm.keys()
 
 @dataclass
 class ExeUnitRequest(Model):
-    package_url: str = field(metadata={"key": "golem.srv.comp.task_package"})
+    package_url: str = prop("golem.srv.comp.task_package")
 
 
+@deprecated(version="0.6.0", reason="this is part of yapapi.payload.vm now")
 class VmPackageFormat(Enum):
     UNKNOWN = None
     GVMKIT_SQUASH = "gvmkit-squash"
 
 
+@deprecated(version="0.6.0", reason="this is part of yapapi.payload.vm now")
 @dataclass
 class VmRequest(ExeUnitRequest):
-    package_format: VmPackageFormat = field(metadata={"key": "golem.srv.comp.vm.package_format"})
+    package_format: VmPackageFormat = prop("golem.srv.comp.vm.package_format")

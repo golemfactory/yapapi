@@ -1,3 +1,4 @@
+import abc
 import enum
 from datetime import datetime
 from typing import List
@@ -6,6 +7,7 @@ from ..rest.market import Market, Subscription
 from dataclasses import asdict
 
 from . import Model
+from .base import join_str_constraints, constraint_model_serialize
 
 
 class DemandBuilder:
@@ -50,18 +52,8 @@ class DemandBuilder:
 
     @property
     def constraints(self) -> str:
-        """List of constraints for this demand."""
-        c_list = self._constraints
-        c_value: str
-        if not c_list:
-            c_value = "()"
-        elif len(c_list) == 1:
-            c_value = c_list[0]
-        else:
-            rules = "\n\t".join(c_list)
-            c_value = f"(&{rules})"
-
-        return c_value
+        """Constraints definition for this demand."""
+        return join_str_constraints(self._constraints)
 
     def ensure(self, constraint: str):
         """Add a constraint to the demand definition."""
@@ -87,3 +79,21 @@ class DemandBuilder:
     async def subscribe(self, market: Market) -> Subscription:
         """Create a Demand on the market and subscribe to Offers that will match that Demand."""
         return await market.subscribe(self._properties, self.constraints)
+
+    async def decorate(self, *decorators: 'DemandDecorator'):
+        for decorator in decorators:
+            await decorator.decorate_demand(self)
+
+
+class DemandDecorator(abc.ABC):
+    """An interface that specifies classes that can add properties and constraints through a DemandBuilder"""
+
+    @abc.abstractmethod
+    async def decorate_demand(self, demand: DemandBuilder):
+        """Add appropriate properties and constraints to a Demand"""
+
+
+class AutodecoratingModel(Model, DemandDecorator):
+    async def decorate_demand(self, demand: DemandBuilder):
+        demand.add(self)
+        demand.ensure(join_str_constraints(constraint_model_serialize(self)))

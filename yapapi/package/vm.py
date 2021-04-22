@@ -1,7 +1,7 @@
-from deprecated import deprecated
+from deprecated import deprecated  # type: ignore
 import logging
 
-from yapapi.package import Package
+from yapapi.payload.package import Package
 from yapapi.payload.vm import repo as _repo, resolve_repo_srv as _resolve_repo_srv, _FALLBACK_REPO_URL
 
 logger = logging.getLogger(__name__)
