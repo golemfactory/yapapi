@@ -35,9 +35,20 @@ jobs:
           poetry env use python3.8
           poetry install -E integration-tests
 
+      # - name: Disconnect Docker containers from default network
+      #  continue-on-error: true
+      #  run: |
+      #    docker network inspect docker_default
+      #    sudo apt-get install -y jq
+      #    docker network inspect docker_default | jq ".[0].Containers | map(.Name)[]" | tee /dev/stderr | xargs --max-args 1 -- docker network disconnect -f docker_default
+
       - name: Remove Docker containers
         continue-on-error: true
-        run: docker rm -f $(docker ps -a -q)
+        run: |
+          docker network inspect docker_default || true
+          for id in $(docker ps -a -q); do echo "Removing container $id"; docker network disconnect -f docker_default $id; docker rm -f $id; done
+          docker network prune -f
+        # run: docker rm -f $(docker ps -a -q)
 
       - name: Log in to GitHub Docker repository
         run: echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{github.actor}} --password-stdin
