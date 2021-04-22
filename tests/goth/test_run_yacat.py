@@ -14,7 +14,7 @@ from goth.runner.probe import RequestorProbe
 
 logger = logging.getLogger("goth.test.run_yacat")
 
-ALL_TASKS = {0, 48}
+ALL_TASKS = {"0", "48", "None"}
 
 
 # Temporal assertions expressing properties of sequences of "events". In this case, each "event"
@@ -33,9 +33,9 @@ async def assert_all_tasks_processed(status: str, output_lines: EventStream[str]
     remaining_tasks = ALL_TASKS.copy()
 
     async for line in output_lines:
-        m = re.search(rf".*Task {status} .* task data: ([0-9]+)", line)
+        m = re.search(rf".*Task {status} .* task data: ([a-zA-Z0-9]+)$", line)
         if m:
-            task_data = int(m.group(1))
+            task_data = m.group(1)
             logger.debug("assert_all_tasks_processed: Task %s: %s", status, task_data)
             remaining_tasks.discard(task_data)
         if not remaining_tasks:
