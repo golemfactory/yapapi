@@ -107,7 +107,6 @@ async def test_run_yacat(
             all_sent = cmd_monitor.add_assertion(assert_all_tasks_sent)
             all_computed = cmd_monitor.add_assertion(assert_all_tasks_computed)
 
-
             await cmd_monitor.wait_for_pattern(".*The keyspace size is 95", timeout=20)
             logger.info("Keyspace found")
 
@@ -119,7 +118,7 @@ async def test_run_yacat(
 
             await all_computed.wait_for_result(timeout=30)
             logger.info("All tasks computed")
-            
+
             await cmd_monitor.wait_for_pattern(".*Password found: yo", timeout=10)
             logger.info("Password found, waiting for Executor shutdown")
 
