@@ -9,6 +9,7 @@ from . import market
 
 from .configuration import Configuration
 from .market import Market
+from .net import Network
 from .payment import Payment
 from .activity import ActivityService as Activity
 

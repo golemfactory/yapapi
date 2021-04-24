@@ -2,6 +2,8 @@
 An implementation of the new Golem's task executor.
 """
 import asyncio
+import copy
+import json
 from asyncio import CancelledError
 import contextlib
 from datetime import datetime, timedelta, timezone
@@ -123,6 +125,7 @@ class Executor(AsyncContextManager):
         network: Optional[str] = None,
         event_consumer: Optional[Callable[[Event], None]] = None,
         stream_output: bool = False,
+        swarm: Optional[rest.net.SwarmBuilder] = None,
     ):
         """Create a new executor.
 
@@ -148,6 +151,8 @@ class Executor(AsyncContextManager):
         self._driver = driver.lower() if driver else DEFAULT_DRIVER
         self._network = network.lower() if network else DEFAULT_NETWORK
         self._stream_output = stream_output
+        self._swarm_builder = swarm
+        self._swarm: Optional[rest.net.Swarm] = None
         if not strategy:
             strategy = LeastExpensiveLinearPayuMS(
                 max_fixed_price=Decimal("1.0"),
@@ -263,6 +268,7 @@ class Executor(AsyncContextManager):
         market_api = self._market_api
         activity_api: rest.Activity = self._activity_api
         strategy = self._strategy
+        swarm = self._swarm
 
         done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
         stream_output = self._stream_output
@@ -459,8 +465,22 @@ class Executor(AsyncContextManager):
             nonlocal last_wid
             wid = last_wid
             last_wid += 1
+            swarm_node = None
 
             emit(events.WorkerStarted(agr_id=agreement.id))
+
+            if self._swarm:
+                try:
+                    # FIXME: proper provider ID retrieval
+                    details = await agreement.details()
+                    offer = details.provider_view
+                    provider_id = offer.properties.get("golem.com.payment.platform.erc20-rinkeby-tglm.address")
+                    if not provider_id:
+                        raise Exception("Provider ID not found in agreement")
+                    swarm_node = await self._swarm.add_node(provider_id)
+                except Exception as e:
+                    print("Error:", e)
+                    raise e
 
             try:
                 act = await activity_api.new_activity(agreement.id)
@@ -476,7 +496,7 @@ class Executor(AsyncContextManager):
                 emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
                 agreements_accepting_debit_notes.add(agreement.id)
                 work_context = WorkContext(
-                    f"worker-{wid}", node_info, storage_manager, emitter=emit
+                    f"worker-{wid}", node_info, storage_manager, emitter=emit, swarm=swarm, swarm_node=swarm_node
                 )
                 with work_queue.new_consumer() as consumer:
 
@@ -623,7 +643,8 @@ class Executor(AsyncContextManager):
 
             emit(events.ComputationFinished())
 
-        except (Exception, CancelledError, KeyboardInterrupt):
+        except (Exception, CancelledError, KeyboardInterrupt) as e:
+            print("Error:", e)
             emit(events.ComputationFinished(exc_info=sys.exc_info()))  # type: ignore
             cancelled = True
 
@@ -766,6 +787,16 @@ class Executor(AsyncContextManager):
 
         payment_client = await stack.enter_async_context(self._api_config.payment())
         self._payment_api = rest.Payment(payment_client)
+
+        net_client = await stack.enter_async_context(self._api_config.net())
+        self._net_api = rest.Network(net_client)
+
+        if self._swarm_builder:
+            headers = net_client.default_headers
+            me = await net_client.request('GET', f"{self._api_config.root_url}/me", headers=headers)
+            identity = json.loads(me.data)['identity']
+            print("Requestor identity:", identity)
+            self._swarm = await self._swarm_builder.build(identity, self._net_api)
 
         return self
 

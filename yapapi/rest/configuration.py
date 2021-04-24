@@ -4,6 +4,7 @@ from typing_extensions import Final
 import ya_market  # type: ignore
 import ya_payment  # type: ignore
 import ya_activity  # type: ignore
+import ya_net  # type: ignore
 
 DEFAULT_YAGNA_API_URL: Final[str] = "http://127.0.0.1:7465"
 
@@ -97,6 +98,7 @@ class Configuration(object):
     * `YAGNA_MARKET_URL`
     * `YAGNA_PAYMENT_URL`
     * `YAGNA_ACTIVITY_URL`
+    * `YAGNA_NET_URL`
     """
 
     def __init__(
@@ -107,6 +109,7 @@ class Configuration(object):
         market_url: Optional[str] = None,
         payment_url: Optional[str] = None,
         activity_url: Optional[str] = None,
+        net_url: Optional[str] = None,
     ):
         self.__app_key: str = app_key or env_or_fail("YAGNA_APPKEY", "API authentication token")
         self.__url = url or os.getenv("YAGNA_API_URL") or DEFAULT_YAGNA_API_URL
@@ -115,6 +118,7 @@ class Configuration(object):
             return given_url or os.getenv(env_val) or f"{self.__url}{prefix}"
 
         self.__market_url: str = resolve_url(market_url, "YAGNA_MARKET_URL", "/market-api/v1")
+        self.__net_url: str = resolve_url(net_url, "YAGNA_NET_URL", "/net-api/v1")
         self.__payment_url: str = resolve_url(payment_url, "YAGNA_PAYMENT_URL", "/payment-api/v1")
         self.__activity_url: str = resolve_url(
             activity_url, "YAGNA_ACTIVITY_URL", "/activity-api/v1"
@@ -140,6 +144,16 @@ class Configuration(object):
         """The URL of the Activity REST API"""
         return self.__activity_url
 
+    @property
+    def net_url(self) -> str:
+        """The URL of the Activity REST API"""
+        return self.__net_url
+
+    @property
+    def root_url(self) -> str:
+        """The root URL of the REST API"""
+        return self.__url
+
     def market(self) -> ya_market.ApiClient:
         """Return a REST client for the Market API."""
         cfg = ya_market.Configuration(host=self.market_url)
@@ -162,6 +176,15 @@ class Configuration(object):
         """Return a REST client for the Activity API."""
         cfg = ya_activity.Configuration(host=self.activity_url)
         return ya_activity.ApiClient(
+            configuration=cfg,
+            header_name="authorization",
+            header_value=f"Bearer {self.app_key}",
+        )
+
+    def net(self) -> ya_net.ApiClient:
+        """Return a REST client for the Activity API."""
+        cfg = ya_net.Configuration(host=self.net_url)
+        return ya_net.ApiClient(
             configuration=cfg,
             header_name="authorization",
             header_value=f"Bearer {self.app_key}",

@@ -8,6 +8,7 @@ from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union
 
 from .events import DownloadStarted, DownloadFinished
 from ..props import NodeInfo
+from ..rest.net import Node, Swarm
 from ..storage import StorageProvider, Source, Destination
 
 
@@ -50,8 +51,11 @@ class Work(abc.ABC):
 
 
 class _InitStep(Work):
+    def __init__(self, deploy: Optional[Dict] = None):
+        self._deploy = deploy or dict()
+
     def register(self, commands: CommandContainer):
-        commands.deploy()
+        commands.deploy(**self._deploy)
         commands.start()
 
 
@@ -199,8 +203,12 @@ class WorkContext:
         node_info: NodeInfo,
         storage: StorageProvider,
         emitter: Optional[Callable[[StorageEvent], None]] = None,
+        swarm: Optional[Swarm] = None,
+        swarm_node: Optional[Node] = None,
     ):
         self.id = ctx_id
+        self.swarm = swarm
+        self.swarm_node = swarm_node
         self._node_info = node_info
         self._storage: StorageProvider = storage
         self._pending_steps: List[Work] = []
@@ -214,7 +222,10 @@ class WorkContext:
 
     def __prepare(self):
         if not self._started:
-            self._pending_steps.append(_InitStep())
+            deploy = dict()
+            deploy.update(self.swarm.deploy(self.swarm_node))
+
+            self._pending_steps.append(_InitStep(deploy=deploy))
             self._started = True
 
     def begin(self):
