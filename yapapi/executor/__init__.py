@@ -438,8 +438,8 @@ class Executor(AsyncContextManager):
                             amount=invoice.amount,
                         )
                     )
-                    allocation = self._get_allocation(invoice)
                     try:
+                        allocation = self._get_allocation(invoice)
                         await invoice.accept(amount=invoice.amount, allocation=allocation)
                     except CancelledError:
                         raise
