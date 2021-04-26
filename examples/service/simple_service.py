@@ -113,7 +113,7 @@ async def main(subnet_tag, driver=None, network=None):
     # the level of detail and format of the logged information.
     async with Executor(
         package=package,
-        max_workers=3,
+        max_workers=1,
         budget=1.0,
         timeout=timeout,
         subnet_tag=subnet_tag,
