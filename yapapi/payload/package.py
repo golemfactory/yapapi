@@ -1,4 +1,5 @@
 import abc
+from dataclasses import dataclass
 
 from yapapi.payload import Payload
 
@@ -9,6 +10,7 @@ class PackageException(Exception):
     pass
 
 
+@dataclass
 class Package(Payload):
     """Description of a task package (e.g. a VM image) deployed on the provider nodes"""
 
