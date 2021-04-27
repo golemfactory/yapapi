@@ -51,9 +51,13 @@ class Work(abc.ABC):
         return None
 
 
-class _InitStep(Work):
+class _Deploy(Work):
     def register(self, commands: CommandContainer):
         commands.deploy()
+
+
+class _Start(Work):
+    def register(self, commands: CommandContainer):
         commands.start()
 
 
@@ -264,6 +268,7 @@ class WorkContext:
         node_info: NodeInfo,
         storage: StorageProvider,
         emitter: Optional[Callable[[StorageEvent], None]] = None,
+        implicit_init: bool = True,
     ):
         self.id = ctx_id
         self._node_info = node_info
@@ -271,6 +276,7 @@ class WorkContext:
         self._pending_steps: List[Work] = []
         self._started: bool = False
         self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
+        self._implicit_init = implicit_init
 
     @property
     def provider_name(self) -> Optional[str]:
@@ -278,12 +284,19 @@ class WorkContext:
         return self._node_info.name
 
     def __prepare(self):
-        if not self._started:
-            self._pending_steps.append(_InitStep())
+        if not self._started and self._implicit_init:
+            self.deploy()
+            self.start()
             self._started = True
 
     def begin(self):
         pass
+
+    def deploy(self, on_deploy: Callable[[bytes], Awaitable]):
+        self._pending_steps.append(_Deploy())
+
+    def start(self, on_start: Callable[[bytes], Awaitable]):
+        self._pending_steps.append(_Start())
 
     def send_json(self, json_path: str, data: dict):
         """Schedule sending JSON data to the provider.
