@@ -93,7 +93,7 @@ async def main(subnet_tag, driver=None, network=None):
     # See the documentation of the `yapapi.log` module on how to set
     # the level of detail and format of the logged information.
     async with Executor(
-        package=package,
+        payload=package,
         max_workers=3,
         budget=10.0,
         timeout=timeout,

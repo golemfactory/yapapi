@@ -34,7 +34,7 @@ from .events import Event
 from . import events
 from .task import Task, TaskStatus
 from .utils import AsyncWrapper
-from ..package import Package
+from ..payload import Payload
 from ..props import Activity, com, NodeInfo, NodeInfoKeys
 from ..props.base import InvalidPropertiesError
 from ..props.builder import DemandBuilder
@@ -114,7 +114,7 @@ class Executor(AsyncContextManager):
     def __init__(
         self,
         *,
-        package: Package,
+        package: Optional[Payload] = None,
         max_workers: int = 5,
         timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
         budget: Union[float, Decimal],
@@ -124,6 +124,7 @@ class Executor(AsyncContextManager):
         network: Optional[str] = None,
         event_consumer: Optional[Callable[[Event], None]] = None,
         stream_output: bool = False,
+        payload: Optional[Payload] = None
     ):
         """Create a new executor.
 
@@ -160,7 +161,16 @@ class Executor(AsyncContextManager):
         self._strategy = strategy
         self._api_config = rest.Configuration()
         self._stack = AsyncExitStack()
-        self._package = package
+
+        if package:
+            if payload:
+                raise TypeError("Cannot use `payload` and `package` at the same time")
+            logger.warning(f"`package` argument to `{self.__class__}` is deprecated, please use `payload` instead")
+            payload = package
+        if not payload:
+            raise TypeError("Executor `payload` must be specified")
+
+        self._package = payload
         self._conf = _ExecutorConfig(max_workers, timeout)
         # TODO: setup precision
         self._budget_amount = Decimal(budget)
