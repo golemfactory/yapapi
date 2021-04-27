@@ -49,10 +49,7 @@ async def assert_multiple_workers_run(agr_id, events):
 
 
 @pytest.mark.asyncio
-async def test_multiactivity_agreement(
-    project_dir: Path,
-    log_dir: Path,
-) -> None:
+async def test_multiactivity_agreement(project_dir: Path, log_dir: Path, config_overrides) -> None:
 
     configure_logging(log_dir)
 
@@ -61,8 +58,10 @@ async def test_multiactivity_agreement(
         {"name": "requestor", "type": "Requestor"},
         {"name": "provider-1", "type": "VM-Wasm-Provider", "use-proxy": True},
     ]
+    config_overrides.append(("nodes", nodes))
     goth_config = goth.configuration.load_yaml(
-        project_dir / "tests" / "goth" / "assets" / "goth-config.yml", [("nodes", nodes)]
+        project_dir / "tests" / "goth" / "assets" / "goth-config.yml",
+        config_overrides,
     )
 
     runner = Runner(base_log_dir=log_dir, compose_config=goth_config.compose_config)
