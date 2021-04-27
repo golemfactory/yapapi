@@ -32,6 +32,7 @@ EXECUTOR_TIMEOUT = timedelta(weeks=100)
 
 
 class Service:
+    """ THIS SHOULD BE PART OF THE API"""
     state: typing.Optional[str] = None
     running = ('new', 'deployed', 'ready', 'shutdown')
 
@@ -94,6 +95,7 @@ class TurbogethService(Service):
 
 
 class Swarm:
+    """ THIS SHOULD BE PART OF THE API"""
     def __init__(self, executor: "Executor", service: typing.Type[Service], payload: Payload):
         self.executor = executor
         self.service = service
@@ -119,6 +121,7 @@ class Swarm:
 
 
 class Executor(typing.AsyncContextManager):
+    """ MOCK OF EXECUTOR JUST SO I COULD ILLUSTRATE THE NEW CALL"""
     def __init__(self, *args, **kwargs):
         pass
 
