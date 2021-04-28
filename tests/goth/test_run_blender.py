@@ -106,7 +106,7 @@ async def test_run_blender(log_dir: Path, project_dir: Path, config_overrides) -
             all_sent = cmd_monitor.add_assertion(assert_all_tasks_sent)
             all_computed = cmd_monitor.add_assertion(assert_all_tasks_computed)
 
-            await cmd_monitor.wait_for_pattern(".*Received proposals from 2 ", timeout=10)
+            await cmd_monitor.wait_for_pattern(".*Received proposals from 2 ", timeout=20)
             logger.info("Received proposals")
 
             await cmd_monitor.wait_for_pattern(".*Agreement proposed ", timeout=10)
