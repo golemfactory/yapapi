@@ -51,9 +51,9 @@ class Service:
         self.ctx.start(on_start=self.on_start)
         yield self.ctx.commit()
 
-    async def execute_batch(self, batch: Optional[Task]):
+    async def execute_batch(self, batch: Optional[Work]):
         if batch:
-            executor.execute(batch)
+            executor.execute(batch)  # some automagic of passing it for execution ;)
 
     async def run(self):  # some way to pass a signal into `run` ... or some other event handler inside `Service`
         while self.state in self.running:
@@ -68,7 +68,7 @@ class Service:
                 async for batch in handler():
                     await self.execute_batch(batch)
 
-    async def on_ready(self):
+    async def on_ready(self, *args, **kwargs):
         while True:
             print(f"service {self.ctx.id} running on {self.ctx.provider_name} ... ")
             await asyncio.sleep(10)
@@ -94,7 +94,7 @@ class TurbogethService(Service):
         self.ctx.download_file("some/service/state", "temp/path")
 
 
-class Swarm:
+class Cluster:
     """ THIS SHOULD BE PART OF THE API"""
     def __init__(self, executor: "Executor", service: typing.Type[Service], payload: Payload):
         self.executor = executor
@@ -138,11 +138,11 @@ class Executor(typing.AsyncContextManager):
             service: typing.Type[Service],
             payload: Payload,
             num_instances: int = 1,
-    ) -> Swarm:
-        swarm = Swarm(executor=self, service=service, payload=payload)
+    ) -> Cluster:
+        cluster = Cluster(executor=self, service=service, payload=payload)
         for i in range(num_instances):
-            asyncio.create_task(swarm.spawn_instance())
-        return swarm
+            asyncio.create_task(cluster.spawn_instance())
+        return cluster
 
 
 async def main(subnet_tag, driver=None, network=None):
