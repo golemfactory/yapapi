@@ -75,13 +75,12 @@ async def assert_all_invoices_accepted(output_lines: EventStream[str]):
 
 
 @pytest.mark.asyncio
-async def test_run_blender(
-    log_dir: Path,
-    project_dir: Path,
-) -> None:
+async def test_run_blender(log_dir: Path, project_dir: Path, config_overrides) -> None:
 
     # This is the default configuration with 2 wasm/VM providers
-    goth_config = load_yaml(Path(__file__).parent / "assets" / "goth-config.yml")
+    goth_config = load_yaml(
+        Path(__file__).parent / "assets" / "goth-config.yml", overrides=config_overrides
+    )
 
     blender_path = project_dir / "examples" / "blender" / "blender.py"
 
