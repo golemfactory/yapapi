@@ -114,7 +114,11 @@ async def main(subnet_tag, driver=None, network=None):
         num_tasks = 0
         start_time = datetime.now()
 
-        async for task in executor.submit(worker, [Task(data=frame) for frame in frames]):
+        async def task_iterator():
+            for frame in frames:
+                yield Task(data=frame)
+
+        async for task in executor.submit(worker, task_iterator()):
             num_tasks += 1
             print(
                 f"{TEXT_COLOR_CYAN}"

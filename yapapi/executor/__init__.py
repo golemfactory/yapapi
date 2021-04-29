@@ -206,7 +206,7 @@ class Executor(AsyncContextManager):
     async def submit(
         self,
         worker: Callable[[WorkContext, AsyncIterator[Task[D, R]]], AsyncGenerator[Work, None]],
-        data: Iterable[Task[D, R]],
+        data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
     ) -> AsyncIterator[Task[D, R]]:
         """Submit a computation to be executed on providers.
 
@@ -388,7 +388,7 @@ class Executor(AsyncContextManager):
     async def _submit(
         self,
         worker: Callable[[WorkContext, AsyncIterator[Task[D, R]]], AsyncGenerator[Work, None]],
-        data: Iterable[Task[D, R]],
+        data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
         services: Set[asyncio.Task],
         workers: Set[asyncio.Task],
     ) -> AsyncGenerator[Task[D, R], None]:
@@ -415,7 +415,7 @@ class Executor(AsyncContextManager):
 
         state = Executor.SubmissionState(builder, agreements_pool)
 
-        market_api = self._market_api
+        # market_api = self._market_api
         activity_api: rest.Activity = self._activity_api
 
         done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
@@ -426,10 +426,15 @@ class Executor(AsyncContextManager):
             if status == TaskStatus.ACCEPTED:
                 done_queue.put_nowait(task)
 
-        def input_tasks() -> Iterable[Task[D, R]]:
-            for task in data:
-                task._add_callback(on_task_done)
-                yield task
+        async def input_tasks() -> AsyncIterator[Task[D, R]]:
+            if isinstance(data, AsyncIterator):
+                async for task in data:
+                    task._add_callback(on_task_done)
+                    yield task
+            else:
+                for task in data:
+                    task._add_callback(on_task_done)
+                    yield task
 
         work_queue = SmartQueue(input_tasks())
 
@@ -607,7 +612,10 @@ class Executor(AsyncContextManager):
             while True:
                 await asyncio.sleep(2)
                 await agreements_pool.cycle()
-                if len(workers) < self._conf.max_workers and work_queue.has_unassigned_items():
+                if (
+                    len(workers) < self._conf.max_workers
+                    and await work_queue.has_unassigned_items()
+                ):
                     new_task = None
                     try:
                         new_task = await agreements_pool.use_agreement(
