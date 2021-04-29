@@ -7,6 +7,7 @@ from typing import Optional, AsyncIterator, cast, Iterable, Union, List
 from decimal import Decimal
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass
+from .common import repeat_on_timeout
 from .resource import ResourceCtx
 
 
@@ -18,6 +19,7 @@ class Invoice(yap.Invoice):
         self.__dict__.update(**_base.__dict__)
         self._api: RequestorApi = _api
 
+    @repeat_on_timeout(max_tries=3)
     async def accept(self, *, amount: Union[Decimal, str], allocation: "Allocation"):
         acceptance = yap.Acceptance(total_amount_accepted=str(amount), allocation_id=allocation.id)
         await self._api.accept_invoice(self.invoice_id, acceptance)
@@ -28,6 +30,7 @@ class DebitNote(yap.DebitNote):
         self.__dict__.update(**_base.__dict__)
         self._api: RequestorApi = _api
 
+    @repeat_on_timeout(max_tries=2)
     async def accept(self, *, amount: Union[Decimal, str], allocation: "Allocation"):
         acceptance = yap.Acceptance(total_amount_accepted=str(amount), allocation_id=allocation.id)
         await self._api.accept_debit_note(self.debit_note_id, acceptance)
@@ -206,7 +209,10 @@ class Payment(object):
 
     def incoming_invoices(self) -> AsyncIterator[Invoice]:
         ts = datetime.now(timezone.utc)
-        api = self._api
+
+        @repeat_on_timeout(max_tries=3)
+        async def _get_invoice_events(after):
+            return await self._api.get_invoice_events(after_timestamp=after)
 
         async def fetch(init_ts: datetime):
             ts = init_ts
@@ -214,7 +220,7 @@ class Payment(object):
                 # In the current version of `ya-aioclient` the method `get_invoice_events`
                 # incorrectly accepts `timeout` parameter, while the server uses `pollTimeout`
                 # events = await api.get_invoice_events(poll_timeout=5, after_timestamp=ts)
-                events = await api.get_invoice_events(after_timestamp=ts)
+                events = await _get_invoice_events(ts)
                 for ev in events:
                     logger.debug("Received invoice event: %r, type: %s", ev, ev.__class__)
                     if isinstance(ev, yap.InvoiceReceivedEvent):
@@ -232,10 +238,14 @@ class Payment(object):
     def incoming_debit_notes(self) -> AsyncIterator[DebitNote]:
         ts = datetime.now(timezone.utc)
 
+        @repeat_on_timeout(max_tries=3)
+        async def _get_debit_note_events(after):
+            return await self._api.get_debit_note_events(after_timestamp=after)
+
         async def fetch(init_ts: datetime):
             ts = init_ts
             while True:
-                events = await self._api.get_debit_note_events(after_timestamp=ts)
+                events = await _get_debit_note_events(ts)
                 for ev in events:
                     logger.debug("Received debit note event: %r, type: %s", ev, ev.__class__)
                     if isinstance(ev, yap.DebitNoteReceivedEvent):
