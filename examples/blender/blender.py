@@ -130,7 +130,8 @@ async def main(subnet_tag, driver=None, network=None):
 
 if __name__ == "__main__":
     parser = build_parser("Render a Blender scene")
-    parser.set_defaults(log_file="blender-yapapi.log")
+    now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
+    parser.set_defaults(log_file=f"blender-yapapi-{now}.log")
     args = parser.parse_args()
 
     # This is only required when running on Windows with Python prior to 3.8:
