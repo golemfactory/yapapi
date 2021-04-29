@@ -27,13 +27,16 @@ _logger = logging.getLogger("yapapi.executor")
 Item = TypeVar("Item")
 
 
-class Handle(Generic[Item], object):  # Handling? QueueItem? ConsumedItem? ConsumerItem? ConsumerBinding?
+class Handle(
+    Generic[Item], object
+):  # Handling? QueueItem? ConsumedItem? ConsumerItem? ConsumerBinding?
     """
     Binding between a queue item and a specific consumer.
 
     Additionally it keeps track of the previously used consumers of the given item
     to prevent them from being assigned to this item again.
     """
+
     __slots__ = ("_data", "_prev_consumers", "_consumer")
 
     def __init__(self, data: Item, *, consumer: Optional["Consumer[Item]"] = None):
@@ -181,6 +184,7 @@ class Consumer(
     Provides an interface to asynchronously iterate over items in the given queue
     while cooperating with other consumers attached to this queue.
     """
+
     def __init__(self, queue: SmartQueue[Item]):
         self._queue = queue
         self._fetched: Optional[Handle[Item]] = None
