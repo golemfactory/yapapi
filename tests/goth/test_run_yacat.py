@@ -106,7 +106,7 @@ async def test_run_yacat(log_dir: Path, project_dir: Path, config_overrides) -> 
             all_sent = cmd_monitor.add_assertion(assert_all_tasks_sent)
             all_computed = cmd_monitor.add_assertion(assert_all_tasks_computed)
 
-            await cmd_monitor.wait_for_pattern(".*The keyspace size is 95", timeout=600)
+            await cmd_monitor.wait_for_pattern(".*The keyspace size is 95", timeout=1200)
             logger.info("Keyspace found")
 
             await cmd_monitor.wait_for_pattern(".*Received proposals from 2 ", timeout=10)
