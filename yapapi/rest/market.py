@@ -1,14 +1,17 @@
 import asyncio
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 import logging
 from types import TracebackType
 from typing import AsyncIterator, Optional, TypeVar, Type, Generator, Any, Generic
 
 from typing_extensions import Awaitable, AsyncContextManager
 
-from ..props import Model
 from ya_market import ApiClient, ApiException, RequestorApi, models  # type: ignore
-from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+
+from .common import SuppressedExceptions, is_recoverable_exception
+from ..props import Model
+
 
 _ModelType = TypeVar("_ModelType", bound=Model)
 
@@ -191,8 +194,10 @@ class Subscription(object):
         """Yield counter-proposals based on the incoming, matching Offers."""
         while self._open:
 
+            proposals = []
             try:
-                proposals = await self._api.collect_offers(self._id, timeout=10, max_events=10)
+                async with SuppressedExceptions(is_recoverable_exception):
+                    proposals = await self._api.collect_offers(self._id, timeout=5, max_events=10)
             except ApiException as ex:
                 if ex.status == 404:
                     logger.debug(

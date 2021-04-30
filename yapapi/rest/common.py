@@ -1,5 +1,4 @@
 import asyncio
-import contextlib
 import functools
 import logging
 from typing import Callable, Optional
@@ -34,7 +33,7 @@ def is_recoverable_exception(e: Exception) -> bool:
     return is_timeout_exception(e) or isinstance(e, aiohttp.ServerDisconnectedError)
 
 
-class SuppressedExceptions(contextlib.AbstractAsyncContextManager):
+class SuppressedExceptions:
     """An async context manager for suppressing exception satisfying given test function."""
 
     exception: Optional[Exception]
