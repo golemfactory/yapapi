@@ -6,7 +6,7 @@ import ya_activity
 import ya_market
 import ya_payment
 
-from yapapi.rest.common import repeat_on_timeout
+from yapapi.rest.common import repeat_on_timeout, SuppressedExceptions, is_timeout_exception
 
 
 @pytest.mark.parametrize(
@@ -56,4 +56,37 @@ async def test_repeat_on_timeout(max_tries, exceptions, calls_expected, expected
     except Exception as e:
         assert expected_error is not None, f"Unexpected exception: {e}"
         assert isinstance(e, expected_error), f"Expected an {expected_error}, got {e}"
-    assert calls_made == calls_expected, "{calls_made} attempts were made, expected {num_calls}"
+    assert calls_made == calls_expected, f"{calls_made} attempts were made, expected {num_calls}"
+
+
+@pytest.mark.asyncio
+async def test_suppressed_exceptions():
+
+    async with SuppressedExceptions(is_timeout_exception) as se:
+        pass
+    assert se.exception is None
+
+    async with SuppressedExceptions(is_timeout_exception) as se:
+        raise asyncio.TimeoutError()
+    assert isinstance(se.exception, asyncio.TimeoutError)
+
+    with pytest.raises(AssertionError):
+        async with SuppressedExceptions(is_timeout_exception):
+            raise AssertionError()
+
+
+@pytest.mark.asyncio
+async def test_suppressed_exceptions_with_return():
+    async def success():
+        return "success"
+
+    async def failure():
+        raise asyncio.TimeoutError()
+
+    async def func(request):
+        async with SuppressedExceptions(is_timeout_exception):
+            return await request
+        return "failure"  # noqa
+
+    assert await func(success()) == "success"
+    assert await func(failure()) == "failure"
