@@ -19,7 +19,7 @@ class Invoice(yap.Invoice):
         self.__dict__.update(**_base.__dict__)
         self._api: RequestorApi = _api
 
-    @repeat_on_timeout(max_tries=3)
+    @repeat_on_timeout(max_tries=5)
     async def accept(self, *, amount: Union[Decimal, str], allocation: "Allocation"):
         acceptance = yap.Acceptance(total_amount_accepted=str(amount), allocation_id=allocation.id)
         await self._api.accept_invoice(self.invoice_id, acceptance)
@@ -30,7 +30,7 @@ class DebitNote(yap.DebitNote):
         self.__dict__.update(**_base.__dict__)
         self._api: RequestorApi = _api
 
-    @repeat_on_timeout(max_tries=2)
+    @repeat_on_timeout(max_tries=5)
     async def accept(self, *, amount: Union[Decimal, str], allocation: "Allocation"):
         acceptance = yap.Acceptance(total_amount_accepted=str(amount), allocation_id=allocation.id)
         await self._api.accept_debit_note(self.debit_note_id, acceptance)
@@ -70,6 +70,7 @@ class Allocation(_Link):
     expires: Optional[datetime]
     "Allocation expiration timestamp"
 
+    @repeat_on_timeout(max_tries=5)
     async def details(self) -> AllocationDetails:
         details: yap.Allocation = await self._api.get_allocation(self.id)
         return AllocationDetails(
@@ -77,6 +78,7 @@ class Allocation(_Link):
             remaining_amount=Decimal(details.remaining_amount),
         )
 
+    @repeat_on_timeout(max_tries=5)
     async def delete(self):
         await self._api.release_allocation(self.id)
 
@@ -194,6 +196,7 @@ class Payment(object):
     async def decorate_demand(self, ids: List[str]) -> yap.MarketDecoration:
         return await self._api.get_demand_decorations(ids)
 
+    @repeat_on_timeout(max_tries=5)
     async def debit_note(self, debit_note_id: str) -> DebitNote:
         debit_note = await self._api.get_debit_note(debit_note_id)
         return DebitNote(_api=self._api, _base=debit_note)
@@ -203,6 +206,7 @@ class Payment(object):
         for invoice_obj in cast(Iterable[yap.Invoice], await self._api.get_invoices()):
             yield Invoice(_api=self._api, _base=invoice_obj)
 
+    @repeat_on_timeout(max_tries=5)
     async def invoice(self, invoice_id: str) -> Invoice:
         invoice_obj = await self._api.get_invoice(invoice_id)
         return Invoice(_api=self._api, _base=invoice_obj)
