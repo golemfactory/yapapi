@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 from types import TracebackType
 from typing import AsyncIterator, Optional, TypeVar, Type, Generator, Any, Generic
 
@@ -69,6 +70,9 @@ class Agreement(object):
         try:
             await self._api.wait_for_approval(self._id, timeout=15, _request_timeout=16)
             return True
+        except asyncio.TimeoutError:
+            logger.debug("waitForApproval(%s): client-side timeout", self._id, exc_info=True)
+            return False
         except ApiException:
             logger.debug("waitForApproval(%s) raised ApiException", self._id, exc_info=True)
             return False
@@ -123,14 +127,14 @@ class OfferProposal(object):
     async def reject(self, reason: str = "Rejected"):
         """Reject the Offer."""
         await self._subscription._api.reject_proposal_offer(
-            self._subscription.id, self.id, request_body={"message": reason}
+            self._subscription.id, self.id, request_body={"message": reason}, _request_timeout=5
         )
 
     async def respond(self, props: dict, constraints: str) -> str:
         """Create an agreeement Proposal for a received Offer, based on our Demand."""
         proposal = models.DemandOfferBase(properties=props, constraints=constraints)
         new_proposal = await self._subscription._api.counter_proposal_demand(
-            self._subscription.id, self.id, proposal
+            self._subscription.id, self.id, proposal, _request_timeout=5
         )
         return new_proposal
 
@@ -199,7 +203,23 @@ class Subscription(object):
     async def events(self) -> AsyncIterator[OfferProposal]:
         """Yield counter-proposals based on the incoming, matching Offers."""
         while self._open:
-            proposals = await self._api.collect_offers(self._id, timeout=10, max_events=10)
+
+            try:
+                proposals = await self._api.collect_offers(self._id, timeout=10, max_events=10)
+            except ApiException as ex:
+                if ex.status == 404:
+                    logger.debug(
+                        "Offer unsubscribed or its subscription expired, subscription_id: %s",
+                        self._id,
+                    )
+                    self._open = False
+                    # Prevent calling `unsubscribe` which would result in API error
+                    # for expired demand subscriptione
+                    self._deleted = True
+                    continue
+                else:
+                    raise
+
             for proposal in proposals:
                 if isinstance(proposal, models.ProposalEvent):
                     yield OfferProposal(self, proposal)
