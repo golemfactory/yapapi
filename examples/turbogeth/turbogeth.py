@@ -1,4 +1,5 @@
 import asyncio
+import enum
 import json
 from datetime import timedelta
 import typing
@@ -31,22 +32,43 @@ INSTANCES_NEEDED = 1
 EXECUTOR_TIMEOUT = timedelta(weeks=100)
 
 
+class ServiceState(enum.Enum):
+    """ THIS SHOULD BE PART OF THE API"""
+    new = 'new'
+    deploying = 'deploying'
+    deployed = 'deployed'
+    ready = 'ready'
+    shutdown = 'shutting down'
+    terminated = 'terminated'
+    undefined = 'undefined'
+
+
+# """ THIS SHOULD BE PART OF THE API"""
+SERVICE_AVAILABLE = (
+    ServiceState.new,
+    ServiceState.deploying,
+    ServiceState.deployed,
+    ServiceState.ready,
+    ServiceState.shutdown
+)
+
+
 class Service:
     """ THIS SHOULD BE PART OF THE API"""
-    state: typing.Optional[str] = None
-    running = ('new', 'deployed', 'ready', 'shutdown')
+    state: typing.Optional[ServiceState] = None
 
     def __init__(self, ctx: WorkContext):
         self.ctx = ctx
-        self.state = "new"  # should state correspond with the ActivityState?
+        self.state = ServiceState.new  # should state correspond with the ActivityState?
 
     async def on_deploy(self, out: bytes):
-        self.state = "deployed"
+        self.state = ServiceState.deployed
 
     async def on_start(self, out: bytes):
-        self.state = "ready"
+        self.state = ServiceState.ready
 
     async def on_new(self):
+        self.state = ServiceState.deploying
         self.ctx.deploy(on_deploy=self.on_deploy)
         self.ctx.start(on_start=self.on_start)
         yield self.ctx.commit()
@@ -56,11 +78,11 @@ class Service:
             executor.execute(batch)  # some automagic of passing it for execution ;)
 
     async def run(self):  # some way to pass a signal into `run` ... or some other event handler inside `Service`
-        while self.state in self.running:
+        while self.state in SERVICE_AVAILABLE:
             _handlers = {
-                'new': self.on_new,
-                'ready': self.on_ready,
-                'shutdown': self.on_shutdown,
+                ServiceState.new: self.on_new,
+                ServiceState.ready: self.on_ready,
+                ServiceState.shutdown: self.on_shutdown,
             }
 
             handler = _handlers.get(self.state)
