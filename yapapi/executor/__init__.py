@@ -23,6 +23,7 @@ from typing import (
     cast,
 )
 import traceback
+import warnings
 
 
 from dataclasses import dataclass, field
@@ -91,31 +92,14 @@ class NoPaymentAccountError(Exception):
         )
 
 
-@dataclass
-class _ExecutorConfig:
-    max_workers: int = 5
-    timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT
-    get_offers_timeout: timedelta = timedelta(seconds=20)
-    traceback: bool = bool(os.getenv("YAPAPI_TRACEBACK", 0))
-
-
 D = TypeVar("D")  # Type var for task data
 R = TypeVar("R")  # Type var for task result
 
 
-class Executor(AsyncContextManager):
-    """
-    Task executor.
-
-    Used to run tasks using the specified application package within providers' execution units.
-    """
-
+class Engine(AsyncContextManager):
     def __init__(
         self,
         *,
-        package: Package,
-        max_workers: int = 5,
-        timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
         budget: Union[float, Decimal],
         strategy: Optional[MarketStrategy] = None,
         subnet_tag: Optional[str] = None,
@@ -123,13 +107,11 @@ class Executor(AsyncContextManager):
         network: Optional[str] = None,
         event_consumer: Optional[Callable[[Event], None]] = None,
         stream_output: bool = False,
+        app_key: Optional[str] = None
     ):
-        """Create a new executor.
+        """
+        Base execution engine containing functions common to all modes of operation
 
-        :param package: a package common for all tasks; vm.repo() function may be
-            used to return package from a repository
-        :param max_workers: maximum number of workers doing the computation
-        :param timeout: timeout for the whole computation
         :param budget: maximum budget for payments
         :param strategy: market strategy used to select providers from the market
             (e.g. LeastExpensiveLinearPayuMS or DummyMS)
@@ -141,13 +123,14 @@ class Executor(AsyncContextManager):
         :param event_consumer: a callable that processes events related to the
             computation; by default it is a function that logs all events
         :param stream_output: stream computation output from providers
+        :param app_key: optional Yagna application key. If not provided, the default is to
+                        get the value from `YAGNA_APPKEY` environment variable
         """
-        logger.debug("Creating Executor instance; parameters: %s", locals())
+        self._init_api(app_key)
 
-        self._subnet: Optional[str] = subnet_tag
-        self._driver = driver.lower() if driver else DEFAULT_DRIVER
-        self._network = network.lower() if network else DEFAULT_NETWORK
-        self._stream_output = stream_output
+        self._budget_amount = Decimal(budget)
+        self._budget_allocations: List[rest.payment.Allocation] = []
+
         if not strategy:
             strategy = LeastExpensiveLinearPayuMS(
                 max_fixed_price=Decimal("1.0"),
@@ -157,13 +140,10 @@ class Executor(AsyncContextManager):
             # the last agreement proposed to them will have it's score multiplied by 0.5.
             strategy = DecreaseScoreForUnconfirmedAgreement(strategy, 0.5)
         self._strategy = strategy
-        self._api_config = rest.Configuration()
-        self._stack = AsyncExitStack()
-        self._package = package
-        self._conf = _ExecutorConfig(max_workers, timeout)
-        # TODO: setup precision
-        self._budget_amount = Decimal(budget)
-        self._budget_allocations: List[rest.payment.Allocation] = []
+
+        self._subnet: Optional[str] = subnet_tag
+        self._driver = driver.lower() if driver else DEFAULT_DRIVER
+        self._network = network.lower() if network else DEFAULT_NETWORK
 
         if not event_consumer:
             # Use local import to avoid cyclic imports when yapapi.log
@@ -175,9 +155,17 @@ class Executor(AsyncContextManager):
         # Add buffering to the provided event emitter to make sure
         # that emitting events will not block
         self._wrapped_consumer = AsyncWrapper(event_consumer)
-        # Each call to `submit()` will add an instance of `asyncio.Event` to this set.
-        # This event can be used to wait until the call to `submit()` is finished.
-        self._active_computations: Set[asyncio.Event] = set()
+
+        self._stream_output = stream_output
+
+        self._stack = AsyncExitStack()
+
+    def _init_api(self, app_key: Optional[str] = None):
+        """
+        initialize the REST (low-level) API
+        :param app_key: (optional) yagna daemon application key
+        """
+        self._api_config = rest.Configuration(app_key)
 
     @property
     def driver(self) -> str:
@@ -190,6 +178,356 @@ class Executor(AsyncContextManager):
     @property
     def strategy(self) -> MarketStrategy:
         return self._strategy
+
+    def emit(self, *args, **kwargs) -> None:
+        self._wrapped_consumer.async_call(*args, **kwargs)
+
+    async def __aenter__(self):
+        stack = self._stack
+
+        market_client = await stack.enter_async_context(self._api_config.market())
+        self._market_api = rest.Market(market_client)
+
+        activity_client = await stack.enter_async_context(self._api_config.activity())
+        self._activity_api = rest.Activity(activity_client)
+
+        payment_client = await stack.enter_async_context(self._api_config.payment())
+        self._payment_api = rest.Payment(payment_client)
+
+        # a set of `asyncio.Event` instances used to track jobs - computations or services - started
+        # those events can be used to wait until all jobs are finished
+        self._active_jobs: Set[asyncio.Event] = set()
+
+        self.payment_decoration = Engine.PaymentDecoration(await self._create_allocations())
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        logger.debug("Engine is shutting down...")
+        # Wait until all computations are finished
+        await asyncio.gather(*[event.wait() for event in self._active_jobs])
+        # TODO: prevent new computations at this point (if it's even possible to start one)
+        try:
+            await self._stack.aclose()
+            self.emit(events.ShutdownFinished())
+        except Exception:
+            self.emit(events.ShutdownFinished(exc_info=sys.exc_info()))
+        finally:
+            await self._wrapped_consumer.stop()
+
+    async def _create_allocations(self) -> rest.payment.MarketDecoration:
+
+        if not self._budget_allocations:
+            async for account in self._payment_api.accounts():
+                driver = account.driver.lower()
+                network = account.network.lower()
+                if (driver, network) != (self._driver, self._network):
+                    logger.debug(
+                        f"Not using payment platform `%s`, platform's driver/network "
+                        f"`%s`/`%s` is different than requested driver/network `%s`/`%s`",
+                        account.platform,
+                        driver,
+                        network,
+                        self._driver,
+                        self._network,
+                    )
+                    continue
+                logger.debug("Creating allocation using payment platform `%s`", account.platform)
+                allocation = cast(
+                    rest.payment.Allocation,
+                    await self._stack.enter_async_context(
+                        self._payment_api.new_allocation(
+                            self._budget_amount,
+                            payment_platform=account.platform,
+                            payment_address=account.address,
+                            #   TODO what do to with this?
+                            #   expires=self._expires + CFG_INVOICE_TIMEOUT,
+                        )
+                    ),
+                )
+                self._budget_allocations.append(allocation)
+
+            if not self._budget_allocations:
+                raise NoPaymentAccountError(self._driver, self._network)
+
+        allocation_ids = [allocation.id for allocation in self._budget_allocations]
+        return await self._payment_api.decorate_demand(allocation_ids)
+
+    def _get_allocation(
+        self, item: Union[rest.payment.DebitNote, rest.payment.Invoice]
+    ) -> rest.payment.Allocation:
+        try:
+            return next(
+                allocation
+                for allocation in self._budget_allocations
+                if allocation.payment_address == item.payer_addr
+                and allocation.payment_platform == item.payment_platform
+            )
+        except:
+            raise ValueError(f"No allocation for {item.payment_platform} {item.payer_addr}.")
+
+    @dataclass
+    class PaymentDecoration:  # TODO add: (DemandDecorator)
+        market_decoration: rest.payment.MarketDecoration
+
+        async def decorate_demand(self, demand: DemandBuilder):
+            for constraint in self.market_decoration.constraints:
+                demand.ensure(constraint)
+            demand.properties.update({p.key: p.value for p in self.market_decoration.properties})
+
+    class Job:
+        """Functionality related to a single job."""
+
+        def __init__(
+                self,
+                engine: "Engine",
+                builder: DemandBuilder,
+                agreements_pool: AgreementsPool,
+        ):
+            self.engine = engine
+            self.builder = builder
+            self.agreements_pool = agreements_pool
+
+            self.offers_collected: int = 0
+            self.proposals_confirmed: int = 0
+
+        async def _handle_proposal(
+            self,
+            proposal: OfferProposal,
+        ) -> events.Event:
+            """Handle a single `OfferProposal`.
+
+            A `proposal` is scored and then can be rejected, responded with
+            a counter-proposal or stored in an agreements pool to be used
+            for negotiating an agreement.
+            """
+
+            async def reject_proposal(reason: str) -> events.ProposalRejected:
+                """Reject `proposal` due to given `reason`."""
+                await proposal.reject(reason)
+                return events.ProposalRejected(prop_id=proposal.id, reason=reason)
+
+            score = await self.engine._strategy.score_offer(proposal, self.agreements_pool)
+            logger.debug(
+                "Scored offer %s, provider: %s, strategy: %s, score: %f",
+                proposal.id,
+                proposal.props.get("golem.node.id.name"),
+                type(self.engine._strategy).__name__,
+                score,
+            )
+
+            if score < SCORE_NEUTRAL:
+                return await reject_proposal("Score too low")
+
+            if not proposal.is_draft:
+                # Proposal is not yet a draft of an agreement
+
+                # Check if any of the supported payment platforms matches the proposal
+                common_platforms = self._get_common_payment_platforms(proposal)
+                if common_platforms:
+                    self.builder.properties["golem.com.payment.chosen-platform"] = next(
+                        iter(common_platforms)
+                    )
+                else:
+                    # reject proposal if there are no common payment platforms
+                    return await reject_proposal("No common payment platform")
+
+                # Check if the timeout for debit note acceptance is not too low
+                timeout = proposal.props.get(DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP)
+                if timeout:
+                    if timeout < DEBIT_NOTE_MIN_TIMEOUT:
+                        return await reject_proposal("Debit note acceptance timeout is too short")
+                    else:
+                        self.builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
+
+                await proposal.respond(self.builder.properties, self.builder.constraints)
+                return events.ProposalResponded(prop_id=proposal.id)
+
+            else:
+                # It's a draft agreement
+                await self.agreements_pool.add_proposal(score, proposal)
+                return events.ProposalConfirmed(prop_id=proposal.id)
+
+        async def _find_offers_for_subscription(
+            self, subscription: Subscription
+        ) -> None:
+            """Create a market subscription and repeatedly collect offer proposals for it.
+
+            Collected proposals are processed concurrently using a bounded number
+            of asyncio tasks.
+
+            :param state: A state related to a call to `Executor.submit()`
+            """
+            max_number_of_tasks = 5
+
+            try:
+                proposals = subscription.events()
+            except Exception as ex:
+                self.engine.emit(events.CollectFailed(sub_id=subscription.id, reason=str(ex)))
+                raise
+
+            # A semaphore is used to limit the number of handler tasks
+            semaphore = asyncio.Semaphore(max_number_of_tasks)
+
+            async for proposal in proposals:
+
+                self.engine.emit(events.ProposalReceived(prop_id=proposal.id, provider_id=proposal.issuer))
+                self.offers_collected += 1
+
+                async def handler(proposal_):
+                    """A coroutine that wraps `_handle_proposal()` method with error handling."""
+                    try:
+                        event = await self._handle_proposal(proposal_)
+                        assert isinstance(event, events.ProposalEvent)
+                        self.engine.emit(event)
+                        if isinstance(event, events.ProposalConfirmed):
+                            self.proposals_confirmed += 1
+                    except CancelledError:
+                        raise
+                    except Exception:
+                        with contextlib.suppress(Exception):
+                            self.engine.emit(
+                                events.ProposalFailed(
+                                    prop_id=proposal_.id, exc_info=sys.exc_info()  # type: ignore
+                                )
+                            )
+                    finally:
+                        semaphore.release()
+
+                # Create a new handler task
+                await semaphore.acquire()
+                asyncio.get_event_loop().create_task(handler(proposal))
+
+        async def _find_offers(self) -> None:
+            """Create demand subscription and process offers.
+            When the subscription expires, create a new one. And so on...
+            """
+
+            while True:
+                try:
+                    subscription = await self.builder.subscribe(self.engine._market_api)
+                    self.engine.emit(events.SubscriptionCreated(sub_id=subscription.id))
+                except Exception as ex:
+                    self.engine.emit(events.SubscriptionFailed(reason=str(ex)))
+                    raise
+                async with subscription:
+                    await self._find_offers_for_subscription(subscription)
+
+        def _get_common_payment_platforms(self, proposal: rest.market.OfferProposal) -> Set[str]:
+            prov_platforms = {
+                property.split(".")[4]
+                for property in proposal.props
+                if property.startswith("golem.com.payment.platform.") and property is not None
+            }
+            if not prov_platforms:
+                prov_platforms = {"NGNT"}
+            req_platforms = {
+                allocation.payment_platform
+                for allocation in self.engine._budget_allocations
+                if allocation.payment_platform is not None
+            }
+            return req_platforms.intersection(prov_platforms)
+
+
+
+    async def execute_task(
+            self,
+            worker: Callable[[WorkContext, AsyncIterator[Task[D, R]]], AsyncGenerator[Work, None]],
+            data: Iterable[Task[D, R]],
+            payload: Package,
+            max_workers: Optional[int] = None,
+            timeout: Optional[timedelta] = None,
+    ) -> AsyncIterator[Task[D, R]]:
+
+        kwargs = {
+            'package': payload
+        }
+        if max_workers:
+            kwargs['max_workers'] = max_workers
+        if timeout:
+            kwargs['timeout'] = timeout
+
+        async with Executor(_engine=self, **kwargs) as executor:
+            async for t in executor.submit(worker, data):
+                yield t
+
+
+
+@dataclass
+class _ExecutorConfig:
+    max_workers: int = 5
+    timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT
+    get_offers_timeout: timedelta = timedelta(seconds=20)
+    traceback: bool = bool(os.getenv("YAPAPI_TRACEBACK", 0))
+
+
+class Executor(AsyncContextManager):
+    """
+    Task executor.
+
+    Used to run batch tasks using the specified application package within providers' execution units.
+    """
+
+    def __init__(
+        self,
+        *,
+            budget: Union[float, Decimal],
+            strategy: Optional[MarketStrategy] = None,
+            subnet_tag: Optional[str] = None,
+            driver: Optional[str] = None,
+            network: Optional[str] = None,
+            event_consumer: Optional[Callable[[Event], None]] = None,
+            stream_output: bool = False,
+            max_workers: int = 5,
+            timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
+            package: Package,
+            _engine: Optional[Engine] = None
+    ):
+        """Create a new executor.
+
+        :param budget: [DEPRECATED use `Engine` instead] maximum budget for payments
+        :param strategy: [DEPRECATED use `Engine` instead] market strategy used to
+            select providers from the market (e.g. LeastExpensiveLinearPayuMS or DummyMS)
+        :param subnet_tag: [DEPRECATED use `Engine` instead] use only providers in the
+            subnet with the subnet_tag name
+        :param driver: [DEPRECATED use `Engine` instead] name of the payment driver
+            to use or `None` to use the default driver;
+            only payment platforms with the specified driver will be used
+        :param network: [DEPRECATED use `Engine` instead] name of the network
+            to use or `None` to use the default network;
+            only payment platforms with the specified network will be used
+        :param event_consumer: [DEPRECATED use `Engine` instead] a callable that
+            processes events related to the computation;
+            by default it is a function that logs all events
+        :param stream_output: [DEPRECATED use `Engine` instead]
+            stream computation output from providers
+
+        :param max_workers: maximum number of workers performing the computation
+        :param timeout: timeout for the whole computation
+        :param package: a package common for all tasks; vm.repo() function may be used
+            to return package from a repository
+        """
+        logger.debug("Creating Executor instance; parameters: %s", locals())
+        self.__standalone = False
+
+        if not _engine:
+            warnings.warn(
+                "stand-alone usage is deprecated, please `Engine.execute_task` class instead ",
+                DeprecationWarning
+            )
+            self._engine = Engine(
+                budget = budget,
+                strategy = strategy,
+                subnet_tag = subnet_tag,
+                driver = driver,
+                network = network,
+                event_consumer = event_consumer,
+                stream_output=stream_output
+            )
+
+        self._package = package
+        self._conf = _ExecutorConfig(max_workers, timeout)
+        # TODO: setup precision
+
+        self._stack = AsyncExitStack()
 
     async def submit(
         self,
@@ -205,7 +543,7 @@ class Executor(AsyncContextManager):
         """
 
         computation_finished = asyncio.Event()
-        self._active_computations.add(computation_finished)
+        self._engine._active_jobs.add(computation_finished)
 
         services: Set[asyncio.Task] = set()
         workers: Set[asyncio.Task] = set()
@@ -231,147 +569,7 @@ class Executor(AsyncContextManager):
             await asyncio.gather(*all_tasks, return_exceptions=True)
             # Signal that this computation is finished
             computation_finished.set()
-            self._active_computations.remove(computation_finished)
-
-    @dataclass
-    class SubmissionState:
-        """Variables related to a single call to `Executor.submit()`.
-
-        One day this will be a fully-fledged and mature class with
-        methods of its own. But for now it only includes the variables
-        required by `find_offers()`.
-        """
-
-        builder: DemandBuilder
-        agreements_pool: AgreementsPool
-        offers_collected: int = field(default=0)
-        proposals_confirmed: int = field(default=0)
-
-    async def _handle_proposal(
-        self,
-        state: "Executor.SubmissionState",
-        proposal: OfferProposal,
-    ) -> events.Event:
-        """Handle a single `OfferProposal`.
-
-        A `proposal` is scored and then can be rejected, responded with
-        a counter-proposal or stored in an agreements pool to be used
-        for negotiating an agreement.
-        """
-
-        async def reject_proposal(reason: str) -> events.ProposalRejected:
-            """Reject `proposal` due to given `reason`."""
-            await proposal.reject(reason)
-            return events.ProposalRejected(prop_id=proposal.id, reason=reason)
-
-        score = await self._strategy.score_offer(proposal, state.agreements_pool)
-        logger.debug(
-            "Scored offer %s, provider: %s, strategy: %s, score: %f",
-            proposal.id,
-            proposal.props.get("golem.node.id.name"),
-            type(self._strategy).__name__,
-            score,
-        )
-
-        if score < SCORE_NEUTRAL:
-            return await reject_proposal("Score too low")
-
-        if not proposal.is_draft:
-            # Proposal is not yet a draft of an agreement
-
-            # Check if any of the supported payment platforms matches the proposal
-            common_platforms = self._get_common_payment_platforms(proposal)
-            if common_platforms:
-                state.builder.properties["golem.com.payment.chosen-platform"] = next(
-                    iter(common_platforms)
-                )
-            else:
-                # reject proposal if there are no common payment platforms
-                return await reject_proposal("No common payment platform")
-
-            # Check if the timeout for debit note acceptance is not too low
-            timeout = proposal.props.get(DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP)
-            if timeout:
-                if timeout < DEBIT_NOTE_MIN_TIMEOUT:
-                    return await reject_proposal("Debit note acceptance timeout is too short")
-                else:
-                    state.builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
-
-            await proposal.respond(state.builder.properties, state.builder.constraints)
-            return events.ProposalResponded(prop_id=proposal.id)
-
-        else:
-            # It's a draft agreement
-            await state.agreements_pool.add_proposal(score, proposal)
-            return events.ProposalConfirmed(prop_id=proposal.id)
-
-    async def _find_offers_for_subscription(
-        self, state: "Executor.SubmissionState", subscription: Subscription
-    ) -> None:
-        """Create a market subscription and repeatedly collect offer proposals for it.
-
-        Collected proposals are processed concurrently using a bounded number
-        of asyncio tasks.
-
-        :param state: A state related to a call to `Executor.submit()`
-        """
-        max_number_of_tasks = 5
-
-        emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
-
-        try:
-            proposals = subscription.events()
-        except Exception as ex:
-            emit(events.CollectFailed(sub_id=subscription.id, reason=str(ex)))
-            raise
-
-        # A semaphore is used to limit the number of handler tasks
-        semaphore = asyncio.Semaphore(max_number_of_tasks)
-
-        async for proposal in proposals:
-
-            emit(events.ProposalReceived(prop_id=proposal.id, provider_id=proposal.issuer))
-            state.offers_collected += 1
-
-            async def handler(proposal_):
-                """A coroutine that wraps `_handle_proposal()` method with error handling."""
-                try:
-                    event = await self._handle_proposal(state, proposal_)
-                    assert isinstance(event, events.ProposalEvent)
-                    emit(event)
-                    if isinstance(event, events.ProposalConfirmed):
-                        state.proposals_confirmed += 1
-                except CancelledError:
-                    raise
-                except Exception:
-                    with contextlib.suppress(Exception):
-                        emit(
-                            events.ProposalFailed(
-                                prop_id=proposal_.id, exc_info=sys.exc_info()  # type: ignore
-                            )
-                        )
-                finally:
-                    semaphore.release()
-
-            # Create a new handler task
-            await semaphore.acquire()
-            asyncio.get_event_loop().create_task(handler(proposal))
-
-    async def _find_offers(self, state: "Executor.SubmissionState") -> None:
-        """Create demand subscription and process offers.
-        When the subscription expires, create a new one. And so on...
-        """
-        emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
-
-        while True:
-            try:
-                subscription = await state.builder.subscribe(self._market_api)
-                emit(events.SubscriptionCreated(sub_id=subscription.id))
-            except Exception as ex:
-                emit(events.SubscriptionFailed(reason=str(ex)))
-                raise
-            async with subscription:
-                await self._find_offers_for_subscription(state, subscription)
+            self._engine._active_jobs.remove(computation_finished)
 
     async def _submit(
         self,
@@ -381,11 +579,7 @@ class Executor(AsyncContextManager):
         workers: Set[asyncio.Task],
     ) -> AsyncGenerator[Task[D, R], None]:
 
-        emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
-
-        multi_payment_decoration = await self._create_allocations()
-
-        emit(events.ComputationStarted(self._expires))
+        self._engine.emit(events.ComputationStarted(self._expires))
 
         # Building offer
         builder = DemandBuilder()
@@ -393,15 +587,13 @@ class Executor(AsyncContextManager):
         builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
-        for constraint in multi_payment_decoration.constraints:
-            builder.ensure(constraint)
-        builder.properties.update({p.key: p.value for p in multi_payment_decoration.properties})
-        await self._package.decorate_demand(builder)
+        await self._engine.payment_decoration.decorate_demand(builder)
         await self._strategy.decorate_demand(builder)
+        await self._package.decorate_demand(builder)
 
-        agreements_pool = AgreementsPool(emit)
+        agreements_pool = AgreementsPool(self._engine.emit)
 
-        state = Executor.SubmissionState(builder, agreements_pool)
+        state = Executor.Job(builder, agreements_pool)
 
         market_api = self._market_api
         activity_api: rest.Activity = self._activity_api
@@ -575,7 +767,6 @@ class Executor(AsyncContextManager):
                             await accept_payment_for_agreement(agreement.id, partial=True)
 
                         except Exception:
-
                             try:
                                 await command_generator.athrow(*sys.exc_info())
                             except Exception:
@@ -743,84 +934,12 @@ class Executor(AsyncContextManager):
                 if agreements_to_pay:
                     logger.warning("Unpaid agreements: %s", agreements_to_pay)
 
-    async def _create_allocations(self) -> rest.payment.MarketDecoration:
-
-        if not self._budget_allocations:
-            async for account in self._payment_api.accounts():
-                driver = account.driver.lower()
-                network = account.network.lower()
-                if (driver, network) != (self._driver, self._network):
-                    logger.debug(
-                        f"Not using payment platform `%s`, platform's driver/network "
-                        f"`%s`/`%s` is different than requested driver/network `%s`/`%s`",
-                        account.platform,
-                        driver,
-                        network,
-                        self._driver,
-                        self._network,
-                    )
-                    continue
-                logger.debug("Creating allocation using payment platform `%s`", account.platform)
-                allocation = cast(
-                    rest.payment.Allocation,
-                    await self._stack.enter_async_context(
-                        self._payment_api.new_allocation(
-                            self._budget_amount,
-                            payment_platform=account.platform,
-                            payment_address=account.address,
-                            expires=self._expires + CFG_INVOICE_TIMEOUT,
-                        )
-                    ),
-                )
-                self._budget_allocations.append(allocation)
-
-            if not self._budget_allocations:
-                raise NoPaymentAccountError(self._driver, self._network)
-
-        allocation_ids = [allocation.id for allocation in self._budget_allocations]
-        return await self._payment_api.decorate_demand(allocation_ids)
-
-    def _get_common_payment_platforms(self, proposal: rest.market.OfferProposal) -> Set[str]:
-        prov_platforms = {
-            property.split(".")[4]
-            for property in proposal.props
-            if property.startswith("golem.com.payment.platform.") and property is not None
-        }
-        if not prov_platforms:
-            prov_platforms = {"NGNT"}
-        req_platforms = {
-            allocation.payment_platform
-            for allocation in self._budget_allocations
-            if allocation.payment_platform is not None
-        }
-        return req_platforms.intersection(prov_platforms)
-
-    def _get_allocation(
-        self, item: Union[rest.payment.DebitNote, rest.payment.Invoice]
-    ) -> rest.payment.Allocation:
-        try:
-            return next(
-                allocation
-                for allocation in self._budget_allocations
-                if allocation.payment_address == item.payer_addr
-                and allocation.payment_platform == item.payment_platform
-            )
-        except:
-            raise ValueError(f"No allocation for {item.payment_platform} {item.payer_addr}.")
 
     async def __aenter__(self) -> "Executor":
         stack = self._stack
 
         # TODO: Cleanup on exception here.
         self._expires = datetime.now(timezone.utc) + self._conf.timeout
-        market_client = await stack.enter_async_context(self._api_config.market())
-        self._market_api = rest.Market(market_client)
-
-        activity_client = await stack.enter_async_context(self._api_config.activity())
-        self._activity_api = rest.Activity(activity_client)
-
-        payment_client = await stack.enter_async_context(self._api_config.payment())
-        self._payment_api = rest.Payment(payment_client)
 
         return self
 
@@ -828,7 +947,7 @@ class Executor(AsyncContextManager):
         logger.debug("Executor is shutting down...")
         emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
         # Wait until all computations are finished
-        await asyncio.gather(*[event.wait() for event in self._active_computations])
+        await asyncio.gather(*[event.wait() for event in self._active_jobs])
         # TODO: prevent new computations at this point (if it's even possible to start one)
         try:
             await self._stack.aclose()
