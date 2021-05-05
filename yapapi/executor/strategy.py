@@ -165,6 +165,11 @@ class DecreaseScoreForUnconfirmedAgreement(MarketStrategy):
     factor: float
 
     def __init__(self, base_strategy, factor):
+        """
+        :param base_strategy: the base strategy around which this strategy is wrapped
+        :param factor: the factor by which the score of an offer for a provider which
+                       failed to confirm the last agreement proposed to them will be multiplied
+        """
         self.base_strategy = base_strategy
         self.factor = factor
         self._logger = logging.getLogger(f"{__name__}.{type(self).__name__}")
