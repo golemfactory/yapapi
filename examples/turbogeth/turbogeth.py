@@ -194,12 +194,6 @@ asyncio.run(main(None))
 
 # notes for next steps
 #
-# -> Service class
-#
-# Executor.run_service(Service, num_instance=3)
-#
-# service instance -> instance of the Service class
-#
 # Service.shutdown should signal Executor to call Services' `exit`
 #
 # when "run" finishes, the service shuts down
