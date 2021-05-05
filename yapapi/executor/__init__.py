@@ -36,11 +36,10 @@ from .task import Task, TaskStatus
 from .utils import AsyncWrapper
 from ..payload import Payload
 from ..props import Activity, com, NodeInfo, NodeInfoKeys
-from ..props.base import InvalidPropertiesError
 from ..props.builder import DemandBuilder
 from .. import rest
 from ..rest.activity import CommandExecutionError
-from ..rest.market import OfferProposal
+from ..rest.market import OfferProposal, Subscription
 from ..storage import gftp
 from ._smartq import SmartQueue, Handle
 from .strategy import (
@@ -316,7 +315,9 @@ class Executor(AsyncContextManager):
             await state.agreements_pool.add_proposal(score, proposal)
             return events.ProposalConfirmed(prop_id=proposal.id)
 
-    async def _find_offers(self, state: "Executor.SubmissionState") -> None:
+    async def _find_offers_for_subscription(
+        self, state: "Executor.SubmissionState", subscription: Subscription
+    ) -> None:
         """Create a market subscription and repeatedly collect offer proposals for it.
 
         Collected proposals are processed concurrently using a bounded number
@@ -329,52 +330,58 @@ class Executor(AsyncContextManager):
         emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
 
         try:
-            subscription = await state.builder.subscribe(self._market_api)
-            emit(events.SubscriptionCreated(sub_id=subscription.id))
+            proposals = subscription.events()
         except Exception as ex:
-            emit(events.SubscriptionFailed(reason=str(ex)))
-            # Treat subscription failure as unrecoverable
+            emit(events.CollectFailed(sub_id=subscription.id, reason=str(ex)))
             raise
 
-        async with subscription:
+        # A semaphore is used to limit the number of handler tasks
+        semaphore = asyncio.Semaphore(max_number_of_tasks)
 
-            try:
-                proposals = subscription.events()
-            except Exception as ex:
-                emit(events.CollectFailed(sub_id=subscription.id, reason=str(ex)))
-                raise
+        async for proposal in proposals:
 
-            # A semaphore is used to limit the number of handler tasks
-            semaphore = asyncio.Semaphore(max_number_of_tasks)
+            emit(events.ProposalReceived(prop_id=proposal.id, provider_id=proposal.issuer))
+            state.offers_collected += 1
 
-            async for proposal in proposals:
-
-                emit(events.ProposalReceived(prop_id=proposal.id, provider_id=proposal.issuer))
-                state.offers_collected += 1
-
-                async def handler(proposal_):
-                    """A coroutine that wraps `_handle_proposal()` method with error handling."""
-                    try:
-                        event = await self._handle_proposal(state, proposal_)
-                        assert isinstance(event, events.ProposalEvent)
-                        emit(event)
-                        if isinstance(event, events.ProposalConfirmed):
-                            state.proposals_confirmed += 1
-                    except CancelledError:
-                        raise
-                    except Exception:
-                        with contextlib.suppress(Exception):
-                            emit(
-                                events.ProposalFailed(
-                                    prop_id=proposal_.id, exc_info=sys.exc_info()  # type: ignore
-                                )
+            async def handler(proposal_):
+                """A coroutine that wraps `_handle_proposal()` method with error handling."""
+                try:
+                    event = await self._handle_proposal(state, proposal_)
+                    assert isinstance(event, events.ProposalEvent)
+                    emit(event)
+                    if isinstance(event, events.ProposalConfirmed):
+                        state.proposals_confirmed += 1
+                except CancelledError:
+                    raise
+                except Exception:
+                    with contextlib.suppress(Exception):
+                        emit(
+                            events.ProposalFailed(
+                                prop_id=proposal_.id, exc_info=sys.exc_info()  # type: ignore
                             )
-                    finally:
-                        semaphore.release()
+                        )
+                finally:
+                    semaphore.release()
 
-                # Create a new handler task
-                await semaphore.acquire()
-                asyncio.get_event_loop().create_task(handler(proposal))
+            # Create a new handler task
+            await semaphore.acquire()
+            asyncio.get_event_loop().create_task(handler(proposal))
+
+    async def _find_offers(self, state: "Executor.SubmissionState") -> None:
+        """Create demand subscription and process offers.
+        When the subscription expires, create a new one. And so on...
+        """
+        emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
+
+        while True:
+            try:
+                subscription = await state.builder.subscribe(self._market_api)
+                emit(events.SubscriptionCreated(sub_id=subscription.id))
+            except Exception as ex:
+                emit(events.SubscriptionFailed(reason=str(ex)))
+                raise
+            async with subscription:
+                await self._find_offers_for_subscription(state, subscription)
 
     async def _submit(
         self,
@@ -441,8 +448,8 @@ class Executor(AsyncContextManager):
                             amount=invoice.amount,
                         )
                     )
-                    allocation = self._get_allocation(invoice)
                     try:
+                        allocation = self._get_allocation(invoice)
                         await invoice.accept(amount=invoice.amount, allocation=allocation)
                     except CancelledError:
                         raise
@@ -479,8 +486,8 @@ class Executor(AsyncContextManager):
                             note_id=debit_note.debit_note_id,
                         )
                     )
-                    allocation = self._get_allocation(debit_note)
                     try:
+                        allocation = self._get_allocation(debit_note)
                         await debit_note.accept(
                             amount=debit_note.total_amount_due, allocation=allocation
                         )
@@ -809,7 +816,7 @@ class Executor(AsyncContextManager):
                 and allocation.payment_platform == item.payment_platform
             )
         except:
-            raise RuntimeError(f"No allocation for {item.payment_platform} {item.payer_addr}.")
+            raise ValueError(f"No allocation for {item.payment_platform} {item.payer_addr}.")
 
     async def __aenter__(self) -> "Executor":
         stack = self._stack

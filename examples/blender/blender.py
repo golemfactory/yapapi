@@ -61,11 +61,12 @@ async def main(subnet_tag, driver=None, network=None):
             output_file = f"output_{frame}.png"
             ctx.download_file(f"/golem/output/out{frame:04d}.png", output_file)
             try:
-                # Set timeout for executing the script on the provider. Two minutes is plenty
-                # of time for computing a single frame, for other tasks it may be not enough.
-                # If the timeout is exceeded, this worker instance will be shut down and all
-                # remaining tasks, including the current one, will be computed by other providers.
-                yield ctx.commit(timeout=timedelta(seconds=120))
+                # Set timeout for executing the script on the provider. Usually, 30 seconds
+                # should be more than enough for computing a single frame, however a provider
+                # may require more time for the first task if it needs to download a VM image
+                # first. Once downloaded, the VM image will be cached and other tasks that use
+                # that image will be computed faster.
+                yield ctx.commit(timeout=timedelta(minutes=10))
                 # TODO: Check if job results are valid
                 # and reject by: task.reject_task(reason = 'invalid file')
                 task.accept_result(result=output_file)
@@ -130,7 +131,8 @@ async def main(subnet_tag, driver=None, network=None):
 
 if __name__ == "__main__":
     parser = build_parser("Render a Blender scene")
-    parser.set_defaults(log_file="blender-yapapi.log")
+    now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
+    parser.set_defaults(log_file=f"blender-yapapi-{now}.log")
     args = parser.parse_args()
 
     # This is only required when running on Windows with Python prior to 3.8:
