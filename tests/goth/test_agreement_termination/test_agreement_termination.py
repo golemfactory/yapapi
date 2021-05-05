@@ -57,6 +57,7 @@ async def assert_all_tasks_computed(stream):
     raise AssertionError(f"Tasks not computed: {remaining_ids}")
 
 
+@pytest.mark.stable
 @pytest.mark.asyncio
 async def test_agreement_termination(
     project_dir: Path,

@@ -1,22 +1,19 @@
-name: integration-test
+name: goth-unstable
 
 on:
   push:
     branches:
-      - master
-      # - <your-branch>    # put your branch name here to test it @ GH Actions
-  pull_request:
-    branches:
-      - master
-      - b0.*
+      # TODO: remove before merging
+      - km/nightly-goth
+  schedule:
+    # run this workflow every day at 1:10 AM UTC
+    - cron: '10 1 * * *'
 
 jobs:
-
   goth-tests:
-    name: Run integration tests
+    name: Run integration tests (unstable)
     runs-on: goth
     steps:
-
       - name: Checkout
         uses: actions/checkout@v2
 
@@ -54,7 +51,7 @@ jobs:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           poetry run poe goth-assets
-          poetry run poe goth-tests
+          poetry run poe goth-tests -m "not stable"
 
       - name: Upload test logs
         uses: actions/upload-artifact@v2
