@@ -115,7 +115,7 @@ async def test_run_blender(log_dir: Path, project_dir: Path, config_overrides) -
             await cmd_monitor.wait_for_pattern(".*Agreement confirmed ", timeout=10)
             logger.info("Agreement confirmed")
 
-            await all_sent.wait_for_result(timeout=600)
+            await all_sent.wait_for_result(timeout=120)
             logger.info("All tasks sent")
 
             await all_computed.wait_for_result(timeout=30)
