@@ -1,12 +1,13 @@
 import asyncio
 
+import aiohttp
 import pytest
 
 import ya_activity
 import ya_market
 import ya_payment
 
-from yapapi.rest.common import repeat_on_timeout, SuppressedExceptions, is_timeout_exception
+from yapapi.rest.common import repeat_on_error, SuppressedExceptions, is_intermittent_error
 
 
 @pytest.mark.parametrize(
@@ -24,6 +25,9 @@ from yapapi.rest.common import repeat_on_timeout, SuppressedExceptions, is_timeo
         (2, [ya_market.ApiException(408)], 2, None),
         (2, [ya_payment.ApiException(408)], 2, None),
         (2, [ya_activity.ApiException(500)], 1, ya_activity.ApiException),
+        (2, [aiohttp.ServerDisconnectedError()], 2, None),
+        (2, [aiohttp.ClientOSError(32, "Broken pipe")], 2, None),
+        (2, [aiohttp.ClientOSError(1132, "UnBroken pipe")], 1, aiohttp.ClientOSError),
         (2, [ValueError()], 1, ValueError),
         (2, [asyncio.TimeoutError()] * 2, 2, asyncio.TimeoutError),
         #
@@ -37,11 +41,11 @@ from yapapi.rest.common import repeat_on_timeout, SuppressedExceptions, is_timeo
     ],
 )
 @pytest.mark.asyncio
-async def test_repeat_on_timeout(max_tries, exceptions, calls_expected, expected_error):
+async def test_repeat_on_error(max_tries, exceptions, calls_expected, expected_error):
 
     calls_made = 0
 
-    @repeat_on_timeout(max_tries=max_tries)
+    @repeat_on_error(max_tries=max_tries)
     async def request():
         nonlocal calls_made, exceptions
         calls_made += 1
@@ -56,22 +60,32 @@ async def test_repeat_on_timeout(max_tries, exceptions, calls_expected, expected
     except Exception as e:
         assert expected_error is not None, f"Unexpected exception: {e}"
         assert isinstance(e, expected_error), f"Expected an {expected_error}, got {e}"
-    assert calls_made == calls_expected, f"{calls_made} attempts were made, expected {num_calls}"
+    assert (
+        calls_made == calls_expected
+    ), f"{calls_made} attempts were made, expected {calls_expected}"
 
 
 @pytest.mark.asyncio
 async def test_suppressed_exceptions():
 
-    async with SuppressedExceptions(is_timeout_exception) as se:
+    async with SuppressedExceptions(is_intermittent_error) as se:
         pass
     assert se.exception is None
 
-    async with SuppressedExceptions(is_timeout_exception) as se:
+    async with SuppressedExceptions(is_intermittent_error) as se:
         raise asyncio.TimeoutError()
     assert isinstance(se.exception, asyncio.TimeoutError)
 
+    async with SuppressedExceptions(is_intermittent_error) as se:
+        raise aiohttp.ClientOSError(32, "Broken pipe")
+    assert isinstance(se.exception, aiohttp.ClientOSError)
+
+    async with SuppressedExceptions(is_intermittent_error) as se:
+        raise aiohttp.ServerDisconnectedError()
+    assert isinstance(se.exception, aiohttp.ServerDisconnectedError)
+
     with pytest.raises(AssertionError):
-        async with SuppressedExceptions(is_timeout_exception):
+        async with SuppressedExceptions(is_intermittent_error):
             raise AssertionError()
 
 
@@ -84,7 +98,7 @@ async def test_suppressed_exceptions_with_return():
         raise asyncio.TimeoutError()
 
     async def func(request):
-        async with SuppressedExceptions(is_timeout_exception):
+        async with SuppressedExceptions(is_intermittent_error):
             return await request
         return "failure"  # noqa
 

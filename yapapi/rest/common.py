@@ -13,35 +13,29 @@ import ya_payment
 logger = logging.getLogger(__name__)
 
 
-def is_timeout_exception(e: Exception) -> bool:
-    """Check if `e` indicates a client-side or server-side timeout error."""
+def is_intermittent_error(e: Exception) -> bool:
+    """Check if `e` indicates an intermittent communication failure such as network timeout."""
 
-    # `asyncio.TimeoutError` is raised on client-side timeouts
-    if isinstance(e, asyncio.TimeoutError):
-        return True
+    is_timeout_exception = isinstance(e, asyncio.TimeoutError) or (
+        isinstance(e, (ya_activity.ApiException, ya_market.ApiException, ya_payment.ApiException))
+        and e.status == 408
+    )
 
-    # `ApiException(408)` is raised on server-side timeouts
-    if isinstance(e, (ya_activity.ApiException, ya_market.ApiException, ya_payment.ApiException)):
-        return e.status == 408
-
-    return False
-
-
-def is_recoverable_exception(e: Exception) -> bool:
-    """Check if `e` indicates that we should retry the operation that raised it."""
-
-    return is_timeout_exception(e) or isinstance(e, aiohttp.ServerDisconnectedError)
+    return (
+        is_timeout_exception
+        or isinstance(e, aiohttp.ServerDisconnectedError)
+        # OS error with errno 32 is "Broken pipe"
+        or (isinstance(e, aiohttp.ClientOSError) and e.errno == 32)
+    )
 
 
 class SuppressedExceptions:
-    """An async context manager for suppressing exception satisfying given test function."""
+    """An async context manager for suppressing exceptions satisfying given condition."""
 
     exception: Optional[Exception]
 
-    def __init__(
-        self, should_suppress: Callable[[Exception], bool], report_exceptions: bool = True
-    ):
-        self._should_suppress = should_suppress
+    def __init__(self, condition: Callable[[Exception], bool], report_exceptions: bool = True):
+        self._condition = condition
         self._report_exceptions = report_exceptions
         self.exception = None
 
@@ -49,7 +43,7 @@ class SuppressedExceptions:
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        if exc_value and self._should_suppress(exc_value):
+        if exc_value and self._condition(exc_value):
             self.exception = exc_value
             if self._report_exceptions:
                 logger.debug(
@@ -59,8 +53,16 @@ class SuppressedExceptions:
         return False
 
 
-def repeat_on_timeout(max_tries: int, interval: float = 0.0):
-    """Decorate a function to repeat calls up to `max_tries` times when timeout errors occur."""
+def repeat_on_error(
+    max_tries: int,
+    condition: Callable[[Exception], bool] = is_intermittent_error,
+    interval: float = 0.0,
+):
+    """Decorate a function to repeat calls up to `max_tries` times when errors occur.
+
+    Only exceptions satisfying the given `condition` will cause the decorated function
+    to be retried. All remaining exceptions will fall through.
+    """
 
     def decorator(func):
         @functools.wraps(func)
@@ -72,7 +74,7 @@ def repeat_on_timeout(max_tries: int, interval: float = 0.0):
                 if try_num > 1:
                     await asyncio.sleep(interval)
 
-                async with SuppressedExceptions(is_timeout_exception, False) as se:
+                async with SuppressedExceptions(condition, False) as se:
                     return await func(*args, **kwargs)
 
                 assert se.exception  # noqa (unreachable)

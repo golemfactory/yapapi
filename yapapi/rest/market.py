@@ -9,7 +9,7 @@ from typing_extensions import Awaitable, AsyncContextManager
 
 from ya_market import ApiClient, ApiException, RequestorApi, models  # type: ignore
 
-from .common import SuppressedExceptions, is_recoverable_exception
+from .common import is_intermittent_error, SuppressedExceptions
 from ..props import Model
 
 
@@ -196,7 +196,7 @@ class Subscription(object):
 
             proposals = []
             try:
-                async with SuppressedExceptions(is_recoverable_exception):
+                async with SuppressedExceptions(is_intermittent_error):
                     proposals = await self._api.collect_offers(self._id, timeout=5, max_events=10)
             except ApiException as ex:
                 if ex.status == 404:
