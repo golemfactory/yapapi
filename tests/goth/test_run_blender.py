@@ -74,7 +74,6 @@ async def assert_all_invoices_accepted(output_lines: EventStream[str]):
         raise AssertionError(f"Unpaid agreements for: {','.join(unpaid_agreement_providers)}")
 
 
-@pytest.mark.stable
 @pytest.mark.asyncio
 async def test_run_blender(log_dir: Path, project_dir: Path, config_overrides) -> None:
 

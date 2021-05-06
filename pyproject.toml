@@ -127,8 +127,3 @@ handbook = ['pydoc-markdown', '_handbook_gen']
 
 [[tool.portray.mkdocs.nav]]
 Low-Level = "docs/Low-Level-Api.md"
-
-[tool.pytest.ini_options]
-markers = [
-    "stable: marks a goth integration test stable (to negate: 'pytest -m \"not stable\"')",
-]
