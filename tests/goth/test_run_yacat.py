@@ -12,13 +12,13 @@ from goth.runner import Runner
 from goth.runner.probe import RequestorProbe
 
 
-logger = logging.getLogger("goth.test.run_blender")
+logger = logging.getLogger("goth.test.run_yacat")
 
-ALL_TASKS = {0, 10, 20, 30, 40, 50}
+ALL_TASKS = {"0", "48", "None"}
 
 
 # Temporal assertions expressing properties of sequences of "events". In this case, each "event"
-# is just a line of output from `blender.py`.
+# is just a line of output from `yacat.py`.
 
 
 async def assert_no_errors(output_lines: EventStream[str]):
@@ -33,10 +33,10 @@ async def assert_all_tasks_processed(status: str, output_lines: EventStream[str]
     remaining_tasks = ALL_TASKS.copy()
 
     async for line in output_lines:
-        m = re.search(rf".*Task {status} .* task data: ([0-9]+)", line)
+        m = re.search(rf".*Task {status} .* task data: ([a-zA-Z0-9]+)$", line)
         if m:
-            task_data = int(m.group(1))
-            logger.debug("assert_all_tasks_processed: Task %s: %d", status, task_data)
+            task_data = m.group(1)
+            logger.debug("assert_all_tasks_processed: Task %s: %s", status, task_data)
             remaining_tasks.discard(task_data)
         if not remaining_tasks:
             return
@@ -75,14 +75,14 @@ async def assert_all_invoices_accepted(output_lines: EventStream[str]):
 
 
 @pytest.mark.asyncio
-async def test_run_blender(log_dir: Path, project_dir: Path, config_overrides) -> None:
+async def test_run_yacat(log_dir: Path, project_dir: Path, config_overrides) -> None:
 
     # This is the default configuration with 2 wasm/VM providers
     goth_config = load_yaml(
         Path(__file__).parent / "assets" / "goth-config.yml", overrides=config_overrides
     )
 
-    blender_path = project_dir / "examples" / "blender" / "blender.py"
+    yacat_path = project_dir / "examples" / "yacat" / "yacat.py"
 
     configure_logging(log_dir)
 
@@ -96,7 +96,7 @@ async def test_run_blender(log_dir: Path, project_dir: Path, config_overrides) -
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
-            f"{blender_path} --subnet-tag goth",
+            f"{yacat_path} ?a?a $P$5ZDzPE45CigTC6EY4cXbyJSLj/pGee0 --number-of-providers 2 --log-file yacat-debug.log  --subnet-tag goth",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor):
 
@@ -106,21 +106,20 @@ async def test_run_blender(log_dir: Path, project_dir: Path, config_overrides) -
             all_sent = cmd_monitor.add_assertion(assert_all_tasks_sent)
             all_computed = cmd_monitor.add_assertion(assert_all_tasks_computed)
 
-            await cmd_monitor.wait_for_pattern(".*Received proposals from 2 ", timeout=20)
+            await cmd_monitor.wait_for_pattern(".*The keyspace size is 95", timeout=120)
+            logger.info("Keyspace found")
+
+            await cmd_monitor.wait_for_pattern(".*Received proposals from 2 ", timeout=10)
             logger.info("Received proposals")
 
-            await cmd_monitor.wait_for_pattern(".*Agreement proposed ", timeout=10)
-            logger.info("Agreement proposed")
-
-            await cmd_monitor.wait_for_pattern(".*Agreement confirmed ", timeout=10)
-            logger.info("Agreement confirmed")
-
-            await all_sent.wait_for_result(timeout=120)
+            await all_sent.wait_for_result(timeout=30)
             logger.info("All tasks sent")
 
             await all_computed.wait_for_result(timeout=30)
-            logger.info("All tasks computed, waiting for Executor shutdown")
+            logger.info("All tasks computed")
+
+            await cmd_monitor.wait_for_pattern(".*Password found: yo", timeout=10)
+            logger.info("Password found, waiting for Executor shutdown")
 
             await cmd_monitor.wait_for_pattern(".*Executor has shut down", timeout=120)
-
             logger.info("Requestor script finished")
