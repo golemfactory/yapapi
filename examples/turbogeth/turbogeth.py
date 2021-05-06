@@ -32,6 +32,11 @@ INSTANCES_NEEDED = 1
 EXECUTOR_TIMEOUT = timedelta(weeks=100)
 
 
+class ConfigurationError(Exception):
+    """ THIS SHOULD BE PART OF THE API"""
+    pass
+
+
 class ServiceState(enum.Enum):
     """ THIS SHOULD BE PART OF THE API"""
     new = 'new'
@@ -44,7 +49,7 @@ class ServiceState(enum.Enum):
 
 
 # """ THIS SHOULD BE PART OF THE API"""
-SERVICE_AVAILABLE = (
+SERVICE_STATE_AVAILABLE = (
     ServiceState.new,
     ServiceState.deploying,
     ServiceState.deployed,
@@ -61,7 +66,16 @@ class Service:
         self.ctx = ctx
         self.state = ServiceState.new  # should state correspond with the ActivityState?
 
-    async def on_deploy(self, out: bytes):
+    @staticmethod
+    def get_payload() -> typing.Optional[Payload]:
+        """Return the payload (runtime) definition for this service.
+
+        If `get_payload` is not implemented, the payload will need to be provided in the
+        `Executor.run_service` call.
+        """
+        pass
+
+    async def on_deploy(self, out: bytes):  # maybe `out` is a structure similar to what we get from the Activity API itself ?
         self.state = ServiceState.deployed
 
     async def on_start(self, out: bytes):
@@ -73,12 +87,23 @@ class Service:
         self.ctx.start(on_start=self.on_start)
         yield self.ctx.commit()
 
-    async def execute_batch(self, batch: Optional[Work]):
+    async def execute_batch(self, batch: typing.Optional[Work]):
         if batch:
             executor.execute(batch)  # some automagic of passing it for execution ;)
 
-    async def run(self):  # some way to pass a signal into `run` ... or some other event handler inside `Service`
-        while self.state in SERVICE_AVAILABLE:
+    async def run(self):
+        # we need some way to pass a signal (or a queue of messages?) into `run` ...
+        # or some other event handler inside `Service`
+
+        # the simplest could be some cancellation token (e.g. an asyncio.Event)
+        # but maybe we would like to pass some more data with it?
+
+        # maybe the state of the service could be a pair or ServiceState
+        # plus some additional data object?
+
+        # better yet -> maybe `run` could take an _input_ async generator
+
+        while self.state in SERVICE_STATE_AVAILABLE:
             _handlers = {
                 ServiceState.new: self.on_new,
                 ServiceState.ready: self.on_ready,
@@ -88,7 +113,11 @@ class Service:
             handler = _handlers.get(self.state)
             if handler:
                 async for batch in handler():
-                    await self.execute_batch(batch)
+                    yield self.execute_batch(batch)
+
+            # we could add something like e.g. Shutdown(Work) step
+            # that would signal the service executor to transition the service
+            # to the shutdown state
 
     async def on_ready(self, *args, **kwargs):
         while True:
@@ -104,6 +133,9 @@ class TurbogethService(Service):
     def __init__(self, ctx: WorkContext):
         super().__init__(ctx)
         self.credentials = {}
+
+    def get_payload(self):
+        return TurbogethPayload(rpc_port=8888)
 
     async def on_deploy(self, out: bytes):
         print("deployed")
@@ -121,6 +153,10 @@ class Cluster:
     def __init__(self, executor: "Executor", service: typing.Type[Service], payload: Payload):
         self.executor = executor
         self.service = service
+
+        if not payload:
+            raise ConfigurationError("Payload must be defined when starting a cluster.")
+
         self.payload = payload
         self.instances: typing.List[Service] = []
 
@@ -157,19 +193,18 @@ class Executor(typing.AsyncContextManager):
 
     def run_service(
             self,
-            service: typing.Type[Service],
-            payload: Payload,
+            service_class: typing.Type[Service],
             num_instances: int = 1,
+            payload: typing.Optional[Payload] = None,
     ) -> Cluster:
-        cluster = Cluster(executor=self, service=service, payload=payload)
+        payload = payload or service_class.get_payload()
+        cluster = Cluster(executor=self, service=service_class, payload=payload)
         for i in range(num_instances):
             asyncio.create_task(cluster.spawn_instance())
         return cluster
 
 
 async def main(subnet_tag, driver=None, network=None):
-
-    payload = TurbogethPayload(rpc_port=8888)
 
     async with Executor(
         max_workers=INSTANCES_NEEDED,
@@ -181,7 +216,7 @@ async def main(subnet_tag, driver=None, network=None):
     ) as executor:
         swarm = executor.run_service(
             TurbogethService,
-            payload=payload,
+            # payload=payload,
             num_instances=INSTANCES_NEEDED
         )
 
