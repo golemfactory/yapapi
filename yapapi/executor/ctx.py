@@ -292,10 +292,10 @@ class WorkContext:
     def begin(self):
         pass
 
-    def deploy(self, on_deploy: Callable[[bytes], Awaitable]):
+    def deploy(self):
         self._pending_steps.append(_Deploy())
 
-    def start(self, on_start: Callable[[bytes], Awaitable]):
+    def start(self):
         self._pending_steps.append(_Start())
 
     def send_json(self, json_path: str, data: dict):
