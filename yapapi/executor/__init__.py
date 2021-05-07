@@ -387,7 +387,10 @@ class Executor(AsyncContextManager):
 
     async def _submit(
         self,
-        worker: Callable[[WorkContext, AsyncIterator[Task[D, R]]], AsyncGenerator[Work, None]],
+        worker: Callable[
+            [WorkContext, AsyncIterator[Task[D, R]]],
+            AsyncGenerator[Work, asyncio.Task]
+        ],
         data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
         services: Set[asyncio.Task],
         workers: Set[asyncio.Task],
@@ -555,7 +558,13 @@ class Executor(AsyncContextManager):
                         work_context,
                         (Task.for_handle(handle, work_queue, emit) async for handle in consumer),
                     )
-                    async for batch in command_generator:
+
+                    try:
+                        batch: Optional[Work] = await command_generator.__anext__()
+                    except StopAsyncIteration:
+                        batch = None
+
+                    while batch:
                         batch_deadline = (
                             datetime.now(timezone.utc) + batch.timeout if batch.timeout else None
                         )
@@ -573,22 +582,66 @@ class Executor(AsyncContextManager):
                             await batch.prepare()
                             cc = CommandContainer()
                             batch.register(cc)
+
+                            import colors
+
+                            print(colors.yellow("[executor] Batch:"), cc.commands())
+
                             remote = await act.send(
                                 cc.commands(), stream_output, deadline=batch_deadline
                             )
                             cmds = cc.commands()
                             emit(events.ScriptSent(agr_id=agreement.id, task_id=task_id, cmds=cmds))
 
-                            async for evt_ctx in remote:
-                                evt = evt_ctx.event(agr_id=agreement.id, task_id=task_id, cmds=cmds)
-                                emit(evt)
-                                if isinstance(evt, events.CommandExecuted) and not evt.success:
-                                    raise CommandExecutionError(evt.command, evt.message)
+                            async def get_batch_results():
 
-                            emit(events.GettingResults(agr_id=agreement.id, task_id=task_id))
-                            await batch.post()
-                            emit(events.ScriptFinished(agr_id=agreement.id, task_id=task_id))
-                            await accept_payment_for_agreement(agreement.id, partial=True)
+                                print(colors.yellow("[get_batch_results] Waiting for results..."))
+
+                                results = []
+                                async for evt_ctx in remote:
+                                    evt = evt_ctx.event(
+                                        agr_id=agreement.id, task_id=task_id, cmds=cmds
+                                    )
+                                    emit(evt)
+                                    results.append(evt)
+                                    if isinstance(evt, events.CommandExecuted) and not evt.success:
+                                        raise CommandExecutionError(evt.command, evt.message)
+
+                                emit(events.GettingResults(agr_id=agreement.id, task_id=task_id))
+                                await batch.post()
+                                emit(events.ScriptFinished(agr_id=agreement.id, task_id=task_id))
+                                await accept_payment_for_agreement(agreement.id, partial=True)
+
+                                print(colors.yellow("[get_batch_results] Got results"))
+                                return results
+
+                            if batch.wait_for_results or batch.contains_init_step:
+                                # Block until the results are available
+                                print(
+                                    colors.yellow(
+                                        "[executor] Blocking until results are available..."
+                                    )
+                                )
+                                results = await get_batch_results()
+                                print(colors.yellow("[executor] Returning results"))
+
+                                async def make_awaitable():
+                                    return results
+
+                                batch = await command_generator.asend(make_awaitable())
+                            else:
+                                # Schedule the coroutine in a separate asyncio task
+                                print(colors.yellow("[executor] Scheduling getting the results..."))
+                                loop = asyncio.get_event_loop()
+                                results_task = loop.create_task(get_batch_results())
+                                print(colors.yellow("[executor] Returning results task"))
+                                batch = await command_generator.asend(results_task)
+
+                            print(colors.yellow("[executor] After asend()"))
+
+                        except StopAsyncIteration:
+                            print(colors.yellow("[executor] Got StopAsyncIteration"))
+                            break
 
                         except Exception:
 
