@@ -12,6 +12,7 @@ import sys
 from typing import (
     AsyncContextManager,
     AsyncIterator,
+    Awaitable,
     Callable,
     Dict,
     Iterable,
@@ -205,7 +206,10 @@ class Executor(AsyncContextManager):
 
     async def submit(
         self,
-        worker: Callable[[WorkContext, AsyncIterator[Task[D, R]]], AsyncGenerator[Work, None]],
+        worker: Callable[
+            [WorkContext, AsyncIterator[Task[D, R]]],
+            AsyncGenerator[Work, Awaitable[List[events.CommandEvent]]],
+        ],
         data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
     ) -> AsyncIterator[Task[D, R]]:
         """Submit a computation to be executed on providers.
@@ -389,7 +393,7 @@ class Executor(AsyncContextManager):
         self,
         worker: Callable[
             [WorkContext, AsyncIterator[Task[D, R]]],
-            AsyncGenerator[Work, asyncio.Task]
+            AsyncGenerator[Work, Awaitable[List[events.CommandEvent]]],
         ],
         data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
         services: Set[asyncio.Task],
@@ -530,6 +534,9 @@ class Executor(AsyncContextManager):
         storage_manager = await self._stack.enter_async_context(gftp.provider())
 
         async def start_worker(agreement: rest.market.Agreement, node_info: NodeInfo) -> None:
+            def log(msg):
+                logger.info("\033[33m%s\033[m", msg)
+
             nonlocal last_wid
             wid = last_wid
             last_wid += 1
@@ -583,9 +590,7 @@ class Executor(AsyncContextManager):
                             cc = CommandContainer()
                             batch.register(cc)
 
-                            import colors
-
-                            print(colors.yellow("[executor] Batch:"), cc.commands())
+                            log(f"Batch: {len(cc.commands())} commands")
 
                             remote = await act.send(
                                 cc.commands(), stream_output, deadline=batch_deadline
@@ -593,9 +598,9 @@ class Executor(AsyncContextManager):
                             cmds = cc.commands()
                             emit(events.ScriptSent(agr_id=agreement.id, task_id=task_id, cmds=cmds))
 
-                            async def get_batch_results():
+                            async def get_batch_results() -> List[events.CommandEvent]:
 
-                                print(colors.yellow("[get_batch_results] Waiting for results..."))
+                                log("[get_batch_results] Waiting for results...")
 
                                 results = []
                                 async for evt_ctx in remote:
@@ -608,39 +613,33 @@ class Executor(AsyncContextManager):
                                         raise CommandExecutionError(evt.command, evt.message)
 
                                 emit(events.GettingResults(agr_id=agreement.id, task_id=task_id))
+                                assert batch
                                 await batch.post()
                                 emit(events.ScriptFinished(agr_id=agreement.id, task_id=task_id))
                                 await accept_payment_for_agreement(agreement.id, partial=True)
 
-                                print(colors.yellow("[get_batch_results] Got results"))
+                                log("[get_batch_results] Got results")
                                 return results
 
+                            loop = asyncio.get_event_loop()
                             if batch.wait_for_results or batch.contains_init_step:
                                 # Block until the results are available
-                                print(
-                                    colors.yellow(
-                                        "[executor] Blocking until results are available..."
-                                    )
-                                )
+                                log("Blocking until batch results are available...")
                                 results = await get_batch_results()
-                                print(colors.yellow("[executor] Returning results"))
-
-                                async def make_awaitable():
-                                    return results
-
-                                batch = await command_generator.asend(make_awaitable())
+                                log("Returning batch results")
+                                future_results = loop.create_future()
+                                future_results.set_result(results)
+                                batch = await command_generator.asend(future_results)
                             else:
                                 # Schedule the coroutine in a separate asyncio task
-                                print(colors.yellow("[executor] Scheduling getting the results..."))
-                                loop = asyncio.get_event_loop()
+                                log("Scheduling getting batch results...")
                                 results_task = loop.create_task(get_batch_results())
-                                print(colors.yellow("[executor] Returning results task"))
+                                log("Returning results task")
                                 batch = await command_generator.asend(results_task)
 
-                            print(colors.yellow("[executor] After asend()"))
+                            log("Awaitable sent to worker")
 
                         except StopAsyncIteration:
-                            print(colors.yellow("[executor] Got StopAsyncIteration"))
                             break
 
                         except Exception:
