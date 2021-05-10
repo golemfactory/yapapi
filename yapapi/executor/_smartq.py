@@ -27,11 +27,9 @@ _logger = logging.getLogger("yapapi.executor")
 Item = TypeVar("Item")
 
 
-class Handle(
-    Generic[Item], object
-):  # Handling? QueueItem? ConsumedItem? ConsumerItem? ConsumerBinding?
+class Handle(Generic[Item]):
     """
-    Binding between a queue item and a specific consumer.
+    Handle of the queue item, iow, binding between a queue item and a specific consumer.
 
     Additionally it keeps track of the previously used consumers of the given item
     to prevent them from being assigned to this item again.
@@ -64,7 +62,6 @@ class SmartQueue(Generic[Item], object):
     def __init__(self, items: Iterable[Item]):
         """
         :param items: the items to be iterated over
-        :param retry_cnt:
         """
         self._items: Iterator[Item] = peekable(items)
 
@@ -143,7 +140,7 @@ class SmartQueue(Generic[Item], object):
             )
 
     async def reschedule(self, handle: Handle[Item]) -> None:
-        """free the item for reassignment to another consumer"""
+        """Free the item for reassignment to another consumer."""
         assert handle in self._in_progress, "handle is not in progress"
         async with self._lock:
             self._in_progress.remove(handle)
@@ -151,7 +148,7 @@ class SmartQueue(Generic[Item], object):
             self._new_items.notify_all()
 
     async def reschedule_all(self, consumer: "Consumer[Item]"):
-        """make all items currently assigned to the consumer available for reassignment"""
+        """Make all items currently assigned to the consumer available for reassignment."""
         async with self._lock:
             handles = [handle for handle in self._in_progress if handle.consumer == consumer]
             for handle in handles:
@@ -168,7 +165,7 @@ class SmartQueue(Generic[Item], object):
         }
 
     async def wait_until_done(self) -> None:
-        """wait until all items in the queue are processed"""
+        """Wait until all items in the queue are processed."""
         async with self._lock:
             while self.__has_data():
                 await self._eof.wait()
@@ -202,8 +199,8 @@ class Consumer(
         return None
 
     @property
-    def last_item(self) -> Optional[Item]:
-        """shouldn't it be called `current_item` ?"""
+    def current_item(self) -> Optional[Item]:
+        """The most-recent queue item that has been fetched to be processed by this consumer."""
         return self._fetched.data if self._fetched else None
 
     async def __anext__(self) -> Handle[Item]:
