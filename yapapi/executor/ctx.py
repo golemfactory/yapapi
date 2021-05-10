@@ -50,10 +50,10 @@ class Work(abc.ABC):
         """Return the optional timeout set for execution of this work."""
         return None
 
-    @property
-    def wait_for_results(self) -> bool:
-        """Return `True` iff yielding this work item should block until the results are returned."""
-        return True
+    # @property
+    # def wait_for_results(self) -> bool:
+    #     """Return `True` iff yielding this work item should block until the results are returned."""
+    #     return True
 
     @property
     def contains_init_step(self) -> bool:
@@ -237,29 +237,22 @@ class _ReceiveJson(_ReceiveBytes):
 
 
 class Steps(Work):
-    def __init__(
-        self, *steps: Work, timeout: Optional[timedelta] = None, wait_for_results: bool = True
-    ):
+    def __init__(self, *steps: Work, timeout: Optional[timedelta] = None):
         """Create a `Work` item consisting of a sequence of steps (subitems).
 
         :param steps: sequence of steps to be executed
         :param timeout: timeout for waiting for the steps' results
-        :param wait_for_results: whether yielding this work item should block
+        # :param wait_for_results: whether yielding this work item should block
             until the results are available
         """
         self._steps: Tuple[Work, ...] = steps
         self._timeout: Optional[timedelta] = timeout
-        self._wait_for_results = wait_for_results
+        # self._wait_for_results = wait_for_results
 
     @property
     def timeout(self) -> Optional[timedelta]:
         """Return the optional timeout set for execution of all steps."""
         return self._timeout
-
-    @property
-    def wait_for_results(self) -> bool:
-        """Return `True` iff yielding these steps should block until the results are available."""
-        return self._wait_for_results
 
     @property
     def contains_init_step(self) -> bool:
@@ -280,6 +273,12 @@ class Steps(Work):
         """Execute the `post` step for all the defined steps."""
         for step in self._steps:
             await step.post()
+
+
+@dataclass
+class ExecOptions:
+    wait_for_results: bool = True
+    batch_timeout: Optional[timedelta] = None
 
 
 class WorkContext:
@@ -408,7 +407,7 @@ class WorkContext:
             _ReceiveJson(self._storage, src_path, on_download, limit, self._emitter)
         )
 
-    def commit(self, timeout: Optional[timedelta] = None, wait_for_results: bool = True) -> Work:
+    def commit(self, timeout: Optional[timedelta] = None) -> Work:
         """Creates a sequence of commands to be sent to provider.
 
         :return: Work object containing the sequence of commands
@@ -416,10 +415,7 @@ class WorkContext:
         """
         steps = self._pending_steps
         self._pending_steps = []
-        return Steps(*steps, timeout=timeout, wait_for_results=wait_for_results)
-
-    def commit_async(self) -> Work:
-        return self.commit(wait_for_results=False)
+        return Steps(*steps, timeout=timeout)
 
 
 class CaptureMode(enum.Enum):

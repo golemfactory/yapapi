@@ -9,9 +9,9 @@ from yapapi import (
     NoPaymentAccountError,
     Task,
     __version__ as yapapi_version,
-    WorkContext,
     windows_event_loop_fix,
 )
+from yapapi.executor.ctx import ExecOptions, WorkContext
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.package import vm
 from yapapi.rest.activity import BatchTimeoutError
@@ -61,10 +61,9 @@ async def main(subnet_tag, driver=None, network=None):
             output_file = f"output_{frame}.png"
             ctx.download_file(f"/golem/output/out{frame:04d}.png", output_file)
 
-            future_results = yield ctx.commit(wait_for_results=False)
-            # equivalent to:
-            #    future_results = yield ctx.commit_async()
-            # print("[Worker]: got future_results: ", future_results)
+            batch = ctx.commit()
+            future_results = yield (batch, ExecOptions(wait_for_results=False))
+
             print("Maybe doing some work before looking at the results...")
             await asyncio.sleep(1)
             results = await future_results
