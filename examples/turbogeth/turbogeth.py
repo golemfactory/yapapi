@@ -104,26 +104,20 @@ class ConfigurationError(Exception):
 class ServiceState(statemachine.StateMachine):
     """ THIS WOULD BE PART OF THE API CODE"""
     new = statemachine.State("new", initial=True)
-    deploying = statemachine.State("deploying")
-    deployed = statemachine.State("deployed")
     starting = statemachine.State("starting")
     running = statemachine.State("running")
     stopping = statemachine.State("stopping")
-    stopped = statemachine.State("stopped")
     terminated = statemachine.State("terminated")
     unresponsive = statemachine.State("unresponsive")
 
-    deploy = new.to(deploying)
-    end_deploy = deploying.to(deployed)
-    start = deployed.to(starting)
-    ready = running.from_(new, starting, deployed, deploying)
+    start = new.to(starting)
+    ready = running.from_(new, starting)
     stop = running.to(stopping)
-    end_stop = stopping.to(stopped)
-    terminate = terminated.from_(new, deploying, deployed, starting, running, stopping, stopped)
-    mark_unresponsive = unresponsive.from_(new, deploying, deployed, starting, running, stopping, stopped)
+    terminate = terminated.from_(new, starting, running, stopping, terminated)
+    mark_unresponsive = unresponsive.from_(new, starting, running, stopping, terminated)
 
     AVAILABLE = (
-        new, deploying, deployed, starting, running, stopping
+        new, starting, running, stopping
     )
 
 
@@ -182,7 +176,7 @@ class Service:
         pass
 
     async def start(self):
-        self.state_transition(ServiceState.deploy)
+        self.state_transition(ServiceState.start)
         self.ctx.deploy()
         self.ctx.start()
         yield self.ctx.commit()
@@ -367,7 +361,7 @@ class TurbogethService(Service):
         return TurbogethPayload(rpc_port=8888)
 
     async def start(self):
-        self.state_transition(ServiceState.deploy)
+        self.state_transition(ServiceState.start)
         deploy_idx = self.ctx.deploy()
         self.ctx.start()
         future_results = yield self.ctx.commit_and_get_results()
