@@ -97,7 +97,7 @@ async def test_smart_queue_retry(caplog):
     with q.new_consumer() as c:
         async for item in c:
             print("item2=", item.data)
-            assert c.last_item == item.data
+            assert c.current_item == item.data
             outputs.add(item.data)
             await q.mark_done(item)
     print("w end")
