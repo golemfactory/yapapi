@@ -16,8 +16,13 @@ RUNTIME_WASMTIME = "wasmtime"
 RUNTIME_EMSCRIPTEN = "emscripten"
 RUNTIME_VM = "vm"
 
+
 @dataclass
-@deprecated(version="0.6.0", reason="please use yapapi.props.inf.RUNTIME_* constants directly", action="default")
+@deprecated(
+    version="0.6.0",
+    reason="please use yapapi.props.inf.RUNTIME_* constants directly",
+    action="default",
+)
 class RuntimeType(Enum):
     UNKNOWN = ""
     WASMTIME = RUNTIME_WASMTIME

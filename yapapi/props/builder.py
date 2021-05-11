@@ -80,7 +80,7 @@ class DemandBuilder:
         """Create a Demand on the market and subscribe to Offers that will match that Demand."""
         return await market.subscribe(self._properties, self.constraints)
 
-    async def decorate(self, *decorators: 'DemandDecorator'):
+    async def decorate(self, *decorators: "DemandDecorator"):
         for decorator in decorators:
             await decorator.decorate_demand(self)
 

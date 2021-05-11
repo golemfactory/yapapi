@@ -123,7 +123,7 @@ class Executor(AsyncContextManager):
         network: Optional[str] = None,
         event_consumer: Optional[Callable[[Event], None]] = None,
         stream_output: bool = False,
-        payload: Optional[Payload] = None
+        payload: Optional[Payload] = None,
     ):
         """Create a new executor.
 
@@ -164,7 +164,9 @@ class Executor(AsyncContextManager):
         if package:
             if payload:
                 raise TypeError("Cannot use `payload` and `package` at the same time")
-            logger.warning(f"`package` argument to `{self.__class__}` is deprecated, please use `payload` instead")
+            logger.warning(
+                f"`package` argument to `{self.__class__}` is deprecated, please use `payload` instead"
+            )
             payload = package
         if not payload:
             raise TypeError("Executor `payload` must be specified")

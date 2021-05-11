@@ -46,9 +46,7 @@ class _VmConstraints:
     runtime: str = prop_base.constraint(inf.INF_RUNTIME_NAME, operator="=", default=RUNTIME_VM)
 
     def __str__(self):
-        return prop_base.join_str_constraints(
-            prop_base.constraint_model_serialize(self)
-        )
+        return prop_base.join_str_constraints(prop_base.constraint_model_serialize(self))
 
 
 @dataclass
