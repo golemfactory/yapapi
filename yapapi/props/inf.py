@@ -46,12 +46,8 @@ class InfVm(InfBase):
     runtime = RUNTIME_VM
     cores: int = prop(INF_CORES, default=1)
 
-    @classmethod
-    def keys(cls):
-        return super().keys()
 
-
-InfVmKeys = InfVm.keys()
+InfVmKeys = InfVm.property_keys()
 
 
 @dataclass

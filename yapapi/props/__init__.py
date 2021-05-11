@@ -16,7 +16,7 @@ class NodeInfo(Model):
     """the name of the subnet within which the Demands and Offers are matched"""
 
 
-NodeInfoKeys = NodeInfo.keys()
+NodeInfoKeys = NodeInfo.property_keys()
 
 
 @dataclass()
@@ -60,4 +60,4 @@ class Activity(Model):
     """
 
 
-ActivityKeys = Activity.keys()
+ActivityKeys = Activity.property_keys()

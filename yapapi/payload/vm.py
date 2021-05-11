@@ -25,7 +25,7 @@ class InfVm(InfBase):
     cores: int = prop_base.prop(INF_CORES, default=1)
 
 
-InfVmKeys = InfVm.keys()
+InfVmKeys = InfVm.property_keys()
 
 
 class VmPackageFormat(Enum):

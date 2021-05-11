@@ -141,7 +141,7 @@ class Model(abc.ABC):
             raise InvalidPropertiesError(msg) from exc
 
     @classmethod
-    def keys(cls):  # change to `property_keys` ?
+    def property_keys(cls):
         """
         :return: a mapping between the model's field names and the property keys
 
@@ -155,7 +155,7 @@ class Model(abc.ABC):
         ...     name: typing.Optional[str] = \
         ...     dataclasses.field(default=None, metadata={"key": "golem.node.id.name"})
         ...
-        >>> NodeInfo.keys().name
+        >>> NodeInfo.property_keys().name
         'golem.node.id.name'
         ```
         """
