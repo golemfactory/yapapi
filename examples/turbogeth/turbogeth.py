@@ -1,4 +1,5 @@
 import asyncio
+import enum
 from datetime import timedelta
 import typing
 from typing import Optional, Any
@@ -45,13 +46,12 @@ class Steps(list):
     def __init__(self, *args, **kwargs):
         self.ctx: WorkContext = kwargs.pop('ctx')
         self.blocking: bool = kwargs.pop('blocking', True)
-        self.get_results: bool = kwargs.pop('get_results', False)
 
         super().__init__(*args, **kwargs)
 
     def __repr__(self):
         list_repr = super().__repr__()
-        return f"<{self.__class__.__name__}: {list_repr}, blocking: {self.blocking}, get_results: {self.get_results}"
+        return f"<{self.__class__.__name__}: {list_repr}, blocking: {self.blocking}"
 
 class WorkContext:
     """ Mock WorkContext to illustrate the idea. """
@@ -69,13 +69,6 @@ class WorkContext:
 
     def commit(self, blocking: bool = True):
         self._steps.blocking = blocking
-        steps = self._steps
-        self._steps = Steps(ctx=self)
-        return steps
-
-    def commit_and_get_results(self, blocking: bool = True):
-        self._steps.blocking = blocking
-        self._steps.get_results = True
         steps = self._steps
         self._steps = Steps(ctx=self)
         return steps
@@ -103,38 +96,44 @@ class ConfigurationError(Exception):
 
 class ServiceState(statemachine.StateMachine):
     """ THIS WOULD BE PART OF THE API CODE"""
-    new = statemachine.State("new", initial=True)
-    starting = statemachine.State("starting")
+    starting = statemachine.State("starting", initial=True)
     running = statemachine.State("running")
     stopping = statemachine.State("stopping")
     terminated = statemachine.State("terminated")
     unresponsive = statemachine.State("unresponsive")
 
-    start = new.to(starting)
-    ready = running.from_(new, starting)
+    ready = starting.to(running)
     stop = running.to(stopping)
-    terminate = terminated.from_(new, starting, running, stopping, terminated)
-    mark_unresponsive = unresponsive.from_(new, starting, running, stopping, terminated)
+    terminate = terminated.from_(starting, running, stopping, terminated)
+    mark_unresponsive = unresponsive.from_(starting, running, stopping, terminated)
+
+    lifecycle = ready | stop | terminate
 
     AVAILABLE = (
-        new, starting, running, stopping
+        starting, running, stopping
     )
 
 
 class Service:
     """ THIS WOULD BE PART OF THE API CODE"""
 
-    def __init__(self, ctx: WorkContext, initial_state: statemachine.State = ServiceState.new):
+    def __init__(self, cluster: "Cluster", ctx: WorkContext):
+        self.cluster = cluster
         self.ctx = ctx
-
-        assert initial_state in ServiceState.states
-        self.__state: ServiceState = ServiceState(start_value=initial_state.value)
 
         self.__inqueue: asyncio.Queue[ServiceSignal] = asyncio.Queue()
         self.__outqueue: asyncio.Queue[ServiceSignal] = asyncio.Queue()
+        self.post_init()
+
+    def post_init(self):
+        pass
+
+    @property
+    def id(self):
+        return self.ctx.id
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}: ctx: {self.ctx}, state: {self.state.value}>"
+        return f"<{self.__class__.__name__}: {self.id}>"
 
     async def send_message(self, message: Any = None):
         await self.__inqueue.put(ServiceSignal(message=message))
@@ -176,43 +175,53 @@ class Service:
         pass
 
     async def start(self):
-        self.state_transition(ServiceState.start)
         self.ctx.deploy()
         self.ctx.start()
         yield self.ctx.commit()
-        self.state_transition(ServiceState.ready)
 
     async def run(self):
-        yield
+        while True:
+            yield
 
     async def shutdown(self):
         yield
 
     @property
-    def state(self):
-        return self.__state.current_state
-
-    def state_transition(self, transition: statemachine.Transition):
-        assert self.__state.get_transition(transition.identifier)
-        self.__state.run(transition.identifier)
-
-    @property
     def is_available(self):
-        return self.state in ServiceState.AVAILABLE
+        return self.cluster.get_state(self) in ServiceState.AVAILABLE
 
     @property
-    def current_handler(self):
-        _handlers = {
-            ServiceState.new: self.start,
-            ServiceState.running: self.run,
-            ServiceState.stopping: self.shutdown,
-        }
+    def state(self):
+        return self.cluster.get_state(self)
 
-        return _handlers.get(self.state, None)
+
+class ControlSignal(enum.Enum):
+    stop = "stop"
+
+@dataclass
+class ServiceInstance:
+    """ THIS WOULD BE PART OF THE API CODE"""
+    service: Service
+    control_queue: "asyncio.Queue[ControlSignal]" = field(default_factory=asyncio.Queue)
+    service_state: ServiceState = field(default_factory=ServiceState)
+
+    @property
+    def state(self) -> ServiceState:
+        return self.service_state.current_state
+
+    def get_control_signal(self) -> typing.Optional[ControlSignal]:
+        try:
+            return self.control_queue.get_nowait()
+        except asyncio.QueueEmpty:
+            pass
+
+    def send_control_signal(self, signal: ControlSignal):
+        self.control_queue.put_nowait(signal)
 
 
 class Cluster:
     """ THIS WOULD BE PART OF THE API CODE"""
+
     def __init__(self, executor: "Executor", service_class: typing.Type[Service], payload: Payload):
         self.executor = executor
         self.service_class = service_class
@@ -221,40 +230,89 @@ class Cluster:
             raise ConfigurationError("Payload must be defined when starting a cluster.")
 
         self.payload = payload
-        self.instances: typing.List[Service] = []
+        self.__instances: typing.List[ServiceInstance] = []
 
     def __repr__(self):
         return f"Cluster " \
                f"[Service: {self.service_class.__name__}, " \
                f"Payload: {self.payload}]"
 
+    @property
+    def instances(self) -> typing.List[Service]:
+        return [i.service for i in self.__instances]
+
+    def __get_service_instance(self, service: Service) -> ServiceInstance:
+        for i in self.__instances:
+            if i.service == service:
+                return i
+
+    def get_state(self, service: Service):
+        instance = self.__get_service_instance(service)
+        return instance.state
+
+    @staticmethod
+    def _get_handler(instance: ServiceInstance):
+        _handlers = {
+            ServiceState.starting: instance.service.start,
+            ServiceState.running: instance.service.run,
+            ServiceState.stopping: instance.service.shutdown,
+        }
+        handler = _handlers.get(instance.state, None)
+        if handler:
+            return handler()
+
     async def _run_instance(self, ctx: WorkContext):
-        service = self.service_class(ctx)
-        self.instances.append(service)
+        loop = asyncio.get_event_loop()
+        instance = ServiceInstance(service=self.service_class(self, ctx))
+        self.__instances.append(instance)
 
-        print(f"{service} commissioned")
+        print(f"{instance.service} commissioned")
 
-        while service.is_available:
-            handler = service.current_handler
-            if handler:
-                try:
-                    gen = handler()
-                    async for batch in gen:
-                        r = yield batch
-                        await gen.asend(r)
-                except StopAsyncIteration:
-                    yield
+        handler = self._get_handler(instance)
+        batch = None
 
-        print(f"{service} decomissioned")
+        while handler:
+            try:
+                if batch:
+                    r = yield batch
+                    fr = loop.create_future()
+                    fr.set_result(await r)
+                    batch = await handler.asend(fr)
+                else:
+                    batch = await handler.__anext__()
+            except StopAsyncIteration:
+                instance.service_state.lifecycle()
+                handler = self._get_handler(instance)
+                batch = None
+
+            ctl = instance.get_control_signal()
+            if ctl == ControlSignal.stop:
+                if instance.state == ServiceState.running:
+                    instance.service_state.stop()
+                else:
+                    instance.service_state.terminate()
+
+                handler = self._get_handler(instance)
+                batch = None
+
+        print(f"{instance.service} decomissioned")
 
     async def spawn_instance(self):
         act = await self.executor.get_activity(self.payload)
         ctx = WorkContext(act.id, len(self.instances) + 1)
 
-        gen = self._run_instance(ctx)
-        async for batch in gen:
-            r = yield batch
-            await gen.asend(r)
+        instance_batches = self._run_instance(ctx)
+        try:
+            batch = await instance_batches.__anext__()
+            while batch:
+                r = yield batch
+                batch = await instance_batches.asend(r)
+        except StopAsyncIteration:
+            pass
+
+    def stop_instance(self, service: Service):
+        instance = self.__get_service_instance(service)
+        instance.send_control_signal(ControlSignal.stop)
 
 
 class Executor(typing.AsyncContextManager):
@@ -287,22 +345,15 @@ class Executor(typing.AsyncContextManager):
             })
 
         await asyncio.sleep(random.randint(1,7))
+        print(f"RETURNING RESULTS: {batch} on {batch.ctx.id}")
         return results
 
     async def _run_batches(self, batches: typing.AsyncGenerator):
         try:
-            async for batch in batches:
-                if batch:
-                    results = self._run_batch(batch)
-
-                    if not batch.blocking:
-                        results = asyncio.create_task(results)
-
-                    if batch.get_results:
-                        await batches.asend(results)
-                    else:
-                        await results
-
+            batch = await batches.__anext__()
+            while batch:
+                results = self._run_batch(batch)
+                batch = await batches.asend(results)
         except StopAsyncIteration:
             print("RUN BATCHES - stop async iteration")
             pass
@@ -348,8 +399,9 @@ EXECUTOR_TIMEOUT = timedelta(weeks=100)
 
 
 class TurbogethService(Service):
-    def __init__(self, ctx: WorkContext):
-        super().__init__(ctx)
+    credentials = None
+
+    def post_init(self):
         self.credentials = {}
 
     def __repr__(self):
@@ -361,28 +413,26 @@ class TurbogethService(Service):
         return TurbogethPayload(rpc_port=8888)
 
     async def start(self):
-        self.state_transition(ServiceState.start)
         deploy_idx = self.ctx.deploy()
         self.ctx.start()
-        future_results = yield self.ctx.commit_and_get_results()
+        future_results = yield self.ctx.commit()
         results = await future_results
         self.credentials = "RECEIVED" or results[deploy_idx]  # (NORMALLY, WOULD BE PARSED)
-        self.state_transition(ServiceState.ready)
 
     async def run(self):
-        print(f"service {self.ctx.id} running on {self.ctx.provider_name} ... ")
-        signal = self._listen_nowait()
-        if signal and signal.message == "go":
-            self.ctx.run("go!")
-            yield self.ctx.commit()
-        else:
-            await asyncio.sleep(1)
-            yield
+        while True:
+            print(f"service {self.ctx.id} running on {self.ctx.provider_name} ... ")
+            signal = self._listen_nowait()
+            if signal and signal.message == "go":
+                self.ctx.run("go!")
+                yield self.ctx.commit()
+            else:
+                await asyncio.sleep(1)
+                yield
 
     async def shutdown(self):
         self.ctx.download_file("some/service/state", "temp/path")
         yield self.ctx.commit()
-        self.state_transition(ServiceState.terminate)
 
 
 async def main(subnet_tag, driver=None, network=None):
@@ -417,7 +467,7 @@ async def main(subnet_tag, driver=None, network=None):
                     cluster.instances[0].send_message_nowait("go")
 
         for s in cluster.instances:
-            s.state_transition(ServiceState.stop)
+            cluster.stop_instance(s)
 
         print(f"instances: {instances()}")
 
@@ -425,7 +475,6 @@ async def main(subnet_tag, driver=None, network=None):
         while cnt < 10 and still_running():
             print(f"instances: {instances()}")
             await asyncio.sleep(1)
-
 
     print(f"instances: {instances()}")
 
