@@ -181,6 +181,7 @@ class Service:
 
     async def run(self):
         while True:
+            await asyncio.sleep(10)
             yield
 
     async def shutdown(self):
