@@ -285,6 +285,7 @@ class Cluster:
                 instance.service_state.lifecycle()
                 handler = self._get_handler(instance)
                 batch = None
+                print(f"{instance.service} state changed to {instance.state.value}")
 
             ctl = instance.get_control_signal()
             if ctl == ControlSignal.stop:
@@ -292,6 +293,8 @@ class Cluster:
                     instance.service_state.stop()
                 else:
                     instance.service_state.terminate()
+
+                print(f"{instance.service} state changed to {instance.state.value}")
 
                 handler = self._get_handler(instance)
                 batch = None
