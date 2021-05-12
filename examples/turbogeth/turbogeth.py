@@ -170,7 +170,7 @@ class Service:
         """Return the payload (runtime) definition for this service.
 
         If `get_payload` is not implemented, the payload will need to be provided in the
-        `Executor.run_service` call.
+        `Golem.run_service` call.
         """
         pass
 
@@ -223,7 +223,7 @@ class ServiceInstance:
 class Cluster:
     """ THIS WOULD BE PART OF THE API CODE"""
 
-    def __init__(self, executor: "Executor", service_class: typing.Type[Service], payload: Payload):
+    def __init__(self, executor: "Golem", service_class: typing.Type[Service], payload: Payload):
         self.executor = executor
         self.service_class = service_class
 
@@ -319,12 +319,12 @@ class Cluster:
         instance.send_control_signal(ControlSignal.stop)
 
 
-class Executor(typing.AsyncContextManager):
+class Golem(typing.AsyncContextManager):
     """ MOCK OF EXECUTOR JUST SO I COULD ILLUSTRATE THE NEW CALL"""
     def __init__(self, *args, **kwargs):
-        print(f"Executor started with {args}, {kwargs}")
+        print(f"Golem started with {args}, {kwargs}")
 
-    async def __aenter__(self) -> "Executor":
+    async def __aenter__(self) -> "Golem":
         print("start executor")
         return self
 
@@ -441,15 +441,15 @@ class TurbogethService(Service):
 
 async def main(subnet_tag, driver=None, network=None):
 
-    async with Executor(
+    async with Golem(
         max_workers=INSTANCES_NEEDED,
         budget=10.0,
         subnet_tag=subnet_tag,
         driver=driver,
         network=network,
         event_consumer=log_summary(log_event_repr),
-    ) as executor:
-        cluster = executor.run_service(
+    ) as golem:
+        cluster = golem.run_service(
             TurbogethService,
             # payload=payload,
             num_instances=INSTANCES_NEEDED
