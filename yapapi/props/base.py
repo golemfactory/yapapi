@@ -97,14 +97,32 @@ class Model(abc.ABC):
         pass
 
     @classmethod
-    def property_fields(cls):
-        return (
+    def property_fields(cls) -> typing.List[Field]:
+        """
+        Return a list of property fields of a Model.
+
+        For the sake of backwards-compatibility, assumes that fields with no defined
+        ModelFieldType are properties.
+        """
+        return [
             f
             for f in fields(cls)
             if PROP_KEY in f.metadata
             and f.metadata.get(PROP_MODEL_FIELD_TYPE, ModelFieldType.property)
             == ModelFieldType.property
-        )
+        ]
+
+    @classmethod
+    def constraint_fields(cls) -> typing.List[Field]:
+        """
+        Return a list of constraint fields of a Model.
+        """
+        return [
+            f
+            for f in fields(cls)
+            if PROP_KEY in f.metadata
+            and f.metadata.get(PROP_MODEL_FIELD_TYPE, None) == ModelFieldType.constraint
+        ]
 
     @classmethod
     def from_properties(cls: Type[ME], props: Props) -> ME:
@@ -188,7 +206,27 @@ class ModelFieldType(enum.Enum):
 
 
 def constraint(key: str, *, operator: ConstraintOperator = "=", default=MISSING):
-    """return a contraint-type dataclass field"""
+    """
+    Return a constraint-type dataclass field for a Model.
+
+    :param key: the key of the property on which the constraint is made - e.g. "golem.srv.comp.task_package"
+    :param operator: constraint's operator, one of: "=", ">=", "<="
+    :param default: the default value for the constraint
+
+    example:
+    ```python
+    >>> from dataclasses import dataclass
+    >>> from yapapi.props.base import Model, constraint, constraint_model_serialize
+    >>>
+    >>> @dataclass
+    ... class Foo(Model):
+    ...     max_baz: int = constraint("baz", operator="<=", default=100)
+    ...
+    >>> constraints = constraint_model_serialize(Foo())
+    >>> print(constraints)
+    ['(baz<=100)']
+    ```
+    """
     return field(
         default=default,
         metadata={
@@ -200,17 +238,48 @@ def constraint(key: str, *, operator: ConstraintOperator = "=", default=MISSING)
 
 
 def prop(key: str, *, default=MISSING):
-    """return a property-type dataclass field"""
+    """
+    Return a property-type dataclass field for a Model.
+
+    :param key: the key of the property, e.g. "golem.runtime.name"
+    :param default: the default value of the property
+
+    example:
+    ```python
+    >>> from dataclasses import dataclass
+    >>> from yapapi.props.base import Model, prop
+    >>> from yapapi.props.builder import DemandBuilder
+    >>>
+    >>> @dataclass
+    ... class Foo(Model):
+    ...     max_bar: int = prop("bar", default=100)
+    ...
+    >>> builder = DemandBuilder()
+    >>> builder.add(Foo())
+    >>> print(builder.properties)
+    {'bar': 100}
+    ```
+    """
     return field(
         default=default, metadata={PROP_KEY: key, PROP_MODEL_FIELD_TYPE: ModelFieldType.property}
     )
 
 
 def constraint_to_str(value, f: Field) -> str:
+    """Get string representation of a constraint with a given value.
+
+    :param value: the value of the the constraint field
+    :param f: the dataclass field for this constraint
+    """
     return f"({f.metadata[PROP_KEY]}{f.metadata[PROP_OPERATOR]}{value})"
 
 
 def constraint_model_serialize(m: Model) -> List[str]:
+    """
+    Return a list of stringified constraints on the given Model instance.
+
+    :param m: instance of Model for which we want the constraints serialized
+    """
     return [
         constraint_to_str(getattr(m, f.name), f)
         for f in fields(type(m))
@@ -218,7 +287,33 @@ def constraint_model_serialize(m: Model) -> List[str]:
     ]
 
 
-def join_str_constraints(constraints: List[str], operator: ConstraintGroupOperator = "&"):
+def join_str_constraints(constraints: List[str], operator: ConstraintGroupOperator = "&") -> str:
+    """
+    Join a list of constraints using the given opererator.
+
+    :param constraints: list of strings representing individual constraints
+                        (which may include previously joined constraint groups)
+    :param operator: constraint group operator, one of "&", "|", "!", which represent
+                     "and", "or" and "not" operations on those constraints.
+                     "!" requires that the list contains one and only one constraint.
+                     Defaults to "&" (and) if not given.
+    :return: string representation of the compound constraint.
+
+    example:
+    ```python
+    >>> from dataclasses import dataclass
+    >>> from yapapi.props.base import Model, constraint, constraint_model_serialize, join_str_constraints
+    >>>
+    >>> @dataclass
+    ... class Foo(Model):
+    ...     min_bar: int = constraint("bar", operator=">=", default=42)
+    ...     max_bar: int = constraint("bar", operator="<=", default=128)
+    ...
+    >>> print(join_str_constraints(constraint_model_serialize(Foo())))
+    (&(bar>=42)
+        (bar<=128))
+    ```
+    """
     if not constraints:
         return "()"
 

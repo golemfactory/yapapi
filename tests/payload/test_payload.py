@@ -19,6 +19,8 @@ class _FooPayload(Payload):
 async def test_payload():
     builder = DemandBuilder()
     await builder.decorate(_FooPayload(port=1234, min_mem_gib=32))
-    assert builder.properties == {'golem.srv.app.foo.port': 1234}
-    assert builder.constraints == '((&(golem.runtime.name=foo)\n\t(golem.inf.mem.gib>=32)\n\t(golem.inf.storage.gib>=1024)))'
-
+    assert builder.properties == {"golem.srv.app.foo.port": 1234}
+    assert (
+        builder.constraints
+        == "((&(golem.runtime.name=foo)\n\t(golem.inf.mem.gib>=32)\n\t(golem.inf.storage.gib>=1024)))"
+    )
