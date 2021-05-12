@@ -1,4 +1,5 @@
 from typing import Dict, Type, Any, Union, List, cast, TypeVar
+
 try:
     from typing import Literal
 except ImportError:
@@ -101,7 +102,8 @@ class Model(abc.ABC):
             f
             for f in fields(cls)
             if PROP_KEY in f.metadata
-               and f.metadata.get(PROP_MODEL_FIELD_TYPE, ModelFieldType.property) == ModelFieldType.property
+            and f.metadata.get(PROP_MODEL_FIELD_TYPE, ModelFieldType.property)
+            == ModelFieldType.property
         )
 
     @classmethod
@@ -141,7 +143,7 @@ class Model(abc.ABC):
             raise InvalidPropertiesError(msg) from exc
 
     @classmethod
-    def keys(cls):  # change to `property_keys` ?
+    def property_keys(cls):
         """
         :return: a mapping between the model's field names and the property keys
 
@@ -155,7 +157,7 @@ class Model(abc.ABC):
         ...     name: typing.Optional[str] = \
         ...     dataclasses.field(default=None, metadata={"key": "golem.node.id.name"})
         ...
-        >>> NodeInfo.keys().name
+        >>> NodeInfo.property_keys().name
         'golem.node.id.name'
         ```
         """
@@ -176,7 +178,7 @@ class ConstraintException(Exception):
 
 CONSTRAINT_VAL_ANY = "*"
 
-ConstraintOperator = Literal['=', ">=", "<="]
+ConstraintOperator = Literal["=", ">=", "<="]
 ConstraintGroupOperator = Literal["&", "|", "!"]
 
 
@@ -193,18 +195,14 @@ def constraint(key: str, *, operator: ConstraintOperator = "=", default=MISSING)
             PROP_KEY: key,
             PROP_OPERATOR: operator,
             PROP_MODEL_FIELD_TYPE: ModelFieldType.constraint,
-        }
+        },
     )
 
 
 def prop(key: str, *, default=MISSING):
     """return a property-type dataclass field"""
     return field(
-        default=default,
-        metadata={
-            PROP_KEY: key,
-            PROP_MODEL_FIELD_TYPE: ModelFieldType.property
-        }
+        default=default, metadata={PROP_KEY: key, PROP_MODEL_FIELD_TYPE: ModelFieldType.property}
     )
 
 
@@ -225,10 +223,10 @@ def join_str_constraints(constraints: List[str], operator: ConstraintGroupOperat
         return "()"
 
     if operator == "!":
-       if len(constraints) == 1:
-           return f"({operator}({constraints[0]}))"
-       else:
-           raise ConstraintException(f"{operator} requires exactly one component.")
+        if len(constraints) == 1:
+            return f"({operator}({constraints[0]}))"
+        else:
+            raise ConstraintException(f"{operator} requires exactly one component.")
 
     if len(constraints) == 1:
         return f"({constraints[0]})"

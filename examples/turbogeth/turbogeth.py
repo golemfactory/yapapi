@@ -7,10 +7,9 @@ import random
 
 import statemachine
 
-
 from dataclasses import dataclass, field
 # from yapapi.executor.ctx import WorkContext
-from yapapi.props.builder import DemandBuilder, AutodecoratingModel
+from yapapi.props.builder import DemandBuilder
 from yapapi.props.base import prop, constraint
 from yapapi.props import inf
 
@@ -342,6 +341,9 @@ class Golem(typing.AsyncContextManager):
         return True
 
     async def get_activity(self, payload):
+        builder = DemandBuilder()
+        await builder.decorate(payload)
+        print(f"Commissioning an Activity for: {builder}")
         await asyncio.sleep(random.randint(3, 7))
         return Activity(payload=payload)
 
@@ -397,7 +399,7 @@ PROP_TURBOGETH_RPC_PORT = "golem.srv.app.eth.rpc-port"
 
 
 @dataclass
-class TurbogethPayload(Payload, AutodecoratingModel):
+class TurbogethPayload(Payload):
     rpc_port: int = prop(PROP_TURBOGETH_RPC_PORT, default=None)
 
     runtime: str = constraint(inf.INF_RUNTIME_NAME, default=TURBOGETH_RUNTIME_NAME)
@@ -490,4 +492,3 @@ async def main(subnet_tag, driver=None, network=None):
     print(f"instances: {instances()}")
 
 asyncio.run(main(None))
-

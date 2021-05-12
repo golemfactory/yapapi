@@ -25,7 +25,7 @@ class InfVm(InfBase):
     cores: int = prop_base.prop(INF_CORES, default=1)
 
 
-InfVmKeys = InfVm.keys()
+InfVmKeys = InfVm.property_keys()
 
 
 class VmPackageFormat(Enum):
@@ -46,9 +46,7 @@ class _VmConstraints:
     runtime: str = prop_base.constraint(inf.INF_RUNTIME_NAME, operator="=", default=RUNTIME_VM)
 
     def __str__(self):
-        return prop_base.join_str_constraints(
-            prop_base.constraint_model_serialize(self)
-        )
+        return prop_base.join_str_constraints(prop_base.constraint_model_serialize(self))
 
 
 @dataclass
