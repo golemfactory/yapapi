@@ -94,6 +94,32 @@ class DemandDecorator(abc.ABC):
 
 
 class AutodecoratingModel(Model, DemandDecorator):
+    """
+    Base class, implementing the DemandDecorator interface to automatically decorate a demand using the model's properties and constraints.
+
+    example:
+    ```python
+    >>> import asyncio
+    >>> from dataclasses import dataclass
+    >>> from yapapi.props import prop, constraint
+    >>> from yapapi.props.builder import AutodecoratingModel, DemandBuilder
+    >>>
+    >>> @dataclass
+    ... class Foo(AutodecoratingModel):
+    ...     bar: str = prop("some.bar")
+    ...     max_baz: int = constraint("baz", operator="<=", default=100)
+    ...
+    >>> async def main():
+    ...     foo = Foo(bar="a nice one", max_baz=50)
+    ...     demand = DemandBuilder()
+    ...     await foo.decorate_demand(demand)
+    ...     print(demand)
+    ...
+    >>> asyncio.run(main())
+    {'properties': {'some.bar': 'a nice one'}, 'constraints': ['((baz<=50))']}
+    ```
+    """
+
     async def decorate_demand(self, demand: DemandBuilder):
         demand.add(self)
         demand.ensure(join_str_constraints(constraint_model_serialize(self)))
