@@ -415,7 +415,6 @@ class Executor(AsyncContextManager):
 
         state = Executor.SubmissionState(builder, agreements_pool)
 
-        # market_api = self._market_api
         activity_api: rest.Activity = self._activity_api
 
         done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()

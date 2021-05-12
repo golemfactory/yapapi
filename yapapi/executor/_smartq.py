@@ -95,8 +95,7 @@ class PeekableAsyncIterator(AsyncIterator[Item]):
         return True
 
 
-class SmartQueue(Generic[Item], object):
-
+class SmartQueue(Generic[Item]):
     def __init__(self, items: AsyncIterator[Item]):
         """
         :param items: the items to be iterated over
