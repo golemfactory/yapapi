@@ -1,4 +1,4 @@
-from .base import InvalidPropertiesError, Model
+from .base import InvalidPropertiesError, Model, prop, constraint
 from dataclasses import dataclass, field
 from typing import Optional
 from decimal import Decimal
