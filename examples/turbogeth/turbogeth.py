@@ -287,6 +287,13 @@ class Cluster:
                 batch = None
                 print(f"{instance.service} state changed to {instance.state.value}")
 
+            # two potential issues:
+            # * awaiting a batch makes use lose an ability to interpret a signal (await on generator won't return)
+            # * we may be losing a `batch` when we act on the control signal
+            #
+            # potential solution:
+            # * use `aiostream.stream.merge`
+
             ctl = instance.get_control_signal()
             if ctl == ControlSignal.stop:
                 if instance.state == ServiceState.running:
