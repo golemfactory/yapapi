@@ -395,12 +395,12 @@ class Golem(typing.AsyncContextManager):
 
 
 TURBOGETH_RUNTIME_NAME = "turbogeth-managed"
-PROP_TURBOGETH_RPC_PORT = "golem.srv.app.eth.rpc-port"
+PROP_TURBOGETH_CHAIN = "golem.srv.app.eth.chain"
 
 
 @dataclass
 class TurbogethPayload(Payload):
-    rpc_port: int = prop(PROP_TURBOGETH_RPC_PORT, default=None)
+    chain: str = prop(PROP_TURBOGETH_CHAIN)
 
     runtime: str = constraint(inf.INF_RUNTIME_NAME, default=TURBOGETH_RUNTIME_NAME)
     min_mem_gib: float = constraint(inf.INF_MEM, operator=">=", default=16)
@@ -423,7 +423,7 @@ class TurbogethService(Service):
 
     @staticmethod
     def get_payload():
-        return TurbogethPayload(rpc_port=8888)
+        return TurbogethPayload(chain="rinkeby")
 
     async def start(self):
         deploy_idx = self.ctx.deploy()
@@ -433,6 +433,7 @@ class TurbogethService(Service):
         self.credentials = "RECEIVED" or results[deploy_idx]  # (NORMALLY, WOULD BE PARSED)
 
     async def run(self):
+
         while True:
             print(f"service {self.ctx.id} running on {self.ctx.provider_name} ... ")
             signal = self._listen_nowait()
