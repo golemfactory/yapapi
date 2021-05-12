@@ -1,7 +1,7 @@
 from typing import Dict, Type, Any, Union, List, cast, TypeVar
 
 try:
-    from typing import Literal
+    from typing import Literal  # type: ignore
 except ImportError:
     from typing_extensions import Literal  # type: ignore
 
