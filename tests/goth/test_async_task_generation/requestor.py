@@ -45,7 +45,7 @@ async def main():
         # Seed the queue with the first task:
         await task_queue.put(Task(data=3))
 
-        async def input_generator() -> AsyncGenerator[Task]:
+        async def input_generator():
             """Task generator yields tasks removed from `queue`."""
             while True:
                 task = await task_queue.get()
@@ -56,7 +56,7 @@ async def main():
         async for task in executor.submit(worker, input_generator()):
             print("task result:", task.result, file=sys.stderr)
             for n in range(task.result):
-                await task.queue.put(Task(data=task.result - 1))
+                await task_queue.put(Task(data=task.result - 1))
 
         print("all done!", file=sys.stderr)
 
