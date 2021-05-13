@@ -35,9 +35,9 @@ from .events import Event
 from . import events
 from .task import Task, TaskStatus
 from .utils import AsyncWrapper
-from ..package import Package
+from ..payload import Payload
 from ..props import Activity, com, NodeInfo, NodeInfoKeys
-from ..props.builder import DemandBuilder
+from ..props.builder import DemandBuilder, DemandDecorator
 from .. import rest
 from ..rest.activity import CommandExecutionError
 from ..rest.market import OfferProposal, Subscription
@@ -265,7 +265,7 @@ class Golem(AsyncContextManager):
             raise ValueError(f"No allocation for {item.payment_platform} {item.payer_addr}.")
 
     @dataclass
-    class PaymentDecoration:  # TODO add: (DemandDecorator)
+    class PaymentDecoration(DemandDecorator):
         market_decoration: rest.payment.MarketDecoration
 
         async def decorate_demand(self, demand: DemandBuilder):
@@ -432,7 +432,7 @@ class Golem(AsyncContextManager):
             self,
             worker: Callable[[WorkContext, AsyncIterator[Task[D, R]]], AsyncGenerator[Work, None]],
             data: Iterable[Task[D, R]],
-            payload: Package,
+            payload: Payload,
             max_workers: Optional[int] = None,
             timeout: Optional[timedelta] = None,
     ) -> AsyncIterator[Task[D, R]]:
@@ -478,7 +478,8 @@ class Executor(AsyncContextManager):
             stream_output: bool = False,
             max_workers: int = 5,
             timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
-            package: Package,
+            package: Optional[Payload] = None,
+            payload: Optional[Payload] = None,
             _engine: Optional[Golem] = None
     ):
         """Create a new executor.
@@ -523,7 +524,17 @@ class Executor(AsyncContextManager):
                 stream_output=stream_output
             )
 
-        self._package = package
+        if package:
+            if payload:
+                raise ValueError("Cannot use `payload` and `package` at the same time")
+            logger.warning(
+                f"`package` argument to `{self.__class__}` is deprecated, please use `payload` instead"
+            )
+            payload = package
+        if not payload:
+            raise ValueError("Executor `payload` must be specified")
+
+        self._payload = payload
         self._conf = _ExecutorConfig(max_workers, timeout)
         # TODO: setup precision
 
@@ -584,16 +595,18 @@ class Executor(AsyncContextManager):
         # Building offer
         builder = DemandBuilder()
         builder.add(Activity(expiration=self._expires, multi_activity=True))
-        builder.add(NodeInfo(subnet_tag=self._subnet))
-        if self._subnet:
-            builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
-        await self._engine.payment_decoration.decorate_demand(builder)
-        await self._strategy.decorate_demand(builder)
-        await self._package.decorate_demand(builder)
+        builder.add(NodeInfo(subnet_tag=self._engine._subnet))
+        if self._engine._subnet:
+            builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._engine._subnet})")
+        await builder.decorate(
+            self._engine.payment_decoration,
+            self._engine.strategy,
+            self._payload,
+        )
 
         agreements_pool = AgreementsPool(self._engine.emit)
 
-        state = Executor.Job(builder, agreements_pool)
+        state = Golem.Job(builder, agreements_pool)
 
         market_api = self._market_api
         activity_api: rest.Activity = self._activity_api
@@ -934,7 +947,6 @@ class Executor(AsyncContextManager):
                 if agreements_to_pay:
                     logger.warning("Unpaid agreements: %s", agreements_to_pay)
 
-
     async def __aenter__(self) -> "Executor":
         stack = self._stack
 
@@ -944,15 +956,4 @@ class Executor(AsyncContextManager):
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        logger.debug("Executor is shutting down...")
-        emit = cast(Callable[[Event], None], self._wrapped_consumer.async_call)
-        # Wait until all computations are finished
-        await asyncio.gather(*[event.wait() for event in self._active_jobs])
-        # TODO: prevent new computations at this point (if it's even possible to start one)
-        try:
-            await self._stack.aclose()
-            emit(events.ShutdownFinished())
-        except Exception:
-            emit(events.ShutdownFinished(exc_info=sys.exc_info()))
-        finally:
-            await self._wrapped_consumer.stop()
+        await self._stack.aclose()

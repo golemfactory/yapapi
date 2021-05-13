@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing_extensions import Final, Protocol
 
 from ..props import com, Activity
-from ..props.builder import DemandBuilder
+from ..props.builder import DemandBuilder, DemandDecorator
 from .. import rest
 
 
@@ -28,7 +28,7 @@ class ComputationHistory(Protocol):
         ...
 
 
-class MarketStrategy(abc.ABC):
+class MarketStrategy(DemandDecorator, abc.ABC):
     """Abstract market strategy."""
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:

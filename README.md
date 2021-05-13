@@ -103,7 +103,7 @@ from yapapi import (
     windows_event_loop_fix,
 )
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
-from yapapi.package import vm
+from yapapi.payload import vm
 from yapapi.rest.activity import BatchTimeoutError
 
 
