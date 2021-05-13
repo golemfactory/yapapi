@@ -543,7 +543,7 @@ class Executor(AsyncContextManager):
             If the item does not specify options, default ones are provided.
             """
             if isinstance(item, tuple):
-                return item[0], item[1]
+                return item
             else:
                 return item, ExecOptions()
 
