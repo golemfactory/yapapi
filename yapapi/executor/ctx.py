@@ -50,11 +50,6 @@ class Work(abc.ABC):
         """Return the optional timeout set for execution of this work."""
         return None
 
-    # @property
-    # def wait_for_results(self) -> bool:
-    #     """Return `True` iff yielding this work item should block until the results are returned."""
-    #     return True
-
     @property
     def contains_init_step(self) -> bool:
         """Return `True` iff this work item contains the initialization step."""
@@ -242,12 +237,9 @@ class Steps(Work):
 
         :param steps: sequence of steps to be executed
         :param timeout: timeout for waiting for the steps' results
-        # :param wait_for_results: whether yielding this work item should block
-            until the results are available
         """
         self._steps: Tuple[Work, ...] = steps
         self._timeout: Optional[timedelta] = timeout
-        # self._wait_for_results = wait_for_results
 
     @property
     def timeout(self) -> Optional[timedelta]:
