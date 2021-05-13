@@ -107,7 +107,7 @@ class AutodecoratingModel(Model, DemandDecorator):
     >>> @dataclass
     ... class Foo(AutodecoratingModel):
     ...     bar: str = prop("some.bar")
-    ...     max_baz: int = constraint("baz", operator="<=", default=100)
+    ...     max_baz: int = constraint("baz", "<=", 100)
     ...
     >>> async def main():
     ...     foo = Foo(bar="a nice one", max_baz=50)

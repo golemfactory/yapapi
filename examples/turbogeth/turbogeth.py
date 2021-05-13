@@ -15,11 +15,11 @@ PROP_TURBOGETH_RPC_PORT = "golem.srv.app.eth.rpc-port"
 
 @dataclass
 class TurbogethPayload(Payload):
-    rpc_port: int = prop(PROP_TURBOGETH_RPC_PORT, default=None)
+    rpc_port: int = prop(PROP_TURBOGETH_RPC_PORT, None)
 
-    runtime: str = constraint(inf.INF_RUNTIME_NAME, default=TURBOGETH_RUNTIME_NAME)
-    min_mem_gib: float = constraint(inf.INF_MEM, operator=">=", default=16)
-    min_storage_gib: float = constraint(inf.INF_STORAGE, operator=">=", default=1024)
+    runtime: str = constraint(inf.INF_RUNTIME_NAME, "=", TURBOGETH_RUNTIME_NAME)
+    min_mem_gib: float = constraint(inf.INF_MEM, ">=", 16)
+    min_storage_gib: float = constraint(inf.INF_STORAGE, ">=", 1024)
 
 
 async def main():

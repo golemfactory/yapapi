@@ -6,14 +6,14 @@ from yapapi.props import base as props_base
 
 @dataclass
 class Foo(props_base.Model):
-    bar: str = props_base.prop("bar", default="cafebiba")
-    max_baz: int = props_base.constraint("baz", operator="<=", default=100)
-    min_baz: int = props_base.constraint("baz", operator=">=", default=1)
+    bar: str = props_base.prop("bar", "cafebiba")
+    max_baz: int = props_base.constraint("baz", "<=", 100)
+    min_baz: int = props_base.constraint("baz", ">=", 1)
 
 
 @dataclass
 class FooToo(props_base.Model):
-    baz: int = props_base.constraint("baz", operator="=", default=21)
+    baz: int = props_base.constraint("baz", "=", 21)
 
 
 @dataclass
@@ -81,9 +81,33 @@ def test_constraint_model_serialize():
             False,
         ),
         (
+            FooToo,
+            "&",
+            "((baz=21))",
+            False,
+        ),
+        (
+            FooToo,
+            "|",
+            "((baz=21))",
+            False,
+        ),
+        (
             FooZero,
             None,
-            "()",
+            "(&)",
+            False,
+        ),
+        (
+            FooZero,
+            "&",
+            "(&)",
+            False,
+        ),
+        (
+            FooZero,
+            "|",
+            "(|)",
             False,
         ),
     ],

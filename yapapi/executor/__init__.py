@@ -163,15 +163,15 @@ class Executor(AsyncContextManager):
 
         if package:
             if payload:
-                raise TypeError("Cannot use `payload` and `package` at the same time")
+                raise ValueError("Cannot use `payload` and `package` at the same time")
             logger.warning(
                 f"`package` argument to `{self.__class__}` is deprecated, please use `payload` instead"
             )
             payload = package
         if not payload:
-            raise TypeError("Executor `payload` must be specified")
+            raise ValueError("Executor `payload` must be specified")
 
-        self._package = payload
+        self._payload = payload
         self._conf = _ExecutorConfig(max_workers, timeout)
         # TODO: setup precision
         self._budget_amount = Decimal(budget)
@@ -408,7 +408,7 @@ class Executor(AsyncContextManager):
         for constraint in multi_payment_decoration.constraints:
             builder.ensure(constraint)
         builder.properties.update({p.key: p.value for p in multi_payment_decoration.properties})
-        await self._package.decorate_demand(builder)
+        await self._payload.decorate_demand(builder)
         await self._strategy.decorate_demand(builder)
 
         agreements_pool = AgreementsPool(emit)

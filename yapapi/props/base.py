@@ -205,7 +205,7 @@ class ModelFieldType(enum.Enum):
     property = "property"
 
 
-def constraint(key: str, *, operator: ConstraintOperator = "=", default=MISSING):
+def constraint(key: str, operator: ConstraintOperator = "=", default=MISSING):
     """
     Return a constraint-type dataclass field for a Model.
 
@@ -220,7 +220,7 @@ def constraint(key: str, *, operator: ConstraintOperator = "=", default=MISSING)
     >>>
     >>> @dataclass
     ... class Foo(Model):
-    ...     max_baz: int = constraint("baz", operator="<=", default=100)
+    ...     max_baz: int = constraint("baz", "<=", 100)
     ...
     >>> constraints = constraint_model_serialize(Foo())
     >>> print(constraints)
@@ -237,7 +237,7 @@ def constraint(key: str, *, operator: ConstraintOperator = "=", default=MISSING)
     )
 
 
-def prop(key: str, *, default=MISSING):
+def prop(key: str, default=MISSING):
     """
     Return a property-type dataclass field for a Model.
 
@@ -252,12 +252,12 @@ def prop(key: str, *, default=MISSING):
     >>>
     >>> @dataclass
     ... class Foo(Model):
-    ...     max_bar: int = prop("bar", default=100)
+    ...     bar: int = prop("bar", default=100)
     ...
     >>> builder = DemandBuilder()
-    >>> builder.add(Foo())
+    >>> builder.add(Foo(bar=42))
     >>> print(builder.properties)
-    {'bar': 100}
+    {'bar': 42}
     ```
     """
     return field(
@@ -291,6 +291,8 @@ def join_str_constraints(constraints: List[str], operator: ConstraintGroupOperat
     """
     Join a list of constraints using the given opererator.
 
+    The semantics here reflect LDAP filters: https://ldap.com/ldap-filters/
+
     :param constraints: list of strings representing individual constraints
                         (which may include previously joined constraint groups)
     :param operator: constraint group operator, one of "&", "|", "!", which represent
@@ -306,22 +308,22 @@ def join_str_constraints(constraints: List[str], operator: ConstraintGroupOperat
     >>>
     >>> @dataclass
     ... class Foo(Model):
-    ...     min_bar: int = constraint("bar", operator=">=", default=42)
-    ...     max_bar: int = constraint("bar", operator="<=", default=128)
+    ...     min_bar: int = constraint("bar", ">=", 42)
+    ...     max_bar: int = constraint("bar", "<=", 128)
     ...
     >>> print(join_str_constraints(constraint_model_serialize(Foo())))
     (&(bar>=42)
         (bar<=128))
     ```
     """
-    if not constraints:
-        return "()"
-
     if operator == "!":
         if len(constraints) == 1:
             return f"({operator}({constraints[0]}))"
         else:
             raise ConstraintException(f"{operator} requires exactly one component.")
+
+    if not constraints:
+        return f"({operator})"
 
     if len(constraints) == 1:
         return f"({constraints[0]})"

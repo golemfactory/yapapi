@@ -8,11 +8,11 @@ from yapapi.payload import Payload
 
 @dataclass
 class _FooPayload(Payload):
-    port: int = prop("golem.srv.app.foo.port", default=None)
+    port: int = prop("golem.srv.app.foo.port", None)
 
-    runtime: str = constraint(inf.INF_RUNTIME_NAME, default="foo")
-    min_mem_gib: float = constraint(inf.INF_MEM, operator=">=", default=16)
-    min_storage_gib: float = constraint(inf.INF_STORAGE, operator=">=", default=1024)
+    runtime: str = constraint(inf.INF_RUNTIME_NAME, "=", "foo")
+    min_mem_gib: float = constraint(inf.INF_MEM, ">=", 16)
+    min_storage_gib: float = constraint(inf.INF_STORAGE, ">=", 1024)
 
 
 @pytest.mark.asyncio
