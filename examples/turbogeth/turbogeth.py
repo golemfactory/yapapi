@@ -9,6 +9,7 @@ import statemachine
 
 from dataclasses import dataclass, field
 # from yapapi.executor.ctx import WorkContext
+
 from yapapi.props.builder import DemandBuilder
 from yapapi.props.base import prop, constraint
 from yapapi.props import inf

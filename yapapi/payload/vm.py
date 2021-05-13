@@ -77,12 +77,11 @@ async def repo(
     """
     Build a reference to application package.
 
-    - *image_hash*: hash of the package's image
-    - *min_mem_gib*: minimal memory required to execute application code
-    - *min_storage_gib* minimal disk storage to execute tasks
-
+    :param image_hash: hash of the package's image
+    :param min_mem_gib: minimal memory required to execute application code
+    :param min_storage_gib: minimal disk storage to execute tasks
+    :return: the payload definition for the given VM image
     """
-
     return _VmPackage(
         repo_url=resolve_repo_srv(_DEFAULT_REPO_SRV),
         image_hash=image_hash,

@@ -10,7 +10,7 @@ class PackageException(Exception):
     pass
 
 
-@dataclass
+@dataclass  # type: ignore  # mypy issue #5374
 class Package(Payload):
     """Description of a task package (e.g. a VM image) deployed on the provider nodes"""
 
