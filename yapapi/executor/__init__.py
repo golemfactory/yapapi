@@ -96,7 +96,7 @@ D = TypeVar("D")  # Type var for task data
 R = TypeVar("R")  # Type var for task result
 
 
-class Engine(AsyncContextManager):
+class Golem(AsyncContextManager):
     def __init__(
         self,
         *,
@@ -198,10 +198,10 @@ class Engine(AsyncContextManager):
         # those events can be used to wait until all jobs are finished
         self._active_jobs: Set[asyncio.Event] = set()
 
-        self.payment_decoration = Engine.PaymentDecoration(await self._create_allocations())
+        self.payment_decoration = Golem.PaymentDecoration(await self._create_allocations())
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        logger.debug("Engine is shutting down...")
+        logger.debug("Golem is shutting down...")
         # Wait until all computations are finished
         await asyncio.gather(*[event.wait() for event in self._active_jobs])
         # TODO: prevent new computations at this point (if it's even possible to start one)
@@ -278,7 +278,7 @@ class Engine(AsyncContextManager):
 
         def __init__(
                 self,
-                engine: "Engine",
+                engine: "Golem",
                 builder: DemandBuilder,
                 agreements_pool: AgreementsPool,
         ):
@@ -479,25 +479,25 @@ class Executor(AsyncContextManager):
             max_workers: int = 5,
             timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
             package: Package,
-            _engine: Optional[Engine] = None
+            _engine: Optional[Golem] = None
     ):
         """Create a new executor.
 
-        :param budget: [DEPRECATED use `Engine` instead] maximum budget for payments
-        :param strategy: [DEPRECATED use `Engine` instead] market strategy used to
+        :param budget: [DEPRECATED use `Golem` instead] maximum budget for payments
+        :param strategy: [DEPRECATED use `Golem` instead] market strategy used to
             select providers from the market (e.g. LeastExpensiveLinearPayuMS or DummyMS)
-        :param subnet_tag: [DEPRECATED use `Engine` instead] use only providers in the
+        :param subnet_tag: [DEPRECATED use `Golem` instead] use only providers in the
             subnet with the subnet_tag name
-        :param driver: [DEPRECATED use `Engine` instead] name of the payment driver
+        :param driver: [DEPRECATED use `Golem` instead] name of the payment driver
             to use or `None` to use the default driver;
             only payment platforms with the specified driver will be used
-        :param network: [DEPRECATED use `Engine` instead] name of the network
+        :param network: [DEPRECATED use `Golem` instead] name of the network
             to use or `None` to use the default network;
             only payment platforms with the specified network will be used
-        :param event_consumer: [DEPRECATED use `Engine` instead] a callable that
+        :param event_consumer: [DEPRECATED use `Golem` instead] a callable that
             processes events related to the computation;
             by default it is a function that logs all events
-        :param stream_output: [DEPRECATED use `Engine` instead]
+        :param stream_output: [DEPRECATED use `Golem` instead]
             stream computation output from providers
 
         :param max_workers: maximum number of workers performing the computation
@@ -510,10 +510,10 @@ class Executor(AsyncContextManager):
 
         if not _engine:
             warnings.warn(
-                "stand-alone usage is deprecated, please `Engine.execute_task` class instead ",
+                "stand-alone usage is deprecated, please `Golem.execute_task` class instead ",
                 DeprecationWarning
             )
-            self._engine = Engine(
+            self._engine = Golem(
                 budget = budget,
                 strategy = strategy,
                 subnet_tag = subnet_tag,
