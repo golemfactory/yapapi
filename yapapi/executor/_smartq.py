@@ -27,7 +27,14 @@ _logger = logging.getLogger("yapapi.executor")
 Item = TypeVar("Item")
 
 
-class Handle(Generic[Item], object):
+class Handle(Generic[Item]):
+    """
+    Handle of the queue item, iow, binding between a queue item and a specific consumer.
+
+    Additionally it keeps track of the previously used consumers of the given item
+    to prevent them from being assigned to this item again.
+    """
+
     __slots__ = ("_data", "_prev_consumers", "_consumer")
 
     def __init__(self, data: Item, *, consumer: Optional["Consumer[Item]"] = None):
@@ -52,9 +59,16 @@ class Handle(Generic[Item], object):
 
 
 class SmartQueue(Generic[Item], object):
-    def __init__(self, items: Iterable[Item], *, retry_cnt: int = 2):
+    def __init__(self, items: Iterable[Item]):
+        """
+        :param items: the items to be iterated over
+        """
         self._items: Iterator[Item] = peekable(items)
+
+        """the items scheduled for reassignment to another consumer"""
         self._rescheduled_items: Set[Handle[Item]] = set()
+
+        """the items currently assigned to consumers"""
         self._in_progress: Set[Handle[Item]] = set()
 
         # Synchronization primitives
@@ -72,7 +86,7 @@ class SmartQueue(Generic[Item], object):
         An item is _unassigned_ if it's new (hasn't been retrieved yet by any consumer)
         or it has been rescheduled and is not in progress.
 
-        A queue has unassigned items iff `get()` will immediately return some item,
+        A queue has unassigned items iff `get()` immediately returns some item,
         without waiting for an item that is currently "in progress" to be rescheduled.
         """
         return self.has_new_items() or bool(self._rescheduled_items)
@@ -126,6 +140,7 @@ class SmartQueue(Generic[Item], object):
             )
 
     async def reschedule(self, handle: Handle[Item]) -> None:
+        """Free the item for reassignment to another consumer."""
         assert handle in self._in_progress, "handle is not in progress"
         async with self._lock:
             self._in_progress.remove(handle)
@@ -133,6 +148,7 @@ class SmartQueue(Generic[Item], object):
             self._new_items.notify_all()
 
     async def reschedule_all(self, consumer: "Consumer[Item]"):
+        """Make all items currently assigned to the consumer available for reassignment."""
         async with self._lock:
             handles = [handle for handle in self._in_progress if handle.consumer == consumer]
             for handle in handles:
@@ -149,6 +165,7 @@ class SmartQueue(Generic[Item], object):
         }
 
     async def wait_until_done(self) -> None:
+        """Wait until all items in the queue are processed."""
         async with self._lock:
             while self.__has_data():
                 await self._eof.wait()
@@ -160,6 +177,11 @@ class Consumer(
     AsyncIterable[Handle[Item]],
     ContextManager["Consumer[Item]"],
 ):
+    """
+    Provides an interface to asynchronously iterate over items in the given queue
+    while cooperating with other consumers attached to this queue.
+    """
+
     def __init__(self, queue: SmartQueue[Item]):
         self._queue = queue
         self._fetched: Optional[Handle[Item]] = None
@@ -177,7 +199,8 @@ class Consumer(
         return None
 
     @property
-    def last_item(self) -> Optional[Item]:
+    def current_item(self) -> Optional[Item]:
+        """The most-recent queue item that has been fetched to be processed by this consumer."""
         return self._fetched.data if self._fetched else None
 
     async def __anext__(self) -> Handle[Item]:

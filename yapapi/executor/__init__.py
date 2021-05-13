@@ -736,7 +736,7 @@ class Executor(AsyncContextManager):
                             datetime.now(timezone.utc) + batch.timeout if batch.timeout else None
                         )
                         try:
-                            current_worker_task = consumer.last_item
+                            current_worker_task = consumer.current_item
                             if current_worker_task:
                                 emit(
                                     events.TaskStarted(
