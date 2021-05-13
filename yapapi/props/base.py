@@ -1,14 +1,15 @@
-from typing import Dict, Type, Any, Union, List, cast, TypeVar
-
-try:
-    from typing import Literal  # type: ignore
-except ImportError:
-    from typing_extensions import Literal  # type: ignore
-
-import typing
 import abc
 import enum
 import json
+import sys
+import typing
+from typing import Dict, Type, Any, Union, List, cast, TypeVar
+
+if sys.version_info > (3, 7):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
+
 from dataclasses import dataclass, fields, MISSING, field, Field
 from datetime import datetime, timezone
 
