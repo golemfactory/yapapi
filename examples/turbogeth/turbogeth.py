@@ -8,6 +8,7 @@ import random
 import statemachine
 
 from dataclasses import dataclass, field
+
 # from yapapi.executor.ctx import WorkContext
 
 from yapapi.props.builder import DemandBuilder
@@ -29,29 +30,34 @@ from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noq
 
 _act_cnt = 0
 
+
 def _act_id():
     global _act_cnt
     _act_cnt += 1
     return _act_cnt
 
+
 @dataclass
 class Activity:
     """ Mock Activity """
+
     payload: Payload
     id: int = field(default_factory=_act_id)
 
 
 class Steps(list):
     """ Mock Steps to illustrate the idea. """
+
     def __init__(self, *args, **kwargs):
-        self.ctx: WorkContext = kwargs.pop('ctx')
-        self.blocking: bool = kwargs.pop('blocking', True)
+        self.ctx: WorkContext = kwargs.pop("ctx")
+        self.blocking: bool = kwargs.pop("blocking", True)
 
         super().__init__(*args, **kwargs)
 
     def __repr__(self):
         list_repr = super().__repr__()
         return f"<{self.__class__.__name__}: {list_repr}, blocking: {self.blocking}"
+
 
 class WorkContext:
     """ Mock WorkContext to illustrate the idea. """
@@ -85,17 +91,20 @@ class WorkContext:
 @dataclass
 class ServiceSignal:
     """ THIS WOULD BE PART OF THE API CODE"""
+
     message: Any
     response_to: Optional["ServiceSignal"] = None
 
 
 class ConfigurationError(Exception):
     """ THIS WOULD BE PART OF THE API CODE"""
+
     pass
 
 
 class ServiceState(statemachine.StateMachine):
     """ THIS WOULD BE PART OF THE API CODE"""
+
     starting = statemachine.State("starting", initial=True)
     running = statemachine.State("running")
     stopping = statemachine.State("stopping")
@@ -109,9 +118,7 @@ class ServiceState(statemachine.StateMachine):
 
     lifecycle = ready | stop | terminate
 
-    AVAILABLE = (
-        starting, running, stopping
-    )
+    AVAILABLE = (starting, running, stopping)
 
 
 class Service:
@@ -199,9 +206,11 @@ class Service:
 class ControlSignal(enum.Enum):
     stop = "stop"
 
+
 @dataclass
 class ServiceInstance:
     """ THIS WOULD BE PART OF THE API CODE"""
+
     service: Service
     control_queue: "asyncio.Queue[ControlSignal]" = field(default_factory=asyncio.Queue)
     service_state: ServiceState = field(default_factory=ServiceState)
@@ -234,9 +243,7 @@ class Cluster:
         self.__instances: typing.List[ServiceInstance] = []
 
     def __repr__(self):
-        return f"Cluster " \
-               f"[Service: {self.service_class.__name__}, " \
-               f"Payload: {self.payload}]"
+        return f"Cluster " f"[Service: {self.service_class.__name__}, " f"Payload: {self.payload}]"
 
     @property
     def instances(self) -> typing.List[Service]:
@@ -328,6 +335,7 @@ class Cluster:
 
 class Golem(typing.AsyncContextManager):
     """ MOCK OF EXECUTOR JUST SO I COULD ILLUSTRATE THE NEW CALL"""
+
     def __init__(self, *args, **kwargs):
         print(f"Golem started with {args}, {kwargs}")
 
@@ -337,6 +345,7 @@ class Golem(typing.AsyncContextManager):
 
     async def __aexit__(self, *exc_info):
         import traceback
+
         tb = traceback.print_tb(exc_info[2]) if len(exc_info) > 2 else None
         print("stop executor", exc_info, tb)
         return True
@@ -353,12 +362,9 @@ class Golem(typing.AsyncContextManager):
         print(f"EXESCRIPT EXECUTION: {batch} on {batch.ctx.id}")
         for command in batch:
             print(f"EXESCRIPT COMMAND {command}")
-            results.append({
-                'command': command,
-                'message': 'some data here'
-            })
+            results.append({"command": command, "message": "some data here"})
 
-        await asyncio.sleep(random.randint(1,7))
+        await asyncio.sleep(random.randint(1, 7))
         print(f"RETURNING RESULTS: {batch} on {batch.ctx.id}")
         return results
 
@@ -373,10 +379,10 @@ class Golem(typing.AsyncContextManager):
             pass
 
     def run_service(
-            self,
-            service_class: typing.Type[Service],
-            num_instances: int = 1,
-            payload: typing.Optional[Payload] = None,
+        self,
+        service_class: typing.Type[Service],
+        num_instances: int = 1,
+        payload: typing.Optional[Payload] = None,
     ) -> Cluster:
         payload = payload or service_class.get_payload()
         cluster = Cluster(executor=self, service_class=service_class, payload=payload)
@@ -463,7 +469,7 @@ async def main(subnet_tag, driver=None, network=None):
         cluster = golem.run_service(
             TurbogethService,
             # payload=payload,
-            num_instances=INSTANCES_NEEDED
+            num_instances=INSTANCES_NEEDED,
         )
 
         def instances():
@@ -492,5 +498,6 @@ async def main(subnet_tag, driver=None, network=None):
             await asyncio.sleep(1)
 
     print(f"instances: {instances()}")
+
 
 asyncio.run(main(None))
