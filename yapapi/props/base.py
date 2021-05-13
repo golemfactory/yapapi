@@ -5,7 +5,7 @@ import sys
 import typing
 from typing import Dict, Type, Any, Union, List, cast, TypeVar
 
-if sys.version_info > (3, 7):
+if sys.version_info > (3, 8):
     from typing import Literal
 else:
     from typing_extensions import Literal
