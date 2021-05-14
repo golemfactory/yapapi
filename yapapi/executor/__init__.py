@@ -12,12 +12,14 @@ import sys
 from typing import (
     AsyncContextManager,
     AsyncIterator,
+    Awaitable,
     Callable,
     Dict,
     Iterable,
     List,
     Optional,
     Set,
+    Tuple,
     TypeVar,
     Union,
     cast,
@@ -29,19 +31,19 @@ from dataclasses import dataclass, field
 from yapapi.executor.agreements_pool import AgreementsPool
 from typing_extensions import Final, AsyncGenerator
 
-from .ctx import CaptureContext, CommandContainer, Work, WorkContext
+from .ctx import CaptureContext, CommandContainer, ExecOptions, Work, WorkContext
 from .events import Event
 from . import events
 from .task import Task, TaskStatus
 from .utils import AsyncWrapper
-from ..package import Package
+from ..payload import Payload
 from ..props import Activity, com, NodeInfo, NodeInfoKeys
 from ..props.builder import DemandBuilder
 from .. import rest
 from ..rest.activity import CommandExecutionError
 from ..rest.market import OfferProposal, Subscription
 from ..storage import gftp
-from ._smartq import SmartQueue, Handle
+from ._smartq import Consumer, Handle, SmartQueue
 from .strategy import (
     DecreaseScoreForUnconfirmedAgreement,
     LeastExpensiveLinearPayuMS,
@@ -99,6 +101,10 @@ class _ExecutorConfig:
     traceback: bool = bool(os.getenv("YAPAPI_TRACEBACK", 0))
 
 
+WorkItem = Union[Work, Tuple[Work, ExecOptions]]
+"""The type of items yielded by a generator created by the `worker` function supplied by user."""
+
+
 D = TypeVar("D")  # Type var for task data
 R = TypeVar("R")  # Type var for task result
 
@@ -113,7 +119,7 @@ class Executor(AsyncContextManager):
     def __init__(
         self,
         *,
-        package: Package,
+        package: Optional[Payload] = None,
         max_workers: int = 5,
         timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
         budget: Union[float, Decimal],
@@ -123,6 +129,7 @@ class Executor(AsyncContextManager):
         network: Optional[str] = None,
         event_consumer: Optional[Callable[[Event], None]] = None,
         stream_output: bool = False,
+        payload: Optional[Payload] = None,
     ):
         """Create a new executor.
 
@@ -159,7 +166,18 @@ class Executor(AsyncContextManager):
         self._strategy = strategy
         self._api_config = rest.Configuration()
         self._stack = AsyncExitStack()
-        self._package = package
+
+        if package:
+            if payload:
+                raise ValueError("Cannot use `payload` and `package` at the same time")
+            logger.warning(
+                f"`package` argument to `{self.__class__}` is deprecated, please use `payload` instead"
+            )
+            payload = package
+        if not payload:
+            raise ValueError("Executor `payload` must be specified")
+
+        self._payload = payload
         self._conf = _ExecutorConfig(max_workers, timeout)
         # TODO: setup precision
         self._budget_amount = Decimal(budget)
@@ -193,8 +211,11 @@ class Executor(AsyncContextManager):
 
     async def submit(
         self,
-        worker: Callable[[WorkContext, AsyncIterator[Task[D, R]]], AsyncGenerator[Work, None]],
-        data: Iterable[Task[D, R]],
+        worker: Callable[
+            [WorkContext, AsyncIterator[Task[D, R]]],
+            AsyncGenerator[Work, Awaitable[List[events.CommandEvent]]],
+        ],
+        data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
     ) -> AsyncIterator[Task[D, R]]:
         """Submit a computation to be executed on providers.
 
@@ -375,8 +396,11 @@ class Executor(AsyncContextManager):
 
     async def _submit(
         self,
-        worker: Callable[[WorkContext, AsyncIterator[Task[D, R]]], AsyncGenerator[Work, None]],
-        data: Iterable[Task[D, R]],
+        worker: Callable[
+            [WorkContext, AsyncIterator[Task[D, R]]],
+            AsyncGenerator[Work, Awaitable[List[events.CommandEvent]]],
+        ],
+        data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
         services: Set[asyncio.Task],
         workers: Set[asyncio.Task],
     ) -> AsyncGenerator[Task[D, R], None]:
@@ -396,14 +420,13 @@ class Executor(AsyncContextManager):
         for constraint in multi_payment_decoration.constraints:
             builder.ensure(constraint)
         builder.properties.update({p.key: p.value for p in multi_payment_decoration.properties})
-        await self._package.decorate_demand(builder)
+        await self._payload.decorate_demand(builder)
         await self._strategy.decorate_demand(builder)
 
         agreements_pool = AgreementsPool(emit)
 
         state = Executor.SubmissionState(builder, agreements_pool)
 
-        market_api = self._market_api
         activity_api: rest.Activity = self._activity_api
 
         done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
@@ -414,10 +437,15 @@ class Executor(AsyncContextManager):
             if status == TaskStatus.ACCEPTED:
                 done_queue.put_nowait(task)
 
-        def input_tasks() -> Iterable[Task[D, R]]:
-            for task in data:
-                task._add_callback(on_task_done)
-                yield task
+        async def input_tasks() -> AsyncIterator[Task[D, R]]:
+            if isinstance(data, AsyncIterator):
+                async for task in data:
+                    task._add_callback(on_task_done)
+                    yield task
+            else:
+                for task in data:
+                    task._add_callback(on_task_done)
+                    yield task
 
         work_queue = SmartQueue(input_tasks())
 
@@ -510,7 +538,99 @@ class Executor(AsyncContextManager):
 
         storage_manager = await self._stack.enter_async_context(gftp.provider())
 
+        def unpack_work_item(item: WorkItem) -> Tuple[Work, ExecOptions]:
+            """Extract `Work` object and options from a work item.
+            If the item does not specify options, default ones are provided.
+            """
+            if isinstance(item, tuple):
+                return item
+            else:
+                return item, ExecOptions()
+
+        async def process_batches(
+            agreement_id: str,
+            activity: rest.activity.Activity,
+            command_generator: AsyncGenerator[Work, Awaitable[List[events.CommandEvent]]],
+            consumer: Consumer[Task[D, R]],
+        ) -> None:
+            """Send command batches produced by `command_generator` to `activity`."""
+
+            item = await command_generator.__anext__()
+
+            while True:
+
+                batch, exec_options = unpack_work_item(item)
+                if batch.timeout:
+                    if exec_options.batch_timeout:
+                        logger.warning(
+                            "Overriding batch timeout set with commit(batch_timeout)"
+                            "by the value set in exec options"
+                        )
+                    else:
+                        exec_options.batch_timeout = batch.timeout
+
+                batch_deadline = (
+                    datetime.now(timezone.utc) + exec_options.batch_timeout
+                    if exec_options.batch_timeout
+                    else None
+                )
+
+                current_worker_task = consumer.current_item
+                if current_worker_task:
+                    emit(
+                        events.TaskStarted(
+                            agr_id=agreement_id,
+                            task_id=current_worker_task.id,
+                            task_data=current_worker_task.data,
+                        )
+                    )
+                task_id = current_worker_task.id if current_worker_task else None
+
+                await batch.prepare()
+                cc = CommandContainer()
+                batch.register(cc)
+                remote = await activity.send(cc.commands(), stream_output, deadline=batch_deadline)
+                cmds = cc.commands()
+                emit(events.ScriptSent(agr_id=agreement_id, task_id=task_id, cmds=cmds))
+
+                async def get_batch_results() -> List[events.CommandEvent]:
+                    results = []
+                    async for evt_ctx in remote:
+                        evt = evt_ctx.event(agr_id=agreement_id, task_id=task_id, cmds=cmds)
+                        emit(evt)
+                        results.append(evt)
+                        if isinstance(evt, events.CommandExecuted) and not evt.success:
+                            raise CommandExecutionError(evt.command, evt.message)
+
+                    emit(events.GettingResults(agr_id=agreement_id, task_id=task_id))
+                    await batch.post()
+                    emit(events.ScriptFinished(agr_id=agreement_id, task_id=task_id))
+                    await accept_payment_for_agreement(agreement_id, partial=True)
+                    return results
+
+                loop = asyncio.get_event_loop()
+
+                if exec_options.wait_for_results:
+                    # Block until the results are available
+                    try:
+                        future_results = loop.create_future()
+                        results = await get_batch_results()
+                        future_results.set_result(results)
+                        item = await command_generator.asend(future_results)
+                    except StopAsyncIteration:
+                        raise
+                    except Exception:
+                        # Raise the exception in `command_generator` (the `worker` coroutine).
+                        # If the client code is able to handle it then we'll proceed with
+                        # subsequent batches. Otherwise the worker finishes with error.
+                        item = await command_generator.athrow(*sys.exc_info())
+                else:
+                    # Schedule the coroutine in a separate asyncio task
+                    future_results = loop.create_task(get_batch_results())
+                    item = await command_generator.asend(future_results)
+
         async def start_worker(agreement: rest.market.Agreement, node_info: NodeInfo) -> None:
+
             nonlocal last_wid
             wid = last_wid
             last_wid += 1
@@ -527,75 +647,44 @@ class Executor(AsyncContextManager):
                 )
                 emit(events.WorkerFinished(agr_id=agreement.id))
                 raise
+
             async with act:
+
                 emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
                 agreements_accepting_debit_notes.add(agreement.id)
                 work_context = WorkContext(
                     f"worker-{wid}", node_info, storage_manager, emitter=emit
                 )
+
                 with work_queue.new_consumer() as consumer:
-
-                    command_generator = worker(
-                        work_context,
-                        (Task.for_handle(handle, work_queue, emit) async for handle in consumer),
-                    )
-                    async for batch in command_generator:
-                        batch_deadline = (
-                            datetime.now(timezone.utc) + batch.timeout if batch.timeout else None
+                    try:
+                        tasks = (
+                            Task.for_handle(handle, work_queue, emit) async for handle in consumer
                         )
+                        batch_generator = worker(work_context, tasks)
                         try:
-                            current_worker_task = consumer.current_item
-                            if current_worker_task:
-                                emit(
-                                    events.TaskStarted(
-                                        agr_id=agreement.id,
-                                        task_id=current_worker_task.id,
-                                        task_data=current_worker_task.data,
-                                    )
-                                )
-                            task_id = current_worker_task.id if current_worker_task else None
-                            await batch.prepare()
-                            cc = CommandContainer()
-                            batch.register(cc)
-                            remote = await act.send(
-                                cc.commands(), stream_output, deadline=batch_deadline
+                            await process_batches(agreement.id, act, batch_generator, consumer)
+                        except StopAsyncIteration:
+                            pass
+                        emit(events.WorkerFinished(agr_id=agreement.id))
+                    except Exception:
+                        emit(
+                            events.WorkerFinished(
+                                agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
                             )
-                            cmds = cc.commands()
-                            emit(events.ScriptSent(agr_id=agreement.id, task_id=task_id, cmds=cmds))
-
-                            async for evt_ctx in remote:
-                                evt = evt_ctx.event(agr_id=agreement.id, task_id=task_id, cmds=cmds)
-                                emit(evt)
-                                if isinstance(evt, events.CommandExecuted) and not evt.success:
-                                    raise CommandExecutionError(evt.command, evt.message)
-
-                            emit(events.GettingResults(agr_id=agreement.id, task_id=task_id))
-                            await batch.post()
-                            emit(events.ScriptFinished(agr_id=agreement.id, task_id=task_id))
-                            await accept_payment_for_agreement(agreement.id, partial=True)
-
-                        except Exception:
-
-                            try:
-                                await command_generator.athrow(*sys.exc_info())
-                            except Exception:
-                                if self._conf.traceback:
-                                    traceback.print_exc()
-                                emit(
-                                    events.WorkerFinished(
-                                        agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
-                                    )
-                                )
-                                raise
-
-            await accept_payment_for_agreement(agreement.id)
-            emit(events.WorkerFinished(agr_id=agreement.id))
+                        )
+                        raise
+                    finally:
+                        await accept_payment_for_agreement(agreement.id)
 
         async def worker_starter() -> None:
             while True:
                 await asyncio.sleep(2)
                 await agreements_pool.cycle()
-                if len(workers) < self._conf.max_workers and work_queue.has_unassigned_items():
+                if (
+                    len(workers) < self._conf.max_workers
+                    and await work_queue.has_unassigned_items()
+                ):
                     new_task = None
                     try:
                         new_task = await agreements_pool.use_agreement(
