@@ -50,11 +50,6 @@ class Work(abc.ABC):
         """Return the optional timeout set for execution of this work."""
         return None
 
-    @property
-    def contains_init_step(self) -> bool:
-        """Return `True` iff this work item contains the initialization step."""
-        return False
-
 
 class _InitStep(Work):
     def register(self, commands: CommandContainer):
@@ -246,11 +241,6 @@ class Steps(Work):
         """Return the optional timeout set for execution of all steps."""
         return self._timeout
 
-    @property
-    def contains_init_step(self) -> bool:
-        """Return `True` iff the steps include an initialization step."""
-        return any(isinstance(step, _InitStep) for step in self._steps)
-
     async def prepare(self):
         """Execute the `prepare` hook for all the defined steps."""
         for step in self._steps:
@@ -269,6 +259,8 @@ class Steps(Work):
 
 @dataclass
 class ExecOptions:
+    """Options related to command batch execution."""
+
     wait_for_results: bool = True
     batch_timeout: Optional[timedelta] = None
 
