@@ -163,7 +163,15 @@ class Golem(AsyncContextManager):
 
         self._stream_output = stream_output
 
+        # initialize the payment structures
+        self.agreements_to_pay: Set[str] = set()
+        self.agreements_accepting_debit_notes: Set[str] = set()
+        self.invoices: Dict[str, rest.payment.Invoice] = dict()
+        self._payment_closing: bool = False
+
         self._stack = AsyncExitStack()
+
+
 
     def create_demand_builder(self, expiration_time: datetime, payload: Payload) -> DemandBuilder:
         """Create a `DemandBuilder` for given `payload` and `expiration_time`."""
@@ -278,6 +286,86 @@ class Golem(AsyncContextManager):
             )
         except:
             raise ValueError(f"No allocation for {item.payment_platform} {item.payer_addr}.")
+
+    async def process_invoices(self) -> None:
+        async for invoice in self._payment_api.incoming_invoices():
+            if invoice.agreement_id in self.agreements_to_pay:
+                self.emit(
+                    events.InvoiceReceived(
+                        agr_id=invoice.agreement_id,
+                        inv_id=invoice.invoice_id,
+                        amount=invoice.amount,
+                    )
+                )
+                try:
+                    allocation = self._get_allocation(invoice)
+                    await invoice.accept(amount=invoice.amount, allocation=allocation)
+                except CancelledError:
+                    raise
+                except Exception:
+                    self.emit(
+                        events.PaymentFailed(
+                            agr_id=invoice.agreement_id, exc_info=sys.exc_info()  # type: ignore
+                        )
+                    )
+                else:
+                    self.agreements_to_pay.remove(invoice.agreement_id)
+                    assert invoice.agreement_id in self.agreements_accepting_debit_notes
+                    self.agreements_accepting_debit_notes.remove(invoice.agreement_id)
+                    self.emit(
+                        events.PaymentAccepted(
+                            agr_id=invoice.agreement_id,
+                            inv_id=invoice.invoice_id,
+                            amount=invoice.amount,
+                        )
+                    )
+            else:
+                self.invoices[invoice.agreement_id] = invoice
+            if self._payment_closing and not self.agreements_to_pay:
+                break
+
+    # TODO Consider processing invoices and debit notes together
+    async def process_debit_notes(self) -> None:
+        async for debit_note in self._payment_api.incoming_debit_notes():
+            if debit_note.agreement_id in self.agreements_accepting_debit_notes:
+                self.emit(
+                    events.DebitNoteReceived(
+                        agr_id=debit_note.agreement_id,
+                        amount=debit_note.total_amount_due,
+                        note_id=debit_note.debit_note_id,
+                    )
+                )
+                try:
+                    allocation = self._get_allocation(debit_note)
+                    await debit_note.accept(
+                        amount=debit_note.total_amount_due, allocation=allocation
+                    )
+                except CancelledError:
+                    raise
+                except Exception:
+                    self.emit(
+                        events.PaymentFailed(
+                            agr_id=debit_note.agreement_id, exc_info=sys.exc_info()  # type: ignore
+                        )
+                    )
+            if self._payment_closing and not self.agreements_to_pay:
+                break
+
+    async def accept_payment_for_agreement(self, agreement_id: str, *, partial: bool = False) -> None:
+        self.emit(events.PaymentPrepared(agr_id=agreement_id))
+        inv = self.invoices.get(agreement_id)
+        if inv is None:
+            self.agreements_to_pay.add(agreement_id)
+            self.emit(events.PaymentQueued(agr_id=agreement_id))
+            return
+        del self.invoices[agreement_id]
+        allocation = self._get_allocation(inv)
+        await inv.accept(amount=inv.amount, allocation=allocation)
+        self.emit(
+            events.PaymentAccepted(
+                agr_id=agreement_id, inv_id=inv.invoice_id, amount=inv.amount
+            )
+        )
 
     @dataclass
     class PaymentDecoration(DemandDecorator):
@@ -613,7 +701,6 @@ class Executor(AsyncContextManager):
         emit = self._engine.emit
         emit(events.ComputationStarted(self._expires))
 
-
         job = Job(
             self._engine,
             expiration_time=self._expires,
@@ -641,90 +728,8 @@ class Executor(AsyncContextManager):
 
         last_wid = 0
 
-        agreements_to_pay: Set[str] = set()
-        agreements_accepting_debit_notes: Set[str] = set()
-        invoices: Dict[str, rest.payment.Invoice] = dict()
         payment_closing: bool = False
 
-        async def process_invoices() -> None:
-            async for invoice in self._payment_api.incoming_invoices():
-                if invoice.agreement_id in agreements_to_pay:
-                    emit(
-                        events.InvoiceReceived(
-                            agr_id=invoice.agreement_id,
-                            inv_id=invoice.invoice_id,
-                            amount=invoice.amount,
-                        )
-                    )
-                    try:
-                        allocation = self._get_allocation(invoice)
-                        await invoice.accept(amount=invoice.amount, allocation=allocation)
-                    except CancelledError:
-                        raise
-                    except Exception:
-                        emit(
-                            events.PaymentFailed(
-                                agr_id=invoice.agreement_id, exc_info=sys.exc_info()  # type: ignore
-                            )
-                        )
-                    else:
-                        agreements_to_pay.remove(invoice.agreement_id)
-                        assert invoice.agreement_id in agreements_accepting_debit_notes
-                        agreements_accepting_debit_notes.remove(invoice.agreement_id)
-                        emit(
-                            events.PaymentAccepted(
-                                agr_id=invoice.agreement_id,
-                                inv_id=invoice.invoice_id,
-                                amount=invoice.amount,
-                            )
-                        )
-                else:
-                    invoices[invoice.agreement_id] = invoice
-                if payment_closing and not agreements_to_pay:
-                    break
-
-        # TODO Consider processing invoices and debit notes together
-        async def process_debit_notes() -> None:
-            async for debit_note in self._payment_api.incoming_debit_notes():
-                if debit_note.agreement_id in agreements_accepting_debit_notes:
-                    emit(
-                        events.DebitNoteReceived(
-                            agr_id=debit_note.agreement_id,
-                            amount=debit_note.total_amount_due,
-                            note_id=debit_note.debit_note_id,
-                        )
-                    )
-                    try:
-                        allocation = self._get_allocation(debit_note)
-                        await debit_note.accept(
-                            amount=debit_note.total_amount_due, allocation=allocation
-                        )
-                    except CancelledError:
-                        raise
-                    except Exception:
-                        emit(
-                            events.PaymentFailed(
-                                agr_id=debit_note.agreement_id, exc_info=sys.exc_info()  # type: ignore
-                            )
-                        )
-                if payment_closing and not agreements_to_pay:
-                    break
-
-        async def accept_payment_for_agreement(agreement_id: str, *, partial: bool = False) -> None:
-            emit(events.PaymentPrepared(agr_id=agreement_id))
-            inv = invoices.get(agreement_id)
-            if inv is None:
-                agreements_to_pay.add(agreement_id)
-                emit(events.PaymentQueued(agr_id=agreement_id))
-                return
-            del invoices[agreement_id]
-            allocation = self._get_allocation(inv)
-            await inv.accept(amount=inv.amount, allocation=allocation)
-            emit(
-                events.PaymentAccepted(
-                    agr_id=agreement_id, inv_id=inv.invoice_id, amount=inv.amount
-                )
-            )
 
         storage_manager = await self._stack.enter_async_context(gftp.provider())
 
@@ -795,7 +800,7 @@ class Executor(AsyncContextManager):
                     emit(events.GettingResults(agr_id=agreement_id, task_id=task_id))
                     await batch.post()
                     emit(events.ScriptFinished(agr_id=agreement_id, task_id=task_id))
-                    await accept_payment_for_agreement(agreement_id, partial=True)
+                    await self._engine.accept_payment_for_agreement(agreement_id, partial=True)
                     return results
 
                 loop = asyncio.get_event_loop()
@@ -894,10 +899,10 @@ class Executor(AsyncContextManager):
 
         loop = asyncio.get_event_loop()
         find_offers_task = loop.create_task(self._find_offers(job))
-        process_invoices_job = loop.create_task(process_invoices())
+        process_invoices_job = loop.create_task(self._engine.process_invoices())
         wait_until_done = loop.create_task(work_queue.wait_until_done())
         worker_starter_task = loop.create_task(worker_starter())
-        debit_notes_job = loop.create_task(process_debit_notes())
+        debit_notes_job = loop.create_task(self._engine.process_debit_notes())
         # Py38: find_offers_task.set_name('find_offers_task')
 
         get_offers_deadline = datetime.now(timezone.utc) + self._conf.get_offers_timeout
@@ -965,7 +970,7 @@ class Executor(AsyncContextManager):
             # Importing this at the beginning would cause circular dependencies
             from ..log import pluralize
 
-            payment_closing = True
+            self._engine._payment_closing = True
             for task in services:
                 if task is not process_invoices_job:
                     task.cancel()
