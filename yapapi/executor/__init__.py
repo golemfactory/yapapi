@@ -322,16 +322,15 @@ class Job:
     def __init__(
             self,
             engine: Golem,
-            agreements_pool: AgreementsPool,
             expiration_time: datetime,
             payload: Payload,
     ):
         self.engine = engine
-        self.agreements_pool = agreements_pool
-
         self.offers_collected: int = 0
         self.proposals_confirmed: int = 0
         self.builder = engine.create_demand_builder(expiration_time, payload)
+
+        self.agreements_pool = AgreementsPool(self.engine.emit)
 
     async def _handle_proposal(
             self,
@@ -614,11 +613,9 @@ class Executor(AsyncContextManager):
         emit = self._engine.emit
         emit(events.ComputationStarted(self._expires))
 
-        agreements_pool = AgreementsPool(self._engine.emit)
 
-        state = Job(
+        job = Job(
             self._engine,
-            agreements_pool,
             expiration_time=self._expires,
             payload=self._payload
         )
@@ -873,14 +870,14 @@ class Executor(AsyncContextManager):
         async def worker_starter() -> None:
             while True:
                 await asyncio.sleep(2)
-                await agreements_pool.cycle()
+                await job.agreements_pool.cycle()
                 if (
                     len(workers) < self._conf.max_workers
                     and await work_queue.has_unassigned_items()
                 ):
                     new_task = None
                     try:
-                        new_task = await agreements_pool.use_agreement(
+                        new_task = await job.agreements_pool.use_agreement(
                             lambda agreement, node: loop.create_task(start_worker(agreement, node))
                         )
                         if new_task is None:
@@ -896,7 +893,7 @@ class Executor(AsyncContextManager):
                         logger.debug("There was a problem during use_agreement", exc_info=True)
 
         loop = asyncio.get_event_loop()
-        find_offers_task = loop.create_task(self._find_offers(state))
+        find_offers_task = loop.create_task(self._find_offers(job))
         process_invoices_job = loop.create_task(process_invoices())
         wait_until_done = loop.create_task(work_queue.wait_until_done())
         worker_starter_task = loop.create_task(worker_starter())
@@ -922,10 +919,10 @@ class Executor(AsyncContextManager):
                 now = datetime.now(timezone.utc)
                 if now > self._expires:
                     raise TimeoutError(f"Computation timed out after {self._conf.timeout}")
-                if now > get_offers_deadline and state.proposals_confirmed == 0:
+                if now > get_offers_deadline and job.proposals_confirmed == 0:
                     emit(
                         events.NoProposalsConfirmed(
-                            num_offers=state.offers_collected, timeout=self._conf.get_offers_timeout
+                            num_offers=job.offers_collected, timeout=self._conf.get_offers_timeout
                         )
                     )
                     get_offers_deadline += self._conf.get_offers_timeout
@@ -972,7 +969,7 @@ class Executor(AsyncContextManager):
             for task in services:
                 if task is not process_invoices_job:
                     task.cancel()
-            if agreements_pool.confirmed == 0:
+            if job.agreements_pool.confirmed == 0:
                 # No need to wait for invoices
                 process_invoices_job.cancel()
             if cancelled:
@@ -995,7 +992,7 @@ class Executor(AsyncContextManager):
 
             try:
                 logger.debug("Terminating agreements...")
-                await agreements_pool.terminate_all(reason=reason)
+                await job.agreements_pool.terminate_all(reason=reason)
             except Exception:
                 logger.debug("Problem with agreements termination", exc_info=True)
                 if self._conf.traceback:
