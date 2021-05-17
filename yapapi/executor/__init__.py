@@ -6,15 +6,18 @@ from asyncio import CancelledError
 import contextlib
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+import itertools
 import logging
 import sys
 from typing import (
+    Any,
     AsyncContextManager,
     AsyncIterator,
     Awaitable,
     Callable,
     Dict,
     Iterable,
+    Iterator,
     List,
     Optional,
     Set,
@@ -94,6 +97,20 @@ class NoPaymentAccountError(Exception):
 
 WorkItem = Union[Work, Tuple[Work, ExecOptions]]
 """The type of items yielded by a generator created by the `worker` function supplied by user."""
+
+
+def unpack_work_item(item: WorkItem) -> Tuple[Work, ExecOptions]:
+    """Extract `Work` object and options from a work item.
+    If the item does not specify options, default ones are provided.
+    """
+    if isinstance(item, tuple):
+        return item
+    else:
+        return item, ExecOptions()
+
+
+batch_ids: Iterator[int] = itertools.count(1)
+
 
 D = TypeVar("D")  # Type var for task data
 R = TypeVar("R")  # Type var for task result
@@ -435,7 +452,10 @@ class Golem(AsyncContextManager):
 
     async def execute_task(
             self,
-            worker: Callable[[WorkContext, AsyncIterator[Task[D, R]]], AsyncGenerator[Work, None]],
+            worker: Callable[
+                [WorkContext, AsyncIterator[Task[D, R]]],
+                AsyncGenerator[Work, Awaitable[List[events.CommandEvent]]],
+            ],
             data: Iterable[Task[D, R]],
             payload: Payload,
             max_workers: Optional[int] = None,
@@ -443,7 +463,7 @@ class Golem(AsyncContextManager):
             budget: Optional[Union[float, Decimal]] = None,
     ) -> AsyncIterator[Task[D, R]]:
 
-        kwargs = {
+        kwargs: Dict[str, Any] = {
             'payload': payload
         }
         if max_workers:
@@ -456,11 +476,86 @@ class Golem(AsyncContextManager):
             async for t in executor.submit(worker, data):
                 yield t
 
-    async def create_activity(self, agreement_id: str) -> Activity:
+    async def create_activity(self, agreement_id: str):
         return await self._activity_api.new_activity(
             agreement_id,
             stream_events=self._stream_output
         )
+
+    async def process_batches(
+        self,
+        agreement_id: str,
+        activity: rest.activity.Activity,
+        command_generator: AsyncGenerator[Work, Awaitable[List[events.CommandEvent]]],
+    ) -> None:
+        """Send command batches produced by `command_generator` to `activity`."""
+
+        item = await command_generator.__anext__()
+
+        while True:
+
+            batch, exec_options = unpack_work_item(item)
+            # TODO: `task_id` should really be `batch_id`, but then we should also rename
+            # `task_id` field of several events (e.g. `ScriptSent`)
+            task_id = str(next(batch_ids))
+
+            if batch.timeout:
+                if exec_options.batch_timeout:
+                    logger.warning(
+                        "Overriding batch timeout set with commit(batch_timeout)"
+                        "by the value set in exec options"
+                    )
+                else:
+                    exec_options.batch_timeout = batch.timeout
+
+            batch_deadline = (
+                datetime.now(timezone.utc) + exec_options.batch_timeout
+                if exec_options.batch_timeout
+                else None
+            )
+
+            await batch.prepare()
+            cc = CommandContainer()
+            batch.register(cc)
+            remote = await activity.send(cc.commands(), deadline=batch_deadline)
+            cmds = cc.commands()
+            self.emit(events.ScriptSent(agr_id=agreement_id, task_id=task_id, cmds=cmds))
+
+            async def get_batch_results() -> List[events.CommandEvent]:
+                results = []
+                async for evt_ctx in remote:
+                    evt = evt_ctx.event(agr_id=agreement_id, task_id=task_id, cmds=cmds)
+                    self.emit(evt)
+                    results.append(evt)
+                    if isinstance(evt, events.CommandExecuted) and not evt.success:
+                        raise CommandExecutionError(evt.command, evt.message)
+
+                self.emit(events.GettingResults(agr_id=agreement_id, task_id=task_id))
+                await batch.post()
+                self.emit(events.ScriptFinished(agr_id=agreement_id, task_id=task_id))
+                await self.accept_payment_for_agreement(agreement_id, partial=True)
+                return results
+
+            loop = asyncio.get_event_loop()
+
+            if exec_options.wait_for_results:
+                # Block until the results are available
+                try:
+                    future_results = loop.create_future()
+                    results = await get_batch_results()
+                    future_results.set_result(results)
+                    item = await command_generator.asend(future_results)
+                except StopAsyncIteration:
+                    raise
+                except Exception:
+                    # Raise the exception in `command_generator` (the `worker` coroutine).
+                    # If the client code is able to handle it then we'll proceed with
+                    # subsequent batches. Otherwise the worker finishes with error.
+                    item = await command_generator.athrow(*sys.exc_info())
+            else:
+                # Schedule the coroutine in a separate asyncio task
+                future_results = loop.create_task(get_batch_results())
+                item = await command_generator.asend(future_results)
 
 
 class Job:
@@ -713,6 +808,9 @@ class Executor(AsyncContextManager):
 
         self._stack = AsyncExitStack()
 
+    def emit(self, event: events.Event) -> None:
+        self._engine.emit(event)
+
     async def submit(
         self,
         worker: Callable[
@@ -774,8 +872,7 @@ class Executor(AsyncContextManager):
         job: Job,
     ) -> AsyncGenerator[Task[D, R], None]:
 
-        emit = self._engine.emit
-        emit(events.ComputationStarted(self._expires))
+        self.emit(events.ComputationStarted(self._expires))
 
         done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
 
@@ -800,137 +897,55 @@ class Executor(AsyncContextManager):
 
         storage_manager = await self._stack.enter_async_context(gftp.provider())
 
-        def unpack_work_item(item: WorkItem) -> Tuple[Work, ExecOptions]:
-            """Extract `Work` object and options from a work item.
-            If the item does not specify options, default ones are provided.
-            """
-            if isinstance(item, tuple):
-                return item
-            else:
-                return item, ExecOptions()
-
-        async def process_batches(
-            agreement_id: str,
-            activity: rest.activity.Activity,
-            command_generator: AsyncGenerator[Work, Awaitable[List[events.CommandEvent]]],
-            consumer: Consumer[Task[D, R]],
-        ) -> None:
-            """Send command batches produced by `command_generator` to `activity`."""
-
-            item = await command_generator.__anext__()
-
-            while True:
-
-                batch, exec_options = unpack_work_item(item)
-                if batch.timeout:
-                    if exec_options.batch_timeout:
-                        logger.warning(
-                            "Overriding batch timeout set with commit(batch_timeout)"
-                            "by the value set in exec options"
-                        )
-                    else:
-                        exec_options.batch_timeout = batch.timeout
-
-                batch_deadline = (
-                    datetime.now(timezone.utc) + exec_options.batch_timeout
-                    if exec_options.batch_timeout
-                    else None
-                )
-
-                current_worker_task = consumer.current_item
-                if current_worker_task:
-                    emit(
-                        events.TaskStarted(
-                            agr_id=agreement_id,
-                            task_id=current_worker_task.id,
-                            task_data=current_worker_task.data,
-                        )
-                    )
-                task_id = current_worker_task.id if current_worker_task else None
-
-                await batch.prepare()
-                cc = CommandContainer()
-                batch.register(cc)
-                remote = await activity.send(cc.commands(), deadline=batch_deadline)
-                cmds = cc.commands()
-                emit(events.ScriptSent(agr_id=agreement_id, task_id=task_id, cmds=cmds))
-
-                async def get_batch_results() -> List[events.CommandEvent]:
-                    results = []
-                    async for evt_ctx in remote:
-                        evt = evt_ctx.event(agr_id=agreement_id, task_id=task_id, cmds=cmds)
-                        emit(evt)
-                        results.append(evt)
-                        if isinstance(evt, events.CommandExecuted) and not evt.success:
-                            raise CommandExecutionError(evt.command, evt.message)
-
-                    emit(events.GettingResults(agr_id=agreement_id, task_id=task_id))
-                    await batch.post()
-                    emit(events.ScriptFinished(agr_id=agreement_id, task_id=task_id))
-                    await self._engine.accept_payment_for_agreement(agreement_id, partial=True)
-                    return results
-
-                loop = asyncio.get_event_loop()
-
-                if exec_options.wait_for_results:
-                    # Block until the results are available
-                    try:
-                        future_results = loop.create_future()
-                        results = await get_batch_results()
-                        future_results.set_result(results)
-                        item = await command_generator.asend(future_results)
-                    except StopAsyncIteration:
-                        raise
-                    except Exception:
-                        # Raise the exception in `command_generator` (the `worker` coroutine).
-                        # If the client code is able to handle it then we'll proceed with
-                        # subsequent batches. Otherwise the worker finishes with error.
-                        item = await command_generator.athrow(*sys.exc_info())
-                else:
-                    # Schedule the coroutine in a separate asyncio task
-                    future_results = loop.create_task(get_batch_results())
-                    item = await command_generator.asend(future_results)
-
         async def start_worker(agreement: rest.market.Agreement, node_info: NodeInfo) -> None:
 
             nonlocal last_wid
             wid = last_wid
             last_wid += 1
 
-            emit(events.WorkerStarted(agr_id=agreement.id))
+            self.emit(events.WorkerStarted(agr_id=agreement.id))
 
             try:
                 act = await self._engine.create_activity(agreement.id)
             except Exception:
-                emit(
+                self.emit(
                     events.ActivityCreateFailed(
                         agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
                     )
                 )
-                emit(events.WorkerFinished(agr_id=agreement.id))
+                self.emit(events.WorkerFinished(agr_id=agreement.id))
                 raise
 
             async with act:
 
-                emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
+                self.emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
                 self._engine.approve_agreement_payments(agreement.id)
                 work_context = WorkContext(
-                    f"worker-{wid}", node_info, storage_manager, emitter=emit
+                    f"worker-{wid}", node_info, storage_manager, emitter=self.emit
                 )
 
                 with work_queue.new_consumer() as consumer:
                     try:
-                        tasks = (
-                            Task.for_handle(handle, work_queue, emit) async for handle in consumer
-                        )
-                        batch_generator = worker(work_context, tasks)
+                        async def task_generator() -> AsyncIterator[Task[D, R]]:
+                            async for handle in consumer:
+                                task = Task.for_handle(handle, work_queue, self.emit)
+                                self._engine.emit(
+                                    events.TaskStarted(
+                                        agr_id=agreement.id,
+                                        task_id=handle.data.id,
+                                        task_data=handle.data.data
+                                    )
+                                )
+                                yield task
+
+                        batch_generator = worker(work_context, task_generator())
                         try:
-                            await process_batches(agreement.id, act, batch_generator, consumer)
+                            await self._engine.process_batches(agreement.id, act, batch_generator)
                         except StopAsyncIteration:
                             pass
-                        emit(events.WorkerFinished(agr_id=agreement.id))
+                        self.emit(events.WorkerFinished(agr_id=agreement.id))
                     except Exception:
-                        emit(
+                        self.emit(
                             events.WorkerFinished(
                                 agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
                             )
@@ -988,7 +1003,7 @@ class Executor(AsyncContextManager):
                 if now > self._expires:
                     raise TimeoutError(f"Computation timed out after {self._timeout}")
                 if now > get_offers_deadline and job.proposals_confirmed == 0:
-                    emit(
+                    self.emit(
                         events.NoProposalsConfirmed(
                             num_offers=job.offers_collected, timeout=DEFAULT_GET_OFFERS_TIMEOUT
                         )
@@ -1022,10 +1037,10 @@ class Executor(AsyncContextManager):
                     assert get_done_task not in services
                     get_done_task = None
 
-            emit(events.ComputationFinished())
+            self.emit(events.ComputationFinished())
 
         except (Exception, CancelledError, KeyboardInterrupt):
-            emit(events.ComputationFinished(exc_info=sys.exc_info()))  # type: ignore
+            self.emit(events.ComputationFinished(exc_info=sys.exc_info()))  # type: ignore
             cancelled = True
 
         finally:
