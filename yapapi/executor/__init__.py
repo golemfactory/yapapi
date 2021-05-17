@@ -7,7 +7,6 @@ import contextlib
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import logging
-import os
 import sys
 from typing import (
     AsyncContextManager,
@@ -24,11 +23,10 @@ from typing import (
     Union,
     cast,
 )
-import traceback
 import warnings
 
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from yapapi.executor.agreements_pool import AgreementsPool
 from typing_extensions import Final, AsyncGenerator
 
@@ -164,23 +162,25 @@ class Golem(AsyncContextManager):
         self._stream_output = stream_output
 
         # initialize the payment structures
-        self.agreements_to_pay: Set[str] = set()
-        self.agreements_accepting_debit_notes: Set[str] = set()
-        self.invoices: Dict[str, rest.payment.Invoice] = dict()
+        self._agreements_to_pay: Set[str] = set()
+        self._agreements_accepting_debit_notes: Set[str] = set()
+        self._invoices: Dict[str, rest.payment.Invoice] = dict()
         self._payment_closing: bool = False
 
         self._stack = AsyncExitStack()
 
-
-
-    def create_demand_builder(self, expiration_time: datetime, payload: Payload) -> DemandBuilder:
+    async def create_demand_builder(
+        self, expiration_time: datetime, payload: Payload
+    ) -> DemandBuilder:
         """Create a `DemandBuilder` for given `payload` and `expiration_time`."""
         builder = DemandBuilder()
         builder.add(Activity(expiration=expiration_time, multi_activity=True))
         builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
-        await builder.decorate(self.payment_decoration, self.strategy, payload)
+        await builder.decorate(self.payment_decoration)
+        await builder.decorate(self.strategy)
+        await builder.decorate(payload)
         return builder
 
     def _init_api(self, app_key: Optional[str] = None):
@@ -205,7 +205,7 @@ class Golem(AsyncContextManager):
     def emit(self, *args, **kwargs) -> None:
         self._wrapped_consumer.async_call(*args, **kwargs)
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "Golem":
         stack = self._stack
 
         market_client = await stack.enter_async_context(self._api_config.market())
@@ -222,6 +222,8 @@ class Golem(AsyncContextManager):
         self._active_jobs: Set[asyncio.Event] = set()
 
         self.payment_decoration = Golem.PaymentDecoration(await self._create_allocations())
+
+        return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         logger.debug("Golem is shutting down...")
@@ -289,7 +291,7 @@ class Golem(AsyncContextManager):
 
     async def process_invoices(self) -> None:
         async for invoice in self._payment_api.incoming_invoices():
-            if invoice.agreement_id in self.agreements_to_pay:
+            if invoice.agreement_id in self._agreements_to_pay:
                 self.emit(
                     events.InvoiceReceived(
                         agr_id=invoice.agreement_id,
@@ -309,9 +311,9 @@ class Golem(AsyncContextManager):
                         )
                     )
                 else:
-                    self.agreements_to_pay.remove(invoice.agreement_id)
-                    assert invoice.agreement_id in self.agreements_accepting_debit_notes
-                    self.agreements_accepting_debit_notes.remove(invoice.agreement_id)
+                    self._agreements_to_pay.remove(invoice.agreement_id)
+                    assert invoice.agreement_id in self._agreements_accepting_debit_notes
+                    self._agreements_accepting_debit_notes.remove(invoice.agreement_id)
                     self.emit(
                         events.PaymentAccepted(
                             agr_id=invoice.agreement_id,
@@ -320,14 +322,14 @@ class Golem(AsyncContextManager):
                         )
                     )
             else:
-                self.invoices[invoice.agreement_id] = invoice
-            if self._payment_closing and not self.agreements_to_pay:
+                self._invoices[invoice.agreement_id] = invoice
+            if self._payment_closing and not self._agreements_to_pay:
                 break
 
     # TODO Consider processing invoices and debit notes together
     async def process_debit_notes(self) -> None:
         async for debit_note in self._payment_api.incoming_debit_notes():
-            if debit_note.agreement_id in self.agreements_accepting_debit_notes:
+            if debit_note.agreement_id in self._agreements_accepting_debit_notes:
                 self.emit(
                     events.DebitNoteReceived(
                         agr_id=debit_note.agreement_id,
@@ -348,17 +350,17 @@ class Golem(AsyncContextManager):
                             agr_id=debit_note.agreement_id, exc_info=sys.exc_info()  # type: ignore
                         )
                     )
-            if self._payment_closing and not self.agreements_to_pay:
+            if self._payment_closing and not self._agreements_to_pay:
                 break
 
     async def accept_payment_for_agreement(self, agreement_id: str, *, partial: bool = False) -> None:
         self.emit(events.PaymentPrepared(agr_id=agreement_id))
-        inv = self.invoices.get(agreement_id)
+        inv = self._invoices.get(agreement_id)
         if inv is None:
-            self.agreements_to_pay.add(agreement_id)
+            self._agreements_to_pay.add(agreement_id)
             self.emit(events.PaymentQueued(agr_id=agreement_id))
             return
-        del self.invoices[agreement_id]
+        del self._invoices[agreement_id]
         allocation = self._get_allocation(inv)
         await inv.accept(amount=inv.amount, allocation=allocation)
         self.emit(
@@ -366,6 +368,9 @@ class Golem(AsyncContextManager):
                 agr_id=agreement_id, inv_id=inv.invoice_id, amount=inv.amount
             )
         )
+
+    def approve_agreement_payments(self, agreement_id):
+        self._agreements_accepting_debit_notes.add(agreement_id)
 
     @dataclass
     class PaymentDecoration(DemandDecorator):
@@ -383,6 +388,7 @@ class Golem(AsyncContextManager):
             payload: Payload,
             max_workers: Optional[int] = None,
             timeout: Optional[timedelta] = None,
+            budget: Optional[Union[float, Decimal]] = None,
     ) -> AsyncIterator[Task[D, R]]:
 
         kwargs = {
@@ -392,6 +398,7 @@ class Golem(AsyncContextManager):
             kwargs['max_workers'] = max_workers
         if timeout:
             kwargs['timeout'] = timeout
+        kwargs['budget'] = budget if budget is not None else self._budget_amount
 
         async with Executor(_engine=self, **kwargs) as executor:
             async for t in executor.submit(worker, data):
@@ -416,13 +423,15 @@ class Job:
         self.engine = engine
         self.offers_collected: int = 0
         self.proposals_confirmed: int = 0
-        self.builder = engine.create_demand_builder(expiration_time, payload)
+        self.expiration_time: datetime = expiration_time
+        self.payload: Payload = payload
 
         self.agreements_pool = AgreementsPool(self.engine.emit)
 
     async def _handle_proposal(
             self,
             proposal: OfferProposal,
+            demand_builder: DemandBuilder,
     ) -> events.Event:
         """Handle a single `OfferProposal`.
 
@@ -454,7 +463,7 @@ class Job:
             # Check if any of the supported payment platforms matches the proposal
             common_platforms = self._get_common_payment_platforms(proposal)
             if common_platforms:
-                self.builder.properties["golem.com.payment.chosen-platform"] = next(
+                demand_builder.properties["golem.com.payment.chosen-platform"] = next(
                     iter(common_platforms)
                 )
             else:
@@ -467,9 +476,9 @@ class Job:
                 if timeout < DEBIT_NOTE_MIN_TIMEOUT:
                     return await reject_proposal("Debit note acceptance timeout is too short")
                 else:
-                    self.builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
+                    demand_builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
 
-            await proposal.respond(self.builder.properties, self.builder.constraints)
+            await proposal.respond(demand_builder.properties, demand_builder.constraints)
             return events.ProposalResponded(prop_id=proposal.id)
 
         else:
@@ -478,7 +487,7 @@ class Job:
             return events.ProposalConfirmed(prop_id=proposal.id)
 
     async def _find_offers_for_subscription(
-            self, subscription: Subscription
+            self, subscription: Subscription, demand_builder: DemandBuilder,
     ) -> None:
         """Create a market subscription and repeatedly collect offer proposals for it.
 
@@ -506,7 +515,7 @@ class Job:
             async def handler(proposal_):
                 """A coroutine that wraps `_handle_proposal()` method with error handling."""
                 try:
-                    event = await self._handle_proposal(proposal_)
+                    event = await self._handle_proposal(proposal_, demand_builder)
                     assert isinstance(event, events.ProposalEvent)
                     self.engine.emit(event)
                     if isinstance(event, events.ProposalConfirmed):
@@ -527,20 +536,24 @@ class Job:
             await semaphore.acquire()
             asyncio.get_event_loop().create_task(handler(proposal))
 
-    async def _find_offers(self) -> None:
+    async def find_offers(self) -> None:
         """Create demand subscription and process offers.
         When the subscription expires, create a new one. And so on...
         """
 
+        builder = await self.engine.create_demand_builder(
+            self.expiration_time, self.payload
+        )
+
         while True:
             try:
-                subscription = await self.builder.subscribe(self.engine._market_api)
+                subscription = await builder.subscribe(self.engine._market_api)
                 self.engine.emit(events.SubscriptionCreated(sub_id=subscription.id))
             except Exception as ex:
                 self.engine.emit(events.SubscriptionFailed(reason=str(ex)))
                 raise
             async with subscription:
-                await self._find_offers_for_subscription(subscription)
+                await self._find_offers_for_subscription(subscription, builder)
 
     # TODO: move to Golem
     def _get_common_payment_platforms(self, proposal: rest.market.OfferProposal) -> Set[str]:
@@ -557,6 +570,9 @@ class Job:
             if allocation.payment_platform is not None
         }
         return req_platforms.intersection(prov_platforms)
+
+
+DEFAULT_GET_OFFERS_TIMEOUT = timedelta(seconds=20)
 
 
 class Executor(AsyncContextManager):
@@ -609,7 +625,9 @@ class Executor(AsyncContextManager):
         logger.debug("Creating Executor instance; parameters: %s", locals())
         self.__standalone = False
 
-        if not _engine:
+        if _engine:
+            self._engine = _engine
+        else:
             warnings.warn(
                 "stand-alone usage is deprecated, please `Golem.execute_task` class instead ",
                 DeprecationWarning
@@ -635,6 +653,7 @@ class Executor(AsyncContextManager):
             raise ValueError("Executor `payload` must be specified")
 
         self._payload = payload
+        self._timeout: timedelta = timeout
         # self._conf = _ExecutorConfig(max_workers, timeout)
         self._max_workers = max_workers
         # TODO: setup precision
@@ -727,9 +746,6 @@ class Executor(AsyncContextManager):
         work_queue = SmartQueue(input_tasks())
 
         last_wid = 0
-
-        payment_closing: bool = False
-
 
         storage_manager = await self._stack.enter_async_context(gftp.provider())
 
@@ -846,7 +862,7 @@ class Executor(AsyncContextManager):
             async with act:
 
                 emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
-                agreements_accepting_debit_notes.add(agreement.id)
+                self._engine.approve_agreement_payments(agreement.id)
                 work_context = WorkContext(
                     f"worker-{wid}", node_info, storage_manager, emitter=emit
                 )
@@ -870,14 +886,14 @@ class Executor(AsyncContextManager):
                         )
                         raise
                     finally:
-                        await accept_payment_for_agreement(agreement.id)
+                        await self._engine.accept_payment_for_agreement(agreement.id)
 
         async def worker_starter() -> None:
             while True:
                 await asyncio.sleep(2)
                 await job.agreements_pool.cycle()
                 if (
-                    len(workers) < self._conf.max_workers
+                    len(workers) < self._max_workers
                     and await work_queue.has_unassigned_items()
                 ):
                     new_task = None
@@ -891,21 +907,26 @@ class Executor(AsyncContextManager):
                     except CancelledError:
                         raise
                     except Exception:
-                        if self._conf.traceback:
-                            traceback.print_exc()
                         if new_task:
                             new_task.cancel()
                         logger.debug("There was a problem during use_agreement", exc_info=True)
 
+        async def _dummy_job():
+            while True:
+                await asyncio.sleep(1.0)
+
         loop = asyncio.get_event_loop()
-        find_offers_task = loop.create_task(self._find_offers(job))
-        process_invoices_job = loop.create_task(self._engine.process_invoices())
+        find_offers_task = loop.create_task(job.find_offers())
+
         wait_until_done = loop.create_task(work_queue.wait_until_done())
         worker_starter_task = loop.create_task(worker_starter())
+
+        process_invoices_job = loop.create_task(self._engine.process_invoices())
         debit_notes_job = loop.create_task(self._engine.process_debit_notes())
+
         # Py38: find_offers_task.set_name('find_offers_task')
 
-        get_offers_deadline = datetime.now(timezone.utc) + self._conf.get_offers_timeout
+        get_offers_deadline = datetime.now(timezone.utc) + DEFAULT_GET_OFFERS_TIMEOUT
         get_done_task: Optional[asyncio.Task] = None
         services.update(
             {
@@ -923,14 +944,14 @@ class Executor(AsyncContextManager):
 
                 now = datetime.now(timezone.utc)
                 if now > self._expires:
-                    raise TimeoutError(f"Computation timed out after {self._conf.timeout}")
+                    raise TimeoutError(f"Computation timed out after {self._timeout}")
                 if now > get_offers_deadline and job.proposals_confirmed == 0:
                     emit(
                         events.NoProposalsConfirmed(
-                            num_offers=job.offers_collected, timeout=self._conf.get_offers_timeout
+                            num_offers=job.offers_collected, timeout=DEFAULT_GET_OFFERS_TIMEOUT
                         )
                     )
-                    get_offers_deadline += self._conf.get_offers_timeout
+                    get_offers_deadline += DEFAULT_GET_OFFERS_TIMEOUT
 
                 if not get_done_task:
                     get_done_task = loop.create_task(done_queue.get())
@@ -948,8 +969,7 @@ class Executor(AsyncContextManager):
                         try:
                             await task
                         except Exception:
-                            if self._conf.traceback:
-                                traceback.print_exc()
+                            pass
 
                 workers -= done
                 services -= done
@@ -1000,8 +1020,6 @@ class Executor(AsyncContextManager):
                 await job.agreements_pool.terminate_all(reason=reason)
             except Exception:
                 logger.debug("Problem with agreements termination", exc_info=True)
-                if self._conf.traceback:
-                    traceback.print_exc()
 
             try:
                 logger.info("Waiting for all services to finish...")
@@ -1013,25 +1031,24 @@ class Executor(AsyncContextManager):
                         "%s still running: %s", pluralize(len(pending), "service"), pending
                     )
             except Exception:
-                if self._conf.traceback:
-                    traceback.print_exc()
+                # TODO: add message
+                logger.debug("TODO", exc_info=True)
 
-            if agreements_to_pay:
+            if self._engine._agreements_to_pay:
                 logger.info(
                     "%s still unpaid, waiting for invoices...",
-                    pluralize(len(agreements_to_pay), "agreement"),
+                    pluralize(len(self._engine._agreements_to_pay), "agreement"),
                 )
                 await asyncio.wait(
                     {process_invoices_job}, timeout=30, return_when=asyncio.ALL_COMPLETED
                 )
-                if agreements_to_pay:
-                    logger.warning("Unpaid agreements: %s", agreements_to_pay)
+                if self._engine._agreements_to_pay:
+                    logger.warning("Unpaid agreements: %s", self._engine._agreements_to_pay)
 
     async def __aenter__(self) -> "Executor":
-        stack = self._stack
 
         # TODO: Cleanup on exception here.
-        self._expires = datetime.now(timezone.utc) + self._conf.timeout
+        self._expires = datetime.now(timezone.utc) + self._timeout
 
         return self
 
