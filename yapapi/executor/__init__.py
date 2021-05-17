@@ -165,13 +165,14 @@ class Golem(AsyncContextManager):
 
         self._stack = AsyncExitStack()
 
-    def create_demand_builder(self) -> DemandBuilder:
-        """Create a `DemandBuilder`."""
+    def create_demand_builder(self, expiration_date: datetime, payload: Payload) -> DemandBuilder:
+        """Create a `DemandBuilder` for given `payload` and `expiration_date`."""
         builder = DemandBuilder()
+        builder.add(Activity(expiration=expiration_date, multi_activity=True))
         builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
-        await builder.decorate(self.payment_decoration, self.strategy)
+        await builder.decorate(self.payment_decoration, self.strategy, payload)
         return builder
 
     def _init_api(self, app_key: Optional[str] = None):
@@ -287,166 +288,6 @@ class Golem(AsyncContextManager):
                 demand.ensure(constraint)
             demand.properties.update({p.key: p.value for p in self.market_decoration.properties})
 
-    class Job:
-        """Functionality related to a single job."""
-
-        def __init__(
-                self,
-                engine: "Golem",
-                agreements_pool: AgreementsPool,
-                expiration: datetime,
-                payload: Payload,
-
-        ):
-            self.engine = engine
-            self.agreements_pool = agreements_pool
-
-            self.offers_collected: int = 0
-            self.proposals_confirmed: int = 0
-
-            self.builder = engine.create_demand_builder()
-            self.builder.add(Activity(expiration=expiration, multi_activity=True))
-            self.builder.decorate(payload)
-
-        async def _handle_proposal(
-            self,
-            proposal: OfferProposal,
-        ) -> events.Event:
-            """Handle a single `OfferProposal`.
-
-            A `proposal` is scored and then can be rejected, responded with
-            a counter-proposal or stored in an agreements pool to be used
-            for negotiating an agreement.
-            """
-
-            async def reject_proposal(reason: str) -> events.ProposalRejected:
-                """Reject `proposal` due to given `reason`."""
-                await proposal.reject(reason)
-                return events.ProposalRejected(prop_id=proposal.id, reason=reason)
-
-            score = await self.engine._strategy.score_offer(proposal, self.agreements_pool)
-            logger.debug(
-                "Scored offer %s, provider: %s, strategy: %s, score: %f",
-                proposal.id,
-                proposal.props.get("golem.node.id.name"),
-                type(self.engine._strategy).__name__,
-                score,
-            )
-
-            if score < SCORE_NEUTRAL:
-                return await reject_proposal("Score too low")
-
-            if not proposal.is_draft:
-                # Proposal is not yet a draft of an agreement
-
-                # Check if any of the supported payment platforms matches the proposal
-                common_platforms = self._get_common_payment_platforms(proposal)
-                if common_platforms:
-                    self.builder.properties["golem.com.payment.chosen-platform"] = next(
-                        iter(common_platforms)
-                    )
-                else:
-                    # reject proposal if there are no common payment platforms
-                    return await reject_proposal("No common payment platform")
-
-                # Check if the timeout for debit note acceptance is not too low
-                timeout = proposal.props.get(DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP)
-                if timeout:
-                    if timeout < DEBIT_NOTE_MIN_TIMEOUT:
-                        return await reject_proposal("Debit note acceptance timeout is too short")
-                    else:
-                        self.builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
-
-                await proposal.respond(self.builder.properties, self.builder.constraints)
-                return events.ProposalResponded(prop_id=proposal.id)
-
-            else:
-                # It's a draft agreement
-                await self.agreements_pool.add_proposal(score, proposal)
-                return events.ProposalConfirmed(prop_id=proposal.id)
-
-        async def _find_offers_for_subscription(
-            self, subscription: Subscription
-        ) -> None:
-            """Create a market subscription and repeatedly collect offer proposals for it.
-
-            Collected proposals are processed concurrently using a bounded number
-            of asyncio tasks.
-
-            :param state: A state related to a call to `Executor.submit()`
-            """
-            max_number_of_tasks = 5
-
-            try:
-                proposals = subscription.events()
-            except Exception as ex:
-                self.engine.emit(events.CollectFailed(sub_id=subscription.id, reason=str(ex)))
-                raise
-
-            # A semaphore is used to limit the number of handler tasks
-            semaphore = asyncio.Semaphore(max_number_of_tasks)
-
-            async for proposal in proposals:
-
-                self.engine.emit(events.ProposalReceived(prop_id=proposal.id, provider_id=proposal.issuer))
-                self.offers_collected += 1
-
-                async def handler(proposal_):
-                    """A coroutine that wraps `_handle_proposal()` method with error handling."""
-                    try:
-                        event = await self._handle_proposal(proposal_)
-                        assert isinstance(event, events.ProposalEvent)
-                        self.engine.emit(event)
-                        if isinstance(event, events.ProposalConfirmed):
-                            self.proposals_confirmed += 1
-                    except CancelledError:
-                        raise
-                    except Exception:
-                        with contextlib.suppress(Exception):
-                            self.engine.emit(
-                                events.ProposalFailed(
-                                    prop_id=proposal_.id, exc_info=sys.exc_info()  # type: ignore
-                                )
-                            )
-                    finally:
-                        semaphore.release()
-
-                # Create a new handler task
-                await semaphore.acquire()
-                asyncio.get_event_loop().create_task(handler(proposal))
-
-        async def _find_offers(self) -> None:
-            """Create demand subscription and process offers.
-            When the subscription expires, create a new one. And so on...
-            """
-
-            while True:
-                try:
-                    subscription = await self.builder.subscribe(self.engine._market_api)
-                    self.engine.emit(events.SubscriptionCreated(sub_id=subscription.id))
-                except Exception as ex:
-                    self.engine.emit(events.SubscriptionFailed(reason=str(ex)))
-                    raise
-                async with subscription:
-                    await self._find_offers_for_subscription(subscription)
-
-        def _get_common_payment_platforms(self, proposal: rest.market.OfferProposal) -> Set[str]:
-            prov_platforms = {
-                property.split(".")[4]
-                for property in proposal.props
-                if property.startswith("golem.com.payment.platform.") and property is not None
-            }
-            if not prov_platforms:
-                prov_platforms = {"NGNT"}
-            req_platforms = {
-                allocation.payment_platform
-                for allocation in self.engine._budget_allocations
-                if allocation.payment_platform is not None
-            }
-            return req_platforms.intersection(prov_platforms)
-
-
-
     async def execute_task(
             self,
             worker: Callable[[WorkContext, AsyncIterator[Task[D, R]]], AsyncGenerator[Work, None]],
@@ -467,6 +308,161 @@ class Golem(AsyncContextManager):
         async with Executor(_engine=self, **kwargs) as executor:
             async for t in executor.submit(worker, data):
                 yield t
+
+
+class Job:
+    """Functionality related to a single job."""
+
+    def __init__(
+            self,
+            engine: Golem,
+            agreements_pool: AgreementsPool,
+            expiration_date: datetime,
+            payload: Payload,
+    ):
+        self.engine = engine
+        self.agreements_pool = agreements_pool
+
+        self.offers_collected: int = 0
+        self.proposals_confirmed: int = 0
+        self.builder = engine.create_demand_builder(expiration_date, payload)
+
+    async def _handle_proposal(
+            self,
+            proposal: OfferProposal,
+    ) -> events.Event:
+        """Handle a single `OfferProposal`.
+
+        A `proposal` is scored and then can be rejected, responded with
+        a counter-proposal or stored in an agreements pool to be used
+        for negotiating an agreement.
+        """
+
+        async def reject_proposal(reason: str) -> events.ProposalRejected:
+            """Reject `proposal` due to given `reason`."""
+            await proposal.reject(reason)
+            return events.ProposalRejected(prop_id=proposal.id, reason=reason)
+
+        score = await self.engine._strategy.score_offer(proposal, self.agreements_pool)
+        logger.debug(
+            "Scored offer %s, provider: %s, strategy: %s, score: %f",
+            proposal.id,
+            proposal.props.get("golem.node.id.name"),
+            type(self.engine._strategy).__name__,
+            score,
+        )
+
+        if score < SCORE_NEUTRAL:
+            return await reject_proposal("Score too low")
+
+        if not proposal.is_draft:
+            # Proposal is not yet a draft of an agreement
+
+            # Check if any of the supported payment platforms matches the proposal
+            common_platforms = self._get_common_payment_platforms(proposal)
+            if common_platforms:
+                self.builder.properties["golem.com.payment.chosen-platform"] = next(
+                    iter(common_platforms)
+                )
+            else:
+                # reject proposal if there are no common payment platforms
+                return await reject_proposal("No common payment platform")
+
+            # Check if the timeout for debit note acceptance is not too low
+            timeout = proposal.props.get(DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP)
+            if timeout:
+                if timeout < DEBIT_NOTE_MIN_TIMEOUT:
+                    return await reject_proposal("Debit note acceptance timeout is too short")
+                else:
+                    self.builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
+
+            await proposal.respond(self.builder.properties, self.builder.constraints)
+            return events.ProposalResponded(prop_id=proposal.id)
+
+        else:
+            # It's a draft agreement
+            await self.agreements_pool.add_proposal(score, proposal)
+            return events.ProposalConfirmed(prop_id=proposal.id)
+
+    async def _find_offers_for_subscription(
+            self, subscription: Subscription
+    ) -> None:
+        """Create a market subscription and repeatedly collect offer proposals for it.
+
+        Collected proposals are processed concurrently using a bounded number
+        of asyncio tasks.
+
+        :param state: A state related to a call to `Executor.submit()`
+        """
+        max_number_of_tasks = 5
+
+        try:
+            proposals = subscription.events()
+        except Exception as ex:
+            self.engine.emit(events.CollectFailed(sub_id=subscription.id, reason=str(ex)))
+            raise
+
+        # A semaphore is used to limit the number of handler tasks
+        semaphore = asyncio.Semaphore(max_number_of_tasks)
+
+        async for proposal in proposals:
+
+            self.engine.emit(events.ProposalReceived(prop_id=proposal.id, provider_id=proposal.issuer))
+            self.offers_collected += 1
+
+            async def handler(proposal_):
+                """A coroutine that wraps `_handle_proposal()` method with error handling."""
+                try:
+                    event = await self._handle_proposal(proposal_)
+                    assert isinstance(event, events.ProposalEvent)
+                    self.engine.emit(event)
+                    if isinstance(event, events.ProposalConfirmed):
+                        self.proposals_confirmed += 1
+                except CancelledError:
+                    raise
+                except Exception:
+                    with contextlib.suppress(Exception):
+                        self.engine.emit(
+                            events.ProposalFailed(
+                                prop_id=proposal_.id, exc_info=sys.exc_info()  # type: ignore
+                            )
+                        )
+                finally:
+                    semaphore.release()
+
+            # Create a new handler task
+            await semaphore.acquire()
+            asyncio.get_event_loop().create_task(handler(proposal))
+
+    async def _find_offers(self) -> None:
+        """Create demand subscription and process offers.
+        When the subscription expires, create a new one. And so on...
+        """
+
+        while True:
+            try:
+                subscription = await self.builder.subscribe(self.engine._market_api)
+                self.engine.emit(events.SubscriptionCreated(sub_id=subscription.id))
+            except Exception as ex:
+                self.engine.emit(events.SubscriptionFailed(reason=str(ex)))
+                raise
+            async with subscription:
+                await self._find_offers_for_subscription(subscription)
+
+    def _get_common_payment_platforms(self, proposal: rest.market.OfferProposal) -> Set[str]:
+        prov_platforms = {
+            property.split(".")[4]
+            for property in proposal.props
+            if property.startswith("golem.com.payment.platform.") and property is not None
+        }
+        if not prov_platforms:
+            prov_platforms = {"NGNT"}
+        req_platforms = {
+            allocation.payment_platform
+            for allocation in self.engine._budget_allocations
+            if allocation.payment_platform is not None
+        }
+        return req_platforms.intersection(prov_platforms)
 
 
 class Executor(AsyncContextManager):
