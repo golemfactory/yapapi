@@ -165,10 +165,10 @@ class Golem(AsyncContextManager):
 
         self._stack = AsyncExitStack()
 
-    def create_demand_builder(self, expiration_date: datetime, payload: Payload) -> DemandBuilder:
-        """Create a `DemandBuilder` for given `payload` and `expiration_date`."""
+    def create_demand_builder(self, expiration_time: datetime, payload: Payload) -> DemandBuilder:
+        """Create a `DemandBuilder` for given `payload` and `expiration_time`."""
         builder = DemandBuilder()
-        builder.add(Activity(expiration=expiration_date, multi_activity=True))
+        builder.add(Activity(expiration=expiration_time, multi_activity=True))
         builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
@@ -309,6 +309,12 @@ class Golem(AsyncContextManager):
             async for t in executor.submit(worker, data):
                 yield t
 
+    async def create_activity(self, agreement_id: str) -> Activity:
+        return await self._activity_api.new_activity(
+            agreement_id,
+            stream_events=self._stream_output
+        )
+
 
 class Job:
     """Functionality related to a single job."""
@@ -317,7 +323,7 @@ class Job:
             self,
             engine: Golem,
             agreements_pool: AgreementsPool,
-            expiration_date: datetime,
+            expiration_time: datetime,
             payload: Payload,
     ):
         self.engine = engine
@@ -325,7 +331,7 @@ class Job:
 
         self.offers_collected: int = 0
         self.proposals_confirmed: int = 0
-        self.builder = engine.create_demand_builder(expiration_date, payload)
+        self.builder = engine.create_demand_builder(expiration_time, payload)
 
     async def _handle_proposal(
             self,
@@ -449,6 +455,7 @@ class Job:
             async with subscription:
                 await self._find_offers_for_subscription(subscription)
 
+    # TODO: move to Golem
     def _get_common_payment_platforms(self, proposal: rest.market.OfferProposal) -> Set[str]:
         prov_platforms = {
             property.split(".")[4]
@@ -571,15 +578,16 @@ class Executor(AsyncContextManager):
 
         try:
             generator = self._submit(worker, data, services, workers)
-            async for result in generator:
-                yield result
-        except GeneratorExit:
-            logger.debug("Early exit from submit(), cancelling the computation")
             try:
-                # Cancel `generator`. It should then exit by raising `StopAsyncIteration`.
-                await generator.athrow(CancelledError)
-            except StopAsyncIteration:
-                pass
+                async for result in generator:
+                    yield result
+            except GeneratorExit:
+                logger.debug("Early exit from submit(), cancelling the computation")
+                try:
+                    # Cancel `generator`. It should then exit by raising `StopAsyncIteration`.
+                    await generator.athrow(CancelledError)
+                except StopAsyncIteration:
+                    pass
         finally:
             # Cancel and gather all tasks to make sure all exceptions are retrieved.
             all_tasks = workers.union(services)
@@ -603,21 +611,19 @@ class Executor(AsyncContextManager):
         workers: Set[asyncio.Task],
     ) -> AsyncGenerator[Task[D, R], None]:
 
-        self._engine.emit(events.ComputationStarted(self._expires))
+        emit = self._engine.emit
+        emit(events.ComputationStarted(self._expires))
 
         agreements_pool = AgreementsPool(self._engine.emit)
 
-        state = Golem.Job(
+        state = Job(
             self._engine,
             agreements_pool,
-            expiration=self._expires,
+            expiration_time=self._expires,
             payload=self._payload
         )
 
-        activity_api: rest.Activity = self._activity_api
-
         done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
-        stream_output = self._stream_output
 
         def on_task_done(task: Task[D, R], status: TaskStatus) -> None:
             """Callback run when `task` is accepted or rejected."""
@@ -776,7 +782,7 @@ class Executor(AsyncContextManager):
                 await batch.prepare()
                 cc = CommandContainer()
                 batch.register(cc)
-                remote = await activity.send(cc.commands(), stream_output, deadline=batch_deadline)
+                remote = await activity.send(cc.commands(), deadline=batch_deadline)
                 cmds = cc.commands()
                 emit(events.ScriptSent(agr_id=agreement_id, task_id=task_id, cmds=cmds))
 
@@ -825,7 +831,7 @@ class Executor(AsyncContextManager):
             emit(events.WorkerStarted(agr_id=agreement.id))
 
             try:
-                act = await activity_api.new_activity(agreement.id)
+                act = await self._engine.create_activity(agreement.id)
             except Exception:
                 emit(
                     events.ActivityCreateFailed(
