@@ -165,6 +165,15 @@ class Golem(AsyncContextManager):
 
         self._stack = AsyncExitStack()
 
+    def create_demand_builder(self) -> DemandBuilder:
+        """Create a `DemandBuilder`."""
+        builder = DemandBuilder()
+        builder.add(NodeInfo(subnet_tag=self._subnet))
+        if self._subnet:
+            builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
+        await builder.decorate(self.payment_decoration, self.strategy)
+        return builder
+
     def _init_api(self, app_key: Optional[str] = None):
         """
         initialize the REST (low-level) API
@@ -284,15 +293,20 @@ class Golem(AsyncContextManager):
         def __init__(
                 self,
                 engine: "Golem",
-                builder: DemandBuilder,
                 agreements_pool: AgreementsPool,
+                expiration: datetime,
+                payload: Payload,
+
         ):
             self.engine = engine
-            self.builder = builder
             self.agreements_pool = agreements_pool
 
             self.offers_collected: int = 0
             self.proposals_confirmed: int = 0
+
+            self.builder = engine.create_demand_builder()
+            self.builder.add(Activity(expiration=expiration, multi_activity=True))
+            self.builder.decorate(payload)
 
         async def _handle_proposal(
             self,
@@ -455,15 +469,6 @@ class Golem(AsyncContextManager):
                 yield t
 
 
-
-@dataclass
-class _ExecutorConfig:
-    max_workers: int = 5
-    timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT
-    get_offers_timeout: timedelta = timedelta(seconds=20)
-    traceback: bool = bool(os.getenv("YAPAPI_TRACEBACK", 0))
-
-
 class Executor(AsyncContextManager):
     """
     Task executor.
@@ -540,7 +545,8 @@ class Executor(AsyncContextManager):
             raise ValueError("Executor `payload` must be specified")
 
         self._payload = payload
-        self._conf = _ExecutorConfig(max_workers, timeout)
+        # self._conf = _ExecutorConfig(max_workers, timeout)
+        self._max_workers = max_workers
         # TODO: setup precision
 
         self._stack = AsyncExitStack()
@@ -603,21 +609,14 @@ class Executor(AsyncContextManager):
 
         self._engine.emit(events.ComputationStarted(self._expires))
 
-        # Building offer
-        builder = DemandBuilder()
-        builder.add(Activity(expiration=self._expires, multi_activity=True))
-        builder.add(NodeInfo(subnet_tag=self._engine._subnet))
-        if self._engine._subnet:
-            builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._engine._subnet})")
-        await builder.decorate(
-            self._engine.payment_decoration,
-            self._engine.strategy,
-            self._payload,
-        )
-
         agreements_pool = AgreementsPool(self._engine.emit)
 
-        state = Golem.Job(builder, agreements_pool)
+        state = Golem.Job(
+            self._engine,
+            agreements_pool,
+            expiration=self._expires,
+            payload=self._payload
+        )
 
         activity_api: rest.Activity = self._activity_api
 
