@@ -444,7 +444,7 @@ class Golem(AsyncContextManager):
     ) -> AsyncIterator[Task[D, R]]:
 
         kwargs = {
-            'package': payload
+            'payload': payload
         }
         if max_workers:
             kwargs['max_workers'] = max_workers
