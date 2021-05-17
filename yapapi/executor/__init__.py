@@ -167,6 +167,8 @@ class Golem(AsyncContextManager):
         self._invoices: Dict[str, rest.payment.Invoice] = dict()
         self._payment_closing: bool = False
 
+        self._services: Set[asyncio.Task] = set()
+
         self._stack = AsyncExitStack()
 
     async def create_demand_builder(
@@ -217,18 +219,61 @@ class Golem(AsyncContextManager):
         payment_client = await stack.enter_async_context(self._api_config.payment())
         self._payment_api = rest.Payment(payment_client)
 
-        # a set of `asyncio.Event` instances used to track jobs - computations or services - started
-        # those events can be used to wait until all jobs are finished
-        self._active_jobs: Set[asyncio.Event] = set()
+        # a set of `Job` instances used to track jobs - computations or services - started
+        # it can be used to wait until all jobs are finished
+        self._jobs: Set[Job] = set()
 
         self.payment_decoration = Golem.PaymentDecoration(await self._create_allocations())
+
+        loop = asyncio.get_event_loop()
+        self._process_invoices_job = loop.create_task(self.process_invoices())
+        self._services.add(self._process_invoices_job)
+        self._services.add(loop.create_task(self.process_debit_notes()))
 
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        # Importing this at the beginning would cause circular dependencies
+        from ..log import pluralize
+
         logger.debug("Golem is shutting down...")
         # Wait until all computations are finished
-        await asyncio.gather(*[event.wait() for event in self._active_jobs])
+        await asyncio.gather(*[job.finished.wait() for job in self._jobs])
+
+        self._payment_closing = True
+
+        for task in self._services:
+            if task is not self._process_invoices_job:
+                task.cancel()
+
+        if not any(True for job in self._jobs if job.agreements_pool.confirmed > 0):
+            logger.debug("No need to wait for invoices.")
+            self._process_invoices_job.cancel()
+
+        try:
+            logger.info("Waiting for Golem services to finish...")
+            _, pending = await asyncio.wait(
+                self._services, timeout=10, return_when=asyncio.ALL_COMPLETED
+            )
+            if pending:
+                logger.debug(
+                    "%s still running: %s", pluralize(len(pending), "service"), pending
+                )
+        except Exception:
+            # TODO: add message
+            logger.debug("TODO", exc_info=True)
+
+        if self._agreements_to_pay:
+            logger.info(
+                "%s still unpaid, waiting for invoices...",
+                pluralize(len(self._agreements_to_pay), "agreement"),
+            )
+            await asyncio.wait(
+                {self._process_invoices_job}, timeout=30, return_when=asyncio.ALL_COMPLETED
+            )
+            if self._agreements_to_pay:
+                logger.warning("Unpaid agreements: %s", self._agreements_to_pay)
+
         # TODO: prevent new computations at this point (if it's even possible to start one)
         try:
             await self._stack.aclose()
@@ -372,6 +417,13 @@ class Golem(AsyncContextManager):
     def approve_agreement_payments(self, agreement_id):
         self._agreements_accepting_debit_notes.add(agreement_id)
 
+    def add_job(self, job: "Job"):
+        self._jobs.add(job)
+
+    @staticmethod
+    def finalize_job(job: "Job"):
+        job.finished.set()
+
     @dataclass
     class PaymentDecoration(DemandDecorator):
         market_decoration: rest.payment.MarketDecoration
@@ -427,6 +479,7 @@ class Job:
         self.payload: Payload = payload
 
         self.agreements_pool = AgreementsPool(self.engine.emit)
+        self.finished = asyncio.Event()
 
     async def _handle_proposal(
             self,
@@ -676,14 +729,18 @@ class Executor(AsyncContextManager):
         :return: yields computation progress events
         """
 
-        computation_finished = asyncio.Event()
-        self._engine._active_jobs.add(computation_finished)
+        job = Job(
+            self._engine,
+            expiration_time=self._expires,
+            payload=self._payload
+        )
+        self._engine.add_job(job)
 
         services: Set[asyncio.Task] = set()
         workers: Set[asyncio.Task] = set()
 
         try:
-            generator = self._submit(worker, data, services, workers)
+            generator = self._submit(worker, data, services, workers, job)
             try:
                 async for result in generator:
                     yield result
@@ -703,8 +760,7 @@ class Executor(AsyncContextManager):
                     task.cancel()
             await asyncio.gather(*all_tasks, return_exceptions=True)
             # Signal that this computation is finished
-            computation_finished.set()
-            self._engine._active_jobs.remove(computation_finished)
+            self._engine.finalize_job(job)
 
     async def _submit(
         self,
@@ -715,16 +771,11 @@ class Executor(AsyncContextManager):
         data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
         services: Set[asyncio.Task],
         workers: Set[asyncio.Task],
+        job: Job,
     ) -> AsyncGenerator[Task[D, R], None]:
 
         emit = self._engine.emit
         emit(events.ComputationStarted(self._expires))
-
-        job = Job(
-            self._engine,
-            expiration_time=self._expires,
-            payload=self._payload
-        )
 
         done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
 
@@ -911,18 +962,11 @@ class Executor(AsyncContextManager):
                             new_task.cancel()
                         logger.debug("There was a problem during use_agreement", exc_info=True)
 
-        async def _dummy_job():
-            while True:
-                await asyncio.sleep(1.0)
-
         loop = asyncio.get_event_loop()
         find_offers_task = loop.create_task(job.find_offers())
 
         wait_until_done = loop.create_task(work_queue.wait_until_done())
         worker_starter_task = loop.create_task(worker_starter())
-
-        process_invoices_job = loop.create_task(self._engine.process_invoices())
-        debit_notes_job = loop.create_task(self._engine.process_debit_notes())
 
         # Py38: find_offers_task.set_name('find_offers_task')
 
@@ -931,10 +975,8 @@ class Executor(AsyncContextManager):
         services.update(
             {
                 find_offers_task,
-                process_invoices_job,
                 wait_until_done,
                 worker_starter_task,
-                debit_notes_job,
             }
         )
         cancelled = False
@@ -992,11 +1034,7 @@ class Executor(AsyncContextManager):
 
             self._engine._payment_closing = True
             for task in services:
-                if task is not process_invoices_job:
-                    task.cancel()
-            if job.agreements_pool.confirmed == 0:
-                # No need to wait for invoices
-                process_invoices_job.cancel()
+                task.cancel()
             if cancelled:
                 reason = {"message": "Work cancelled", "golem.requestor.code": "Cancelled"}
                 for worker_task in workers:
@@ -1022,7 +1060,7 @@ class Executor(AsyncContextManager):
                 logger.debug("Problem with agreements termination", exc_info=True)
 
             try:
-                logger.info("Waiting for all services to finish...")
+                logger.info("Waiting for Executor services to finish...")
                 _, pending = await asyncio.wait(
                     workers.union(services), timeout=10, return_when=asyncio.ALL_COMPLETED
                 )
@@ -1033,17 +1071,6 @@ class Executor(AsyncContextManager):
             except Exception:
                 # TODO: add message
                 logger.debug("TODO", exc_info=True)
-
-            if self._engine._agreements_to_pay:
-                logger.info(
-                    "%s still unpaid, waiting for invoices...",
-                    pluralize(len(self._engine._agreements_to_pay), "agreement"),
-                )
-                await asyncio.wait(
-                    {process_invoices_job}, timeout=30, return_when=asyncio.ALL_COMPLETED
-                )
-                if self._engine._agreements_to_pay:
-                    logger.warning("Unpaid agreements: %s", self._engine._agreements_to_pay)
 
     async def __aenter__(self) -> "Executor":
 
