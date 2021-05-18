@@ -21,7 +21,7 @@ class DemandBuilder:
 
     ```python
     >>> import yapapi
-    >>> from yapapi import properties as yp
+    >>> from yapapi import props as yp
     >>> from yapapi.props.builder import DemandBuilder
     >>> from datetime import datetime, timezone
     >>> builder = DemandBuilder()
