@@ -81,7 +81,6 @@ class InvalidPropertiesError(Exception):
         return msg
 
 
-@dataclass
 class Model(abc.ABC):
     """
     Base class from which all property models inherit.
