@@ -219,6 +219,10 @@ class Golem(AsyncContextManager):
         return self._network
 
     @property
+    def storage_manager(self):
+        return self._storage_manager
+
+    @property
     def strategy(self) -> MarketStrategy:
         return self._strategy
 
@@ -247,6 +251,8 @@ class Golem(AsyncContextManager):
         self._process_invoices_job = loop.create_task(self.process_invoices())
         self._services.add(self._process_invoices_job)
         self._services.add(loop.create_task(self.process_debit_notes()))
+
+        self._storage_manager = await self._stack.enter_async_context(gftp.provider())
 
         return self
 
@@ -529,7 +535,7 @@ class Golem(AsyncContextManager):
                     self.emit(evt)
                     results.append(evt)
                     if isinstance(evt, events.CommandExecuted) and not evt.success:
-                        raise CommandExecutionError(evt.command, evt.message)
+                        raise CommandExecutionError(evt.command, evt.stderr)
 
                 self.emit(events.GettingResults(agr_id=agreement_id, task_id=task_id))
                 await batch.post()
@@ -962,8 +968,6 @@ class Executor(AsyncContextManager):
 
         last_wid = 0
 
-        storage_manager = await self._stack.enter_async_context(gftp.provider())
-
         async def start_worker(agreement: rest.market.Agreement, node_info: NodeInfo) -> None:
 
             nonlocal last_wid
@@ -988,7 +992,7 @@ class Executor(AsyncContextManager):
                 self.emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
                 self._engine.approve_agreement_payments(agreement.id)
                 work_context = WorkContext(
-                    f"worker-{wid}", node_info, storage_manager, emitter=self.emit
+                    f"worker-{wid}", node_info, self._engine.storage_manager, emitter=self.emit
                 )
 
                 with work_queue.new_consumer() as consumer:
@@ -1114,7 +1118,6 @@ class Executor(AsyncContextManager):
             # Importing this at the beginning would cause circular dependencies
             from ..log import pluralize
 
-            self._engine._payment_closing = True
             for task in services:
                 task.cancel()
             if cancelled:

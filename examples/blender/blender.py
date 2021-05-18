@@ -12,6 +12,7 @@ from yapapi import (
     WorkContext,
     windows_event_loop_fix,
 )
+from yapapi.executor import Golem
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.payload import vm
 from yapapi.rest.activity import BatchTimeoutError
@@ -93,28 +94,32 @@ async def main(subnet_tag, driver=None, network=None):
     # By passing `event_consumer=log_summary()` we enable summary logging.
     # See the documentation of the `yapapi.log` module on how to set
     # the level of detail and format of the logged information.
-    async with Executor(
-        payload=package,
-        max_workers=3,
+    async with Golem(
         budget=10.0,
-        timeout=timeout,
         subnet_tag=subnet_tag,
         driver=driver,
         network=network,
         event_consumer=log_summary(log_event_repr),
-    ) as executor:
+    ) as golem:
 
         print(
             f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n"
             f"Using subnet: {TEXT_COLOR_YELLOW}{subnet_tag}{TEXT_COLOR_DEFAULT}, "
-            f"payment driver: {TEXT_COLOR_YELLOW}{executor.driver}{TEXT_COLOR_DEFAULT}, "
-            f"and network: {TEXT_COLOR_YELLOW}{executor.network}{TEXT_COLOR_DEFAULT}\n"
+            f"payment driver: {TEXT_COLOR_YELLOW}{driver}{TEXT_COLOR_DEFAULT}, "
+            f"and network: {TEXT_COLOR_YELLOW}{network}{TEXT_COLOR_DEFAULT}\n"
         )
 
         num_tasks = 0
         start_time = datetime.now()
 
-        async for task in executor.submit(worker, [Task(data=frame) for frame in frames]):
+        completed_tasks = golem.execute_task(
+            worker,
+            [Task(data=frame) for frame in frames],
+            payload=package,
+            max_workers=3,
+            timeout=timeout,
+        )
+        async for task in completed_tasks:
             num_tasks += 1
             print(
                 f"{TEXT_COLOR_CYAN}"
