@@ -1,7 +1,5 @@
 import asyncio
-import json
 import logging
-import re
 from types import TracebackType
 from typing import AsyncIterator, Optional, TypeVar, Type, Generator, Any, Generic
 
@@ -66,36 +64,25 @@ class Agreement(object):
 
         :return: True if the agreement has been confirmed, False otherwise
         """
-        await self._api.confirm_agreement(self._id)
         try:
+            await self._api.confirm_agreement(self._id)
             await self._api.wait_for_approval(self._id, timeout=15, _request_timeout=16)
             return True
-        except asyncio.TimeoutError:
-            logger.debug("waitForApproval(%s): client-side timeout", self._id, exc_info=True)
-            return False
-        except ApiException:
-            logger.debug("waitForApproval(%s) raised ApiException", self._id, exc_info=True)
+        except (ApiException, asyncio.TimeoutError):
+            logger.debug("waitForApproval(%s) failed", self._id, exc_info=True)
             return False
 
     async def terminate(self, reason: dict) -> bool:
+        """Terminate the agreement.
 
+        :return: True is the agreement has been successfully terminated, False otherwise.
+        """
         try:
-            await self._api.terminate_agreement(
-                self._id,
-                request_body=reason,
-            )
+            await self._api.terminate_agreement(self._id, request_body=reason)
             logger.debug("terminateAgreement(%s) returned successfully", self._id)
             return True
-        except ApiException as e:
-            if e.status == 410:
-                body = json.loads(str(e.body))
-                logger.debug(
-                    "terminateAgreement(%s) raised ApiException: status = 410, message = %s",
-                    self._id,
-                    body.get("message"),
-                )
-            else:
-                logger.debug("terminateAgreement(%s) raised ApiException", self._id, exc_info=True)
+        except (ApiException, asyncio.TimeoutError):
+            logger.debug("terminateAgreement(%s) failed", self._id, exc_info=True)
             return False
 
 

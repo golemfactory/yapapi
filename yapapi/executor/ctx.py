@@ -232,6 +232,11 @@ class _ReceiveJson(_ReceiveBytes):
 
 class Steps(Work):
     def __init__(self, *steps: Work, timeout: Optional[timedelta] = None):
+        """Create a `Work` item consisting of a sequence of steps (subitems).
+
+        :param steps: sequence of steps to be executed
+        :param timeout: timeout for waiting for the steps' results
+        """
         self._steps: Tuple[Work, ...] = steps
         self._timeout: Optional[timedelta] = timeout
 
@@ -254,6 +259,14 @@ class Steps(Work):
         """Execute the `post` step for all the defined steps."""
         for step in self._steps:
             await step.post()
+
+
+@dataclass
+class ExecOptions:
+    """Options related to command batch execution."""
+
+    wait_for_results: bool = True
+    batch_timeout: Optional[timedelta] = None
 
 
 class WorkContext:
