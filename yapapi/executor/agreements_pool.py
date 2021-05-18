@@ -8,7 +8,7 @@ from typing import Dict, NamedTuple, Optional, Set, Tuple
 
 from yapapi.executor import events
 from yapapi.props import Activity, NodeInfo
-from yapapi.rest.market import Agreement, OfferProposal
+from yapapi.rest.market import Agreement, ApiException, OfferProposal
 
 logger = logging.getLogger(__name__)
 
@@ -121,16 +121,21 @@ class AgreementsPool:
             exc_info = (type(e), e, sys.exc_info()[2])
             emit(events.ProposalFailed(prop_id=offer.proposal.id, exc_info=exc_info))
             raise
-        agreement_details = await agreement.details()
-        provider_activity = agreement_details.provider_view.extract(Activity)
-        requestor_activity = agreement_details.requestor_view.extract(Activity)
-        node_info = agreement_details.provider_view.extract(NodeInfo)
-        logger.debug("New agreement. id: %s, provider: %s", agreement.id, node_info)
-        emit(
-            events.AgreementCreated(
-                agr_id=agreement.id, provider_id=provider_id, provider_info=node_info
+        try:
+            agreement_details = await agreement.details()
+            provider_activity = agreement_details.provider_view.extract(Activity)
+            requestor_activity = agreement_details.requestor_view.extract(Activity)
+            node_info = agreement_details.provider_view.extract(NodeInfo)
+            logger.debug("New agreement. id: %s, provider: %s", agreement.id, node_info)
+            emit(
+                events.AgreementCreated(
+                    agr_id=agreement.id, provider_id=provider_id, provider_info=node_info
+                )
             )
-        )
+        except (ApiException, asyncio.TimeoutError):
+            logger.debug("Cannot get agreement details. id: %s", agreement.id, exc_info=True)
+            emit(events.AgreementRejected(agr_id=agreement.id))
+            return None
         if not await agreement.confirm():
             emit(events.AgreementRejected(agr_id=agreement.id))
             self._rejecting_providers.add(provider_id)
@@ -174,14 +179,21 @@ class AgreementsPool:
             return
 
         buffered_agreement = self._agreements[agreement_id]
-        agreement_details = await buffered_agreement.agreement.details()
-        provider = agreement_details.provider_view.extract(NodeInfo)
+
+        try:
+            agreement_details = await buffered_agreement.agreement.details()
+            provider = agreement_details.provider_view.extract(NodeInfo).name
+        except (ApiException, asyncio.TimeoutError):
+            logger.debug("Cannot get details for agreement %s", agreement_id, exc_info=True)
+            provider = "<couldn't get provider name>"
+
         logger.debug(
             "Terminating agreement. id: %s, reason: %s, provider: %s",
             agreement_id,
             reason,
             provider,
         )
+
         if buffered_agreement.worker_task is not None and not buffered_agreement.worker_task.done():
             logger.debug(
                 "Terminating agreement that still has worker. agreement_id: %s, worker: %s",
@@ -193,7 +205,7 @@ class AgreementsPool:
         if buffered_agreement.has_multi_activity:
             if not await buffered_agreement.agreement.terminate(reason):
                 logger.debug(
-                    "Couldn't terminate agreement. id=%s, provider=%s",
+                    "Couldn't terminate agreement. id: %s, provider: %s",
                     buffered_agreement.agreement.id,
                     provider,
                 )
