@@ -25,6 +25,7 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    overload,
 )
 import warnings
 
@@ -733,18 +734,18 @@ class Executor(AsyncContextManager):
     def __init__(
         self,
         *,
-            budget: Union[float, Decimal],
-            strategy: Optional[MarketStrategy] = None,
-            subnet_tag: Optional[str] = None,
-            driver: Optional[str] = None,
-            network: Optional[str] = None,
-            event_consumer: Optional[Callable[[Event], None]] = None,
-            stream_output: bool = False,
-            max_workers: int = 5,
-            timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
-            package: Optional[Payload] = None,
-            payload: Optional[Payload] = None,
-            _engine: Optional[Golem] = None
+        budget: Union[float, Decimal],
+        strategy: Optional[MarketStrategy] = None,
+        subnet_tag: Optional[str] = None,
+        driver: Optional[str] = None,
+        network: Optional[str] = None,
+        event_consumer: Optional[Callable[[Event], None]] = None,
+        stream_output: bool = False,
+        max_workers: int = 5,
+        timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
+        package: Optional[Payload] = None,
+        payload: Optional[Payload] = None,
+        _engine: Optional[Golem] = None,
     ):
         """Create a new executor.
 
@@ -781,14 +782,15 @@ class Executor(AsyncContextManager):
                 DeprecationWarning
             )
             self._engine = Golem(
-                budget = budget,
-                strategy = strategy,
-                subnet_tag = subnet_tag,
-                driver = driver,
-                network = network,
-                event_consumer = event_consumer,
+                budget=budget,
+                strategy=strategy,
+                subnet_tag=subnet_tag,
+                driver=driver,
+                network=network,
+                event_consumer=event_consumer,
                 stream_output=stream_output
             )
+            self.__standalone = True
 
         if package:
             if payload:
@@ -802,11 +804,27 @@ class Executor(AsyncContextManager):
 
         self._payload = payload
         self._timeout: timedelta = timeout
-        # self._conf = _ExecutorConfig(max_workers, timeout)
         self._max_workers = max_workers
-        # TODO: setup precision
-
         self._stack = AsyncExitStack()
+
+    @property
+    def driver(self) -> str:
+        return self._engine.driver
+
+    @property
+    def network(self) -> str:
+        return self._engine.network
+
+    async def __aenter__(self) -> "Executor":
+        self._expires = datetime.now(timezone.utc) + self._timeout
+        if self.__standalone:
+            await self._engine.__aenter__()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self._stack.aclose()
+        if self.__standalone:
+            await self._engine.__aexit__(exc_type, exc_val, exc_tb)
 
     def emit(self, event: events.Event) -> None:
         self._engine.emit(event)
@@ -1086,13 +1104,3 @@ class Executor(AsyncContextManager):
             except Exception:
                 # TODO: add message
                 logger.debug("TODO", exc_info=True)
-
-    async def __aenter__(self) -> "Executor":
-
-        # TODO: Cleanup on exception here.
-        self._expires = datetime.now(timezone.utc) + self._timeout
-
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self._stack.aclose()
