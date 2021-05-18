@@ -535,7 +535,7 @@ class Golem(AsyncContextManager):
                     self.emit(evt)
                     results.append(evt)
                     if isinstance(evt, events.CommandExecuted) and not evt.success:
-                        raise CommandExecutionError(evt.command, evt.message)
+                        raise CommandExecutionError(evt.command, evt.stderr)
 
                 self.emit(events.GettingResults(agr_id=agreement_id, task_id=task_id))
                 await batch.post()
@@ -918,7 +918,6 @@ class Executor(AsyncContextManager):
         work_queue = SmartQueue(input_tasks())
 
         last_wid = 0
-
 
         async def start_worker(agreement: rest.market.Agreement, node_info: NodeInfo) -> None:
 
