@@ -198,9 +198,9 @@ class Golem(AsyncContextManager):
         builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
-        await builder.decorate(self.payment_decoration)
-        await builder.decorate(self.strategy)
-        await builder.decorate(payload)
+        await builder.decorate(
+            self.payment_decoration, self.strategy, payload
+        )
         return builder
 
     def _init_api(self, app_key: Optional[str] = None):
@@ -451,13 +451,13 @@ class Golem(AsyncContextManager):
                 demand.ensure(constraint)
             demand.properties.update({p.key: p.value for p in self.market_decoration.properties})
 
-    async def execute_task(
+    async def execute_tasks(
             self,
             worker: Callable[
                 [WorkContext, AsyncIterator[Task[D, R]]],
                 AsyncGenerator[Work, Awaitable[List[events.CommandEvent]]],
             ],
-            data: Iterable[Task[D, R]],
+            data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
             payload: Payload,
             max_workers: Optional[int] = None,
             timeout: Optional[timedelta] = None,
@@ -731,6 +731,56 @@ class Executor(AsyncContextManager):
     Used to run batch tasks using the specified application package within providers' execution units.
     """
 
+    @overload
+    def __init__(
+        self,
+        *,
+        budget: Union[float, Decimal],
+        payload: Optional[Payload] = None,
+        max_workers: int = 5,
+        timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
+        _engine: Golem
+    ):
+        # A variant with explicit `_engine`
+        ...
+
+    @overload
+    def __init__(
+        self,
+        *,
+        budget: Union[float, Decimal],
+        strategy: Optional[MarketStrategy] = None,
+        subnet_tag: Optional[str] = None,
+        driver: Optional[str] = None,
+        network: Optional[str] = None,
+        event_consumer: Optional[Callable[[Event], None]] = None,
+        stream_output: bool = False,
+        payload: Optional[Payload] = None,
+        max_workers: int = 5,
+        timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
+    ):
+        # Standalone usage, with `payload` parameter
+        ...
+
+    @overload
+    def __init__(
+        self,
+        *,
+        budget: Union[float, Decimal],
+        strategy: Optional[MarketStrategy] = None,
+        subnet_tag: Optional[str] = None,
+        driver: Optional[str] = None,
+        network: Optional[str] = None,
+        event_consumer: Optional[Callable[[Event], None]] = None,
+        stream_output: bool = False,
+        max_workers: int = 5,
+        timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
+        package: Optional[Payload] = None,
+    ):
+        # Standalone usage, with `package` parameter
+        ...
+
+
     def __init__(
         self,
         *,
@@ -816,15 +866,14 @@ class Executor(AsyncContextManager):
         return self._engine.network
 
     async def __aenter__(self) -> "Executor":
-        self._expires = datetime.now(timezone.utc) + self._timeout
         if self.__standalone:
-            await self._engine.__aenter__()
+            await self._stack.enter_async_context(self._engine)
+
+        self._expires = datetime.now(timezone.utc) + self._timeout
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self._stack.aclose()
-        if self.__standalone:
-            await self._engine.__aexit__(exc_type, exc_val, exc_tb)
 
     def emit(self, event: events.Event) -> None:
         self._engine.emit(event)
@@ -950,8 +999,8 @@ class Executor(AsyncContextManager):
                                 self._engine.emit(
                                     events.TaskStarted(
                                         agr_id=agreement.id,
-                                        task_id=handle.data.id,
-                                        task_data=handle.data.data
+                                        task_id=task.id,
+                                        task_data=task.data
                                     )
                                 )
                                 yield task
