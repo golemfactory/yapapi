@@ -3,7 +3,7 @@ from itertools import product
 import pytest
 from unittest.mock import Mock
 
-from yapapi.executor import Executor
+from yapapi.executor import Golem
 from yapapi.executor.strategy import (
     DecreaseScoreForUnconfirmedAgreement,
     LeastExpensiveLinearPayuMS,
@@ -130,8 +130,8 @@ async def test_default_strategy_type(monkeypatch):
 
     monkeypatch.setattr(yapapi.rest, "Configuration", Mock)
 
-    executor = Executor(package=Mock(), budget=1.0)
-    default_strategy = executor.strategy
+    golem = Golem(budget=1.0)
+    default_strategy = golem.strategy
     assert isinstance(default_strategy, DecreaseScoreForUnconfirmedAgreement)
     assert isinstance(default_strategy.base_strategy, LeastExpensiveLinearPayuMS)
 
@@ -143,8 +143,8 @@ async def test_user_strategy_not_modified(monkeypatch):
     monkeypatch.setattr(yapapi.rest, "Configuration", Mock)
 
     user_strategy = Mock()
-    executor = Executor(package=Mock(), budget=1.0, strategy=user_strategy)
-    assert executor.strategy == user_strategy
+    golem = Golem(budget=1.0, strategy=user_strategy)
+    assert golem.strategy == user_strategy
 
 
 class TestLeastExpensiveLinearPayuMS:
