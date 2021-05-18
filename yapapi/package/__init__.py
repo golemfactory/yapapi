@@ -1,21 +1,12 @@
-import abc
+from deprecated import deprecated  # type: ignore
+from yapapi.payload.package import Package as _Package, PackageException as _PackageException
 
-from yapapi.props.builder import DemandBuilder
 
-
-class PackageException(Exception):
-    """Exception raised on any problems related to the package repository."""
-
+@deprecated(version="0.6.0", reason="please use yapapi.payload.package.PackageException")
+class PackageException(_PackageException):
     pass
 
 
-class Package(abc.ABC):
-    """Information on task package to be used for running tasks on providers."""
-
-    @abc.abstractmethod
-    async def resolve_url(self) -> str:
-        """Return package URL."""
-
-    @abc.abstractmethod
-    async def decorate_demand(self, demand: DemandBuilder):
-        """Add package information to a Demand."""
+@deprecated(version="0.6.0", reason="please use yapapi.payload.package.Package")
+class Package(_Package):
+    pass

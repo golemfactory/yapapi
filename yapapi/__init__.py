@@ -6,7 +6,14 @@ import toml
 from pathlib import Path
 from pkg_resources import get_distribution
 
-from .executor import Executor, NoPaymentAccountError, Task, WorkContext, CaptureContext
+from .executor import (
+    CaptureContext,
+    ExecOptions,
+    Executor,
+    NoPaymentAccountError,
+    Task,
+    WorkContext,
+)
 
 
 def get_version() -> str:

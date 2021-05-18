@@ -13,7 +13,7 @@ from yapapi import (
     windows_event_loop_fix,
 )
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
-from yapapi.package import vm
+from yapapi.payload import vm
 from yapapi.rest.activity import BatchTimeoutError
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
@@ -94,7 +94,7 @@ async def main(subnet_tag, driver=None, network=None):
     # See the documentation of the `yapapi.log` module on how to set
     # the level of detail and format of the logged information.
     async with Executor(
-        package=package,
+        payload=package,
         max_workers=3,
         budget=10.0,
         timeout=timeout,
