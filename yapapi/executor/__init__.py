@@ -600,7 +600,7 @@ class Executor(AsyncContextManager):
                         emit(evt)
                         results.append(evt)
                         if isinstance(evt, events.CommandExecuted) and not evt.success:
-                            raise CommandExecutionError(evt.command, evt.message)
+                            raise CommandExecutionError(evt.command, evt.stderr)
 
                     emit(events.GettingResults(agr_id=agreement_id, task_id=task_id))
                     await batch.post()
