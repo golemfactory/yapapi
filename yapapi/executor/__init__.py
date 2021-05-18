@@ -1070,7 +1070,6 @@ class Executor(AsyncContextManager):
             # Importing this at the beginning would cause circular dependencies
             from ..log import pluralize
 
-            self._engine._payment_closing = True
             for task in services:
                 task.cancel()
             if cancelled:
