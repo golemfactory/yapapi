@@ -112,7 +112,7 @@ async def main(subnet_tag, driver=None, network=None):
         num_tasks = 0
         start_time = datetime.now()
 
-        completed_tasks = golem.execute_task(
+        completed_tasks = golem.execute_tasks(
             worker,
             [Task(data=frame) for frame in frames],
             payload=package,

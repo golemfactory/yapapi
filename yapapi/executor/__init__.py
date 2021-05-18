@@ -469,30 +469,6 @@ class Golem(AsyncContextManager):
                 demand.ensure(constraint)
             demand.properties.update({p.key: p.value for p in self.market_decoration.properties})
 
-    async def execute_tasks(
-        self,
-        worker: Callable[
-            [WorkContext, AsyncIterator[Task[D, R]]],
-            AsyncGenerator[Work, Awaitable[List[events.CommandEvent]]],
-        ],
-        data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
-        payload: Payload,
-        max_workers: Optional[int] = None,
-        timeout: Optional[timedelta] = None,
-        budget: Optional[Union[float, Decimal]] = None,
-    ) -> AsyncIterator[Task[D, R]]:
-
-        kwargs: Dict[str, Any] = {"payload": payload}
-        if max_workers:
-            kwargs["max_workers"] = max_workers
-        if timeout:
-            kwargs["timeout"] = timeout
-        kwargs["budget"] = budget if budget is not None else self._budget_amount
-
-        async with Executor(_engine=self, **kwargs) as executor:
-            async for t in executor.submit(worker, data):
-                yield t
-
     async def create_activity(self, agreement_id: str):
         return await self._activity_api.new_activity(
             agreement_id, stream_events=self._stream_output
@@ -572,6 +548,30 @@ class Golem(AsyncContextManager):
                 # Schedule the coroutine in a separate asyncio task
                 future_results = loop.create_task(get_batch_results())
                 item = await command_generator.asend(future_results)
+
+    async def execute_tasks(
+        self,
+        worker: Callable[
+            [WorkContext, AsyncIterator[Task[D, R]]],
+            AsyncGenerator[Work, Awaitable[List[events.CommandEvent]]],
+        ],
+        data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
+        payload: Payload,
+        max_workers: Optional[int] = None,
+        timeout: Optional[timedelta] = None,
+        budget: Optional[Union[float, Decimal]] = None,
+    ) -> AsyncIterator[Task[D, R]]:
+
+        kwargs: Dict[str, Any] = {"payload": payload}
+        if max_workers:
+            kwargs["max_workers"] = max_workers
+        if timeout:
+            kwargs["timeout"] = timeout
+        kwargs["budget"] = budget if budget is not None else self._budget_amount
+
+        async with Executor(_engine=self, **kwargs) as executor:
+            async for t in executor.submit(worker, data):
+                yield t
 
 
 class Job:
