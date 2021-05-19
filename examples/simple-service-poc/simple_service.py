@@ -14,14 +14,13 @@ import sys
 from yapapi import (
     NoPaymentAccountError,
     __version__ as yapapi_version,
-    WorkContext,
     windows_event_loop_fix,
 )
 from yapapi.executor import Golem
 from yapapi.executor.services import Service
 
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
-from yapapi.package import vm
+from yapapi.payload import vm
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
