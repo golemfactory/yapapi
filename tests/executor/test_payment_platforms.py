@@ -70,8 +70,8 @@ async def test_no_accounts_raises(monkeypatch):
 
     monkeypatch.setattr(Payment, "accounts", _mock_accounts_iterator())
 
-    async with Executor(package=mock.Mock(), budget=10.0) as executor:
-        with pytest.raises(NoPaymentAccountError):
+    with pytest.raises(NoPaymentAccountError):
+        async with Executor(package=mock.Mock(), budget=10.0) as executor:
             async for _ in executor.submit(worker=mock.Mock(), data=mock.Mock()):
                 pass
 
@@ -90,15 +90,15 @@ async def test_no_matching_account_raises(monkeypatch):
         ),
     )
 
-    async with Executor(
-        package=mock.Mock(), budget=10.0, driver="matching-driver", network="matching-network"
-    ) as executor:
-        with pytest.raises(NoPaymentAccountError) as exc_info:
+    with pytest.raises(NoPaymentAccountError) as exc_info:
+        async with Executor(
+            package=mock.Mock(), budget=10.0, driver="matching-driver", network="matching-network"
+        ) as executor:
             async for _ in executor.submit(worker=mock.Mock(), data=mock.Mock()):
                 pass
-        exc = exc_info.value
-        assert exc.required_driver == "matching-driver"
-        assert exc.required_network == "matching-network"
+    exc = exc_info.value
+    assert exc.required_driver == "matching-driver"
+    assert exc.required_network == "matching-network"
 
 
 @pytest.mark.asyncio

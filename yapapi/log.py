@@ -232,8 +232,8 @@ class SummaryLogger:
     # Generates subsequent numbers, for use in generated provider names
     numbers: Iterator[int]
 
-    # Start time of the computation
-    start_time: float
+    # Start time of the computation (indexed by job_id)
+    start_time: Dict[str, float]
 
     # Maps received proposal ids to provider ids
     received_proposals: Dict[str, str]
@@ -273,30 +273,29 @@ class SummaryLogger:
 
         self._wrapped_emitter = wrapped_emitter
         self.numbers: Iterator[int] = itertools.count(1)
+        self._reset_counters()
+
+    def _reset_counters(self):
+        """Reset all information aggregated by this logger related to a single Executor instance."""
+
         self.provider_cost = {}
-        self._reset()
-
-    def _reset(self) -> None:
-        """Reset all information aggregated by this logger related to a single computation.
-
-        Here "computation" means an interval of time between the events
-        `ComputationStarted` and `ComputationFinished`.
-
-        Note that the `provider_cost` is not reset here, it is zeroed on `ExecutorShutdown`.
-        """
-
-        self.start_time = time.time()
+        self.start_time = {}
         self.received_proposals = {}
         self.confirmed_proposals = set()
         self.agreement_provider_info = {}
         self.confirmed_agreements = set()
         self.task_data = {}
+        self.provider_cost = {}
         self.provider_tasks = defaultdict(list)
         self.provider_failures = Counter()
         self.cancelled = False
         self.finished = False
         self.error_occurred = False
         self.time_waiting_for_proposals = timedelta(0)
+
+    def _register_job(self, job_id: str) -> None:
+        """Initialize counters for a new job."""
+        self.start_time[job_id] = time.time()
 
     def _print_summary(self) -> None:
         """Print a summary at the end of computation."""
@@ -343,7 +342,7 @@ class SummaryLogger:
 
     def _handle(self, event: events.Event):
         if isinstance(event, events.ComputationStarted):
-            self._reset()
+            self._register_job(event.job_id)
             if self.provider_cost:
                 # This means another computation run in the current Executor instance.
                 self._print_total_cost(partial=True)
@@ -459,7 +458,7 @@ class SummaryLogger:
 
         elif isinstance(event, events.ComputationFinished):
             if not event.exc_info:
-                total_time = time.time() - self.start_time
+                total_time = time.time() - self.start_time[event.job_id]
                 self.logger.info(f"Computation finished in {total_time:.1f}s")
                 self.finished = True
             else:

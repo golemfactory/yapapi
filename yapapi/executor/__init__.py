@@ -29,6 +29,7 @@ from typing import (
     cast,
     overload,
 )
+import uuid
 import warnings
 
 
@@ -179,7 +180,11 @@ class Golem(AsyncContextManager):
 
         # Add buffering to the provided event emitter to make sure
         # that emitting events will not block
-        self._wrapped_consumer = AsyncWrapper(event_consumer)
+        # TODO: make AsyncWrapper an AsyncContextManager and start it in
+        # in __aenter__(); if it's started here then there's no guarantee that
+        # it will be cancelled properly
+        self._wrapped_consumer: Optional[AsyncWrapper] = None
+        self._event_consumer = event_consumer
 
         self._stream_output = stream_output
 
@@ -189,8 +194,12 @@ class Golem(AsyncContextManager):
         self._invoices: Dict[str, rest.payment.Invoice] = dict()
         self._payment_closing: bool = False
 
-        self._services: Set[asyncio.Task] = set()
+        # a set of `Job` instances used to track jobs - computations or services - started
+        # it can be used to wait until all jobs are finished
+        self._jobs: Set[Job] = set()
+        self._process_invoices_job: Optional[asyncio.Task] = None
 
+        self._services: Set[asyncio.Task] = set()
         self._stack = AsyncExitStack()
 
     async def create_demand_builder(
@@ -229,34 +238,39 @@ class Golem(AsyncContextManager):
         return self._strategy
 
     def emit(self, *args, **kwargs) -> None:
-        self._wrapped_consumer.async_call(*args, **kwargs)
+        if self._wrapped_consumer:
+            self._wrapped_consumer.async_call(*args, **kwargs)
 
     async def __aenter__(self) -> "Golem":
-        stack = self._stack
+        try:
+            stack = self._stack
 
-        market_client = await stack.enter_async_context(self._api_config.market())
-        self._market_api = rest.Market(market_client)
+            self._wrapped_consumer = AsyncWrapper(self._event_consumer)
 
-        activity_client = await stack.enter_async_context(self._api_config.activity())
-        self._activity_api = rest.Activity(activity_client)
+            market_client = await stack.enter_async_context(self._api_config.market())
+            self._market_api = rest.Market(market_client)
 
-        payment_client = await stack.enter_async_context(self._api_config.payment())
-        self._payment_api = rest.Payment(payment_client)
+            activity_client = await stack.enter_async_context(self._api_config.activity())
+            self._activity_api = rest.Activity(activity_client)
 
-        # a set of `Job` instances used to track jobs - computations or services - started
-        # it can be used to wait until all jobs are finished
-        self._jobs: Set[Job] = set()
+            payment_client = await stack.enter_async_context(self._api_config.payment())
+            self._payment_api = rest.Payment(payment_client)
 
-        self.payment_decoration = Golem.PaymentDecoration(await self._create_allocations())
+            self.payment_decoration = Golem.PaymentDecoration(await self._create_allocations())
 
-        loop = asyncio.get_event_loop()
-        self._process_invoices_job = loop.create_task(self.process_invoices())
-        self._services.add(self._process_invoices_job)
-        self._services.add(loop.create_task(self.process_debit_notes()))
+            # TODO: make the method starting the process_invoices() task an async context manager
+            # to simplify code in __aexit__()
+            loop = asyncio.get_event_loop()
+            self._process_invoices_job = loop.create_task(self.process_invoices())
+            self._services.add(self._process_invoices_job)
+            self._services.add(loop.create_task(self.process_debit_notes()))
 
-        self._storage_manager = await self._stack.enter_async_context(gftp.provider())
+            self._storage_manager = await self._stack.enter_async_context(gftp.provider())
 
-        return self
+            return self
+        except:
+            await self.__aexit__(*sys.exc_info())
+            raise
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         # Importing this at the beginning would cause circular dependencies
@@ -272,7 +286,9 @@ class Golem(AsyncContextManager):
             if task is not self._process_invoices_job:
                 task.cancel()
 
-        if not any(True for job in self._jobs if job.agreements_pool.confirmed > 0):
+        if self._process_invoices_job and not any(
+            True for job in self._jobs if job.agreements_pool.confirmed > 0
+        ):
             logger.debug("No need to wait for invoices.")
             self._process_invoices_job.cancel()
 
@@ -287,7 +303,7 @@ class Golem(AsyncContextManager):
             # TODO: add message
             logger.debug("TODO", exc_info=True)
 
-        if self._agreements_to_pay:
+        if self._agreements_to_pay and self._process_invoices_job:
             logger.info(
                 "%s still unpaid, waiting for invoices...",
                 pluralize(len(self._agreements_to_pay), "agreement"),
@@ -305,7 +321,8 @@ class Golem(AsyncContextManager):
         except Exception:
             self.emit(events.ShutdownFinished(exc_info=sys.exc_info()))
         finally:
-            await self._wrapped_consumer.stop()
+            if self._wrapped_consumer:
+                await self._wrapped_consumer.stop()
 
     async def _create_allocations(self) -> rest.payment.MarketDecoration:
 
@@ -580,7 +597,6 @@ class Golem(AsyncContextManager):
         cluster.spawn_instances()
         return cluster
 
-
 class Job:
     """Functionality related to a single job."""
 
@@ -590,6 +606,7 @@ class Job:
         expiration_time: datetime,
         payload: Payload,
     ):
+        self.id = str(uuid.uuid4())
         self.engine = engine
         self.offers_collected: int = 0
         self.proposals_confirmed: int = 0
@@ -891,7 +908,6 @@ class Executor(AsyncContextManager):
     async def __aenter__(self) -> "Executor":
         if self.__standalone:
             await self._stack.enter_async_context(self._engine)
-
         self._expires = datetime.now(timezone.utc) + self._timeout
         return self
 
@@ -958,7 +974,7 @@ class Executor(AsyncContextManager):
         job: Job,
     ) -> AsyncGenerator[Task[D, R], None]:
 
-        self.emit(events.ComputationStarted(self._expires))
+        self.emit(events.ComputationStarted(job.id, self._expires))
 
         done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
 
@@ -1117,10 +1133,10 @@ class Executor(AsyncContextManager):
                     assert get_done_task not in services
                     get_done_task = None
 
-            self.emit(events.ComputationFinished())
+            self.emit(events.ComputationFinished(job.id))
 
         except (Exception, CancelledError, KeyboardInterrupt):
-            self.emit(events.ComputationFinished(exc_info=sys.exc_info()))  # type: ignore
+            self.emit(events.ComputationFinished(job.id, exc_info=sys.exc_info()))  # type: ignore
             cancelled = True
 
         finally:
