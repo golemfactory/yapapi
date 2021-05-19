@@ -113,7 +113,7 @@ class Service:
         self.__outqueue.put_nowait(ServiceSignal(message=message, response_to=response_to))
 
     @staticmethod
-    def get_payload() -> Optional[Payload]:
+    async def get_payload() -> Optional[Payload]:
         """Return the payload (runtime) definition for this service.
 
         If `get_payload` is not implemented, the payload will need to be provided in the
