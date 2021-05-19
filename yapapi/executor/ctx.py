@@ -306,9 +306,11 @@ class WorkContext:
         pass
 
     def deploy(self):
+        self._implicit_init = False
         self._pending_steps.append(_Deploy())
 
     def start(self):
+        self._implicit_init = False
         self._pending_steps.append(_Start())
 
     def send_json(self, json_path: str, data: dict):
