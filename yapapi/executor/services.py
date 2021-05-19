@@ -196,7 +196,7 @@ class Cluster(AsyncContextManager):
     def __repr__(self):
         return f"Cluster {self._num_instances} x [Service: {self._service_class.__name__}, Payload: {self._payload}]"
 
-    def __aenter__(self):
+    async def __aenter__(self):
         self.__services: Set[asyncio.Task] = set()
         """Asyncio tasks running within this cluster"""
 
@@ -216,7 +216,7 @@ class Cluster(AsyncContextManager):
 
         self.__services.add(loop.create_task(agreements_pool_cycler()))
 
-    def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
         logger.debug("%s is shutting down...", self)
 
         for task in self.__services:
@@ -347,10 +347,12 @@ class Cluster(AsyncContextManager):
         loop = asyncio.get_event_loop()
 
         while not spawned:
+            await asyncio.sleep(1.0)
             task = await self._job.agreements_pool.use_agreement(
                 lambda agreement, node: loop.create_task(start_worker(agreement, node))
             )
-            await task
+            if task:
+                await task
 
     def stop_instance(self, service: Service):
         instance = self.__get_service_instance(service)

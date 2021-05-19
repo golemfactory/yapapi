@@ -580,11 +580,11 @@ class Golem(AsyncContextManager):
 
     async def run_service(
         self,
-        service_class: Type[Service],
+        service_class: Type["Service"],
         num_instances: int = 1,
         payload: Optional[Payload] = None,
         expiration: Optional[datetime] = None,
-    ) -> Cluster:
+    ) -> "Cluster":
         from .services import Cluster  # avoid circular dependency
 
         payload = payload or service_class.get_payload()
