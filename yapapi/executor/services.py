@@ -381,3 +381,8 @@ class Cluster(AsyncContextManager):
         loop = asyncio.get_event_loop()
         for i in range(num_instances):
             loop.create_task(self.spawn_instance())
+
+    def stop(self):
+        """Signal the whole cluster to stop."""
+        for s in self.instances:
+            self.stop_instance(s)
