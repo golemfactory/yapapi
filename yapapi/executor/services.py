@@ -202,7 +202,7 @@ class Cluster(AsyncContextManager):
         self._stack = AsyncExitStack()
 
     def __repr__(self):
-        return f"Cluster {self._num_instances} x [Service: {self._service_class.__name__}, Payload: {self._payload}]"
+        return f"Cluster: {self._num_instances} x [Service: {self._service_class.__name__}, Payload: {self._payload}]"
 
     async def __aenter__(self):
         self.__services: Set[asyncio.Task] = set()
@@ -311,6 +311,7 @@ class Cluster(AsyncContextManager):
         logger.info(f"{instance.service} decomissioned")
 
     async def spawn_instance(self):
+        logger.debug("spawning instance within %s", self)
         spawned = False
 
         async def start_worker(agreement: rest.market.Agreement, node_info: NodeInfo) -> None:
