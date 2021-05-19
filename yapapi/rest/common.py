@@ -18,7 +18,7 @@ def is_intermittent_error(e: Exception) -> bool:
 
     is_timeout_exception = isinstance(e, asyncio.TimeoutError) or (
         isinstance(e, (ya_activity.ApiException, ya_market.ApiException, ya_payment.ApiException))
-        and e.status == 408
+        and e.status in (408, 504)
     )
 
     return (
