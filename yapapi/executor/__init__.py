@@ -588,7 +588,7 @@ class Golem(AsyncContextManager):
     ) -> "Cluster":
         from .services import Cluster  # avoid circular dependency
 
-        payload = payload or service_class.get_payload()
+        payload = payload or await service_class.get_payload()
 
         if not payload:
             raise ValueError(

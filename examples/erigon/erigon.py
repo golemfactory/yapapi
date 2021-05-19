@@ -36,7 +36,7 @@ class ErigonService(Service):
         return f"{srv_repr}, credentials: {self.credentials}"
 
     @staticmethod
-    def get_payload():
+    async def get_payload():
         return ErigonPayload(network="rinkeby")
 
     async def start(self):
