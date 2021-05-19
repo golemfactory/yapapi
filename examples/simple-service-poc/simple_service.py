@@ -120,7 +120,7 @@ async def main(subnet_tag, driver=None, network=None):
         def still_running():
             return any([s for s in cluster.instances if s.is_available])
 
-        while datetime.now() < start_time + timedelta(minutes=3):
+        while datetime.now() < start_time + timedelta(minutes=2):
             print(f"instances: {instances()}")
             await asyncio.sleep(3)
 
