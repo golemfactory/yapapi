@@ -45,13 +45,18 @@ class HasExcInfo(Event):
         return exc_info, me
 
 
+@dataclass(init=False)
+class ComputationEvent(Event):
+    job_id: str
+
+
 @dataclass
-class ComputationStarted(Event):
+class ComputationStarted(ComputationEvent):
     expires: datetime
 
 
 @dataclass
-class ComputationFinished(HasExcInfo):
+class ComputationFinished(HasExcInfo, ComputationEvent):
     """Indicates successful completion if `exc_info` is `None` and a failure otherwise."""
 
 

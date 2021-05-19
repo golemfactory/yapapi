@@ -27,6 +27,7 @@ from typing import (
     cast,
     overload,
 )
+import uuid
 import warnings
 
 
@@ -583,6 +584,7 @@ class Job:
         expiration_time: datetime,
         payload: Payload,
     ):
+        self.id = str(uuid.uuid4())
         self.engine = engine
         self.offers_collected: int = 0
         self.proposals_confirmed: int = 0
@@ -950,7 +952,7 @@ class Executor(AsyncContextManager):
         job: Job,
     ) -> AsyncGenerator[Task[D, R], None]:
 
-        self.emit(events.ComputationStarted(self._expires))
+        self.emit(events.ComputationStarted(job.id, self._expires))
 
         done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
 
@@ -1109,10 +1111,10 @@ class Executor(AsyncContextManager):
                     assert get_done_task not in services
                     get_done_task = None
 
-            self.emit(events.ComputationFinished())
+            self.emit(events.ComputationFinished(job.id))
 
         except (Exception, CancelledError, KeyboardInterrupt):
-            self.emit(events.ComputationFinished(exc_info=sys.exc_info()))  # type: ignore
+            self.emit(events.ComputationFinished(job.id, exc_info=sys.exc_info()))  # type: ignore
             cancelled = True
 
         finally:

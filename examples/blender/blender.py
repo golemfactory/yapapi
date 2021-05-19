@@ -5,7 +5,6 @@ import pathlib
 import sys
 
 from yapapi import (
-    Executor,
     NoPaymentAccountError,
     Task,
     __version__ as yapapi_version,
@@ -105,8 +104,8 @@ async def main(subnet_tag, driver=None, network=None):
         print(
             f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n"
             f"Using subnet: {TEXT_COLOR_YELLOW}{subnet_tag}{TEXT_COLOR_DEFAULT}, "
-            f"payment driver: {TEXT_COLOR_YELLOW}{driver}{TEXT_COLOR_DEFAULT}, "
-            f"and network: {TEXT_COLOR_YELLOW}{network}{TEXT_COLOR_DEFAULT}\n"
+            f"payment driver: {TEXT_COLOR_YELLOW}{golem.driver}{TEXT_COLOR_DEFAULT}, "
+            f"and network: {TEXT_COLOR_YELLOW}{golem.network}{TEXT_COLOR_DEFAULT}\n"
         )
 
         num_tasks = 0
