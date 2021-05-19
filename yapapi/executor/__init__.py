@@ -22,7 +22,9 @@ from typing import (
     Optional,
     Set,
     Tuple,
+    Type,
     TypeVar,
+    TYPE_CHECKING,
     Union,
     cast,
     overload,
@@ -47,6 +49,8 @@ from ..rest.activity import CommandExecutionError
 from ..rest.market import OfferProposal, Subscription
 from ..storage import gftp
 from ._smartq import Consumer, Handle, SmartQueue
+if TYPE_CHECKING:
+    from .services import Cluster, Service
 from .strategy import (
     DecreaseScoreForUnconfirmedAgreement,
     LeastExpensiveLinearPayuMS,
@@ -557,6 +561,24 @@ class Golem(AsyncContextManager):
             async for t in executor.submit(worker, data):
                 yield t
 
+    async def run_service(
+        self,
+        service_class: Type[Service],
+        num_instances: int = 1,
+        payload: Optional[Payload] = None,
+        expiration: Optional[datetime] = None,
+    ) -> Cluster:
+        from .services import Cluster  # avoid circular dependency
+
+        payload = payload or service_class.get_payload()
+
+        if not payload:
+            raise ValueError(f"No payload returned from {service_class.__name__}.get_payload() nor given in the `payload` argument.")
+
+        cluster = Cluster(engine=self, service_class=service_class, payload=payload, num_instances=num_instances, expiration=expiration)
+        await self._stack.enter_async_context(cluster)
+        cluster.spawn_instances()
+        return cluster
 
 
 class Job:

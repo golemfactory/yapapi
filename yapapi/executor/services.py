@@ -1,15 +1,27 @@
 import asyncio
-import typing
 from dataclasses import dataclass, field
+from datetime import timedelta, datetime, timezone
 import enum
-from typing import Any, List, Optional, Type
+import logging
+from typing import Any, AsyncContextManager, List, Optional, Set, Type, Final
 import statemachine
+import sys
 
-from yapapi.executor.ctx import WorkContext
-from yapapi.payload import Payload
+if sys.version_info >= (3, 7):
+    from contextlib import AsyncExitStack
+else:
+    from async_exit_stack import AsyncExitStack  # type: ignore
 
-if typing.TYPE_CHECKING:
-    from yapapi.executor import Golem
+from .. import rest
+from ..executor import Golem, Job
+from ..executor.ctx import WorkContext
+from ..payload import Payload
+from ..props import NodeInfo
+from . import events
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_SERVICE_EXPIRATION: Final[datetime] = datetime.now(timezone.utc) + timedelta(days=3650)
 
 
 class ServiceState(statemachine.StateMachine):
@@ -164,20 +176,59 @@ class ServiceInstance:
         self.control_queue.put_nowait(signal)
 
 
-class Cluster:
+class Cluster(AsyncContextManager):
     """
     Golem's sub-engine used to spawn and control instances of a single Service.
     """
 
-    def __init__(self, engine: "Golem", service_class: Type[Service], payload: Payload):
+    def __init__(self, engine: "Golem", service_class: Type[Service], payload: Payload, num_instances: int = 1, expiration: Optional[datetime] = None):
         self._engine = engine
-        self.service_class = service_class
+        self._service_class = service_class
+        self._payload = payload
+        self._num_instances = num_instances
+        self._expiration = expiration or DEFAULT_SERVICE_EXPIRATION
 
-        self.payload = payload
         self.__instances: List[ServiceInstance] = []
+        """List of Service instances"""
+
+        self._stack = AsyncExitStack()
 
     def __repr__(self):
-        return f"Cluster " f"[Service: {self.service_class.__name__}, " f"Payload: {self.payload}]"
+        return f"Cluster {self._num_instances} x [Service: {self._service_class.__name__}, Payload: {self._payload}]"
+
+    def __aenter__(self):
+        self.__services: Set[asyncio.Task] = set()
+        """Asyncio tasks running within this cluster"""
+
+        logger.debug("Starting new %s", self)
+
+        self._job = Job(self._engine, expiration_time=self._expiration, payload=self._payload)
+        self._engine.add_job(self._job)
+
+        loop = asyncio.get_event_loop()
+        self.__services.add(loop.create_task(self._job.find_offers()))
+
+        async def agreements_pool_cycler():
+            # shouldn't this be part of the Agreement pool itself? (or a task within Job?)
+            while True:
+                await asyncio.sleep(2)
+                await self._job.agreements_pool.cycle()
+
+        self.__services.add(loop.create_task(agreements_pool_cycler()))
+
+    def __aexit__(self, exc_type, exc_val, exc_tb):
+        logger.debug("%s is shutting down...", self)
+
+        for task in self.__services:
+            if not task.done():
+                logger.debug("Cancelling task: %s", task)
+                task.cancel()
+        await asyncio.gather(*self.__services, return_exceptions=True)
+
+        self._engine.finalize_job(self._job)
+
+    def emit(self, event: events.Event) -> None:
+        self._engine.emit(event)
 
     @property
     def instances(self) -> List[Service]:
@@ -205,10 +256,10 @@ class Cluster:
 
     async def _run_instance(self, ctx: WorkContext):
         loop = asyncio.get_event_loop()
-        instance = ServiceInstance(service=self.service_class(self, ctx))
+        instance = ServiceInstance(service=self._service_class(self, ctx))
         self.__instances.append(instance)
 
-        print(f"{instance.service} commissioned")
+        logger.info(f"{instance.service} commissioned")
 
         handler = self._get_handler(instance)
         batch = None
@@ -226,8 +277,10 @@ class Cluster:
                 instance.service_state.lifecycle()
                 handler = self._get_handler(instance)
                 batch = None
-                print(f"{instance.service} state changed to {instance.state.value}")
+                logger.debug(f"{instance.service} state changed to {instance.state.value}")
 
+            # TODO
+            #
             # two potential issues:
             # * awaiting a batch makes us lose an ability to interpret a signal (await on generator won't return)
             # * we may be losing a `batch` when we act on the control signal
@@ -242,26 +295,79 @@ class Cluster:
                 else:
                     instance.service_state.terminate()
 
-                print(f"{instance.service} state changed to {instance.state.value}")
+                logger.debug(f"{instance.service} state changed to {instance.state.value}")
 
                 handler = self._get_handler(instance)
                 batch = None
 
-        print(f"{instance.service} decomissioned")
+        logger.info(f"{instance.service} decomissioned")
 
     async def spawn_instance(self):
-        act = await self._engine.get_activity(self.payload)
-        ctx = WorkContext(act.id, len(self.instances) + 1)
+        spawned = False
 
-        instance_batches = self._run_instance(ctx)
-        try:
-            batch = await instance_batches.__anext__()
-            while batch:
-                r = yield batch
-                batch = await instance_batches.asend(r)
-        except StopAsyncIteration:
-            pass
+        async def start_worker(agreement: rest.market.Agreement, node_info: NodeInfo) -> None:
+            nonlocal spawned
+            self.emit(events.WorkerStarted(agr_id=agreement.id))
+            try:
+                act = await self._engine.create_activity(agreement.id)
+            except Exception:
+                self.emit(
+                    events.ActivityCreateFailed(
+                        agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
+                    )
+                )
+                self.emit(events.WorkerFinished(agr_id=agreement.id))
+                raise
+
+            async with act:
+                spawned = True
+                self.emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
+                self._engine.approve_agreement_payments(agreement.id)
+                work_context = WorkContext(
+                    act.id, node_info, self._engine.storage_manager, emitter=self.emit
+                )
+
+                try:
+                    instance_batches = self._run_instance(work_context)
+                    try:
+                        await self._engine.process_batches(agreement.id, act, instance_batches)
+                    except StopAsyncIteration:
+                        pass
+                    self.emit(events.WorkerFinished(agr_id=agreement.id))
+                except Exception:
+                    self.emit(
+                        events.WorkerFinished(
+                            agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
+                        )
+                    )
+                    raise
+                finally:
+                    await self._engine.accept_payment_for_agreement(agreement.id)
+
+        loop = asyncio.get_event_loop()
+
+        while not spawned:
+            task = await self._job.agreements_pool.use_agreement(
+                lambda agreement, node: loop.create_task(start_worker(agreement, node))
+            )
+            await task
 
     def stop_instance(self, service: Service):
         instance = self.__get_service_instance(service)
         instance.send_control_signal(ControlSignal.stop)
+
+    def spawn_instances(self, num_instances: Optional[int] = None) -> None:
+        """
+        Spawn new instances within this Cluster.
+
+        :param num_instances: number of instances to commission.
+                              if not given, spawns the number that the Cluster has been initialized with.
+        """
+        if num_instances:
+            self._num_instances += num_instances
+        else:
+            num_instances = self._num_instances
+
+        loop = asyncio.get_event_loop()
+        for i in range(num_instances):
+            loop.create_task(self.spawn_instance())
