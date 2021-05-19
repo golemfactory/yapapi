@@ -2,12 +2,17 @@
 import dataclasses
 from datetime import datetime, timedelta
 from dataclasses import dataclass
+import json
+import logging
 from types import TracebackType
 from typing import Any, Optional, Type, Tuple, List
 
 from yapapi.props import NodeInfo
 
 ExcInfo = Tuple[Type[BaseException], BaseException, Optional[TracebackType]]
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(init=False)
@@ -40,13 +45,18 @@ class HasExcInfo(Event):
         return exc_info, me
 
 
+@dataclass(init=False)
+class ComputationEvent(Event):
+    job_id: str
+
+
 @dataclass
-class ComputationStarted(Event):
+class ComputationStarted(ComputationEvent):
     expires: datetime
 
 
 @dataclass
-class ComputationFinished(HasExcInfo):
+class ComputationFinished(HasExcInfo, ComputationEvent):
     """Indicates successful completion if `exc_info` is `None` and a failure otherwise."""
 
 
@@ -217,27 +227,11 @@ class CommandEvent(ScriptEvent):
 
 
 @dataclass
-class CommandEventContext:
-    evt_cls: Type[CommandEvent]
-    kwargs: dict
-
-    def computation_finished(self, last_idx: int) -> bool:
-        return self.evt_cls is CommandExecuted and (
-            self.kwargs["cmd_idx"] >= last_idx or not self.kwargs["success"]
-        )
-
-    def event(self, agr_id: str, task_id: str, cmds: List) -> CommandEvent:
-        kwargs = dict(agr_id=agr_id, task_id=task_id, **self.kwargs)
-        if self.evt_cls is CommandExecuted:
-            kwargs["command"] = cmds[self.kwargs["cmd_idx"]]
-        return self.evt_cls(**kwargs)
-
-
-@dataclass
 class CommandExecuted(CommandEvent):
     command: Any
     success: bool = dataclasses.field(default=True)
-    message: Optional[str] = dataclasses.field(default=None)
+    stdout: Optional[str] = dataclasses.field(default=None)
+    stderr: Optional[str] = dataclasses.field(default=None)
 
 
 @dataclass
@@ -278,3 +272,36 @@ class DownloadFinished(Event):
 @dataclass
 class ShutdownFinished(HasExcInfo):
     """Indicates the completion of Executor shutdown sequence"""
+
+
+@dataclass
+class CommandEventContext:
+    evt_cls: Type[CommandEvent]
+    kwargs: dict
+
+    def computation_finished(self, last_idx: int) -> bool:
+        return self.evt_cls is CommandExecuted and (
+            self.kwargs["cmd_idx"] >= last_idx or not self.kwargs["success"]
+        )
+
+    def event(self, agr_id: str, task_id: str, cmds: List) -> CommandEvent:
+        kwargs = dict(agr_id=agr_id, task_id=task_id, **self.kwargs)
+        if self.evt_cls is CommandExecuted:
+            kwargs["command"] = cmds[self.kwargs["cmd_idx"]]
+            kwargs["stdout"] = kwargs["stderr"] = None
+            try:
+                # Replace the "message" kwarg with "stdout" and "stderr"
+                message = self.kwargs["message"]
+                del kwargs["message"]
+                if message is not None:
+                    message_dict = json.loads(message)
+                    kwargs["stdout"] = message_dict["stdout"]
+                    kwargs["stderr"] = message_dict["stderr"]
+            except (json.JSONDecodeError, KeyError, TypeError) as e:
+                logger.warning(
+                    'Missing or invalid field "message" in CommandExecuted event; '
+                    "kwargs: %s; error: %r",
+                    self.kwargs,
+                    e,
+                )
+        return self.evt_cls(**kwargs)

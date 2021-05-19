@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing_extensions import Final, Protocol
 
 from ..props import com, Activity
-from ..props.builder import DemandBuilder
+from ..props.builder import DemandBuilder, DemandDecorator
 from .. import rest
 
 
@@ -28,7 +28,7 @@ class ComputationHistory(Protocol):
         ...
 
 
-class MarketStrategy(abc.ABC):
+class MarketStrategy(DemandDecorator, abc.ABC):
     """Abstract market strategy."""
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
@@ -165,6 +165,11 @@ class DecreaseScoreForUnconfirmedAgreement(MarketStrategy):
     factor: float
 
     def __init__(self, base_strategy, factor):
+        """
+        :param base_strategy: the base strategy around which this strategy is wrapped
+        :param factor: the factor by which the score of an offer for a provider which
+                       failed to confirm the last agreement proposed to them will be multiplied
+        """
         self.base_strategy = base_strategy
         self.factor = factor
         self._logger = logging.getLogger(f"{__name__}.{type(self).__name__}")

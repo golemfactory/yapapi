@@ -6,7 +6,7 @@ import logging
 
 from yapapi import Executor, Task, WorkContext
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
-from yapapi.package import vm
+from yapapi.payload import vm
 
 
 async def main():

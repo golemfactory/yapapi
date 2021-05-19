@@ -51,9 +51,13 @@ class Work(abc.ABC):
         return None
 
 
-class _InitStep(Work):
+class _Deploy(Work):
     def register(self, commands: CommandContainer):
         commands.deploy()
+
+
+class _Start(Work):
+    def register(self, commands: CommandContainer):
         commands.start()
 
 
@@ -228,6 +232,11 @@ class _ReceiveJson(_ReceiveBytes):
 
 class Steps(Work):
     def __init__(self, *steps: Work, timeout: Optional[timedelta] = None):
+        """Create a `Work` item consisting of a sequence of steps (subitems).
+
+        :param steps: sequence of steps to be executed
+        :param timeout: timeout for waiting for the steps' results
+        """
         self._steps: Tuple[Work, ...] = steps
         self._timeout: Optional[timedelta] = timeout
 
@@ -252,6 +261,14 @@ class Steps(Work):
             await step.post()
 
 
+@dataclass
+class ExecOptions:
+    """Options related to command batch execution."""
+
+    wait_for_results: bool = True
+    batch_timeout: Optional[timedelta] = None
+
+
 class WorkContext:
     """An object used to schedule commands to be sent to provider."""
 
@@ -264,6 +281,7 @@ class WorkContext:
         node_info: NodeInfo,
         storage: StorageProvider,
         emitter: Optional[Callable[[StorageEvent], None]] = None,
+        implicit_init: bool = True,
     ):
         self.id = ctx_id
         self._node_info = node_info
@@ -271,6 +289,7 @@ class WorkContext:
         self._pending_steps: List[Work] = []
         self._started: bool = False
         self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
+        self._implicit_init = implicit_init
 
     @property
     def provider_name(self) -> Optional[str]:
@@ -278,12 +297,19 @@ class WorkContext:
         return self._node_info.name
 
     def __prepare(self):
-        if not self._started:
-            self._pending_steps.append(_InitStep())
+        if not self._started and self._implicit_init:
+            self.deploy()
+            self.start()
             self._started = True
 
     def begin(self):
         pass
+
+    def deploy(self):
+        self._pending_steps.append(_Deploy())
+
+    def start(self):
+        self._pending_steps.append(_Start())
 
     def send_json(self, json_path: str, data: dict):
         """Schedule sending JSON data to the provider.

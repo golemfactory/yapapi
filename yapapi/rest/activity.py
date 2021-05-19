@@ -33,7 +33,7 @@ class ActivityService(object):
         self._api = RequestorControlApi(api_client)
         self._state = RequestorStateApi(api_client)
 
-    async def new_activity(self, agreement_id: str) -> "Activity":
+    async def new_activity(self, agreement_id: str, stream_events: bool = False) -> "Activity":
         """Create an activity within bounds of the specified agreement.
 
         :return: the object that represents the Activity
@@ -41,16 +41,23 @@ class ActivityService(object):
         :rtype: Activity
         """
         activity_id = await self._api.create_activity(agreement_id)
-        return Activity(self._api, self._state, activity_id)
+        return Activity(self._api, self._state, activity_id, stream_events)
 
 
 class Activity(AsyncContextManager["Activity"]):
     """Mid-level wrapper for REST's Activity endpoint"""
 
-    def __init__(self, _api: RequestorControlApi, _state: RequestorStateApi, activity_id: str):
+    def __init__(
+        self,
+        _api: RequestorControlApi,
+        _state: RequestorStateApi,
+        activity_id: str,
+        stream_events: bool,
+    ):
         self._api: RequestorControlApi = _api
         self._state: RequestorStateApi = _state
         self._id: str = activity_id
+        self._stream_events = stream_events
 
     @property
     def id(self) -> str:
@@ -61,14 +68,12 @@ class Activity(AsyncContextManager["Activity"]):
         state: yaa.ActivityState = await self._state.get_activity_state(self._id)
         return state
 
-    async def send(
-        self, script: List[dict], stream: bool = False, deadline: Optional[datetime] = None
-    ):
+    async def send(self, script: List[dict], deadline: Optional[datetime] = None) -> "Batch":
         """Send the execution script to the provider's execution unit."""
         script_txt = json.dumps(script)
         batch_id = await self._api.call_exec(self._id, yaa.ExeScriptRequest(text=script_txt))
 
-        if stream:
+        if self._stream_events:
             return StreamingBatch(self._api, self._id, batch_id, len(script), deadline)
         return PollingBatch(self._api, self._id, batch_id, len(script), deadline)
 
