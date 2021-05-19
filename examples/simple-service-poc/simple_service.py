@@ -3,7 +3,7 @@
 the requestor agent controlling and interacting with the "simple service"
 """
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 import pathlib
 import random
@@ -111,7 +111,7 @@ async def main(subnet_tag, driver=None, network=None):
 
         start_time = datetime.now()
 
-        cluster = await golem.run_service(SimpleService)
+        cluster = await golem.run_service(SimpleService, expiration=datetime.now(timezone.utc) + timedelta(minutes=15))
 
         def instances():
             return [{s.ctx.id, s.state.value} for s in cluster.instances]
