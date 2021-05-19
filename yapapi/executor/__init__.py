@@ -50,6 +50,7 @@ from ..rest.activity import CommandExecutionError
 from ..rest.market import OfferProposal, Subscription
 from ..storage import gftp
 from ._smartq import Consumer, Handle, SmartQueue
+
 if TYPE_CHECKING:
     from .services import Cluster, Service
 from .strategy import (
@@ -590,12 +591,21 @@ class Golem(AsyncContextManager):
         payload = payload or service_class.get_payload()
 
         if not payload:
-            raise ValueError(f"No payload returned from {service_class.__name__}.get_payload() nor given in the `payload` argument.")
+            raise ValueError(
+                f"No payload returned from {service_class.__name__}.get_payload() nor given in the `payload` argument."
+            )
 
-        cluster = Cluster(engine=self, service_class=service_class, payload=payload, num_instances=num_instances, expiration=expiration)
+        cluster = Cluster(
+            engine=self,
+            service_class=service_class,
+            payload=payload,
+            num_instances=num_instances,
+            expiration=expiration,
+        )
         await self._stack.enter_async_context(cluster)
         cluster.spawn_instances()
         return cluster
+
 
 class Job:
     """Functionality related to a single job."""

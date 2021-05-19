@@ -147,6 +147,7 @@ class ControlSignal(enum.Enum):
     """
     Control signal, used to request an instance's state change from the controlling Cluster.
     """
+
     stop = "stop"
 
 
@@ -181,7 +182,14 @@ class Cluster(AsyncContextManager):
     Golem's sub-engine used to spawn and control instances of a single Service.
     """
 
-    def __init__(self, engine: "Golem", service_class: Type[Service], payload: Payload, num_instances: int = 1, expiration: Optional[datetime] = None):
+    def __init__(
+        self,
+        engine: "Golem",
+        service_class: Type[Service],
+        payload: Payload,
+        num_instances: int = 1,
+        expiration: Optional[datetime] = None,
+    ):
         self._engine = engine
         self._service_class = service_class
         self._payload = payload
