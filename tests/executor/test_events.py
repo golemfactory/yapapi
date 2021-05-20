@@ -29,7 +29,7 @@ def test_command_executed_stdout_stderr(
 
     kwargs = {"cmd_idx": 1, "command": "mock-command", "message": message}
     ctx = CommandEventContext(CommandExecuted, kwargs)
-    e = ctx.event(agr_id="2c3b6f473b86fd923591ec568df4797", task_id="2", cmds=[1, 2, 3, 4, 5])
+    e = ctx.event(agr_id="2c3b6f473b86fd923591ec568df4797", script_id="2", cmds=[1, 2, 3, 4, 5])
 
     assert isinstance(e, CommandExecuted)
     assert e.stdout == expected_stdout

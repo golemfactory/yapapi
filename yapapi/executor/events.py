@@ -197,13 +197,18 @@ class TaskStarted(AgreementEvent, TaskEvent):
 
 
 @dataclass
+class TaskFinished(AgreementEvent, TaskEvent):
+    pass
+
+
+@dataclass
 class WorkerFinished(HasExcInfo, AgreementEvent):
     """Indicates successful completion if `exc_info` is `None` and a failure otherwise."""
 
 
 @dataclass(init=False)
 class ScriptEvent(AgreementEvent):
-    task_id: Optional[str]
+    script_id: Optional[str]
 
 
 @dataclass
@@ -284,8 +289,8 @@ class CommandEventContext:
             self.kwargs["cmd_idx"] >= last_idx or not self.kwargs["success"]
         )
 
-    def event(self, agr_id: str, task_id: str, cmds: List) -> CommandEvent:
-        kwargs = dict(agr_id=agr_id, task_id=task_id, **self.kwargs)
+    def event(self, agr_id: str, script_id: str, cmds: List) -> CommandEvent:
+        kwargs = dict(agr_id=agr_id, script_id=script_id, **self.kwargs)
         if self.evt_cls is CommandExecuted:
             kwargs["command"] = cmds[self.kwargs["cmd_idx"]]
             kwargs["stdout"] = kwargs["stderr"] = None

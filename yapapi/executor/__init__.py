@@ -116,7 +116,7 @@ def unpack_work_item(item: WorkItem) -> Tuple[Work, ExecOptions]:
         return item, ExecOptions()
 
 
-batch_ids: Iterator[int] = itertools.count(1)
+exescript_ids: Iterator[int] = itertools.count(1)
 
 
 D = TypeVar("D")  # Type var for task data
@@ -495,7 +495,7 @@ class Golem(AsyncContextManager):
             batch, exec_options = unpack_work_item(item)
             # TODO: `task_id` should really be `batch_id`, but then we should also rename
             # `task_id` field of several events (e.g. `ScriptSent`)
-            task_id = str(next(batch_ids))
+            script_id = str(next(exescript_ids))
 
             if batch.timeout:
                 if exec_options.batch_timeout:
@@ -517,20 +517,20 @@ class Golem(AsyncContextManager):
             batch.register(cc)
             remote = await activity.send(cc.commands(), deadline=batch_deadline)
             cmds = cc.commands()
-            self.emit(events.ScriptSent(agr_id=agreement_id, task_id=task_id, cmds=cmds))
+            self.emit(events.ScriptSent(agr_id=agreement_id, script_id=script_id, cmds=cmds))
 
             async def get_batch_results() -> List[events.CommandEvent]:
                 results = []
                 async for evt_ctx in remote:
-                    evt = evt_ctx.event(agr_id=agreement_id, task_id=task_id, cmds=cmds)
+                    evt = evt_ctx.event(agr_id=agreement_id, script_id=script_id, cmds=cmds)
                     self.emit(evt)
                     results.append(evt)
                     if isinstance(evt, events.CommandExecuted) and not evt.success:
                         raise CommandExecutionError(evt.command, evt.stderr)
 
-                self.emit(events.GettingResults(agr_id=agreement_id, task_id=task_id))
+                self.emit(events.GettingResults(agr_id=agreement_id, script_id=script_id))
                 await batch.post()
-                self.emit(events.ScriptFinished(agr_id=agreement_id, task_id=task_id))
+                self.emit(events.ScriptFinished(agr_id=agreement_id, script_id=script_id))
                 await self.accept_payment_for_agreement(agreement_id, partial=True)
                 return results
 
@@ -1046,6 +1046,9 @@ class Executor(AsyncContextManager):
                                     )
                                 )
                                 yield task
+                                self._engine.emit(
+                                    events.TaskFinished(agr_id=agreement.id, task_id=task.id)
+                                )
 
                         batch_generator = worker(work_context, task_generator())
                         try:

@@ -139,6 +139,7 @@ event_type_to_string = {
     events.ActivityCreated: "Activity created on provider",
     events.ActivityCreateFailed: "Failed to create activity",
     events.TaskStarted: "Task started",
+    events.TaskFinished: "Task finished",
     events.ScriptSent: "Script sent to provider",
     events.CommandStarted: "Command started",
     events.CommandStdOut: "Command stdout",
@@ -285,6 +286,7 @@ class SummaryLogger:
         self.agreement_provider_info = {}
         self.confirmed_agreements = set()
         self.task_data = {}
+        self.script_cmds = {}
         self.provider_cost = {}
         self.provider_tasks = defaultdict(list)
         self.provider_failures = Counter()
@@ -403,20 +405,17 @@ class SummaryLogger:
             self.confirmed_agreements.add(event.agr_id)
 
         elif isinstance(event, events.TaskStarted):
-            self.task_data[event.task_id] = event.task_data
-
-        elif isinstance(event, events.ScriptSent):
             provider_info = self.agreement_provider_info[event.agr_id]
-            data = self.task_data[event.task_id] if event.task_id else "<initialization>"
+            self.task_data[event.task_id] = event.task_data
             self.logger.info(
-                "Task sent to provider '%s', task data: %s",
+                "Task started on provider '%s', task data: %s",
                 provider_info.name,
-                str_capped(data, 200),
+                str_capped(event.task_data, 200),
             )
 
-        elif isinstance(event, events.ScriptFinished):
+        elif isinstance(event, events.TaskFinished):
             provider_info = self.agreement_provider_info[event.agr_id]
-            data = self.task_data[event.task_id] if event.task_id else "<initialization>"
+            data = self.task_data[event.task_id]
             self.logger.info(
                 "Task computed by provider '%s', task data: %s",
                 provider_info.name,
@@ -424,6 +423,25 @@ class SummaryLogger:
             )
             if event.task_id:
                 self.provider_tasks[provider_info].append(event.task_id)
+
+        elif isinstance(event, events.ScriptSent):
+            provider_info = self.agreement_provider_info[event.agr_id]
+            self.script_cmds[event.script_id] = event.cmds
+            cmds = ", ".join([", ".join(cmd.keys()) for cmd in event.cmds])
+            self.logger.debug(
+                "Script '%s' sent to provider '%s', cmds: %s",
+                event.script_id,
+                provider_info.name,
+                str_capped(cmds, 200),
+            )
+
+        elif isinstance(event, events.ScriptFinished):
+            provider_info = self.agreement_provider_info[event.agr_id]
+            self.logger.debug(
+                "Script '%s' finished on provider '%s'",
+                event.script_id,
+                provider_info.name,
+            )
 
         elif isinstance(event, events.PaymentAccepted):
             provider_info = self.agreement_provider_info[event.agr_id]
