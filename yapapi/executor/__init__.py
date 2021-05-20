@@ -521,7 +521,7 @@ class Golem(AsyncContextManager):
                     self.emit(evt)
                     results.append(evt)
                     if isinstance(evt, events.CommandExecuted) and not evt.success:
-                        raise CommandExecutionError(evt.command, evt.stderr)
+                        raise CommandExecutionError(evt.command, evt.message, evt.stderr)
 
                 self.emit(events.GettingResults(agr_id=agreement_id, script_id=script_id))
                 await batch.post()
