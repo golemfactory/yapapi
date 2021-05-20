@@ -43,7 +43,7 @@ def test_log_event_emit_traceback():
     try:
         raise Exception("Hello!")
     except:
-        log_event(ComputationFinished(exc_info=sys.exc_info()))
+        log_event(ComputationFinished(exc_info=sys.exc_info(), job_id="42"))
 
 
 def test_log_event_repr_emit_traceback():
@@ -52,4 +52,4 @@ def test_log_event_repr_emit_traceback():
     try:
         raise Exception("Hello!")
     except:
-        log_event_repr(ComputationFinished(exc_info=sys.exc_info()))
+        log_event_repr(ComputationFinished(exc_info=sys.exc_info(), job_id="42"))
