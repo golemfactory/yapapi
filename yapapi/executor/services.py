@@ -1,4 +1,5 @@
 import asyncio
+import itertools
 from dataclasses import dataclass, field
 from datetime import timedelta, datetime, timezone
 import enum
@@ -13,7 +14,7 @@ else:
     from async_exit_stack import AsyncExitStack  # type: ignore
 
 from .. import rest
-from ..executor import Golem, Job
+from ..executor import Golem, Job, Task
 from ..executor.ctx import WorkContext
 from ..payload import Payload
 from ..props import NodeInfo
@@ -21,7 +22,10 @@ from . import events
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SERVICE_EXPIRATION: Final[datetime] = datetime.now(timezone.utc) + timedelta(days=3650)
+# current default for yagna providers as of yagna 0.6.x
+DEFAULT_SERVICE_EXPIRATION: Final[timedelta] = timedelta(minutes=175)
+
+cluster_ids = itertools.count(1)
 
 
 class ServiceState(statemachine.StateMachine):
@@ -194,19 +198,23 @@ class Cluster(AsyncContextManager):
         num_instances: int = 1,
         expiration: Optional[datetime] = None,
     ):
+        self.id = str(next(cluster_ids))
+
         self._engine = engine
         self._service_class = service_class
         self._payload = payload
         self._num_instances = num_instances
-        self._expiration = expiration or DEFAULT_SERVICE_EXPIRATION
+        self._expiration = expiration or datetime.now(timezone.utc) + DEFAULT_SERVICE_EXPIRATION
 
         self.__instances: List[ServiceInstance] = []
         """List of Service instances"""
 
+        self._task_ids = itertools.count(1)
+
         self._stack = AsyncExitStack()
 
     def __repr__(self):
-        return f"Cluster: {self._num_instances} x [Service: {self._service_class.__name__}, Payload: {self._payload}]"
+        return f"Cluster {self.id}: {self._num_instances}x[Service: {self._service_class.__name__}, Payload: {self._payload}]"
 
     async def __aenter__(self):
         self.__services: Set[asyncio.Task] = set()
@@ -339,6 +347,14 @@ class Cluster(AsyncContextManager):
                 work_context = WorkContext(
                     act.id, node_info, self._engine.storage_manager, emitter=self.emit
                 )
+                task_id = f"{self.id}{next(self._task_ids)}"
+                self.emit(
+                    events.TaskStarted(
+                        agr_id=agreement.id,
+                        task_id=task_id,
+                        task_data=f"Service: {self._service_class.__name__}"
+                    )
+                )
 
                 try:
                     instance_batches = self._run_instance(work_context)
@@ -346,6 +362,13 @@ class Cluster(AsyncContextManager):
                         await self._engine.process_batches(agreement.id, act, instance_batches)
                     except StopAsyncIteration:
                         pass
+
+                    self.emit(
+                        events.TaskFinished(
+                            agr_id=agreement.id,
+                            task_id=task_id,
+                        )
+                    )
                     self.emit(events.WorkerFinished(agr_id=agreement.id))
                 except Exception:
                     self.emit(
