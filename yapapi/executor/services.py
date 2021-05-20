@@ -347,7 +347,7 @@ class Cluster(AsyncContextManager):
                 work_context = WorkContext(
                     act.id, node_info, self._engine.storage_manager, emitter=self.emit
                 )
-                task_id = f"{self.id}{next(self._task_ids)}"
+                task_id = f"{self.id}:{next(self._task_ids)}"
                 self.emit(
                     events.TaskStarted(
                         agr_id=agreement.id,
