@@ -43,11 +43,6 @@ class SimpleService(Service):
     PLOT_INFO_PATH = "/golem/out/plot"
     SIMPLE_SERVICE = "/golem/run/simple_service.py"
 
-    plots_to_download = None
-
-    def post_init(self):
-        self.plots_to_download = queue.Queue()
-
     @staticmethod
     async def get_payload():
         return await vm.repo(
@@ -56,46 +51,32 @@ class SimpleService(Service):
         min_storage_gib=2.0,
     )
 
-    async def on_plot(self, out: bytes):
-        fname = json.loads(out.strip())
-        self.plots_to_download.put_nowait(fname)
-
-    @staticmethod
-    async def on_stats(out: bytes):
-        print(f"{TEXT_COLOR_CYAN}stats: {out}{TEXT_COLOR_DEFAULT}")
-
     async def start(self):
         self._ctx.run("/golem/run/simulate_observations_ctl.py", "--start")
-        self._ctx.send_bytes(
-            "/golem/in/get_stats.sh", f"{self.SIMPLE_SERVICE} --stats > {self.STATS_PATH}".encode()
-        )
-        self._ctx.send_bytes(
-            "/golem/in/get_plot.sh", f"{self.SIMPLE_SERVICE} --plot dist > {self.PLOT_INFO_PATH}".encode()
-        )
         yield self._ctx.commit()
 
     async def run(self):
         while True:
             await asyncio.sleep(10)
+            self._ctx.run(self.SIMPLE_SERVICE, "--stats")  # idx 0
+            self._ctx.run(self.SIMPLE_SERVICE, "--plot", "dist")  # idx 1
 
-            self._ctx.run("/bin/sh", "/golem/in/get_stats.sh")
-            self._ctx.download_bytes(self.STATS_PATH, self.on_stats)
-            self._ctx.run("/bin/sh", "/golem/in/get_plot.sh")
-            self._ctx.download_bytes(self.PLOT_INFO_PATH, self.on_plot)
+            future_results = yield self._ctx.commit()
+            results = await future_results
+            stats = results[0].stdout.strip()
+            plot = results[1].stdout.strip().strip('"')
 
-            while True:
-                try:
-                    plot = self.plots_to_download.get_nowait()
-                    plot_filename = (
-                            "".join(random.choice(string.ascii_letters) for _ in
-                                    range(10)) + ".png"
-                    )
-                    print(f"{TEXT_COLOR_CYAN}downloading plot: {plot_filename}{TEXT_COLOR_DEFAULT}")
-                    self._ctx.download_file(plot, str(pathlib.Path(__file__).resolve().parent / plot_filename))
-                except queue.Empty:
-                    break
+            print(f"{TEXT_COLOR_CYAN}stats: {stats}{TEXT_COLOR_DEFAULT}")
 
-            yield self._ctx.commit()
+            plot_filename = (
+                    "".join(random.choice(string.ascii_letters) for _ in
+                            range(10)) + ".png"
+            )
+            print(f"{TEXT_COLOR_CYAN}downloading plot: {plot} to {plot_filename}{TEXT_COLOR_DEFAULT}")
+            self._ctx.download_file(plot, str(pathlib.Path(__file__).resolve().parent / plot_filename))
+
+            steps = self._ctx.commit()
+            yield steps
 
     async def shutdown(self):
         self._ctx.run("/golem/run/simulate_observations_ctl.py", "--stop")
