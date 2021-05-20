@@ -846,7 +846,7 @@ class Executor(AsyncContextManager):
             self._engine = _engine
         else:
             warnings.warn(
-                "stand-alone usage is deprecated, please `Golem.execute_task` class instead ",
+                "stand-alone usage is deprecated, please use `Golem.execute_task` class instead.",
                 DeprecationWarning,
             )
             self._engine = Golem(
