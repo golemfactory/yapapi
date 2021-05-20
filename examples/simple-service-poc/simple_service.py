@@ -19,7 +19,7 @@ from yapapi import (
 from yapapi.executor import Golem
 from yapapi.executor.services import Service
 
-from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
+from yapapi.log import enable_default_logger, log_summary, log_event_repr, pluralize  # noqa
 from yapapi.payload import vm
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
@@ -32,6 +32,8 @@ from utils import (
     TEXT_COLOR_RED,
     TEXT_COLOR_YELLOW,
 )
+
+NUM_INSTANCES = 1
 
 
 class SimpleService(Service):
@@ -62,35 +64,35 @@ class SimpleService(Service):
         print(f"{TEXT_COLOR_CYAN}stats: {out}{TEXT_COLOR_DEFAULT}")
 
     async def start(self):
-        self.ctx.run("/golem/run/simulate_observations_ctl.py", "--start")
-        self.ctx.send_bytes(
+        self._ctx.run("/golem/run/simulate_observations_ctl.py", "--start")
+        self._ctx.send_bytes(
             "/golem/in/get_stats.sh", f"{self.SIMPLE_SERVICE} --stats > {self.STATS_PATH}".encode()
         )
-        self.ctx.send_bytes(
+        self._ctx.send_bytes(
             "/golem/in/get_plot.sh", f"{self.SIMPLE_SERVICE} --plot dist > {self.PLOT_INFO_PATH}".encode()
         )
-        yield self.ctx.commit()
+        yield self._ctx.commit()
 
     async def run(self):
         while True:
             await asyncio.sleep(10)
 
-            self.ctx.run("/bin/sh", "/golem/in/get_stats.sh")
-            self.ctx.download_bytes(self.STATS_PATH, self.on_stats)
-            self.ctx.run("/bin/sh", "/golem/in/get_plot.sh")
-            self.ctx.download_bytes(self.PLOT_INFO_PATH, self.on_plot)
+            self._ctx.run("/bin/sh", "/golem/in/get_stats.sh")
+            self._ctx.download_bytes(self.STATS_PATH, self.on_stats)
+            self._ctx.run("/bin/sh", "/golem/in/get_plot.sh")
+            self._ctx.download_bytes(self.PLOT_INFO_PATH, self.on_plot)
 
             for plot in self.plots_to_download:
                 test_filename = (
                         "".join(random.choice(string.ascii_letters) for _ in
                                 range(10)) + ".png"
                 )
-                self.ctx.download_file(plot, str(pathlib.Path(__file__).resolve().parent / test_filename))
-            yield self.ctx.commit()
+                self._ctx.download_file(plot, str(pathlib.Path(__file__).resolve().parent / test_filename))
+            yield self._ctx.commit()
 
     async def shutdown(self):
-        self.ctx.run("/golem/run/simulate_observations_ctl.py", "--stop")
-        yield self.ctx.commit()
+        self._ctx.run("/golem/run/simulate_observations_ctl.py", "--stop")
+        yield self._ctx.commit()
 
 
 async def main(subnet_tag, driver=None, network=None):
@@ -111,25 +113,30 @@ async def main(subnet_tag, driver=None, network=None):
 
         start_time = datetime.now()
 
-        cluster = await golem.run_service(SimpleService, expiration=datetime.now(timezone.utc) + timedelta(minutes=15))
+        print(TEXT_COLOR_YELLOW, f"starting {NUM_INSTANCES} ", pluralize(NUM_INSTANCES, "instance"), TEXT_COLOR_DEFAULT)
+
+        cluster = await golem.run_service(
+            SimpleService,
+            num_instances=NUM_INSTANCES,
+            expiration=datetime.now(timezone.utc) + timedelta(minutes=15))
 
         def instances():
-            return [{s.ctx.id, s.state.value} for s in cluster.instances]
+            return [(s.provider_name, s.state.value) for s in cluster.instances]
 
         def still_running():
             return any([s for s in cluster.instances if s.is_available])
 
         while datetime.now() < start_time + timedelta(minutes=2):
             print(f"instances: {instances()}")
-            await asyncio.sleep(3)
+            await asyncio.sleep(5)
 
-        print("stopping instances")
+        print(f"{TEXT_COLOR_YELLOW}stopping instances{TEXT_COLOR_DEFAULT}")
         cluster.stop()
 
         cnt = 0
         while cnt < 10 and still_running():
             print(f"instances: {instances()}")
-            await asyncio.sleep(1)
+            await asyncio.sleep(5)
 
     print(f"instances: {instances()}")
 
