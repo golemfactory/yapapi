@@ -6,9 +6,11 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 import json
 import pathlib
+import queue
 import random
 import string
 import sys
+
 
 
 from yapapi import (
@@ -44,7 +46,7 @@ class SimpleService(Service):
     plots_to_download = None
 
     def post_init(self):
-        self.plots_to_download = []
+        self.plots_to_download = queue.Queue()
 
     @staticmethod
     async def get_payload():
@@ -56,8 +58,7 @@ class SimpleService(Service):
 
     async def on_plot(self, out: bytes):
         fname = json.loads(out.strip())
-        print(f"{TEXT_COLOR_CYAN}plot: {fname}{TEXT_COLOR_DEFAULT}")
-        self.plots_to_download.append(fname)
+        self.plots_to_download.put_nowait(fname)
 
     @staticmethod
     async def on_stats(out: bytes):
@@ -82,12 +83,18 @@ class SimpleService(Service):
             self._ctx.run("/bin/sh", "/golem/in/get_plot.sh")
             self._ctx.download_bytes(self.PLOT_INFO_PATH, self.on_plot)
 
-            for plot in self.plots_to_download:
-                test_filename = (
-                        "".join(random.choice(string.ascii_letters) for _ in
-                                range(10)) + ".png"
-                )
-                self._ctx.download_file(plot, str(pathlib.Path(__file__).resolve().parent / test_filename))
+            while True:
+                try:
+                    plot = self.plots_to_download.get_nowait()
+                    plot_filename = (
+                            "".join(random.choice(string.ascii_letters) for _ in
+                                    range(10)) + ".png"
+                    )
+                    print(f"{TEXT_COLOR_CYAN}downloading plot: {plot_filename}{TEXT_COLOR_DEFAULT}")
+                    self._ctx.download_file(plot, str(pathlib.Path(__file__).resolve().parent / plot_filename))
+                except queue.Empty:
+                    break
+
             yield self._ctx.commit()
 
     async def shutdown(self):
@@ -113,7 +120,7 @@ async def main(subnet_tag, driver=None, network=None):
 
         start_time = datetime.now()
 
-        print(TEXT_COLOR_YELLOW, f"starting {NUM_INSTANCES} ", pluralize(NUM_INSTANCES, "instance"), TEXT_COLOR_DEFAULT)
+        print(f"{TEXT_COLOR_YELLOW}starting {pluralize(NUM_INSTANCES, 'instance')}{TEXT_COLOR_DEFAULT}")
 
         cluster = await golem.run_service(
             SimpleService,
