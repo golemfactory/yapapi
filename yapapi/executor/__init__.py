@@ -1015,9 +1015,7 @@ class Executor(AsyncContextManager):
                                 )
                                 yield task
                                 self._engine.emit(
-                                    events.TaskFinished(
-                                        agr_id=agreement.id, task_id=task.id
-                                    )
+                                    events.TaskFinished(agr_id=agreement.id, task_id=task.id)
                                 )
 
                         batch_generator = worker(work_context, task_generator())
