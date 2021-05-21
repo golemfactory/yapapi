@@ -112,7 +112,7 @@ def unpack_work_item(item: WorkItem) -> Tuple[Work, ExecOptions]:
 
 
 exescript_ids: Iterator[int] = itertools.count(1)
-
+"""An iterator providing unique ids used to correlate events related to a single exe script."""
 
 D = TypeVar("D")  # Type var for task data
 R = TypeVar("R")  # Type var for task result
@@ -148,8 +148,7 @@ class Golem(AsyncContextManager):
         :param app_key: optional Yagna application key. If not provided, the default is to
                         get the value from `YAGNA_APPKEY` environment variable
         """
-        self._init_api(app_key)
-
+        self._api_config = rest.Configuration(app_key)
         self._budget_amount = Decimal(budget)
         self._budget_allocations: List[rest.payment.Allocation] = []
 
@@ -206,13 +205,6 @@ class Golem(AsyncContextManager):
         await builder.decorate(self.payment_decoration, self.strategy, payload)
         return builder
 
-    def _init_api(self, app_key: Optional[str] = None):
-        """
-        initialize the REST (low-level) API
-        :param app_key: (optional) yagna daemon application key
-        """
-        self._api_config = rest.Configuration(app_key)
-
     @property
     def driver(self) -> str:
         return self._driver
@@ -265,7 +257,7 @@ class Golem(AsyncContextManager):
             self._services.add(self._process_invoices_job)
             self._services.add(loop.create_task(self.process_debit_notes()))
 
-            self._storage_manager = await self._stack.enter_async_context(gftp.provider())
+            self._storage_manager = await stack.enter_async_context(gftp.provider())
 
             return self
         except:
@@ -1159,5 +1151,4 @@ class Executor(AsyncContextManager):
                         "%s still running: %s", pluralize(len(pending), "service"), pending
                     )
             except Exception:
-                # TODO: add message
-                logger.debug("TODO", exc_info=True)
+                logger.debug("Got error when waiting for services to finish", exc_info=True)

@@ -10,6 +10,7 @@ from .executor import (
     CaptureContext,
     ExecOptions,
     Executor,
+    Golem,
     NoPaymentAccountError,
     Task,
     WorkContext,
