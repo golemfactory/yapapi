@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import asyncio
 from datetime import datetime, timedelta
 import pathlib
@@ -20,6 +21,27 @@ from utils import (
     TEXT_COLOR_YELLOW,
 )
 
+HASHCAT_ATTACK_MODE = 3  # stands for mask attack, hashcat -a option
+
+arg_parser = build_parser("Run a hashcat attack (mask mode) on Golem network")
+arg_parser.add_argument("--hash", type=str, help="Target hash to be cracked")
+arg_parser.add_argument("--mask", type=str, help="Hashcat mask to be used for the attack")
+arg_parser.add_argument(
+    "--chunk-size",  # affects skip and limit hashcat parameters
+    type=int,
+    help="Limit for the number of words to be checked as part of a single activity",
+    default=2048,
+)
+arg_parser.add_argument(
+    "--hash-type",
+    type=int,
+    help="Type of hashing algorithm to use (hashcat -m option)",
+    default=400,
+)
+
+# Container object for parsed arguments
+args = argparse.Namespace()
+
 
 def write_hash(hash):
     with open("in.hash", "w") as f:
@@ -34,19 +56,6 @@ def write_keyspace_check_script(mask):
 def read_keyspace():
     with open("keyspace.txt", "r") as f:
         return int(f.readline())
-
-
-def read_password(ranges):
-    for r in ranges:
-        path = pathlib.Path(f"hashcat_{r}.potfile")
-        if not path.is_file():
-            continue
-        with open(path, "r") as f:
-            line = f.readline()
-        split_list = line.split(":")
-        if len(split_list) >= 2:
-            return split_list[1]
-    return None
 
 
 async def main(args):
@@ -71,7 +80,7 @@ async def main(args):
 
         async for task in tasks:
             skip = task.data
-            limit = skip + step
+            limit = skip + args.chunk_size
 
             # Commands to be run on the provider
             commands = (
@@ -113,9 +122,9 @@ async def main(args):
 
         completed = golem.execute_tasks(
             worker_check_keyspace,
-            [Task(data="check_keyspace")],
+            [Task(data="calculate_keyspace")],
             payload=package,
-            max_workers=args.number_of_providers,
+            max_workers=1,
             timeout=timedelta(minutes=30),
         )
 
@@ -134,15 +143,14 @@ async def main(args):
             f"{TEXT_COLOR_DEFAULT}"
         )
 
-        step = int(keyspace / args.number_of_providers) + 1
-
-        ranges = range(0, keyspace, step)
+        data = [Task(data=c) for c in range(0, keyspace, args.chunk_size)]
+        max_workers = keyspace // args.chunk_size
 
         completed = golem.execute_tasks(
             worker_find_password,
-            [Task(data=range) for range in ranges],
+            data,
             payload=package,
-            max_workers=args.number_of_providers,
+            max_workers=max_workers,
             timeout=timedelta(minutes=30),
         )
 
@@ -151,24 +159,16 @@ async def main(args):
                 f"{TEXT_COLOR_CYAN}Task computed: {task}, result: {task.result}{TEXT_COLOR_DEFAULT}"
             )
 
-        password = read_password(ranges)
-
-        if password is None:
-            print(f"{TEXT_COLOR_RED}No password found{TEXT_COLOR_DEFAULT}")
-        else:
-            print(f"{TEXT_COLOR_GREEN}Password found: {password}{TEXT_COLOR_DEFAULT}")
+        # if password is None:
+        #     print(f"{TEXT_COLOR_RED}No password found{TEXT_COLOR_DEFAULT}")
+        # else:
+        #     print(f"{TEXT_COLOR_GREEN}Password found: {password}{TEXT_COLOR_DEFAULT}")
 
         print(f"{TEXT_COLOR_CYAN}Total time: {datetime.now() - start_time}{TEXT_COLOR_DEFAULT}")
 
 
 if __name__ == "__main__":
-    parser = build_parser("yacat")
-
-    parser.add_argument("--number-of-providers", dest="number_of_providers", type=int, default=3)
-    parser.add_argument("mask")
-    parser.add_argument("hash")
-
-    args = parser.parse_args()
+    args = arg_parser.parse_args()
 
     # This is only required when running on Windows with Python prior to 3.8:
     windows_event_loop_fix()
