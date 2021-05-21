@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import pathlib
 import sys
 
-from yapapi import Executor, NoPaymentAccountError, Task, WorkContext, windows_event_loop_fix
+from yapapi import Golem, NoPaymentAccountError, Task, WorkContext, windows_event_loop_fix
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.payload import vm
 
@@ -94,29 +94,32 @@ async def main(args):
     # By passing `event_consumer=log_summary()` we enable summary logging.
     # See the documentation of the `yapapi.log` module on how to set
     # the level of detail and format of the logged information.
-    async with Executor(
-        package=package,
-        max_workers=args.number_of_providers,
+    async with Golem(
         budget=10.0,
-        # timeout should be keyspace / number of providers dependent
-        timeout=timedelta(minutes=30),
         subnet_tag=args.subnet_tag,
         driver=args.driver,
         network=args.network,
         event_consumer=log_summary(log_event_repr),
-    ) as executor:
+    ) as golem:
 
         print(
             f"Using subnet: {TEXT_COLOR_YELLOW}{args.subnet_tag}{TEXT_COLOR_DEFAULT}, "
-            f"payment driver: {TEXT_COLOR_YELLOW}{executor.driver}{TEXT_COLOR_DEFAULT}, "
-            f"and network: {TEXT_COLOR_YELLOW}{executor.network}{TEXT_COLOR_DEFAULT}\n"
+            f"payment driver: {TEXT_COLOR_YELLOW}{golem.driver}{TEXT_COLOR_DEFAULT}, "
+            f"and network: {TEXT_COLOR_YELLOW}{golem.network}{TEXT_COLOR_DEFAULT}\n"
         )
 
         keyspace_computed = False
         start_time = datetime.now()
 
-        # This is not a typical use of executor.submit as there is only one task, with no data:
-        async for _task in executor.submit(worker_check_keyspace, [Task(data=None)]):
+        completed = golem.execute_tasks(
+            worker_check_keyspace,
+            [Task(data="check_keyspace")],
+            payload=package,
+            max_workers=args.number_of_providers,
+            timeout=timedelta(minutes=30),
+        )
+
+        async for task in completed:
             keyspace_computed = True
 
         if not keyspace_computed:
@@ -135,9 +138,15 @@ async def main(args):
 
         ranges = range(0, keyspace, step)
 
-        async for task in executor.submit(
-            worker_find_password, [Task(data=range) for range in ranges]
-        ):
+        completed = golem.execute_tasks(
+            worker_find_password,
+            [Task(data=range) for range in ranges],
+            payload=package,
+            max_workers=args.number_of_providers,
+            timeout=timedelta(minutes=30),
+        )
+
+        async for task in completed:
             print(
                 f"{TEXT_COLOR_CYAN}Task computed: {task}, result: {task.result}{TEXT_COLOR_DEFAULT}"
             )
