@@ -176,11 +176,7 @@ class Golem(AsyncContextManager):
 
         # Add buffering to the provided event emitter to make sure
         # that emitting events will not block
-        # TODO: make AsyncWrapper an AsyncContextManager and start it in
-        # in __aenter__(); if it's started here then there's no guarantee that
-        # it will be cancelled properly
-        self._wrapped_consumer: Optional[AsyncWrapper] = None
-        self._event_consumer = event_consumer
+        self._wrapped_consumer = AsyncWrapper(event_consumer)
 
         self._stream_output = stream_output
 
@@ -241,7 +237,15 @@ class Golem(AsyncContextManager):
         try:
             stack = self._stack
 
-            self._wrapped_consumer = AsyncWrapper(self._event_consumer)
+            await stack.enter_async_context(self._wrapped_consumer)
+
+            def report_shutdown(*exc_info):
+                if any(item for item in exc_info):
+                    self.emit(events.ShutdownFinished(exc_info=exc_info))  # noqa
+                else:
+                    self.emit(events.ShutdownFinished())
+
+            stack.push(report_shutdown)
 
             market_client = await stack.enter_async_context(self._api_config.market())
             self._market_api = rest.Market(market_client)
@@ -272,53 +276,48 @@ class Golem(AsyncContextManager):
         # Importing this at the beginning would cause circular dependencies
         from ..log import pluralize
 
-        logger.debug("Golem is shutting down...")
-        # Wait until all computations are finished
-        await asyncio.gather(*[job.finished.wait() for job in self._jobs])
-
-        self._payment_closing = True
-
-        for task in self._services:
-            if task is not self._process_invoices_job:
-                task.cancel()
-
-        if self._process_invoices_job and not any(
-            True for job in self._jobs if job.agreements_pool.confirmed > 0
-        ):
-            logger.debug("No need to wait for invoices.")
-            self._process_invoices_job.cancel()
-
         try:
-            logger.info("Waiting for Golem services to finish...")
-            _, pending = await asyncio.wait(
-                self._services, timeout=10, return_when=asyncio.ALL_COMPLETED
-            )
-            if pending:
-                logger.debug("%s still running: %s", pluralize(len(pending), "service"), pending)
-        except Exception:
-            # TODO: add message
-            logger.debug("TODO", exc_info=True)
+            logger.debug("Golem is shutting down...")
+            # Wait until all computations are finished
+            await asyncio.gather(*[job.finished.wait() for job in self._jobs])
 
-        if self._agreements_to_pay and self._process_invoices_job:
-            logger.info(
-                "%s still unpaid, waiting for invoices...",
-                pluralize(len(self._agreements_to_pay), "agreement"),
-            )
-            await asyncio.wait(
-                {self._process_invoices_job}, timeout=30, return_when=asyncio.ALL_COMPLETED
-            )
-            if self._agreements_to_pay:
-                logger.warning("Unpaid agreements: %s", self._agreements_to_pay)
+            self._payment_closing = True
 
-        # TODO: prevent new computations at this point (if it's even possible to start one)
-        try:
-            await self._stack.aclose()
-            self.emit(events.ShutdownFinished())
-        except Exception:
-            self.emit(events.ShutdownFinished(exc_info=sys.exc_info()))
+            for task in self._services:
+                if task is not self._process_invoices_job:
+                    task.cancel()
+
+            if self._process_invoices_job and not any(
+                True for job in self._jobs if job.agreements_pool.confirmed > 0
+            ):
+                logger.debug("No need to wait for invoices.")
+                self._process_invoices_job.cancel()
+
+            try:
+                logger.info("Waiting for Golem services to finish...")
+                _, pending = await asyncio.wait(
+                    self._services, timeout=10, return_when=asyncio.ALL_COMPLETED
+                )
+                if pending:
+                    logger.debug(
+                        "%s still running: %s", pluralize(len(pending), "service"), pending
+                    )
+            except Exception:
+                logger.debug("Got error when waiting for services to finish", exc_info=True)
+
+            if self._agreements_to_pay and self._process_invoices_job:
+                logger.info(
+                    "%s still unpaid, waiting for invoices...",
+                    pluralize(len(self._agreements_to_pay), "agreement"),
+                )
+                await asyncio.wait(
+                    {self._process_invoices_job}, timeout=30, return_when=asyncio.ALL_COMPLETED
+                )
+                if self._agreements_to_pay:
+                    logger.warning("Unpaid agreements: %s", self._agreements_to_pay)
+
         finally:
-            if self._wrapped_consumer:
-                await self._wrapped_consumer.stop()
+            await self._stack.aclose()
 
     async def _create_allocations(self) -> rest.payment.MarketDecoration:
 
