@@ -45,13 +45,18 @@ class HasExcInfo(Event):
         return exc_info, me
 
 
+@dataclass(init=False)
+class ComputationEvent(Event):
+    job_id: str
+
+
 @dataclass
-class ComputationStarted(Event):
+class ComputationStarted(ComputationEvent):
     expires: datetime
 
 
 @dataclass
-class ComputationFinished(HasExcInfo):
+class ComputationFinished(HasExcInfo, ComputationEvent):
     """Indicates successful completion if `exc_info` is `None` and a failure otherwise."""
 
 
@@ -192,13 +197,18 @@ class TaskStarted(AgreementEvent, TaskEvent):
 
 
 @dataclass
+class TaskFinished(AgreementEvent, TaskEvent):
+    pass
+
+
+@dataclass
 class WorkerFinished(HasExcInfo, AgreementEvent):
     """Indicates successful completion if `exc_info` is `None` and a failure otherwise."""
 
 
 @dataclass(init=False)
 class ScriptEvent(AgreementEvent):
-    task_id: Optional[str]
+    script_id: Optional[str]
 
 
 @dataclass
@@ -225,6 +235,7 @@ class CommandEvent(ScriptEvent):
 class CommandExecuted(CommandEvent):
     command: Any
     success: bool = dataclasses.field(default=True)
+    message: Optional[str] = dataclasses.field(default=None)
     stdout: Optional[str] = dataclasses.field(default=None)
     stderr: Optional[str] = dataclasses.field(default=None)
 
@@ -279,24 +290,8 @@ class CommandEventContext:
             self.kwargs["cmd_idx"] >= last_idx or not self.kwargs["success"]
         )
 
-    def event(self, agr_id: str, task_id: str, cmds: List) -> CommandEvent:
-        kwargs = dict(agr_id=agr_id, task_id=task_id, **self.kwargs)
+    def event(self, agr_id: str, script_id: str, cmds: List) -> CommandEvent:
+        kwargs = dict(agr_id=agr_id, script_id=script_id, **self.kwargs)
         if self.evt_cls is CommandExecuted:
             kwargs["command"] = cmds[self.kwargs["cmd_idx"]]
-            kwargs["stdout"] = kwargs["stderr"] = None
-            try:
-                # Replace the "message" kwarg with "stdout" and "stderr"
-                message = self.kwargs["message"]
-                del kwargs["message"]
-                if message is not None:
-                    message_dict = json.loads(message)
-                    kwargs["stdout"] = message_dict["stdout"]
-                    kwargs["stderr"] = message_dict["stderr"]
-            except (json.JSONDecodeError, KeyError, TypeError) as e:
-                logger.warning(
-                    'Missing or invalid field "message" in CommandExecuted event; '
-                    "kwargs: %s; error: %r",
-                    self.kwargs,
-                    e,
-                )
         return self.evt_cls(**kwargs)
