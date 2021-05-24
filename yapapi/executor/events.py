@@ -235,6 +235,7 @@ class CommandEvent(ScriptEvent):
 class CommandExecuted(CommandEvent):
     command: Any
     success: bool = dataclasses.field(default=True)
+    message: Optional[str] = dataclasses.field(default=None)
     stdout: Optional[str] = dataclasses.field(default=None)
     stderr: Optional[str] = dataclasses.field(default=None)
 
@@ -293,20 +294,4 @@ class CommandEventContext:
         kwargs = dict(agr_id=agr_id, script_id=script_id, **self.kwargs)
         if self.evt_cls is CommandExecuted:
             kwargs["command"] = cmds[self.kwargs["cmd_idx"]]
-            kwargs["stdout"] = kwargs["stderr"] = None
-            try:
-                # Replace the "message" kwarg with "stdout" and "stderr"
-                message = self.kwargs["message"]
-                del kwargs["message"]
-                if message is not None:
-                    message_dict = json.loads(message)
-                    kwargs["stdout"] = message_dict["stdout"]
-                    kwargs["stderr"] = message_dict["stderr"]
-            except (json.JSONDecodeError, KeyError, TypeError) as e:
-                logger.warning(
-                    'Missing or invalid field "message" in CommandExecuted event; '
-                    "kwargs: %s; error: %r",
-                    self.kwargs,
-                    e,
-                )
         return self.evt_cls(**kwargs)

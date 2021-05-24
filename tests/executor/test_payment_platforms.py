@@ -123,7 +123,11 @@ async def test_matching_account_creates_allocation(monkeypatch, _mock_decorate_d
         create_allocation_args.append(model)
         return mock.Mock()
 
+    async def mock_release_allocation(*args, **kwargs):
+        pass
+
     monkeypatch.setattr(RequestorApi, "create_allocation", mock_create_allocation)
+    monkeypatch.setattr(RequestorApi, "release_allocation", mock_release_allocation)
 
     with pytest.raises(_StopExecutor):
         async with Executor(
