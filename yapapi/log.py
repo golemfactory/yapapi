@@ -55,6 +55,7 @@ from typing import Any, Callable, Dict, Iterator, List, Optional, Set
 
 import yapapi.executor.events as events
 from yapapi import __version__ as yapapi_version
+from yapapi.rest.activity import CommandExecutionError
 
 event_logger = logging.getLogger("yapapi.events")
 executor_logger = logging.getLogger("yapapi.executor")
@@ -470,9 +471,14 @@ class SummaryLogger:
             provider_info = self.agreement_provider_info[event.agr_id]
             self.provider_failures[provider_info] += 1
             reason = str(exc) or repr(exc) or "unexpected error"
-            self.logger.warning(
-                "Activity failed on provider '%s', reason: %s", provider_info.name, reason
-            )
+            if isinstance(exc, CommandExecutionError):
+                self.logger.warning(
+                    "Activity failed on provider '%s'; reason: %s", provider_info.name, reason
+                )
+            else:
+                self.logger.warning(
+                    "Worker for provider '%s' failed; reason: %s", provider_info.name, reason
+                )
 
         elif isinstance(event, events.ComputationFinished):
             if not event.exc_info:

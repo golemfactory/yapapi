@@ -5,13 +5,13 @@ import pathlib
 import sys
 
 from yapapi import (
+    Golem,
     NoPaymentAccountError,
     Task,
     __version__ as yapapi_version,
     WorkContext,
     windows_event_loop_fix,
 )
-from yapapi.executor import Golem
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.payload import vm
 from yapapi.rest.activity import BatchTimeoutError

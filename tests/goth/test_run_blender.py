@@ -44,14 +44,14 @@ async def assert_all_tasks_processed(status: str, output_lines: EventStream[str]
     raise AssertionError(f"Tasks not {status}: {remaining_tasks}")
 
 
-async def assert_all_tasks_sent(output_lines: EventStream[str]):
-    """Assert that for every task a line with `Task sent` will appear."""
-    await assert_all_tasks_processed("sent", output_lines)
+async def assert_all_tasks_started(output_lines: EventStream[str]):
+    """Assert that for every task a line with `Task started on provider` will appear."""
+    await assert_all_tasks_processed("started on provider", output_lines)
 
 
 async def assert_all_tasks_computed(output_lines: EventStream[str]):
-    """Assert that for every task a line with `Task computed` will appear."""
-    await assert_all_tasks_processed("computed", output_lines)
+    """Assert that for every task a line with `Task computed by provider` will appear."""
+    await assert_all_tasks_processed("computed by provider", output_lines)
 
 
 async def assert_all_invoices_accepted(output_lines: EventStream[str]):
@@ -103,7 +103,7 @@ async def test_run_blender(log_dir: Path, project_dir: Path, config_overrides) -
             # Add assertions to the command output monitor `cmd_monitor`:
             cmd_monitor.add_assertion(assert_no_errors)
             cmd_monitor.add_assertion(assert_all_invoices_accepted)
-            all_sent = cmd_monitor.add_assertion(assert_all_tasks_sent)
+            all_sent = cmd_monitor.add_assertion(assert_all_tasks_started)
             all_computed = cmd_monitor.add_assertion(assert_all_tasks_computed)
 
             await cmd_monitor.wait_for_pattern(".*Received proposals from 2 ", timeout=20)

@@ -5,35 +5,54 @@ import time
 from yapapi.executor.utils import AsyncWrapper
 
 
-def test_keyboard_interrupt(event_loop):
+def test_async_wrapper_ordering():
+    """Test if AsyncWrapper preserves order of calls."""
+
+    input_ = list(range(10))
+    output = []
+
+    def func(n):
+        output.append(n)
+
+    async def main():
+        async with AsyncWrapper(func) as wrapper:
+            for n in input_:
+                wrapper.async_call(n)
+
+    asyncio.get_event_loop().run_until_complete(main())
+    assert output == input_
+
+
+def test_keyboard_interrupt():
     """Test if AsyncWrapper handles KeyboardInterrupt by passing it to the event loop."""
 
     def func(interrupt):
         if interrupt:
             raise KeyboardInterrupt
 
-    wrapper = AsyncWrapper(func, event_loop)
-
     async def main():
-        for _ in range(100):
-            wrapper.async_call(False)
-            # This will raise KeyboardInterrupt in the wrapper's worker task
-            wrapper.async_call(True)
-            await asyncio.sleep(0.01)
+        async with AsyncWrapper(func) as wrapper:
+            for _ in range(100):
+                wrapper.async_call(False)
+                # This will raise KeyboardInterrupt in the wrapper's worker task
+                wrapper.async_call(True)
+                await asyncio.sleep(0.01)
 
-    task = event_loop.create_task(main())
+    loop = asyncio.get_event_loop()
+    task = loop.create_task(main())
     with pytest.raises(KeyboardInterrupt):
-        event_loop.run_until_complete(task)
+        loop.run_until_complete(task)
 
     # Make sure the main task did not get KeyboardInterrupt
     assert not task.done()
 
-    # Make sure the wrapper can still make calls, it's worker task shouldn't exit
-    wrapper.async_call(False)
+    with pytest.raises(asyncio.CancelledError):
+        task.cancel()
+        loop.run_until_complete(task)
 
 
-def test_stop_doesnt_deadlock(event_loop):
-    """Test if the AsyncWrapper.stop() coroutine completes after an AsyncWrapper is interrupted.
+def test_aexit_doesnt_deadlock():
+    """Test if the AsyncWrapper.__aexit__() completes after an AsyncWrapper is interrupted.
 
     See https://github.com/golemfactory/yapapi/issues/238.
     """
@@ -46,55 +65,57 @@ def test_stop_doesnt_deadlock(event_loop):
     async def main():
         """"This coroutine mimics how an AsyncWrapper is used in an Executor."""
 
-        wrapper = AsyncWrapper(func, event_loop)
-        try:
-            # Queue some calls
-            for _ in range(10):
-                wrapper.async_call(False)
-            wrapper.async_call(True)
-            for _ in range(10):
-                wrapper.async_call(False)
-            # Sleep until cancelled
-            await asyncio.sleep(30)
-            assert False, "Sleep should be cancelled"
-        except asyncio.CancelledError:
-            # This call should exit without timeout
-            await asyncio.wait_for(wrapper.stop(), timeout=30.0)
+        async with AsyncWrapper(func) as wrapper:
+            try:
+                # Queue some calls
+                for _ in range(10):
+                    wrapper.async_call(False)
+                wrapper.async_call(True)
+                for _ in range(10):
+                    wrapper.async_call(False)
+                # Sleep until cancelled
+                await asyncio.sleep(30)
+                assert False, "Sleep should be cancelled"
+            except asyncio.CancelledError:
+                pass
 
-    task = event_loop.create_task(main())
+    loop = asyncio.get_event_loop()
+    task = loop.create_task(main())
     try:
-        event_loop.run_until_complete(task)
+        loop.run_until_complete(task)
         assert False, "Expected KeyboardInterrupt"
     except KeyboardInterrupt:
         task.cancel()
-        event_loop.run_until_complete(task)
+        loop.run_until_complete(task)
 
 
-def test_stop_doesnt_wait(event_loop):
-    """Test if the AsyncWrapper.stop() coroutine prevents new calls from be queued."""
+def test_cancel_doesnt_wait():
+    """Test if the AsyncWrapper stops processing calls when it's cancelled."""
 
-    def func():
-        time.sleep(0.1)
-        pass
+    num_calls = 0
 
-    wrapper = AsyncWrapper(func, event_loop)
+    def func(d):
+        print("Calling func()")
+        nonlocal num_calls
+        num_calls += 1
+        time.sleep(d)
 
     async def main():
-        with pytest.raises(RuntimeError):
-            for n in range(100):
-                wrapper.async_call()
-                await asyncio.sleep(0.01)
-            # wrapper should be stopped before all calls are made
-            assert False, "Should raise RuntimeError"
+        try:
+            async with AsyncWrapper(func) as wrapper:
+                for _ in range(10):
+                    wrapper.async_call(0.1)
+        except asyncio.CancelledError:
+            pass
 
-    async def stop():
-        await asyncio.sleep(0.1)
-        await wrapper.stop()
-
-    task = event_loop.create_task(main())
-    event_loop.create_task(stop())
-    try:
-        event_loop.run_until_complete(task)
-    except KeyboardInterrupt:
+    async def cancel():
+        await asyncio.sleep(0.05)
+        print("Cancelling!")
         task.cancel()
-        event_loop.run_until_complete(task)
+
+    loop = asyncio.get_event_loop()
+    task = loop.create_task(main())
+    loop.create_task(cancel())
+    loop.run_until_complete(task)
+
+    assert num_calls < 10

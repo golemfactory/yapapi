@@ -117,7 +117,7 @@ def unpack_work_item(item: WorkItem) -> Tuple[Work, ExecOptions]:
 
 
 exescript_ids: Iterator[int] = itertools.count(1)
-
+"""An iterator providing unique ids used to correlate events related to a single exe script."""
 
 D = TypeVar("D")  # Type var for task data
 R = TypeVar("R")  # Type var for task result
@@ -153,8 +153,7 @@ class Golem(AsyncContextManager):
         :param app_key: optional Yagna application key. If not provided, the default is to
                         get the value from `YAGNA_APPKEY` environment variable
         """
-        self._init_api(app_key)
-
+        self._api_config = rest.Configuration(app_key)
         self._budget_amount = Decimal(budget)
         self._budget_allocations: List[rest.payment.Allocation] = []
 
@@ -181,11 +180,7 @@ class Golem(AsyncContextManager):
 
         # Add buffering to the provided event emitter to make sure
         # that emitting events will not block
-        # TODO: make AsyncWrapper an AsyncContextManager and start it in
-        # in __aenter__(); if it's started here then there's no guarantee that
-        # it will be cancelled properly
-        self._wrapped_consumer: Optional[AsyncWrapper] = None
-        self._event_consumer = event_consumer
+        self._wrapped_consumer = AsyncWrapper(event_consumer)
 
         self._stream_output = stream_output
 
@@ -215,13 +210,6 @@ class Golem(AsyncContextManager):
         await builder.decorate(self.payment_decoration, self.strategy, payload)
         return builder
 
-    def _init_api(self, app_key: Optional[str] = None):
-        """
-        initialize the REST (low-level) API
-        :param app_key: (optional) yagna daemon application key
-        """
-        self._api_config = rest.Configuration(app_key)
-
     @property
     def driver(self) -> str:
         return self._driver
@@ -246,7 +234,15 @@ class Golem(AsyncContextManager):
         try:
             stack = self._stack
 
-            self._wrapped_consumer = AsyncWrapper(self._event_consumer)
+            await stack.enter_async_context(self._wrapped_consumer)
+
+            def report_shutdown(*exc_info):
+                if any(item for item in exc_info):
+                    self.emit(events.ShutdownFinished(exc_info=exc_info))  # noqa
+                else:
+                    self.emit(events.ShutdownFinished())
+
+            stack.push(report_shutdown)
 
             market_client = await stack.enter_async_context(self._api_config.market())
             self._market_api = rest.Market(market_client)
@@ -266,7 +262,7 @@ class Golem(AsyncContextManager):
             self._services.add(self._process_invoices_job)
             self._services.add(loop.create_task(self.process_debit_notes()))
 
-            self._storage_manager = await self._stack.enter_async_context(gftp.provider())
+            self._storage_manager = await stack.enter_async_context(gftp.provider())
 
             return self
         except:
@@ -277,53 +273,48 @@ class Golem(AsyncContextManager):
         # Importing this at the beginning would cause circular dependencies
         from ..log import pluralize
 
-        logger.debug("Golem is shutting down...")
-        # Wait until all computations are finished
-        await asyncio.gather(*[job.finished.wait() for job in self._jobs])
-
-        self._payment_closing = True
-
-        for task in self._services:
-            if task is not self._process_invoices_job:
-                task.cancel()
-
-        if self._process_invoices_job and not any(
-            True for job in self._jobs if job.agreements_pool.confirmed > 0
-        ):
-            logger.debug("No need to wait for invoices.")
-            self._process_invoices_job.cancel()
-
         try:
-            logger.info("Waiting for Golem services to finish...")
-            _, pending = await asyncio.wait(
-                self._services, timeout=10, return_when=asyncio.ALL_COMPLETED
-            )
-            if pending:
-                logger.debug("%s still running: %s", pluralize(len(pending), "service"), pending)
-        except Exception:
-            # TODO: add message
-            logger.debug("TODO", exc_info=True)
+            logger.debug("Golem is shutting down...")
+            # Wait until all computations are finished
+            await asyncio.gather(*[job.finished.wait() for job in self._jobs])
 
-        if self._agreements_to_pay and self._process_invoices_job:
-            logger.info(
-                "%s still unpaid, waiting for invoices...",
-                pluralize(len(self._agreements_to_pay), "agreement"),
-            )
-            await asyncio.wait(
-                {self._process_invoices_job}, timeout=30, return_when=asyncio.ALL_COMPLETED
-            )
-            if self._agreements_to_pay:
-                logger.warning("Unpaid agreements: %s", self._agreements_to_pay)
+            self._payment_closing = True
 
-        # TODO: prevent new computations at this point (if it's even possible to start one)
-        try:
-            await self._stack.aclose()
-            self.emit(events.ShutdownFinished())
-        except Exception:
-            self.emit(events.ShutdownFinished(exc_info=sys.exc_info()))
+            for task in self._services:
+                if task is not self._process_invoices_job:
+                    task.cancel()
+
+            if self._process_invoices_job and not any(
+                True for job in self._jobs if job.agreements_pool.confirmed > 0
+            ):
+                logger.debug("No need to wait for invoices.")
+                self._process_invoices_job.cancel()
+
+            try:
+                logger.info("Waiting for Golem services to finish...")
+                _, pending = await asyncio.wait(
+                    self._services, timeout=10, return_when=asyncio.ALL_COMPLETED
+                )
+                if pending:
+                    logger.debug(
+                        "%s still running: %s", pluralize(len(pending), "service"), pending
+                    )
+            except Exception:
+                logger.debug("Got error when waiting for services to finish", exc_info=True)
+
+            if self._agreements_to_pay and self._process_invoices_job:
+                logger.info(
+                    "%s still unpaid, waiting for invoices...",
+                    pluralize(len(self._agreements_to_pay), "agreement"),
+                )
+                await asyncio.wait(
+                    {self._process_invoices_job}, timeout=30, return_when=asyncio.ALL_COMPLETED
+                )
+                if self._agreements_to_pay:
+                    logger.warning("Unpaid agreements: %s", self._agreements_to_pay)
+
         finally:
-            if self._wrapped_consumer:
-                await self._wrapped_consumer.stop()
+            await self._stack.aclose()
 
     async def _create_allocations(self) -> rest.payment.MarketDecoration:
 
@@ -493,6 +484,7 @@ class Golem(AsyncContextManager):
         while True:
 
             batch, exec_options = unpack_work_item(item)
+
             # TODO: `task_id` should really be `batch_id`, but then we should also rename
             # `task_id` field of several events (e.g. `ScriptSent`)
             script_id = str(next(exescript_ids))
@@ -526,7 +518,7 @@ class Golem(AsyncContextManager):
                     self.emit(evt)
                     results.append(evt)
                     if isinstance(evt, events.CommandExecuted) and not evt.success:
-                        raise CommandExecutionError(evt.command, evt.stderr)
+                        raise CommandExecutionError(evt.command, evt.message, evt.stderr)
 
                 self.emit(events.GettingResults(agr_id=agreement_id, script_id=script_id))
                 await batch.post()
@@ -542,14 +534,14 @@ class Golem(AsyncContextManager):
                     future_results = loop.create_future()
                     results = await get_batch_results()
                     future_results.set_result(results)
-                    item = await command_generator.asend(future_results)
-                except StopAsyncIteration:
-                    raise
-                except Exception:
+                except Exception as e:
                     # Raise the exception in `command_generator` (the `worker` coroutine).
                     # If the client code is able to handle it then we'll proceed with
                     # subsequent batches. Otherwise the worker finishes with error.
                     item = await command_generator.athrow(*sys.exc_info())
+                else:
+                    item = await command_generator.asend(future_results)
+
             else:
                 # Schedule the coroutine in a separate asyncio task
                 future_results = loop.create_task(get_batch_results())
@@ -1192,5 +1184,4 @@ class Executor(AsyncContextManager):
                         "%s still running: %s", pluralize(len(pending), "service"), pending
                     )
             except Exception:
-                # TODO: add message
-                logger.debug("TODO", exc_info=True)
+                logger.debug("Got error when waiting for services to finish", exc_info=True)

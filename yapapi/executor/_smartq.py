@@ -126,7 +126,13 @@ class SmartQueue(Generic[Item]):
         A queue has unassigned items iff the next call to `get()` will immediately return
         some item, without waiting for an item that is currently "in progress" to be rescheduled.
         """
-        return await self.has_new_items() or bool(self._rescheduled_items)
+        while True:
+            if self._rescheduled_items:
+                return True
+            try:
+                return await asyncio.wait_for(self.has_new_items(), 1.0)
+            except asyncio.TimeoutError:
+                pass
 
     def new_consumer(self) -> "Consumer[Item]":
         return Consumer(self)
