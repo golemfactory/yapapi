@@ -55,52 +55,15 @@ class Handle(Generic[Item]):
         return self._data
 
 
-class PeekableAsyncIterator(AsyncIterator[Item]):
-    """An AsyncIterator with an additional `has_next()` method."""
-
-    def __init__(self, base: AsyncIterator[Item]):
-        self._base: AsyncIterator[Item] = base
-        self._first_item: Optional[Item] = None
-        self._first_set: bool = False
-        self._lock = asyncio.Lock()
-
-    async def _get_first(self) -> None:
-
-        # Both __anext__() and has_next() may call this method, and both
-        # may be called concurrently. We need to ensure that _base.__anext__()
-        # is not called concurrently or else it may raise a RuntimeError.
-        async with self._lock:
-            if self._first_set:
-                return
-            self._first_item = await self._base.__anext__()
-            self._first_set = True
-
-    async def __anext__(self) -> Item:
-        await self._get_first()
-        item = self._first_item
-        self._first_item = None
-        self._first_set = False
-        return item  # type: ignore
-
-    async def has_next(self) -> bool:
-        """Return `True` if and only this iterator has more elements.
-
-        In other words, `has_next()` returns `True` iff the next call to `__anext__()`
-        will return normally, without raising `StopAsyncIteration`.
-        """
-        try:
-            await self._get_first()
-        except StopAsyncIteration:
-            return False
-        return True
-
-
 class SmartQueue(Generic[Item]):
     def __init__(self, items: AsyncIterator[Item]):
         """
         :param items: the items to be iterated over
         """
-        self._items: PeekableAsyncIterator[Item] = PeekableAsyncIterator(items)
+
+        self._buffer: "asyncio.Queue[Item]" = asyncio.Queue(maxsize=1)
+        self._incoming_finished = False
+        self._buffer_task = asyncio.get_event_loop().create_task(self._fill_buffer(items))
 
         """The items scheduled for reassignment to another consumer"""
         self._rescheduled_items: Set[Handle[Item]] = set()
@@ -113,32 +76,35 @@ class SmartQueue(Generic[Item]):
         self._new_items = Condition(lock=self._lock)
         self._eof = Condition(lock=self._lock)
 
-    async def has_new_items(self) -> bool:
-        """Check whether this queue has any items that were not retrieved by any consumer yet."""
-        return await self._items.has_next()
+    async def _fill_buffer(self, incoming: AsyncIterator[Item]):
+        try:
+            async for item in incoming:
+                await self._buffer.put(item)
+                async with self._lock:
+                    self._new_items.notify_all()
+            self._incoming_finished = True
+            async with self._lock:
+                self._eof.notify_all()
+                self._new_items.notify_all()
+        except asyncio.CancelledError:
+            pass
 
-    async def has_unassigned_items(self) -> bool:
-        """Check whether this queue has any unassigned items.
+    async def close(self):
+        if self._buffer_task:
+            self._buffer_task.cancel()
+            await self._buffer_task
 
-        An item is _unassigned_ if it's new (hasn't been retrieved yet by any consumer)
-        or it has been rescheduled and is not in progress.
+    def finished(self):
+        return (
+            not self.has_unassigned_items() and not (self._in_progress) and self._incoming_finished
+        )
 
-        A queue has unassigned items iff the next call to `get()` will immediately return
-        some item, without waiting for an item that is currently "in progress" to be rescheduled.
-        """
-        while True:
-            if self._rescheduled_items:
-                return True
-            try:
-                return await asyncio.wait_for(self.has_new_items(), 1.0)
-            except asyncio.TimeoutError:
-                pass
+    def has_unassigned_items(self) -> bool:
+        """Check if this queue has a new or rescheduled item immediately available."""
+        return bool(self._rescheduled_items) or bool(self._buffer.qsize())
 
     def new_consumer(self) -> "Consumer[Item]":
         return Consumer(self)
-
-    async def __has_data(self):
-        return await self.has_unassigned_items() or bool(self._in_progress)
 
     def __find_rescheduled_item(self, consumer: "Consumer[Item]") -> Optional[Handle[Item]]:
         return next(
@@ -153,7 +119,7 @@ class SmartQueue(Generic[Item]):
     async def get(self, consumer: "Consumer[Item]") -> Handle[Item]:
         """Get a handle to the next item to be processed (either a new one or rescheduled)."""
         async with self._lock:
-            while await self.__has_data():
+            while not self.finished():
 
                 handle = self.__find_rescheduled_item(consumer)
                 if handle:
@@ -162,8 +128,8 @@ class SmartQueue(Generic[Item]):
                     handle.assign_consumer(consumer)
                     return handle
 
-                if await self.has_new_items():
-                    next_elem = await self._items.__anext__()
+                if self._buffer.qsize():
+                    next_elem = await self._buffer.get()
                     handle = Handle(next_elem, consumer=consumer)
                     self._in_progress.add(handle)
                     return handle
@@ -180,8 +146,9 @@ class SmartQueue(Generic[Item]):
             self._eof.notify_all()
             self._new_items.notify_all()
         if _logger.isEnabledFor(logging.DEBUG):
+            stats = self.stats()
             _logger.debug(
-                f"status in-progress={len(self._in_progress)}, have_item={bool(self._items)}"
+                "status: " + ", ".join(f"{key}: {val}" for key, val in self.stats().items())
             )
 
     async def reschedule(self, handle: Handle[Item]) -> None:
@@ -204,15 +171,16 @@ class SmartQueue(Generic[Item]):
     def stats(self) -> Dict:
         return {
             "locked": self._lock.locked(),
-            "items": bool(self._items),
-            "in-progress": len(self._in_progress),
-            "rescheduled-items": len(self._rescheduled_items),
+            "in progress": len(self._in_progress),
+            "rescheduled": len(self._rescheduled_items),
+            "in buffer": self._buffer.qsize(),
+            "incoming finished": self._incoming_finished,
         }
 
     async def wait_until_done(self) -> None:
         """Wait until all items in the queue are processed."""
         async with self._lock:
-            while await self.__has_data():
+            while not self.finished():
                 await self._eof.wait()
 
 
