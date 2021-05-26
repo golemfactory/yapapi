@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import sys
 from tempfile import NamedTemporaryFile
-from typing import AsyncIterable
+from typing import AsyncIterable, Optional
 
 from yapapi import Golem, NoPaymentAccountError, Task, WorkContext, windows_event_loop_fix
 from yapapi.executor.events import CommandExecuted
@@ -83,12 +83,13 @@ async def perform_attack(ctx: WorkContext, tasks: AsyncIterable[Task]):
         worker_output_path = f"/golem/output/hashcat_{skip}.potfile"
 
         ctx.run(f"/bin/sh", "-c", _make_attack_command(skip, limit, worker_output_path))
-
         output_file = NamedTemporaryFile()
         ctx.download_file(worker_output_path, output_file.name)
-        # ExeOptions?
+
         yield ctx.commit(timeout=timedelta(minutes=10))
-        task.accept_result(result=output_file.file.readline())
+
+        result = output_file.file.readline()
+        task.accept_result(result)
         output_file.close()
 
 
@@ -98,8 +99,20 @@ def _make_attack_command(skip: int, limit: int, output_path: str) -> str:
         f"hashcat -a {HASHCAT_ATTACK_MODE} -m {args.hash_type} "
         f"--self-test-disable --potfile-disable "
         f"--skip={skip} --limit={limit} -o {output_path} "
-        f"'{args.hash}' '{args.mask}' || true"  # TODO this may cover up other errors
+        f"'{args.hash}' '{args.mask}' || true"
     )
+
+
+def _parse_result(potfile_line: bytes) -> Optional[str]:
+    """Helper function which parses a single .potfile line and returns the password part.
+
+    Hashcat uses its .potfile format to report results. In this format, each line consists of the
+    hash and its matching word, separated with a colon (e.g. `asdf1234:password`).
+    """
+    potfile_line = potfile_line.decode("utf-8")
+    if potfile_line:
+        return potfile_line.split(":")[-1].strip()
+    return None
 
 
 async def main(args):
@@ -156,15 +169,21 @@ async def main(args):
             timeout=timedelta(minutes=30),
         )
 
+        password = None
+
         async for task in completed:
             print(
                 f"{TEXT_COLOR_CYAN}Task computed: {task}, result: {task.result}{TEXT_COLOR_DEFAULT}"
             )
 
-        # if password is None:
-        #     print(f"{TEXT_COLOR_RED}No password found{TEXT_COLOR_DEFAULT}")
-        # else:
-        #     print(f"{TEXT_COLOR_GREEN}Password found: {password}{TEXT_COLOR_DEFAULT}")
+            result = _parse_result(task.result)
+            if result:
+                password = result
+
+        if password:
+            print(f"{TEXT_COLOR_GREEN}Password found: {password}{TEXT_COLOR_DEFAULT}")
+        else:
+            print(f"{TEXT_COLOR_RED}No password found{TEXT_COLOR_DEFAULT}")
 
         print(f"{TEXT_COLOR_CYAN}Total time: {datetime.now() - start_time}{TEXT_COLOR_DEFAULT}")
 
