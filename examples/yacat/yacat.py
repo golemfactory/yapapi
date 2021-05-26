@@ -46,6 +46,12 @@ arg_parser.add_argument(
     help="Type of hashing algorithm to use (hashcat -m option)",
     default=400,
 )
+arg_parser.add_argument(
+    "--max-workers",
+    type=int,
+    help="The maximum number of nodes we want to perform the attack on (default is dynamic)",
+    default=None,
+)
 
 # Container object for parsed arguments
 args = argparse.Namespace()
@@ -163,7 +169,7 @@ async def main(args):
         )
 
         data = [Task(data=c) for c in range(0, keyspace, args.chunk_size)]
-        max_workers = keyspace // args.chunk_size
+        max_workers = args.max_workers or (keyspace // args.chunk_size) // 2
 
         completed = golem.execute_tasks(
             perform_attack,
