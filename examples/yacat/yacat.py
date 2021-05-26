@@ -32,8 +32,10 @@ ATTACK_TIMEOUT: timedelta = timedelta(minutes=30)
 KEYSPACE_TIMEOUT: timedelta = timedelta(minutes=10)
 
 arg_parser = build_parser("Run a hashcat attack (mask mode) on Golem network")
-arg_parser.add_argument("--hash", type=str, help="Target hash to be cracked")
-arg_parser.add_argument("--mask", type=str, help="Hashcat mask to be used for the attack")
+arg_parser.add_argument("--hash", type=str, help="Target hash to be cracked", required=True)
+arg_parser.add_argument(
+    "--mask", type=str, help="Hashcat mask to be used for the attack", required=True
+)
 arg_parser.add_argument(
     "--chunk-size",  # affects skip and limit hashcat parameters
     type=int,
