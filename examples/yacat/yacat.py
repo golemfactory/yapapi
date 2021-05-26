@@ -27,6 +27,10 @@ from utils import (
 HASHCAT_ATTACK_MODE = 3  # stands for mask attack, hashcat -a option
 KEYSPACE_OUTPUT_PATH = Path("/golem/output/keyspace")
 
+# Ideally, this value should depend on the chunk size
+ATTACK_TIMEOUT: timedelta = timedelta(minutes=30)
+KEYSPACE_TIMEOUT: timedelta = timedelta(minutes=10)
+
 arg_parser = build_parser("Run a hashcat attack (mask mode) on Golem network")
 arg_parser.add_argument("--hash", type=str, help="Target hash to be cracked")
 arg_parser.add_argument("--mask", type=str, help="Hashcat mask to be used for the attack")
@@ -57,7 +61,7 @@ async def compute_keyspace(context: WorkContext, tasks: AsyncIterable[Task]):
         cmd = f"hashcat --keyspace " f"-a {HASHCAT_ATTACK_MODE} -m {args.hash_type} {args.mask}"
         context.run("/bin/bash", "-c", cmd)
 
-        future_result = yield context.commit(timeout=timedelta(minutes=10))
+        future_result = yield context.commit(timeout=KEYSPACE_TIMEOUT)
         # each item is the result of a single command on the provider (including setup commands)
         result: List[CommandExecuted] = await future_result
         # we take the last item since it's the last command that was executed on the provider
@@ -86,7 +90,7 @@ async def perform_attack(ctx: WorkContext, tasks: AsyncIterable[Task]):
         output_file = NamedTemporaryFile()
         ctx.download_file(worker_output_path, output_file.name)
 
-        yield ctx.commit(timeout=timedelta(minutes=10))
+        yield ctx.commit(timeout=ATTACK_TIMEOUT)
 
         result = output_file.file.readline()
         task.accept_result(result)
@@ -146,7 +150,7 @@ async def main(args):
             [Task(data="compute_keyspace")],
             payload=package,
             max_workers=1,
-            timeout=timedelta(minutes=30),
+            timeout=KEYSPACE_TIMEOUT,
         )
 
         async for task in completed:
@@ -166,7 +170,7 @@ async def main(args):
             data,
             payload=package,
             max_workers=max_workers,
-            timeout=timedelta(minutes=30),
+            timeout=ATTACK_TIMEOUT,
         )
 
         password = None
