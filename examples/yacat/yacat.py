@@ -38,7 +38,7 @@ arg_parser.add_argument(
     "--chunk-size",  # affects skip and limit hashcat parameters
     type=int,
     help="Limit for the number of words to be checked as part of a single activity",
-    default=2048,
+    default=4096,
 )
 arg_parser.add_argument(
     "--hash-type",
