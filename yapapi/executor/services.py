@@ -4,14 +4,20 @@ from dataclasses import dataclass, field
 from datetime import timedelta, datetime, timezone
 import enum
 import logging
-from typing import Any, AsyncContextManager, List, Optional, Set, Type, Final
-import statemachine
+from typing import Any, AsyncContextManager, List, Optional, Set, Type
+import statemachine  # type: ignore
 import sys
 
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
 else:
     from async_exit_stack import AsyncExitStack  # type: ignore
+
+if sys.version_info >= (3, 8):
+    from typing import Final
+else:
+    from typing_extensions import Final
+
 
 from .. import rest
 from ..executor import Golem, Job, Task
@@ -99,7 +105,7 @@ class Service:
         try:
             return self.__outqueue.get_nowait()
         except asyncio.QueueEmpty:
-            pass
+            return None
 
     async def _listen(self) -> ServiceSignal:
         return await self.__inqueue.get()
@@ -108,7 +114,7 @@ class Service:
         try:
             return self.__inqueue.get_nowait()
         except asyncio.QueueEmpty:
-            pass
+            return None
 
     async def _respond(self, message: Optional[Any], response_to: Optional[ServiceSignal] = None):
         await self.__outqueue.put(ServiceSignal(message=message, response_to=response_to))
@@ -175,7 +181,7 @@ class ServiceInstance:
         try:
             return self.control_queue.get_nowait()
         except asyncio.QueueEmpty:
-            pass
+            return None
 
     def send_control_signal(self, signal: ControlSignal):
         self.control_queue.put_nowait(signal)
@@ -266,8 +272,9 @@ class Cluster(AsyncContextManager):
         for i in self.__instances:
             if i.service == service:
                 return i
+        assert False, f"No instance found for {service}"
 
-    def get_state(self, service: Service):
+    def get_state(self, service: Service) -> ServiceState:
         instance = self.__get_service_instance(service)
         return instance.state
 
