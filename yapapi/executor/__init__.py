@@ -264,57 +264,61 @@ class Golem(AsyncContextManager):
 
             self._storage_manager = await stack.enter_async_context(gftp.provider())
 
+            stack.push_async_exit(self._shutdown)
+
             return self
         except:
             await self.__aexit__(*sys.exc_info())
             raise
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def _shutdown(self, *exc_info):
+        """Shutdown this Golem instance."""
+
         # Importing this at the beginning would cause circular dependencies
         from ..log import pluralize
 
+        logger.info("Golem is shutting down...")
+        # Wait until all computations are finished
+        await asyncio.gather(*[job.finished.wait() for job in self._jobs])
+        logger.info("All jobs have finished")
+
+        self._payment_closing = True
+
+        for task in self._services:
+            if task is not self._process_invoices_job:
+                task.cancel()
+
+        if self._process_invoices_job and not any(
+            True for job in self._jobs if job.agreements_pool.confirmed > 0
+        ):
+            logger.debug("No need to wait for invoices.")
+            self._process_invoices_job.cancel()
+
         try:
-            logger.debug("Golem is shutting down...")
-            # Wait until all computations are finished
-            await asyncio.gather(*[job.finished.wait() for job in self._jobs])
+            logger.info("Waiting for Golem services to finish...")
+            _, pending = await asyncio.wait(
+                self._services, timeout=10, return_when=asyncio.ALL_COMPLETED
+            )
+            if pending:
+                logger.debug("%s still running: %s", pluralize(len(pending), "service"), pending)
+        except Exception:
+            logger.debug("Got error when waiting for services to finish", exc_info=True)
 
-            self._payment_closing = True
+        if self._agreements_to_pay and self._process_invoices_job:
+            logger.info(
+                "%s still unpaid, waiting for invoices...",
+                pluralize(len(self._agreements_to_pay), "agreement"),
+            )
+            await asyncio.wait(
+                {self._process_invoices_job}, timeout=30, return_when=asyncio.ALL_COMPLETED
+            )
+            if self._agreements_to_pay:
+                logger.warning("Unpaid agreements: %s", self._agreements_to_pay)
 
-            for task in self._services:
-                if task is not self._process_invoices_job:
-                    task.cancel()
+        await asyncio.gather(*[job.finished.wait() for job in self._jobs])
 
-            if self._process_invoices_job and not any(
-                True for job in self._jobs if job.agreements_pool.confirmed > 0
-            ):
-                logger.debug("No need to wait for invoices.")
-                self._process_invoices_job.cancel()
-
-            try:
-                logger.info("Waiting for Golem services to finish...")
-                _, pending = await asyncio.wait(
-                    self._services, timeout=10, return_when=asyncio.ALL_COMPLETED
-                )
-                if pending:
-                    logger.debug(
-                        "%s still running: %s", pluralize(len(pending), "service"), pending
-                    )
-            except Exception:
-                logger.debug("Got error when waiting for services to finish", exc_info=True)
-
-            if self._agreements_to_pay and self._process_invoices_job:
-                logger.info(
-                    "%s still unpaid, waiting for invoices...",
-                    pluralize(len(self._agreements_to_pay), "agreement"),
-                )
-                await asyncio.wait(
-                    {self._process_invoices_job}, timeout=30, return_when=asyncio.ALL_COMPLETED
-                )
-                if self._agreements_to_pay:
-                    logger.warning("Unpaid agreements: %s", self._agreements_to_pay)
-
-        finally:
-            await self._stack.aclose()
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self._stack.aclose()
 
     async def _create_allocations(self) -> rest.payment.MarketDecoration:
 

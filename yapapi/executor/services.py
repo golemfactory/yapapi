@@ -239,6 +239,18 @@ class Cluster(AsyncContextManager):
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         logger.debug("%s is shutting down...", self)
 
+        # TODO: should be different if we stop due to an error
+        termination_reason = {
+            "message": "Successfully finished all work",
+            "golem.requestor.code": "Success",
+        }
+
+        try:
+            logger.debug("Terminating agreements...")
+            await self._job.agreements_pool.terminate_all(reason=termination_reason)
+        except Exception:
+            logger.debug("Couldn't terminate agreements", exc_info=True)
+
         for task in self.__services:
             if not task.done():
                 logger.debug("Cancelling task: %s", task)
@@ -352,7 +364,7 @@ class Cluster(AsyncContextManager):
                     events.TaskStarted(
                         agr_id=agreement.id,
                         task_id=task_id,
-                        task_data=f"Service: {self._service_class.__name__}"
+                        task_data=f"Service: {self._service_class.__name__}",
                     )
                 )
 
