@@ -109,3 +109,33 @@ async def test_smart_queue_retry(caplog):
     print("w end")
 
     assert outputs == {1, 2, 3}
+
+
+@pytest.mark.asyncio
+async def test_has_unassigned_items_doesnt_block():
+    """Test if `has_unassigned_items` does not block if there are rescheduled items."""
+
+    loop = asyncio.get_event_loop()
+
+    async def blocking_task_source():
+        yield 1
+        await asyncio.sleep(10)
+        assert False, "Task iterator should not block"
+
+    q = SmartQueue(blocking_task_source())
+
+    async def worker():
+        with q.new_consumer() as con:
+            async for handle in con:
+                print("Item retrieved:", handle.data)
+                # This will yield control to the other worker
+                await asyncio.sleep(0.1)
+                await q.reschedule(handle)
+                # After the item is rescheduled, the second worker should
+                # pick it up, instead of waiting until `blocking()` fails.
+                print("Item rescheduled")
+                return
+
+    worker_1 = loop.create_task(worker())
+    worker_2 = loop.create_task(worker())
+    await asyncio.gather(worker_1, worker_2)

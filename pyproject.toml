@@ -22,13 +22,13 @@ readme = "README.md"
 python = "^3.6.1"
 aiohttp = "^3.6"
 aiohttp-sse-client = "^0.1.7"
-dataclasses = { version = "^0.7", python = ">=3.6, <3.7"}
+dataclasses = { version = "^0.8", python = ">=3.6, <3.7"}
 more-itertools = "^8.6.0"
 urllib3 = "^1.25.9"
 typing_extensions = "^3.7.4"
 
 fire = { version = "^0.3.1", optional = true }
-rich = { version = "^2.2.5", optional = true }
+rich = { version = "^10.2", optional = true }
 async_exit_stack = "^1.0.1"
 jsonrpc-base = "^1.0.3"
 
@@ -60,7 +60,7 @@ mypy = "^0.782"
 liccheck = "^0.4.7"
 poethepoet = "^0.8.0"
 pytest-cov = "^2.11"
-pydoc-markdown = "^3.5.0"
+pydoc-markdown = "3.9"
 factory-boy = "^3.2.0"
 
 [tool.portray]
