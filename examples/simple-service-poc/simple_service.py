@@ -19,7 +19,7 @@ from yapapi import (
     windows_event_loop_fix,
 )
 from yapapi.executor import Golem
-from yapapi.executor.services import Service
+from yapapi.executor.services import Service, ServiceState
 
 from yapapi.log import enable_default_logger, log_summary, log_event_repr, pluralize  # noqa
 from yapapi.payload import vm
@@ -36,6 +36,7 @@ from utils import (
 )
 
 NUM_INSTANCES = 1
+STARTING_TIMEOUT = timedelta(minutes=10)
 
 
 class SimpleService(Service):
@@ -99,20 +100,35 @@ async def main(subnet_tag, driver=None, network=None):
             f"and network: {TEXT_COLOR_YELLOW}{golem.network}{TEXT_COLOR_DEFAULT}\n"
         )
 
-        start_time = datetime.now()
+        commissioning_time = datetime.now()
 
         print(f"{TEXT_COLOR_YELLOW}starting {pluralize(NUM_INSTANCES, 'instance')}{TEXT_COLOR_DEFAULT}")
 
         cluster = await golem.run_service(
             SimpleService,
             num_instances=NUM_INSTANCES,
-            expiration=datetime.now(timezone.utc) + timedelta(minutes=15))
+            expiration=datetime.now(timezone.utc) + timedelta(minutes=120))
 
         def instances():
             return [(s.provider_name, s.state.value) for s in cluster.instances]
 
         def still_running():
             return any([s for s in cluster.instances if s.is_available])
+
+        def still_starting():
+            return len(cluster.instances) < NUM_INSTANCES or \
+                   any([s for s in cluster.instances if s.state == ServiceState.running])
+
+        while still_starting() and datetime.now() < commissioning_time + STARTING_TIMEOUT:
+            print(f"instances: {instances()}")
+            await asyncio.sleep(5)
+
+        if still_starting():
+            raise Exception(f"Failed to start instances before {STARTING_TIMEOUT} elapsed :( ...")
+
+        print("All instances started :)")
+
+        start_time = datetime.now()
 
         while datetime.now() < start_time + timedelta(minutes=2):
             print(f"instances: {instances()}")
