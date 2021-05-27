@@ -10,7 +10,6 @@ import string
 import sys
 
 
-
 from yapapi import (
     NoPaymentAccountError,
     __version__ as yapapi_version,
@@ -46,10 +45,10 @@ class SimpleService(Service):
     @staticmethod
     async def get_payload():
         return await vm.repo(
-        image_hash="8b11df59f84358d47fc6776d0bb7290b0054c15ded2d6f54cf634488",
-        min_mem_gib=0.5,
-        min_storage_gib=2.0,
-    )
+            image_hash="8b11df59f84358d47fc6776d0bb7290b0054c15ded2d6f54cf634488",
+            min_mem_gib=0.5,
+            min_storage_gib=2.0,
+        )
 
     async def start(self):
         # handler responsible for starting the service
@@ -70,12 +69,13 @@ class SimpleService(Service):
 
             print(f"{TEXT_COLOR_CYAN}stats: {stats}{TEXT_COLOR_DEFAULT}")
 
-            plot_filename = (
-                    "".join(random.choice(string.ascii_letters) for _ in
-                            range(10)) + ".png"
+            plot_filename = "".join(random.choice(string.ascii_letters) for _ in range(10)) + ".png"
+            print(
+                f"{TEXT_COLOR_CYAN}downloading plot: {plot} to {plot_filename}{TEXT_COLOR_DEFAULT}"
             )
-            print(f"{TEXT_COLOR_CYAN}downloading plot: {plot} to {plot_filename}{TEXT_COLOR_DEFAULT}")
-            self._ctx.download_file(plot, str(pathlib.Path(__file__).resolve().parent / plot_filename))
+            self._ctx.download_file(
+                plot, str(pathlib.Path(__file__).resolve().parent / plot_filename)
+            )
 
             steps = self._ctx.commit()
             yield steps
@@ -104,14 +104,17 @@ async def main(subnet_tag, driver=None, network=None):
 
         commissioning_time = datetime.now()
 
-        print(f"{TEXT_COLOR_YELLOW}starting {pluralize(NUM_INSTANCES, 'instance')}{TEXT_COLOR_DEFAULT}")
+        print(
+            f"{TEXT_COLOR_YELLOW}starting {pluralize(NUM_INSTANCES, 'instance')}{TEXT_COLOR_DEFAULT}"
+        )
 
         # start the service
 
         cluster = await golem.run_service(
             SimpleService,
             num_instances=NUM_INSTANCES,
-            expiration=datetime.now(timezone.utc) + timedelta(minutes=120))
+            expiration=datetime.now(timezone.utc) + timedelta(minutes=120),
+        )
 
         # helper functions to display / filter instances
 
@@ -122,8 +125,9 @@ async def main(subnet_tag, driver=None, network=None):
             return any([s for s in cluster.instances if s.is_available])
 
         def still_starting():
-            return len(cluster.instances) < NUM_INSTANCES or \
-                   any([s for s in cluster.instances if s.state == ServiceState.starting])
+            return len(cluster.instances) < NUM_INSTANCES or any(
+                [s for s in cluster.instances if s.state == ServiceState.starting]
+            )
 
         # wait until instances are started
 
@@ -159,7 +163,9 @@ async def main(subnet_tag, driver=None, network=None):
 
 
 if __name__ == "__main__":
-    parser = build_parser("A very simple / POC example of a service running on Golem, utilizing the VM runtime")
+    parser = build_parser(
+        "A very simple / POC example of a service running on Golem, utilizing the VM runtime"
+    )
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     parser.set_defaults(log_file=f"simple-service-yapapi-{now}.log")
     args = parser.parse_args()
