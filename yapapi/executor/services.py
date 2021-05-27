@@ -75,8 +75,8 @@ class Service:
     """
 
     def __init__(self, cluster: "Cluster", ctx: WorkContext):
-        self.cluster = cluster
-        self.ctx = ctx
+        self._cluster: "Cluster" = cluster
+        self._ctx: WorkContext = ctx
 
         self.__inqueue: asyncio.Queue[ServiceSignal] = asyncio.Queue()
         self.__outqueue: asyncio.Queue[ServiceSignal] = asyncio.Queue()
@@ -87,7 +87,11 @@ class Service:
 
     @property
     def id(self):
-        return self.ctx.id
+        return self._ctx.id
+
+    @property
+    def provider_name(self):
+        return self._ctx.provider_name
 
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.id}>"
@@ -132,9 +136,9 @@ class Service:
         pass
 
     async def start(self):
-        self.ctx.deploy()
-        self.ctx.start()
-        yield self.ctx.commit()
+        self._ctx.deploy()
+        self._ctx.start()
+        yield self._ctx.commit()
 
     async def run(self):
         while True:
@@ -146,11 +150,11 @@ class Service:
 
     @property
     def is_available(self):
-        return self.cluster.get_state(self) in ServiceState.AVAILABLE
+        return self._cluster.get_state(self) in ServiceState.AVAILABLE
 
     @property
     def state(self):
-        return self.cluster.get_state(self)
+        return self._cluster.get_state(self)
 
 
 class ControlSignal(enum.Enum):
@@ -338,6 +342,7 @@ class Cluster(AsyncContextManager):
         logger.info(f"{instance.service} decomissioned")
 
     async def spawn_instance(self):
+        logger.debug("spawning instance within %s", self)
         spawned = False
 
         async def start_worker(agreement: rest.market.Agreement, node_info: NodeInfo) -> None:
