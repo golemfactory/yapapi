@@ -102,10 +102,14 @@ async def main(subnet_tag, driver=None, network=None):
 
         print(f"{TEXT_COLOR_YELLOW}starting {pluralize(NUM_INSTANCES, 'instance')}{TEXT_COLOR_DEFAULT}")
 
+        # start the service
+
         cluster = await golem.run_service(
             SimpleService,
             num_instances=NUM_INSTANCES,
             expiration=datetime.now(timezone.utc) + timedelta(minutes=120))
+
+        # helper functions to display / filter instances
 
         def instances():
             return [(s.provider_name, s.state.value) for s in cluster.instances]
@@ -117,6 +121,8 @@ async def main(subnet_tag, driver=None, network=None):
             return len(cluster.instances) < NUM_INSTANCES or \
                    any([s for s in cluster.instances if s.state == ServiceState.starting])
 
+        # wait until instances are started
+
         while still_starting() and datetime.now() < commissioning_time + STARTING_TIMEOUT:
             print(f"instances: {instances()}")
             await asyncio.sleep(5)
@@ -126,6 +132,9 @@ async def main(subnet_tag, driver=None, network=None):
 
         print("All instances started :)")
 
+        # allow the service to run for a short while
+        # (and allowing its requestor-end handlers to interact with it)
+
         start_time = datetime.now()
 
         while datetime.now() < start_time + timedelta(minutes=2):
@@ -134,6 +143,8 @@ async def main(subnet_tag, driver=None, network=None):
 
         print(f"{TEXT_COLOR_YELLOW}stopping instances{TEXT_COLOR_DEFAULT}")
         cluster.stop()
+
+        # wait for instances to stop
 
         cnt = 0
         while cnt < 10 and still_running():
