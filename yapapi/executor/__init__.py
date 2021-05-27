@@ -1066,7 +1066,7 @@ class Executor(AsyncContextManager):
             while True:
                 await asyncio.sleep(2)
                 await job.agreements_pool.cycle()
-                if len(workers) < self._max_workers and await work_queue.has_unassigned_items():
+                if len(workers) < self._max_workers and work_queue.has_unassigned_items():
                     new_task = None
                     try:
                         new_task = await job.agreements_pool.use_agreement(
@@ -1149,6 +1149,9 @@ class Executor(AsyncContextManager):
             cancelled = True
 
         finally:
+
+            await work_queue.close()
+
             # Importing this at the beginning would cause circular dependencies
             from ..log import pluralize
 
