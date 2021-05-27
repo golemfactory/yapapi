@@ -1113,6 +1113,9 @@ class Executor(AsyncContextManager):
             cancelled = True
 
         finally:
+
+            await work_queue.close()
+
             # Importing this at the beginning would cause circular dependencies
             from ..log import pluralize
 

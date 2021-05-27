@@ -93,6 +93,7 @@ class SmartQueue(Generic[Item]):
         if self._buffer_task:
             self._buffer_task.cancel()
             await self._buffer_task
+            self._buffer_task = None
 
     def finished(self):
         return (
