@@ -4,9 +4,7 @@ the requestor agent controlling and interacting with the "simple service"
 """
 import asyncio
 from datetime import datetime, timedelta, timezone
-import json
 import pathlib
-import queue
 import random
 import string
 import sys
@@ -36,7 +34,7 @@ from utils import (
 )
 
 NUM_INSTANCES = 1
-STARTING_TIMEOUT = timedelta(minutes=10)
+STARTING_TIMEOUT = timedelta(minutes=4)
 
 
 class SimpleService(Service):
@@ -117,7 +115,7 @@ async def main(subnet_tag, driver=None, network=None):
 
         def still_starting():
             return len(cluster.instances) < NUM_INSTANCES or \
-                   any([s for s in cluster.instances if s.state == ServiceState.running])
+                   any([s for s in cluster.instances if s.state == ServiceState.starting])
 
         while still_starting() and datetime.now() < commissioning_time + STARTING_TIMEOUT:
             print(f"instances: {instances()}")
@@ -146,7 +144,7 @@ async def main(subnet_tag, driver=None, network=None):
 
 
 if __name__ == "__main__":
-    parser = build_parser("Test http")
+    parser = build_parser("A very simple / POC example of a service running on Golem, utilizing the VM runtime")
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     parser.set_defaults(log_file=f"simple-service-yapapi-{now}.log")
     args = parser.parse_args()
