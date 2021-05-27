@@ -6,6 +6,8 @@ in a real-world example, this could be e.g. a thermometer connected to the provi
 machine providing its inputs into the database or some other piece of information
 from some external source that changes over time and which can be expressed as a
 singular value
+
+[ part of the VM image that's deployed by the runtime on the Provider's end. ]
 """
 import os
 from pathlib import Path
