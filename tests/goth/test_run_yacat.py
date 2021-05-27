@@ -51,7 +51,7 @@ async def assert_all_tasks_started(output_lines: EventStream[str]):
 
 async def assert_all_tasks_computed(output_lines: EventStream[str]):
     """Assert that for every task a line with `Task computed by provider` will appear."""
-    await assert_all_tasks_processed("computed by provider", output_lines)
+    await assert_all_tasks_processed("finished by provider", output_lines)
 
 
 async def assert_all_invoices_accepted(output_lines: EventStream[str]):
