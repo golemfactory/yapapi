@@ -41,6 +41,7 @@ class SimpleService(Service):
     STATS_PATH = "/golem/out/stats"
     PLOT_INFO_PATH = "/golem/out/plot"
     SIMPLE_SERVICE = "/golem/run/simple_service.py"
+    SIMPLE_SERVICE_CTL = "/golem/run/simulate_observations_ctl.py"
 
     @staticmethod
     async def get_payload():
@@ -51,10 +52,12 @@ class SimpleService(Service):
     )
 
     async def start(self):
-        self._ctx.run("/golem/run/simulate_observations_ctl.py", "--start")
+        # handler responsible for starting the service
+        self._ctx.run(self.SIMPLE_SERVICE_CTL, "--start")
         yield self._ctx.commit()
 
     async def run(self):
+        # handler responsible for providing the required interactions while the service is running
         while True:
             await asyncio.sleep(10)
             self._ctx.run(self.SIMPLE_SERVICE, "--stats")  # idx 0
@@ -78,7 +81,8 @@ class SimpleService(Service):
             yield steps
 
     async def shutdown(self):
-        self._ctx.run("/golem/run/simulate_observations_ctl.py", "--stop")
+        # handler reponsible for executing operations on shutdown
+        self._ctx.run(self.SIMPLE_SERVICE_CTL, "--stop")
         yield self._ctx.commit()
 
 
