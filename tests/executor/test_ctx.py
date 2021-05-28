@@ -45,7 +45,7 @@ class TestWorkContext:
         self._on_download_executed = False
 
     @staticmethod
-    def _get_work_context(storage):
+    def _get_work_context(storage=None):
         return WorkContext(factory.Faker("pystr"), node_info=NodeInfoFactory(), storage=storage)
 
     @staticmethod
@@ -126,3 +126,20 @@ class TestWorkContext:
         await steps.post()
         self._assert_src_path(steps, src_path)
         assert self._on_download_executed
+
+    @pytest.mark.parametrize(
+        "args",
+        (
+            ("foo", 42),
+            (),
+        ),
+    )
+    def test_start(self, args):
+        ctx = self._get_work_context()
+        ctx.start(*args)
+        steps = ctx.commit()
+
+        c = CommandContainer()
+        steps.register(c)
+
+        assert c.commands() == [{"start": {"args": args}}]

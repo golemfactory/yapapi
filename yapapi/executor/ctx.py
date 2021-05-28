@@ -20,6 +20,9 @@ class CommandContainer:
     def commands(self):
         return self._commands
 
+    def __repr__(self):
+        return f"commands: {self._commands}"
+
     def __getattr__(self, item):
         def add_command(**kwargs) -> int:
             kwargs = dict(
@@ -57,8 +60,14 @@ class _Deploy(Work):
 
 
 class _Start(Work):
+    def __init__(self, *args: str):
+        self.args = args
+
+    def __repr__(self):
+        return f"start{self.args}"
+
     def register(self, commands: CommandContainer):
-        commands.start()
+        commands.start(args=self.args)
 
 
 class _SendWork(Work, abc.ABC):
@@ -240,6 +249,9 @@ class Steps(Work):
         self._steps: Tuple[Work, ...] = steps
         self._timeout: Optional[timedelta] = timeout
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}: {self._steps}"
+
     @property
     def timeout(self) -> Optional[timedelta]:
         """Return the optional timeout set for execution of all steps."""
@@ -309,9 +321,9 @@ class WorkContext:
         self._implicit_init = False
         self._pending_steps.append(_Deploy())
 
-    def start(self):
+    def start(self, *args: str):
         self._implicit_init = False
-        self._pending_steps.append(_Start())
+        self._pending_steps.append(_Start(*args))
 
     def send_json(self, json_path: str, data: dict):
         """Schedule sending JSON data to the provider.
