@@ -46,8 +46,6 @@ class TestWorkContext:
 
     @staticmethod
     def _get_work_context(storage=None):
-        # if not storage:
-        #     storage = mock.Mock()
         return WorkContext(factory.Faker("pystr"), node_info=NodeInfoFactory(), storage=storage)
 
     @staticmethod
