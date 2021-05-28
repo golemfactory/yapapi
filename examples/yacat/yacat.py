@@ -28,7 +28,7 @@ HASHCAT_ATTACK_MODE = 3  # stands for mask attack, hashcat -a option
 KEYSPACE_OUTPUT_PATH = Path("/golem/output/keyspace")
 
 # Ideally, this value should depend on the chunk size
-ATTACK_TIMEOUT: timedelta = timedelta(minutes=30)
+MASK_ATTACK_TIMEOUT: timedelta = timedelta(minutes=30)
 KEYSPACE_TIMEOUT: timedelta = timedelta(minutes=10)
 
 arg_parser = build_parser("Run a hashcat attack (mask mode) on Golem network")
@@ -83,7 +83,7 @@ async def compute_keyspace(context: WorkContext, tasks: AsyncIterable[Task]):
         task.accept_result(result=keyspace)
 
 
-async def perform_attack(ctx: WorkContext, tasks: AsyncIterable[Task]):
+async def perform_mask_attack(ctx: WorkContext, tasks: AsyncIterable[Task]):
     """Worker script which performs a hashcat mask attack against a target hash.
 
     This function is used as the `worker` parameter to `Golem#execute_tasks`.
@@ -98,7 +98,7 @@ async def perform_attack(ctx: WorkContext, tasks: AsyncIterable[Task]):
         output_file = NamedTemporaryFile()
         ctx.download_file(worker_output_path, output_file.name)
 
-        yield ctx.commit(timeout=ATTACK_TIMEOUT)
+        yield ctx.commit(timeout=MASK_ATTACK_TIMEOUT)
 
         result = output_file.file.readline()
         task.accept_result(result)
@@ -174,11 +174,11 @@ async def main(args):
         max_workers = args.max_workers or (keyspace // args.chunk_size) // 2
 
         completed = golem.execute_tasks(
-            perform_attack,
+            perform_mask_attack,
             data,
             payload=package,
             max_workers=max_workers,
-            timeout=ATTACK_TIMEOUT,
+            timeout=MASK_ATTACK_TIMEOUT,
         )
 
         password = None
