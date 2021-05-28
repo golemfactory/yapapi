@@ -782,7 +782,6 @@ class Executor(AsyncContextManager):
     def __init__(
         self,
         *,
-        budget: Union[float, Decimal],
         payload: Optional[Payload] = None,
         max_workers: int = 5,
         timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
