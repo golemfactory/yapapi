@@ -20,8 +20,8 @@ else:
 
 
 from .. import rest
-from ..executor import Golem, Job, Task
-from ..executor.ctx import WorkContext, Work
+from ..executor import Golem, Job
+from ..executor.ctx import WorkContext
 from ..payload import Payload
 from ..props import NodeInfo
 from . import events
@@ -313,16 +313,15 @@ class Cluster(AsyncContextManager):
             # Any finished task is replaced with a new one, so there are always two.
 
             if batch_task is None:
-                batch_task = asyncio.create_task(handler.__anext__())
+                batch_task = loop.create_task(handler.__anext__())
             if signal_task is None:
-                signal_task = asyncio.create_task(instance.control_queue.get())
+                signal_task = loop.create_task(instance.control_queue.get())
 
             done, _ = await asyncio.wait(
                 (batch_task, signal_task), return_when=asyncio.FIRST_COMPLETED
             )
 
             if batch_task in done:
-                print("Got a new batch!")
                 # Process a batch
                 try:
                     batch = batch_task.result()
@@ -330,19 +329,17 @@ class Cluster(AsyncContextManager):
                     result = await fut_result
                     wrapped_results = loop.create_future()
                     wrapped_results.set_result(result)
-                    batch_task = asyncio.create_task(handler.asend(wrapped_results))
+                    batch_task = loop.create_task(handler.asend(wrapped_results))
                 except StopAsyncIteration:
-                    print("Batch iterator finished")
                     instance.service_state.lifecycle()
                     handler = self._get_handler(instance)
-                    logger.info(f"{instance.service} state changed to {instance.state.value}")
+                    logger.debug(f"{instance.service} state changed to {instance.state.value}")
                     batch_task = None
 
             if signal_task in done:
-                print("Got a new signal!")
                 # Process a signal
                 ctl = signal_task.result()
-                logger.info(f"Processing control signal {ctl}")
+                logger.debug(f"Processing control signal {ctl}")
                 if ctl == ControlSignal.stop:
                     if instance.state == ServiceState.running:
                         instance.service_state.stop()
