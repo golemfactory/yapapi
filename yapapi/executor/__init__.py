@@ -782,7 +782,6 @@ class Executor(AsyncContextManager):
     def __init__(
         self,
         *,
-        budget: Union[float, Decimal],
         payload: Optional[Payload] = None,
         max_workers: int = 5,
         timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
@@ -830,7 +829,7 @@ class Executor(AsyncContextManager):
     def __init__(
         self,
         *,
-        budget: Union[float, Decimal],
+        budget: Optional[Union[float, Decimal]] = None,
         strategy: Optional[MarketStrategy] = None,
         subnet_tag: Optional[str] = None,
         driver: Optional[str] = None,
@@ -877,6 +876,9 @@ class Executor(AsyncContextManager):
                 "stand-alone usage is deprecated, please use `Golem.execute_task` class instead.",
                 DeprecationWarning,
             )
+            if not budget:
+                raise ValueError("Missing value for `budget` argument.")
+
             self._engine = Golem(
                 budget=budget,
                 strategy=strategy,
