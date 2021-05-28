@@ -135,4 +135,4 @@ class TestWorkContext:
         c = CommandContainer()
         steps.register(c)
 
-        assert c.commands() == [{'terminate': {}}]
+        assert c.commands() == [{"terminate": {}}]
