@@ -60,7 +60,7 @@ class _Deploy(Work):
 
 
 class _Start(Work):
-    def __init__(self, *args: Iterable[str]):
+    def __init__(self, *args: str):
         self.args = args
 
     def __repr__(self):
@@ -321,7 +321,7 @@ class WorkContext:
         self._implicit_init = False
         self._pending_steps.append(_Deploy())
 
-    def start(self, *args: Iterable[str]):
+    def start(self, *args: str):
         self._implicit_init = False
         self._pending_steps.append(_Start(*args))
 
