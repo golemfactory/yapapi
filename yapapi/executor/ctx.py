@@ -70,6 +70,11 @@ class _Start(Work):
         commands.start(args=self.args)
 
 
+class _Terminate(Work):
+    def register(self, commands: CommandContainer):
+        commands.terminate()
+
+
 class _SendWork(Work, abc.ABC):
     def __init__(self, storage: StorageProvider, dst_path: str):
         self._storage = storage
@@ -318,12 +323,18 @@ class WorkContext:
         pass
 
     def deploy(self):
+        """Schedule a Deploy command."""
         self._implicit_init = False
         self._pending_steps.append(_Deploy())
 
     def start(self, *args: str):
+        """Schedule a Start command."""
         self._implicit_init = False
         self._pending_steps.append(_Start(*args))
+
+    def terminate(self):
+        """Schedule a Terminate command."""
+        self._pending_steps.append(_Terminate())
 
     def send_json(self, json_path: str, data: dict):
         """Schedule sending JSON data to the provider.

@@ -143,3 +143,13 @@ class TestWorkContext:
         steps.register(c)
 
         assert c.commands() == [{"start": {"args": args}}]
+
+    def test_terminate(self):
+        ctx = self._get_work_context(None)
+        ctx.terminate()
+        steps = ctx.commit()
+
+        c = CommandContainer()
+        steps.register(c)
+
+        assert c.commands() == [{"terminate": {}}]
