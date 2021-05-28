@@ -126,3 +126,13 @@ class TestWorkContext:
         await steps.post()
         self._assert_src_path(steps, src_path)
         assert self._on_download_executed
+
+    def test_terminate(self):
+        ctx = self._get_work_context(None)
+        ctx.terminate()
+        steps = ctx.commit()
+
+        c = CommandContainer()
+        steps.register(c)
+
+        assert c.commands() == [{'terminate': {}}]

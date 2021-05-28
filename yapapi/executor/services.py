@@ -146,7 +146,8 @@ class Service:
             yield
 
     async def shutdown(self):
-        yield
+        self._ctx.terminate()
+        yield self._ctx.commit()
 
     @property
     def is_available(self):
