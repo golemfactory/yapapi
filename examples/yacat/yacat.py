@@ -5,12 +5,13 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import sys
 from tempfile import NamedTemporaryFile
-from typing import AsyncIterable, Optional
+from typing import AsyncIterable, List, Optional
 
 from yapapi import Golem, NoPaymentAccountError, Task, WorkContext, windows_event_loop_fix
 from yapapi.executor.events import CommandExecuted
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.payload import vm
+from yapapi.rest.activity import CommandExecutionError
 
 examples_dir = Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
@@ -77,18 +78,18 @@ async def compute_keyspace(context: WorkContext, tasks: AsyncIterable[Task]):
         cmd = f"hashcat --keyspace " f"-a {HASHCAT_ATTACK_MODE} -m {args.hash_type} {args.mask}"
         context.run("/bin/bash", "-c", cmd)
 
-        future_result = yield context.commit(timeout=KEYSPACE_TIMEOUT)
-        # each item is the result of a single command on the provider (including setup commands)
-        result: List[CommandExecuted] = await future_result
-        # we take the last item since it's the last command that was executed on the provider
-        cmd_result: CommandExecuted = result[-1]
+        try:
+            future_result = yield context.commit(timeout=KEYSPACE_TIMEOUT)
 
-        if cmd_result.success:
+            # each item is the result of a single command on the provider (including setup commands)
+            result: List[CommandExecuted] = await future_result
+            # we take the last item since it's the last command that was executed on the provider
+            cmd_result: CommandExecuted = result[-1]
+
             keyspace = int(cmd_result.stdout)
-        else:
-            raise RuntimeError("Failed to compute attack keyspace")
-
-        task.accept_result(result=keyspace)
+            task.accept_result(result=keyspace)
+        except CommandExecutionError as e:
+            raise RuntimeError(f"Failed to compute attack keyspace: {e}")
 
 
 async def perform_mask_attack(ctx: WorkContext, tasks: AsyncIterable[Task]):
