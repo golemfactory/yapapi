@@ -31,10 +31,18 @@ KEYSPACE_OUTPUT_PATH = Path("/golem/output/keyspace")
 MASK_ATTACK_TIMEOUT: timedelta = timedelta(minutes=30)
 KEYSPACE_TIMEOUT: timedelta = timedelta(minutes=10)
 
-arg_parser = build_parser("Run a hashcat attack (mask mode) on Golem network")
+arg_parser = build_parser("Run a hashcat attack (mask mode) on Golem network.")
+arg_parser.epilog = (
+    "Example invocation: ./yacat.py --mask '?a?a?a' --hash '$P$5ZDzPE45CLLhEx/72qt3NehVzwN2Ry/'"
+)
 arg_parser.add_argument("--hash", type=str, help="Target hash to be cracked", required=True)
 arg_parser.add_argument(
-    "--mask", type=str, help="Hashcat mask to be used for the attack", required=True
+    "--mask",
+    type=str,
+    help="Hashcat mask to be used for the attack. Example: a value of '?a?a?a' will "
+    "try all 3-character combinations, where each character is mixalpha-numeric "
+    "(lower and upper-case letters + digits) or a special character",
+    required=True,
 )
 arg_parser.add_argument(
     "--chunk-size",  # affects skip and limit hashcat parameters
@@ -45,7 +53,7 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     "--hash-type",
     type=int,
-    help="Type of hashing algorithm to use (hashcat -m option)",
+    help="Type of hashing algorithm to use (hashcat -m option). Default: 400 (phpass)",
     default=400,
 )
 arg_parser.add_argument(
