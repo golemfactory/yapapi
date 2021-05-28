@@ -225,8 +225,10 @@ class StreamingBatch(Batch):
         batch_id = self._batch_id
         last_idx = self._size - 1
 
+        evt_src_endpoint = f"{host}/activity/{activity_id}/exec/{batch_id}"
+
         async with sse_client.EventSource(
-            f"{host}/activity/{activity_id}/exec/{batch_id}",
+            evt_src_endpoint,
             headers=headers,
             timeout=self.seconds_left(),
         ) as event_source:

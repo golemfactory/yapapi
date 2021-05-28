@@ -418,7 +418,7 @@ class SummaryLogger:
             provider_info = self.agreement_provider_info[event.agr_id]
             data = self.task_data[event.task_id]
             self.logger.info(
-                "Task computed by provider '%s', task data: %s",
+                "Task finished by provider '%s', task data: %s",
                 provider_info.name,
                 str_capped(data, 200),
             )

@@ -22,7 +22,9 @@ from typing import (
     Optional,
     Set,
     Tuple,
+    Type,
     TypeVar,
+    TYPE_CHECKING,
     Union,
     cast,
     overload,
@@ -48,6 +50,9 @@ from ..rest.activity import CommandExecutionError
 from ..rest.market import OfferProposal, Subscription
 from ..storage import gftp
 from ._smartq import Consumer, Handle, SmartQueue
+
+if TYPE_CHECKING:
+    from .services import Cluster, Service
 from .strategy import (
     DecreaseScoreForUnconfirmedAgreement,
     LeastExpensiveLinearPayuMS,
@@ -259,57 +264,61 @@ class Golem(AsyncContextManager):
 
             self._storage_manager = await stack.enter_async_context(gftp.provider())
 
+            stack.push_async_exit(self._shutdown)
+
             return self
         except:
             await self.__aexit__(*sys.exc_info())
             raise
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def _shutdown(self, *exc_info):
+        """Shutdown this Golem instance."""
+
         # Importing this at the beginning would cause circular dependencies
         from ..log import pluralize
 
+        logger.info("Golem is shutting down...")
+        # Wait until all computations are finished
+        await asyncio.gather(*[job.finished.wait() for job in self._jobs])
+        logger.info("All jobs have finished")
+
+        self._payment_closing = True
+
+        for task in self._services:
+            if task is not self._process_invoices_job:
+                task.cancel()
+
+        if self._process_invoices_job and not any(
+            True for job in self._jobs if job.agreements_pool.confirmed > 0
+        ):
+            logger.debug("No need to wait for invoices.")
+            self._process_invoices_job.cancel()
+
         try:
-            logger.debug("Golem is shutting down...")
-            # Wait until all computations are finished
-            await asyncio.gather(*[job.finished.wait() for job in self._jobs])
+            logger.info("Waiting for Golem services to finish...")
+            _, pending = await asyncio.wait(
+                self._services, timeout=10, return_when=asyncio.ALL_COMPLETED
+            )
+            if pending:
+                logger.debug("%s still running: %s", pluralize(len(pending), "service"), pending)
+        except Exception:
+            logger.debug("Got error when waiting for services to finish", exc_info=True)
 
-            self._payment_closing = True
+        if self._agreements_to_pay and self._process_invoices_job:
+            logger.info(
+                "%s still unpaid, waiting for invoices...",
+                pluralize(len(self._agreements_to_pay), "agreement"),
+            )
+            await asyncio.wait(
+                {self._process_invoices_job}, timeout=30, return_when=asyncio.ALL_COMPLETED
+            )
+            if self._agreements_to_pay:
+                logger.warning("Unpaid agreements: %s", self._agreements_to_pay)
 
-            for task in self._services:
-                if task is not self._process_invoices_job:
-                    task.cancel()
+        await asyncio.gather(*[job.finished.wait() for job in self._jobs])
 
-            if self._process_invoices_job and not any(
-                True for job in self._jobs if job.agreements_pool.confirmed > 0
-            ):
-                logger.debug("No need to wait for invoices.")
-                self._process_invoices_job.cancel()
-
-            try:
-                logger.info("Waiting for Golem services to finish...")
-                _, pending = await asyncio.wait(
-                    self._services, timeout=10, return_when=asyncio.ALL_COMPLETED
-                )
-                if pending:
-                    logger.debug(
-                        "%s still running: %s", pluralize(len(pending), "service"), pending
-                    )
-            except Exception:
-                logger.debug("Got error when waiting for services to finish", exc_info=True)
-
-            if self._agreements_to_pay and self._process_invoices_job:
-                logger.info(
-                    "%s still unpaid, waiting for invoices...",
-                    pluralize(len(self._agreements_to_pay), "agreement"),
-                )
-                await asyncio.wait(
-                    {self._process_invoices_job}, timeout=30, return_when=asyncio.ALL_COMPLETED
-                )
-                if self._agreements_to_pay:
-                    logger.warning("Unpaid agreements: %s", self._agreements_to_pay)
-
-        finally:
-            await self._stack.aclose()
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self._stack.aclose()
 
     async def _create_allocations(self) -> rest.payment.MarketDecoration:
 
@@ -565,6 +574,33 @@ class Golem(AsyncContextManager):
         async with Executor(_engine=self, **kwargs) as executor:
             async for t in executor.submit(worker, data):
                 yield t
+
+    async def run_service(
+        self,
+        service_class: Type["Service"],
+        num_instances: int = 1,
+        payload: Optional[Payload] = None,
+        expiration: Optional[datetime] = None,
+    ) -> "Cluster":
+        from .services import Cluster  # avoid circular dependency
+
+        payload = payload or await service_class.get_payload()
+
+        if not payload:
+            raise ValueError(
+                f"No payload returned from {service_class.__name__}.get_payload() nor given in the `payload` argument."
+            )
+
+        cluster = Cluster(
+            engine=self,
+            service_class=service_class,
+            payload=payload,
+            num_instances=num_instances,
+            expiration=expiration,
+        )
+        await self._stack.enter_async_context(cluster)
+        cluster.spawn_instances()
+        return cluster
 
 
 class Job:
@@ -1030,7 +1066,7 @@ class Executor(AsyncContextManager):
             while True:
                 await asyncio.sleep(2)
                 await job.agreements_pool.cycle()
-                if len(workers) < self._max_workers and await work_queue.has_unassigned_items():
+                if len(workers) < self._max_workers and work_queue.has_unassigned_items():
                     new_task = None
                     try:
                         new_task = await job.agreements_pool.use_agreement(
@@ -1113,6 +1149,9 @@ class Executor(AsyncContextManager):
             cancelled = True
 
         finally:
+
+            await work_queue.close()
+
             # Importing this at the beginning would cause circular dependencies
             from ..log import pluralize
 
