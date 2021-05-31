@@ -1,3 +1,4 @@
+"""Implementation of high-level services API."""
 import asyncio
 import itertools
 from dataclasses import dataclass, field
@@ -35,9 +36,7 @@ cluster_ids = itertools.count(1)
 
 
 class ServiceState(statemachine.StateMachine):
-    """
-    State machine describing the state and lifecycle of a Service instance.
-    """
+    """State machine describing the state and lifecycle of a Service instance."""
 
     # states
     starting = statemachine.State("starting", initial=True)
@@ -60,52 +59,65 @@ class ServiceState(statemachine.StateMachine):
 
 @dataclass
 class ServiceSignal:
-    """
-    Simple container to carry information between the client code and the Service instance.
-    """
+    """Simple container to carry information between the client code and the Service instance."""
 
     message: Any
     response_to: Optional["ServiceSignal"] = None
 
 
 class Service:
-    """
-    Base Service class to be extended by application developers to define their own,
-    specialized Service specifications.
+    """Base class for service specifications.
+
+    To be extended by application developers to define their own, specialized
+    Service specifications.
     """
 
     def __init__(self, cluster: "Cluster", ctx: WorkContext):
+        """Initialize a service for a specific cluster of instances and a specific work context.
+
+        :param cluster: a cluster to which an instance of this service belongs
+        :param ctx: a work context object for executing commands on a provider that runs this
+            service instance.
+        """
         self._cluster: "Cluster" = cluster
         self._ctx: WorkContext = ctx
 
         self.__inqueue: asyncio.Queue[ServiceSignal] = asyncio.Queue()
         self.__outqueue: asyncio.Queue[ServiceSignal] = asyncio.Queue()
-        self.post_init()
-
-    def post_init(self):
-        pass
 
     @property
     def id(self):
+        """Return the id of the work context associated with this service instance."""
         return self._ctx.id
 
     @property
     def provider_name(self):
+        """Return the name of the provider that runs this service instance."""
         return self._ctx.provider_name
 
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.id}>"
 
     async def send_message(self, message: Any = None):
+        """Send a control message to this instance."""
         await self.__inqueue.put(ServiceSignal(message=message))
 
     def send_message_nowait(self, message: Optional[Any] = None):
+        """Send a control message to this instance without blocking.
+
+        May raise `asyncio.QueueFull` if the channel for sending control messages is full.
+        """
         self.__inqueue.put_nowait(ServiceSignal(message=message))
 
     async def receive_message(self) -> ServiceSignal:
+        """Wait for a control message sent to this instance."""
         return await self.__outqueue.get()
 
     def receive_message_nowait(self) -> Optional[ServiceSignal]:
+        """Retrieve a control message sent to this instance.
+
+        Return `None` if no message is available.
+        """
         try:
             return self.__outqueue.get_nowait()
         except asyncio.QueueEmpty:
@@ -136,32 +148,38 @@ class Service:
         pass
 
     async def start(self):
+        """Implement the `starting` state of the service."""
+
         self._ctx.deploy()
         self._ctx.start()
         yield self._ctx.commit()
 
     async def run(self):
+        """Implement the `running` state of the service."""
+
         while True:
             await asyncio.sleep(10)
             yield
 
     async def shutdown(self):
+        """Implement the `stopping` state of the service."""
+
         self._ctx.terminate()
         yield self._ctx.commit()
 
     @property
     def is_available(self):
+        """Return `True` iff this instance is available (that is, starting, running or stopping)."""
         return self._cluster.get_state(self) in ServiceState.AVAILABLE
 
     @property
     def state(self):
+        """Return the current state of this instance."""
         return self._cluster.get_state(self)
 
 
 class ControlSignal(enum.Enum):
-    """
-    Control signal, used to request an instance's state change from the controlling Cluster.
-    """
+    """Control signal, used to request an instance's state change from the controlling Cluster."""
 
     stop = "stop"
 
@@ -180,13 +198,12 @@ class ServiceInstance:
 
     @property
     def state(self) -> ServiceState:
+        """Return the current state of this instance."""
         return self.service_state.current_state
 
 
 class Cluster(AsyncContextManager):
-    """
-    Golem's sub-engine used to spawn and control instances of a single Service.
-    """
+    """Golem's sub-engine used to spawn and control instances of a single Service."""
 
     def __init__(
         self,
@@ -196,6 +213,16 @@ class Cluster(AsyncContextManager):
         num_instances: int = 1,
         expiration: Optional[datetime] = None,
     ):
+        """Initialize a Cluster of service instances.
+
+        :param engine: an engine for running service instance
+        :param service_class: service specification
+        :param payload: definition of service runtime for this Cluster
+        :param num_instances: number of instances to spawn in this Cluster
+        :param expiration: a date before which all agreements related to running services
+            in this Cluster should be terminated
+        """
+
         self.id = str(next(cluster_ids))
 
         self._engine = engine
@@ -212,9 +239,14 @@ class Cluster(AsyncContextManager):
         self._stack = AsyncExitStack()
 
     def __repr__(self):
-        return f"Cluster {self.id}: {self._num_instances}x[Service: {self._service_class.__name__}, Payload: {self._payload}]"
+        return (
+            f"Cluster {self.id}: {self._num_instances}x[Service: {self._service_class.__name__}, "
+            f"Payload: {self._payload}]"
+        )
 
     async def __aenter__(self):
+        """Post a Demand and start collecting provider Offers for running service instances."""
+
         self.__services: Set[asyncio.Task] = set()
         """Asyncio tasks running within this cluster"""
 
@@ -235,6 +267,8 @@ class Cluster(AsyncContextManager):
         self.__services.add(loop.create_task(agreements_pool_cycler()))
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Release resources used by this Cluster."""
+
         logger.debug("%s is shutting down...", self)
 
         # TODO: should be different if we stop due to an error
@@ -258,10 +292,12 @@ class Cluster(AsyncContextManager):
         self._engine.finalize_job(self._job)
 
     def emit(self, event: events.Event) -> None:
+        """Emit an event using this Cluster's engine."""
         self._engine.emit(event)
 
     @property
     def instances(self) -> List[Service]:
+        """Return the list of service instances in this Cluster."""
         return [i.service for i in self.__instances]
 
     def __get_service_instance(self, service: Service) -> ServiceInstance:
@@ -271,6 +307,7 @@ class Cluster(AsyncContextManager):
         assert False, f"No instance found for {service}"
 
     def get_state(self, service: Service) -> ServiceState:
+        """Return the state of the specific instance in this Cluster."""
         instance = self.__get_service_instance(service)
         return instance.state
 
@@ -357,7 +394,9 @@ class Cluster(AsyncContextManager):
 
         logger.info("%s decomissioned", instance.service)
 
-    async def spawn_instance(self):
+    async def spawn_instance(self) -> None:
+        """Spawn a new service instance within this Cluster."""
+
         logger.debug("spawning instance within %s", self)
         spawned = False
 
@@ -378,7 +417,7 @@ class Cluster(AsyncContextManager):
             async with act:
                 spawned = True
                 self.emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
-                self._engine.approve_agreement_payments(agreement.id)
+                self._engine.approve_debit_notes_for_agreement(agreement.id)
                 work_context = WorkContext(
                     act.id, node_info, self._engine.storage_manager, emitter=self.emit
                 )
@@ -413,7 +452,7 @@ class Cluster(AsyncContextManager):
                     )
                     raise
                 finally:
-                    await self._engine.accept_payment_for_agreement(agreement.id)
+                    await self._engine.accept_payments_for_agreement(agreement.id)
 
         loop = asyncio.get_event_loop()
 
@@ -426,15 +465,16 @@ class Cluster(AsyncContextManager):
                 await task
 
     def stop_instance(self, service: Service):
+        """Stop the specific service instance belonging to this Cluster."""
+
         instance = self.__get_service_instance(service)
         instance.control_queue.put_nowait(ControlSignal.stop)
 
     def spawn_instances(self, num_instances: Optional[int] = None) -> None:
-        """
-        Spawn new instances within this Cluster.
+        """Spawn new instances within this Cluster.
 
         :param num_instances: number of instances to commission.
-                              if not given, spawns the number that the Cluster has been initialized with.
+            if not given, spawns the number that the Cluster has been initialized with.
         """
         if num_instances:
             self._num_instances += num_instances
