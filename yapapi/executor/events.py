@@ -2,7 +2,6 @@
 import dataclasses
 from datetime import datetime, timedelta
 from dataclasses import dataclass
-import json
 import logging
 from types import TracebackType
 from typing import Any, Optional, Type, Tuple, List

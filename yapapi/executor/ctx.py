@@ -102,7 +102,7 @@ class _SendBytes(_SendWork):
         self._data: Optional[bytes] = data
 
     async def do_upload(self, storage: StorageProvider) -> Source:
-        assert self._data is not None, f"buffer unintialized"
+        assert self._data is not None, "buffer unintialized"
         src = await storage.upload_bytes(self._data)
         self._data = None
         return src

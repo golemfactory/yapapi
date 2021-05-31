@@ -149,7 +149,7 @@ class SmartQueue(Generic[Item]):
         if _logger.isEnabledFor(logging.DEBUG):
             stats = self.stats()
             _logger.debug(
-                "status: " + ", ".join(f"{key}: {val}" for key, val in self.stats().items())
+                "status: " + ", ".join(f"{key}: {val}" for key, val in stats.items())
             )
 
     async def reschedule(self, handle: Handle[Item]) -> None:
