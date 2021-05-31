@@ -503,7 +503,7 @@ class Golem(AsyncContextManager):
         self,
         agreement_id: str,
         activity: rest.activity.Activity,
-        command_generator: AsyncGenerator[Work, Awaitable[List[events.CommandEvent]]],
+        command_generator: AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
     ) -> None:
         """Send command batches produced by `command_generator` to `activity`."""
 
@@ -579,7 +579,7 @@ class Golem(AsyncContextManager):
         self,
         worker: Callable[
             [WorkContext, AsyncIterator[Task[D, R]]],
-            AsyncGenerator[Work, Awaitable[List[events.CommandEvent]]],
+            AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
         ],
         data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
         payload: Payload,
@@ -996,7 +996,7 @@ class Executor(AsyncContextManager):
         self,
         worker: Callable[
             [WorkContext, AsyncIterator[Task[D, R]]],
-            AsyncGenerator[Work, Awaitable[List[events.CommandEvent]]],
+            AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
         ],
         data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
     ) -> AsyncIterator[Task[D, R]]:
@@ -1041,7 +1041,7 @@ class Executor(AsyncContextManager):
         self,
         worker: Callable[
             [WorkContext, AsyncIterator[Task[D, R]]],
-            AsyncGenerator[Work, Awaitable[List[events.CommandEvent]]],
+            AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
         ],
         data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
         services: Set[asyncio.Task],
