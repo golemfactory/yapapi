@@ -354,8 +354,8 @@ class SummaryLogger:
                 min, sec = divmod(round(timeout.total_seconds()), 60)
                 self.logger.warning(
                     f"Expiration time for your tasks is set to {min} min {sec} sec from now."
-                    " Providers will probably not respond to tasks which expire sooner than 5 min"
-                    " or later than 30 min, counting from the moment they get your demand."
+                    " Providers may not be willing to take up tasks which expire sooner than 5 min"
+                    " or later than 3 hours, counting from the moment they get your demand."
                     " Use the `timeout` parameter to `Executor()` to adjust the timeout."
                 )
 
