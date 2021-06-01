@@ -2,6 +2,7 @@
 import argparse
 import asyncio
 from datetime import datetime, timedelta
+import math
 from pathlib import Path
 import sys
 from tempfile import NamedTemporaryFile
@@ -180,7 +181,7 @@ async def main(args):
         )
 
         data = [Task(data=c) for c in range(0, keyspace, args.chunk_size)]
-        max_workers = args.max_workers or (keyspace // args.chunk_size) // 2
+        max_workers = args.max_workers or math.ceil(keyspace / args.chunk_size) // 2
 
         completed = golem.execute_tasks(
             perform_mask_attack,

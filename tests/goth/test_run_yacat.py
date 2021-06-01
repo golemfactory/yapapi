@@ -101,7 +101,7 @@ async def test_run_yacat(log_dir: Path, project_dir: Path, config_overrides) -> 
 
         async with requestor.run_command_on_host(
             f"{yacat_path} --mask ?a?a --hash $P$5ZDzPE45CigTC6EY4cXbyJSLj/pGee0 "
-            f"--subnet-tag goth --chunk-size {CHUNK_SIZE}",
+            f"--subnet-tag goth --chunk-size {CHUNK_SIZE} --max-workers {PROVIDER_COUNT}",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor):
 
