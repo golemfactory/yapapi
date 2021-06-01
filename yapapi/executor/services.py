@@ -414,6 +414,7 @@ class Cluster(AsyncContextManager):
                     raise
                 finally:
                     await self._engine.accept_payment_for_agreement(agreement.id)
+                    await self._job.agreements_pool.release_agreement(agreement.id, False)
 
         loop = asyncio.get_event_loop()
 
