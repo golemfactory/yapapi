@@ -51,8 +51,8 @@ async def main():
         start_time = datetime.now()
 
         while datetime.now() < start_time + timedelta(minutes=1):
-            cluster_state = [(i.provider_name, i.state.value) for i in cluster.instances]
-            print(cluster_state)
+            for num, instance in enumerate(cluster.instances):
+                print(f"Instance {num} is {instance.state.value} on {instance.provider_name}")
             await asyncio.sleep(REFRESH_INTERVAL_SEC)
 
 
