@@ -19,7 +19,7 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Final
 
-from yapapi import Golem, Job, rest
+from yapapi import Engine, Job, rest
 from yapapi.executor import events
 from yapapi.executor.ctx import WorkContext
 from yapapi.payload import Payload
@@ -212,7 +212,7 @@ class Cluster(AsyncContextManager):
 
     def __init__(
         self,
-        engine: "Golem",
+        engine: "Engine",
         service_class: Type[Service],
         payload: Payload,
         num_instances: int = 1,
