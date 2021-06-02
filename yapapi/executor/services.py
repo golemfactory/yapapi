@@ -29,8 +29,11 @@ from . import events
 
 logger = logging.getLogger(__name__)
 
-# current default for yagna providers as of yagna 0.6.x
-DEFAULT_SERVICE_EXPIRATION: Final[timedelta] = timedelta(minutes=175)
+# current defaults for yagna providers as of yagna 0.6.x, see
+# https://github.com/golemfactory/yagna/blob/c37dbd1a2bc918a511eed12f2399eb9fd5bbf2a2/agent/provider/src/market/negotiator/factory.rs#L20
+MIN_AGREEMENT_EXPIRATION: Final[timedelta] = timedelta(minutes=5)
+MAX_AGREEMENT_EXPIRATION: Final[timedelta] = timedelta(minutes=180)
+DEFAULT_SERVICE_EXPIRATION: Final[timedelta] = MAX_AGREEMENT_EXPIRATION - timedelta(minutes=5)
 
 cluster_ids = itertools.count(1)
 
