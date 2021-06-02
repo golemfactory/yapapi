@@ -53,8 +53,9 @@ import sys
 import time
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set
 
-import yapapi.executor.events as events
 from yapapi import __version__ as yapapi_version
+import yapapi.executor.events as events
+from yapapi.executor.services import MAX_AGREEMENT_EXPIRATION, MIN_AGREEMENT_EXPIRATION
 from yapapi.rest.activity import CommandExecutionError
 
 event_logger = logging.getLogger("yapapi.events")
@@ -350,13 +351,18 @@ class SummaryLogger:
                 # This means another computation run in the current Executor instance.
                 self._print_total_cost(partial=True)
             timeout = event.expires - datetime.now(timezone.utc)
-            if not timedelta(minutes=5, seconds=5) <= timeout <= timedelta(minutes=30):
+            # Compute the timeout as it will be seen by providers, assuming they will see
+            # the Demand 5 seconds from now
+            provider_timeout = timeout - timedelta(seconds=5)
+            if not MIN_AGREEMENT_EXPIRATION <= provider_timeout <= MAX_AGREEMENT_EXPIRATION:
                 min, sec = divmod(round(timeout.total_seconds()), 60)
+                seconds_str = f" {sec} sec " if sec else " "
+                max_minutes = round(MAX_AGREEMENT_EXPIRATION.seconds / 60)
                 self.logger.warning(
-                    f"Expiration time for your tasks is set to {min} min {sec} sec from now."
-                    " Providers will probably not respond to tasks which expire sooner than 5 min"
-                    " or later than 30 min, counting from the moment they get your demand."
-                    " Use the `timeout` parameter to `Executor()` to adjust the timeout."
+                    f"Expiration time for your tasks is set to {min} min{seconds_str}from now."
+                    " Providers may not be willing to take up tasks which expire sooner than 5 min"
+                    f" or later than {max_minutes} min, counting from the moment they get your"
+                    " demand."
                 )
 
         elif isinstance(event, events.ProposalReceived):

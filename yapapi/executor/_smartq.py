@@ -148,9 +148,7 @@ class SmartQueue(Generic[Item]):
             self._new_items.notify_all()
         if _logger.isEnabledFor(logging.DEBUG):
             stats = self.stats()
-            _logger.debug(
-                "status: " + ", ".join(f"{key}: {val}" for key, val in self.stats().items())
-            )
+            _logger.debug("status: " + ", ".join(f"{key}: {val}" for key, val in stats.items()))
 
     async def reschedule(self, handle: Handle[Item]) -> None:
         """Free the item for reassignment to another consumer."""
