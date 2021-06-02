@@ -44,7 +44,7 @@ class DateService(Service):
 async def main():
     async with Golem(
         budget=1.0,
-        subnet_tag="goth",
+        subnet_tag="devnet-beta.2",
         # event_consumer=log_summary(log_event_repr),
     ) as golem:
         cluster = await golem.run_service(DateService, num_instances=1)
