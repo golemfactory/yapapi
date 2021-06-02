@@ -2,9 +2,8 @@
 import asyncio
 from typing import AsyncIterable
 
-# from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
-
 from yapapi import Golem, Task, WorkContext
+from yapapi.log import enable_default_logger
 from yapapi.payload import vm
 
 
@@ -12,9 +11,8 @@ async def worker(context: WorkContext, tasks: AsyncIterable[Task]):
     async for task in tasks:
         context.run("/bin/sh", "-c", "date")
 
-        future_result = yield context.commit()
-        results = await future_result
-
+        future_results = yield context.commit()
+        results = await future_results
         task.accept_result(result=results[-1])
 
 
@@ -25,17 +23,14 @@ async def main():
 
     tasks = [Task(data=None)]
 
-    async with Golem(
-        budget=1.0,
-        subnet_tag="devnet-beta.2",
-        # event_consumer=log_summary(log_event_repr),
-    ) as golem:
+    async with Golem(budget=1.0, subnet_tag="goth") as golem:
         async for completed in golem.execute_tasks(worker, tasks, payload=package):
             print(completed.result.stdout)
 
 
 if __name__ == "__main__":
+    enable_default_logger(log_file="hello.log")
+
     loop = asyncio.get_event_loop()
     task = loop.create_task(main())
-    # enable_default_logger(log_file="hello.log")
     loop.run_until_complete(task)

@@ -2,10 +2,9 @@
 import asyncio
 from datetime import datetime, timedelta
 
-# from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
-
 from yapapi import Golem
 from yapapi.executor.services import Service
+from yapapi.log import enable_default_logger
 from yapapi.payload import vm
 
 DATE_OUTPUT_PATH = "/golem/work/date.txt"
@@ -42,11 +41,7 @@ class DateService(Service):
 
 
 async def main():
-    async with Golem(
-        budget=1.0,
-        subnet_tag="devnet-beta.2",
-        # event_consumer=log_summary(log_event_repr),
-    ) as golem:
+    async with Golem(budget=1.0, subnet_tag="goth") as golem:
         cluster = await golem.run_service(DateService, num_instances=1)
         start_time = datetime.now()
 
@@ -57,7 +52,8 @@ async def main():
 
 
 if __name__ == "__main__":
+    enable_default_logger(log_file="hello.log")
+
     loop = asyncio.get_event_loop()
     task = loop.create_task(main())
-    # enable_default_logger(log_file="hello.log")
     loop.run_until_complete(task)
