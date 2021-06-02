@@ -11,6 +11,7 @@ from .executor import (
     ExecOptions,
     Executor,
     Golem,
+    Job,
     NoPaymentAccountError,
     Task,
     WorkContext,
@@ -57,4 +58,6 @@ __all__ = [
     "Task",
     "WorkContext",
     "CaptureContext",
+    "Golem",
+    "Job",
 ]

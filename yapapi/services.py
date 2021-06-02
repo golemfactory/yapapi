@@ -19,13 +19,12 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Final
 
+from yapapi import Golem, Job, rest
+from yapapi.executor import events
+from yapapi.executor.ctx import WorkContext
+from yapapi.payload import Payload
+from yapapi.props import NodeInfo
 
-from .. import rest
-from ..executor import Golem, Job
-from ..executor.ctx import WorkContext
-from ..payload import Payload
-from ..props import NodeInfo
-from . import events
 
 logger = logging.getLogger(__name__)
 
