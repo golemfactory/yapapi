@@ -1,6 +1,4 @@
-"""
-An implementation of the new Golem's task executor.
-"""
+"""An implementation of the new Golem's task executor."""
 import asyncio
 from asyncio import CancelledError
 import contextlib
@@ -49,7 +47,7 @@ from .. import rest
 from ..rest.activity import CommandExecutionError
 from ..rest.market import OfferProposal, Subscription
 from ..storage import gftp
-from ._smartq import Consumer, Handle, SmartQueue
+from ._smartq import SmartQueue
 
 if TYPE_CHECKING:
     from .services import Cluster, Service
@@ -92,6 +90,11 @@ class NoPaymentAccountError(Exception):
     """Network required for the account."""
 
     def __init__(self, required_driver: str, required_network: str):
+        """Initialize `NoPaymentAccountError`.
+
+        :param required_driver: payment driver for which initialization was required
+        :param required_network: payment network for which initialization was required
+        """
         self.required_driver: str = required_driver
         self.required_network: str = required_network
 
@@ -106,8 +109,9 @@ WorkItem = Union[Work, Tuple[Work, ExecOptions]]
 """The type of items yielded by a generator created by the `worker` function supplied by user."""
 
 
-def unpack_work_item(item: WorkItem) -> Tuple[Work, ExecOptions]:
+def _unpack_work_item(item: WorkItem) -> Tuple[Work, ExecOptions]:
     """Extract `Work` object and options from a work item.
+
     If the item does not specify options, default ones are provided.
     """
     if isinstance(item, tuple):
@@ -124,6 +128,8 @@ R = TypeVar("R")  # Type var for task result
 
 
 class Golem(AsyncContextManager):
+    """Base execution engine containing functions common to all modes of operation."""
+
     def __init__(
         self,
         *,
@@ -136,8 +142,7 @@ class Golem(AsyncContextManager):
         stream_output: bool = False,
         app_key: Optional[str] = None,
     ):
-        """
-        Base execution engine containing functions common to all modes of operation
+        """Initialize the Golem engine.
 
         :param budget: maximum budget for payments
         :param strategy: market strategy used to select providers from the market
@@ -207,30 +212,37 @@ class Golem(AsyncContextManager):
         builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
-        await builder.decorate(self.payment_decoration, self.strategy, payload)
+        await builder.decorate(self.payment_decorator, self.strategy, payload)
         return builder
 
     @property
     def driver(self) -> str:
+        """Return the name of the payment driver used by this engine."""
         return self._driver
 
     @property
     def network(self) -> str:
+        """Return the name of the payment network used by this engine."""
         return self._network
 
     @property
     def storage_manager(self):
+        """Return the storage manager used by this engine."""
         return self._storage_manager
 
     @property
     def strategy(self) -> MarketStrategy:
+        """Return the instance of `MarketStrategy` used by this engine."""
         return self._strategy
 
-    def emit(self, *args, **kwargs) -> None:
+    def emit(self, event: events.Event) -> None:
+        """Emit an event to be consumed by this engine's event consumer."""
         if self._wrapped_consumer:
-            self._wrapped_consumer.async_call(*args, **kwargs)
+            self._wrapped_consumer.async_call(event)
 
     async def __aenter__(self) -> "Golem":
+        """Initialize resources and start background services used by this engine."""
+
         try:
             stack = self._stack
 
@@ -253,14 +265,14 @@ class Golem(AsyncContextManager):
             payment_client = await stack.enter_async_context(self._api_config.payment())
             self._payment_api = rest.Payment(payment_client)
 
-            self.payment_decoration = Golem.PaymentDecoration(await self._create_allocations())
+            self.payment_decorator = Golem.PaymentDecorator(await self._create_allocations())
 
             # TODO: make the method starting the process_invoices() task an async context manager
             # to simplify code in __aexit__()
             loop = asyncio.get_event_loop()
-            self._process_invoices_job = loop.create_task(self.process_invoices())
+            self._process_invoices_job = loop.create_task(self._process_invoices())
             self._services.add(self._process_invoices_job)
-            self._services.add(loop.create_task(self.process_debit_notes()))
+            self._services.add(loop.create_task(self._process_debit_notes()))
 
             self._storage_manager = await stack.enter_async_context(gftp.provider())
 
@@ -329,8 +341,8 @@ class Golem(AsyncContextManager):
                 network = account.network.lower()
                 if (driver, network) != (self._driver, self._network):
                     logger.debug(
-                        f"Not using payment platform `%s`, platform's driver/network "
-                        f"`%s`/`%s` is different than requested driver/network `%s`/`%s`",
+                        "Not using payment platform `%s`, platform's driver/network "
+                        "`%s`/`%s` is different than requested driver/network `%s`/`%s`",
                         account.platform,
                         driver,
                         network,
@@ -372,7 +384,9 @@ class Golem(AsyncContextManager):
         except:
             raise ValueError(f"No allocation for {item.payment_platform} {item.payer_addr}.")
 
-    async def process_invoices(self) -> None:
+    async def _process_invoices(self) -> None:
+        """Process incoming invoices."""
+
         async for invoice in self._payment_api.incoming_invoices():
             if invoice.agreement_id in self._agreements_to_pay:
                 self.emit(
@@ -409,8 +423,9 @@ class Golem(AsyncContextManager):
             if self._payment_closing and not self._agreements_to_pay:
                 break
 
-    # TODO Consider processing invoices and debit notes together
-    async def process_debit_notes(self) -> None:
+    async def _process_debit_notes(self) -> None:
+        """Process incoming debit notes."""
+
         async for debit_note in self._payment_api.incoming_debit_notes():
             if debit_note.agreement_id in self._agreements_accepting_debit_notes:
                 self.emit(
@@ -436,9 +451,11 @@ class Golem(AsyncContextManager):
             if self._payment_closing and not self._agreements_to_pay:
                 break
 
-    async def accept_payment_for_agreement(
+    async def accept_payments_for_agreement(
         self, agreement_id: str, *, partial: bool = False
     ) -> None:
+        """Add given agreement to the set of agreements for which invoices should be accepted."""
+
         self.emit(events.PaymentPrepared(agr_id=agreement_id))
         inv = self._invoices.get(agreement_id)
         if inv is None:
@@ -452,26 +469,33 @@ class Golem(AsyncContextManager):
             events.PaymentAccepted(agr_id=agreement_id, inv_id=inv.invoice_id, amount=inv.amount)
         )
 
-    def approve_agreement_payments(self, agreement_id):
+    def accept_debit_notes_for_agreement(self, agreement_id: str) -> None:
+        """Add given agreement to the set of agreements for which debit notes should be accepted."""
         self._agreements_accepting_debit_notes.add(agreement_id)
 
     def add_job(self, job: "Job"):
+        """Register a job with this engine."""
         self._jobs.add(job)
 
     @staticmethod
     def finalize_job(job: "Job"):
+        """Mark a job as finished."""
         job.finished.set()
 
     @dataclass
-    class PaymentDecoration(DemandDecorator):
+    class PaymentDecorator(DemandDecorator):
+        """A `DemandDecorator` that adds payment-related constraints and properties to a Demand."""
+
         market_decoration: rest.payment.MarketDecoration
 
         async def decorate_demand(self, demand: DemandBuilder):
+            """Add properties and constraints to a Demand."""
             for constraint in self.market_decoration.constraints:
                 demand.ensure(constraint)
             demand.properties.update({p.key: p.value for p in self.market_decoration.properties})
 
     async def create_activity(self, agreement_id: str):
+        """Create an activity for given `agreement_id`."""
         return await self._activity_api.new_activity(
             agreement_id, stream_events=self._stream_output
         )
@@ -480,7 +504,7 @@ class Golem(AsyncContextManager):
         self,
         agreement_id: str,
         activity: rest.activity.Activity,
-        command_generator: AsyncGenerator[Work, Awaitable[List[events.CommandEvent]]],
+        command_generator: AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
     ) -> None:
         """Send command batches produced by `command_generator` to `activity`."""
 
@@ -488,7 +512,7 @@ class Golem(AsyncContextManager):
 
         while True:
 
-            batch, exec_options = unpack_work_item(item)
+            batch, exec_options = _unpack_work_item(item)
 
             # TODO: `task_id` should really be `batch_id`, but then we should also rename
             # `task_id` field of several events (e.g. `ScriptSent`)
@@ -528,7 +552,7 @@ class Golem(AsyncContextManager):
                 self.emit(events.GettingResults(agr_id=agreement_id, script_id=script_id))
                 await batch.post()
                 self.emit(events.ScriptFinished(agr_id=agreement_id, script_id=script_id))
-                await self.accept_payment_for_agreement(agreement_id, partial=True)
+                await self.accept_payments_for_agreement(agreement_id, partial=True)
                 return results
 
             loop = asyncio.get_event_loop()
@@ -539,7 +563,7 @@ class Golem(AsyncContextManager):
                     future_results = loop.create_future()
                     results = await get_batch_results()
                     future_results.set_result(results)
-                except Exception as e:
+                except Exception:
                     # Raise the exception in `command_generator` (the `worker` coroutine).
                     # If the client code is able to handle it then we'll proceed with
                     # subsequent batches. Otherwise the worker finishes with error.
@@ -556,7 +580,7 @@ class Golem(AsyncContextManager):
         self,
         worker: Callable[
             [WorkContext, AsyncIterator[Task[D, R]]],
-            AsyncGenerator[Work, Awaitable[List[events.CommandEvent]]],
+            AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
         ],
         data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
         payload: Payload,
@@ -564,6 +588,23 @@ class Golem(AsyncContextManager):
         timeout: Optional[timedelta] = None,
         budget: Optional[Union[float, Decimal]] = None,
     ) -> AsyncIterator[Task[D, R]]:
+        """Submit a sequence of tasks to be executed on providers.
+
+        Internally, this method creates an instance of `yapapi.executor.Executor`
+        and calls its `submit()` method with given worker function and sequence of tasks.
+
+        :param worker: an async generator that takes a `WorkContext` object and a sequence
+            of tasks, and generates as sequence of work items to be executed on providers in order
+            to compute given tasks
+        :param data: an iterable or an async generator of `Task` objects to be computed on providers
+        :param payload: specification of the payload that needs to be deployed on providers
+            (for example, a VM runtime package) in order to compute the tasks, passed to
+            the created `Executor` instance
+        :param max_workers: maximum number of concurrent workers, passed to the `Executor` instance
+        :param timeout: timeout for computing all tasks, passed to the `Executor` instance
+        :param budget: budget for computing all tasks, passed to the `Executor` instance
+        :return: an iterator that yields completed `Task` objects
+        """
 
         kwargs: Dict[str, Any] = {"payload": payload}
         if max_workers:
@@ -583,13 +624,25 @@ class Golem(AsyncContextManager):
         payload: Optional[Payload] = None,
         expiration: Optional[datetime] = None,
     ) -> "Cluster":
+        """Run a number of instances of a service represented by a given `Service` subclass.
+
+        :param service_class: a subclass of `Service` that represents the service to be run
+        :param num_instances: optional number of service instances to run, defaults to a single
+            instance
+        :param payload: optional runtime definition for the service; if not provided, the
+            payload specified by the `get_payload()` method of `service_class` is used
+        :param expiration: optional expiration datetime for the service
+        :return: a `Cluster` of service instances
+        """
+
         from .services import Cluster  # avoid circular dependency
 
         payload = payload or await service_class.get_payload()
 
         if not payload:
             raise ValueError(
-                f"No payload returned from {service_class.__name__}.get_payload() nor given in the `payload` argument."
+                f"No payload returned from {service_class.__name__}.get_payload()"
+                " nor given in the `payload` argument."
             )
 
         cluster = Cluster(
@@ -605,7 +658,10 @@ class Golem(AsyncContextManager):
 
 
 class Job:
-    """Functionality related to a single job."""
+    """Functionality related to a single job.
+
+    Responsible for posting a Demand to market and collecting Offer proposals for the Demand.
+    """
 
     def __init__(
         self,
@@ -613,6 +669,15 @@ class Job:
         expiration_time: datetime,
         payload: Payload,
     ):
+        """Initialize a `Job` instance.
+
+        param engine: a `Golem` engine which will run this job
+        param expiration_time: expiration time for the job; all agreements created for this job
+            must expire before this date
+        param payload: definition of a service runtime or a runtime package that needs to
+            be deployed on providers for executing this job
+        """
+
         self.id = str(uuid.uuid4())
         self.engine = engine
         self.offers_collected: int = 0
@@ -712,7 +777,7 @@ class Job:
             self.offers_collected += 1
 
             async def handler(proposal_):
-                """A coroutine that wraps `_handle_proposal()` method with error handling."""
+                """Wrap `_handle_proposal()` method with error handling."""
                 try:
                     event = await self._handle_proposal(proposal_, demand_builder)
                     assert isinstance(event, events.ProposalEvent)
@@ -737,6 +802,7 @@ class Job:
 
     async def find_offers(self) -> None:
         """Create demand subscription and process offers.
+
         When the subscription expires, create a new one. And so on...
         """
 
@@ -773,10 +839,10 @@ DEFAULT_GET_OFFERS_TIMEOUT = timedelta(seconds=20)
 
 
 class Executor(AsyncContextManager):
-    """
-    Task executor.
+    """Task executor.
 
-    Used to run batch tasks using the specified application package within providers' execution units.
+    Used to run batch tasks using the specified application package within providers'
+    execution units.
     """
 
     @overload
@@ -788,8 +854,7 @@ class Executor(AsyncContextManager):
         timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
         _engine: Golem,
     ):
-        # A variant with explicit `_engine`
-        ...
+        """Initialize the `Executor` to use a specific Golem `_engine`."""
 
     @overload
     def __init__(
@@ -806,8 +871,7 @@ class Executor(AsyncContextManager):
         max_workers: int = 5,
         timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
     ):
-        # Standalone usage, with `payload` parameter
-        ...
+        """Initialize the `Executor` for standalone usage, with `payload` parameter."""
 
     @overload
     def __init__(
@@ -824,8 +888,7 @@ class Executor(AsyncContextManager):
         timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
         package: Optional[Payload] = None,
     ):
-        # Standalone usage, with `package` parameter
-        ...
+        """Initialize the `Executor` for standalone usage, with `package` parameter."""
 
     def __init__(
         self,
@@ -843,7 +906,7 @@ class Executor(AsyncContextManager):
         payload: Optional[Payload] = None,
         _engine: Optional[Golem] = None,
     ):
-        """Create a new executor.
+        """Initialize an `Executor`.
 
         :param budget: [DEPRECATED use `Golem` instead] maximum budget for payments
         :param strategy: [DEPRECATED use `Golem` instead] market strategy used to
@@ -861,11 +924,10 @@ class Executor(AsyncContextManager):
             by default it is a function that logs all events
         :param stream_output: [DEPRECATED use `Golem` instead]
             stream computation output from providers
-
-        :param max_workers: maximum number of workers performing the computation
+        :param max_workers: maximum number of concurrent workers performing the computation
+        :param payload: specification of payload (for example a VM package) that needs to be
+            deployed on providers in order to compute tasks with this Executor
         :param timeout: timeout for the whole computation
-        :param package: a package common for all tasks; vm.repo() function may be used
-            to return package from a repository
         """
         logger.debug("Creating Executor instance; parameters: %s", locals())
         self.__standalone = False
@@ -895,7 +957,8 @@ class Executor(AsyncContextManager):
             if payload:
                 raise ValueError("Cannot use `payload` and `package` at the same time")
             logger.warning(
-                f"`package` argument to `{self.__class__}` is deprecated, please use `payload` instead"
+                f"`package` argument to `{self.__class__}` is deprecated,"
+                " please use `payload` instead"
             )
             payload = package
         if not payload:
@@ -908,37 +971,43 @@ class Executor(AsyncContextManager):
 
     @property
     def driver(self) -> str:
+        """Return the payment driver used for this `Executor`'s engine."""
         return self._engine.driver
 
     @property
     def network(self) -> str:
+        """Return the payment network used for this `Executor`'s engine."""
         return self._engine.network
 
     async def __aenter__(self) -> "Executor":
+        """Start computation using this `Executor`."""
         if self.__standalone:
             await self._stack.enter_async_context(self._engine)
         self._expires = datetime.now(timezone.utc) + self._timeout
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Release resources used by this `Executor`."""
         await self._stack.aclose()
 
     def emit(self, event: events.Event) -> None:
+        """Emit a computation event using this `Executor`'s engine."""
         self._engine.emit(event)
 
     async def submit(
         self,
         worker: Callable[
             [WorkContext, AsyncIterator[Task[D, R]]],
-            AsyncGenerator[Work, Awaitable[List[events.CommandEvent]]],
+            AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
         ],
         data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
     ) -> AsyncIterator[Task[D, R]]:
         """Submit a computation to be executed on providers.
 
         :param worker: a callable that takes a WorkContext object and a list o tasks,
-                       adds commands to the context object and yields committed commands
-        :param data: an iterator of Task objects to be computed on providers
+            adds commands to the context object and yields committed commands
+        :param data: an iterable or an async generator iterator of Task objects to be computed
+            on providers
         :return: yields computation progress events
         """
 
@@ -975,7 +1044,7 @@ class Executor(AsyncContextManager):
         self,
         worker: Callable[
             [WorkContext, AsyncIterator[Task[D, R]]],
-            AsyncGenerator[Work, Awaitable[List[events.CommandEvent]]],
+            AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
         ],
         data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
         services: Set[asyncio.Task],
@@ -1028,7 +1097,7 @@ class Executor(AsyncContextManager):
             async with act:
 
                 self.emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
-                self._engine.approve_agreement_payments(agreement.id)
+                self._engine.accept_debit_notes_for_agreement(agreement.id)
                 work_context = WorkContext(
                     f"worker-{wid}", node_info, self._engine.storage_manager, emitter=self.emit
                 )
@@ -1063,7 +1132,7 @@ class Executor(AsyncContextManager):
                         )
                         raise
                     finally:
-                        await self._engine.accept_payment_for_agreement(agreement.id)
+                        await self._engine.accept_payments_for_agreement(agreement.id)
 
         async def worker_starter() -> None:
             while True:
