@@ -92,8 +92,8 @@ class NoPaymentAccountError(Exception):
     def __init__(self, required_driver: str, required_network: str):
         """Initialize `NoPaymentAccountError`.
 
-        :param required_driver: payment driver for which initialization has been required
-        :param required_network: payment network for which initialization has been required
+        :param required_driver: payment driver for which initialization was required
+        :param required_network: payment network for which initialization was required
         """
         self.required_driver: str = required_driver
         self.required_network: str = required_network
@@ -142,7 +142,7 @@ class Golem(AsyncContextManager):
         stream_output: bool = False,
         app_key: Optional[str] = None,
     ):
-        """Initialize a Golem engine.
+        """Initialize the Golem engine.
 
         :param budget: maximum budget for payments
         :param strategy: market strategy used to select providers from the market
@@ -212,7 +212,7 @@ class Golem(AsyncContextManager):
         builder.add(NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
-        await builder.decorate(self.payment_decoration, self.strategy, payload)
+        await builder.decorate(self.payment_decorator, self.strategy, payload)
         return builder
 
     @property
@@ -265,7 +265,7 @@ class Golem(AsyncContextManager):
             payment_client = await stack.enter_async_context(self._api_config.payment())
             self._payment_api = rest.Payment(payment_client)
 
-            self.payment_decoration = Golem.PaymentDecoration(await self._create_allocations())
+            self.payment_decorator = Golem.PaymentDecorator(await self._create_allocations())
 
             # TODO: make the method starting the process_invoices() task an async context manager
             # to simplify code in __aexit__()
@@ -468,7 +468,7 @@ class Golem(AsyncContextManager):
             events.PaymentAccepted(agr_id=agreement_id, inv_id=inv.invoice_id, amount=inv.amount)
         )
 
-    def approve_debit_notes_for_agreement(self, agreement_id):
+    def accept_debit_notes_for_agreement(self, agreement_id: str) -> None:
         """Add given agreement to the set of agreements for which debit notes should be accepted."""
         self._agreements_accepting_debit_notes.add(agreement_id)
 
@@ -482,7 +482,7 @@ class Golem(AsyncContextManager):
         job.finished.set()
 
     @dataclass
-    class PaymentDecoration(DemandDecorator):
+    class PaymentDecorator(DemandDecorator):
         """A `DemandDecorator` that adds payment-related constraints and properties to a Demand."""
 
         market_decoration: rest.payment.MarketDecoration
@@ -595,7 +595,7 @@ class Golem(AsyncContextManager):
         :param worker: an async generator that takes a `WorkContext` object and a sequence
             of tasks, and generates as sequence of work items to be executed on providers in order
             to compute given tasks
-        :param data: an iterator of `Task` objects to be computed on providers
+        :param data: an iterable or an async generator of `Task` objects to be computed on providers
         :param payload: specification of the payload that needs to be deployed on providers
             (for example, a VM runtime package) in order to compute the tasks, passed to
             the created `Executor` instance
@@ -626,10 +626,11 @@ class Golem(AsyncContextManager):
         """Run a number of instances of a service represented by a given `Service` subclass.
 
         :param service_class: a subclass of `Service` that represents the service to be run
-        :param num_instances: the number of service instances to run
+        :param num_instances: optional number of service instances to run, defaults to a single
+            instance
         :param payload: optional runtime definition for the service; if not provided, the
             payload specified by the `get_payload()` method of `service_class` is used
-        :param expiration:optional expiration date for the service
+        :param expiration: optional expiration datetime for the service
         :return: a `Cluster` of service instances
         """
 
@@ -1003,8 +1004,9 @@ class Executor(AsyncContextManager):
         """Submit a computation to be executed on providers.
 
         :param worker: a callable that takes a WorkContext object and a list o tasks,
-                       adds commands to the context object and yields committed commands
-        :param data: an iterator of Task objects to be computed on providers
+            adds commands to the context object and yields committed commands
+        :param data: an iterable or an async generator iterator of Task objects to be computed
+            on providers
         :return: yields computation progress events
         """
 
@@ -1094,7 +1096,7 @@ class Executor(AsyncContextManager):
             async with act:
 
                 self.emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
-                self._engine.approve_debit_notes_for_agreement(agreement.id)
+                self._engine.accept_debit_notes_for_agreement(agreement.id)
                 work_context = WorkContext(
                     f"worker-{wid}", node_info, self._engine.storage_manager, emitter=self.emit
                 )

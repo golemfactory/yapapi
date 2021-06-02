@@ -73,9 +73,9 @@ class Service:
     """
 
     def __init__(self, cluster: "Cluster", ctx: WorkContext):
-        """Initialize a service for a specific cluster of instances and a specific work context.
+        """Initialize the service instance for a specific Cluster and a specific WorkContext.
 
-        :param cluster: a cluster to which an instance of this service belongs
+        :param cluster: a cluster to which this service instance of this service belongs
         :param ctx: a work context object for executing commands on a provider that runs this
             service instance.
         """
@@ -87,7 +87,10 @@ class Service:
 
     @property
     def id(self):
-        """Return the id of the work context associated with this service instance."""
+        """Return the id of this service instance.
+
+        Guaranteed to be unique within a Cluster.
+        """
         return self._ctx.id
 
     @property
@@ -213,7 +216,7 @@ class Cluster(AsyncContextManager):
         num_instances: int = 1,
         expiration: Optional[datetime] = None,
     ):
-        """Initialize a Cluster of service instances.
+        """Initialize this Cluster.
 
         :param engine: an engine for running service instance
         :param service_class: service specification
@@ -417,7 +420,7 @@ class Cluster(AsyncContextManager):
             async with act:
                 spawned = True
                 self.emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
-                self._engine.approve_debit_notes_for_agreement(agreement.id)
+                self._engine.accept_debit_notes_for_agreement(agreement.id)
                 work_context = WorkContext(
                     act.id, node_info, self._engine.storage_manager, emitter=self.emit
                 )
