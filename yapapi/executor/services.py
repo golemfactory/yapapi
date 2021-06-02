@@ -233,13 +233,14 @@ class Cluster(AsyncContextManager):
         self._payload = payload
         self._num_instances = num_instances
         self._expiration = expiration or datetime.now(timezone.utc) + DEFAULT_SERVICE_EXPIRATION
+        self._task_ids = itertools.count(1)
+        self._stack = AsyncExitStack()
 
         self.__instances: List[ServiceInstance] = []
         """List of Service instances"""
 
-        self._task_ids = itertools.count(1)
-
-        self._stack = AsyncExitStack()
+        self._instance_tasks: Set[asyncio.Task] = set()
+        """Set of asyncio tasks that run spawn_service()"""
 
     def __repr__(self):
         return (
@@ -273,6 +274,17 @@ class Cluster(AsyncContextManager):
         """Release resources used by this Cluster."""
 
         logger.debug("%s is shutting down...", self)
+
+        # Give the instance tasks some time to terminate gracefully.
+        # Then cancel them without mercy!
+        if self._instance_tasks:
+            logger.debug("Waiting for service instances to terminate...")
+            _, still_running = await asyncio.wait(self._instance_tasks, timeout=10)
+            if still_running:
+                for task in still_running:
+                    logger.debug("Cancelling task: %s", task)
+                    task.cancel()
+                await asyncio.gather(*still_running, return_exceptions=True)
 
         # TODO: should be different if we stop due to an error
         termination_reason = {
@@ -456,7 +468,9 @@ class Cluster(AsyncContextManager):
                     raise
                 finally:
                     await self._engine.accept_payments_for_agreement(agreement.id)
-                    await self._job.agreements_pool.release_agreement(agreement.id, False)
+                    await self._job.agreements_pool.release_agreement(
+                        agreement.id, allow_reuse=False
+                    )
 
         loop = asyncio.get_event_loop()
 
@@ -487,7 +501,8 @@ class Cluster(AsyncContextManager):
 
         loop = asyncio.get_event_loop()
         for i in range(num_instances):
-            loop.create_task(self.spawn_instance())
+            task = loop.create_task(self.spawn_instance())
+            self._instance_tasks.add(task)
 
     def stop(self):
         """Signal the whole cluster to stop."""

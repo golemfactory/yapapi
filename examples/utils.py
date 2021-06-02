@@ -1,5 +1,9 @@
 """Utilities for yapapi example scripts."""
 import argparse
+from datetime import datetime, timezone
+from pathlib import Path
+import tempfile
+
 
 import colorama  # type: ignore
 
@@ -18,6 +22,9 @@ colorama.init()
 
 
 def build_parser(description: str):
+    current_time_str = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S%z")
+    default_log_path = Path(tempfile.gettempdir()) / f"yapapi_{current_time_str}.log"
+
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--driver", help="Payment driver name, for example `zksync`")
     parser.add_argument("--network", help="Network name, for example `rinkeby`")
@@ -25,6 +32,8 @@ def build_parser(description: str):
         "--subnet-tag", default="devnet-beta.2", help="Subnet name; default: %(default)s"
     )
     parser.add_argument(
-        "--log-file", default=None, help="Log file for YAPAPI; default: %(default)s"
+        "--log-file",
+        default=str(default_log_path),
+        help="Log file for YAPAPI; default: %(default)s",
     )
     return parser

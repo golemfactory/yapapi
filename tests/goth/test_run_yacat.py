@@ -1,4 +1,5 @@
 import logging
+import math
 import os
 from pathlib import Path
 import re
@@ -14,7 +15,10 @@ from goth.runner.probe import RequestorProbe
 
 logger = logging.getLogger("goth.test.run_yacat")
 
-ALL_TASKS = {"0", "48", "None"}
+EXPECTED_KEYSPACE_SIZE = 95
+PROVIDER_COUNT = 2
+CHUNK_SIZE = math.ceil(EXPECTED_KEYSPACE_SIZE / PROVIDER_COUNT)
+ALL_TASKS = {"compute_keyspace", "0", f"{CHUNK_SIZE}"}
 
 
 # Temporal assertions expressing properties of sequences of "events". In this case, each "event"
@@ -33,7 +37,7 @@ async def assert_all_tasks_processed(status: str, output_lines: EventStream[str]
     remaining_tasks = ALL_TASKS.copy()
 
     async for line in output_lines:
-        m = re.search(rf".*Task {status} .* task data: ([a-zA-Z0-9]+)$", line)
+        m = re.search(rf".*Task {status} .* task data: (.+)$", line)
         if m:
             task_data = m.group(1)
             logger.debug("assert_all_tasks_processed: Task %s: %s", status, task_data)
@@ -96,7 +100,8 @@ async def test_run_yacat(log_dir: Path, project_dir: Path, config_overrides) -> 
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
-            f"{yacat_path} ?a?a $P$5ZDzPE45CigTC6EY4cXbyJSLj/pGee0 --number-of-providers 2 --log-file yacat-debug.log  --subnet-tag goth",
+            f"{yacat_path} --mask ?a?a --hash $P$5ZDzPE45CigTC6EY4cXbyJSLj/pGee0 "
+            f"--subnet-tag goth --chunk-size {CHUNK_SIZE} --max-workers {PROVIDER_COUNT}",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor):
 
@@ -106,16 +111,18 @@ async def test_run_yacat(log_dir: Path, project_dir: Path, config_overrides) -> 
             all_sent = cmd_monitor.add_assertion(assert_all_tasks_started)
             all_computed = cmd_monitor.add_assertion(assert_all_tasks_computed)
 
-            await cmd_monitor.wait_for_pattern(".*The keyspace size is 95", timeout=120)
+            await cmd_monitor.wait_for_pattern(
+                f".*The keyspace size is {EXPECTED_KEYSPACE_SIZE}", timeout=120
+            )
             logger.info("Keyspace found")
 
-            await cmd_monitor.wait_for_pattern(".*Received proposals from 2 ", timeout=10)
+            await cmd_monitor.wait_for_pattern(".*Received proposals from 2", timeout=10)
             logger.info("Received proposals")
 
             await all_sent.wait_for_result(timeout=30)
             logger.info("All tasks sent")
 
-            await all_computed.wait_for_result(timeout=30)
+            await all_computed.wait_for_result(timeout=60)
             logger.info("All tasks computed")
 
             await cmd_monitor.wait_for_pattern(".*Password found: yo", timeout=10)

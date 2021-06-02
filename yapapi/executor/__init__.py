@@ -321,9 +321,10 @@ class Golem(AsyncContextManager):
                 "%s still unpaid, waiting for invoices...",
                 pluralize(len(self._agreements_to_pay), "agreement"),
             )
-            await asyncio.wait(
-                {self._process_invoices_job}, timeout=30, return_when=asyncio.ALL_COMPLETED
-            )
+            try:
+                await asyncio.wait_for(self._process_invoices_job, timeout=30)
+            except asyncio.TimeoutError:
+                logger.debug("process_invoices_job cancelled")
             if self._agreements_to_pay:
                 logger.warning("Unpaid agreements: %s", self._agreements_to_pay)
 
