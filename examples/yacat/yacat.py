@@ -10,7 +10,7 @@ from typing import AsyncIterable, List, Optional
 
 from yapapi import Golem, NoPaymentAccountError, Task, WorkContext, windows_event_loop_fix
 from yapapi.executor.events import CommandExecuted
-from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
+from yapapi.log import enable_default_logger
 from yapapi.payload import vm
 from yapapi.rest.activity import CommandExecutionError
 
@@ -144,15 +144,11 @@ async def main(args):
         min_storage_gib=2.0,
     )
 
-    # By passing `event_consumer=log_summary()` we enable summary logging.
-    # See the documentation of the `yapapi.log` module on how to set
-    # the level of detail and format of the logged information.
     async with Golem(
         budget=10.0,
         subnet_tag=args.subnet_tag,
         driver=args.driver,
         network=args.network,
-        event_consumer=log_summary(log_event_repr),
     ) as golem:
 
         print(

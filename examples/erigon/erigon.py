@@ -8,8 +8,7 @@ from yapapi.props import inf
 from yapapi.payload import Payload
 from yapapi.executor import Golem
 from yapapi.executor.services import Service
-
-from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
+from yapapi.log import enable_default_logger
 
 
 TURBOGETH_RUNTIME_NAME = "turbogeth-managed"
@@ -70,7 +69,6 @@ async def main(subnet_tag, driver=None, network=None):
         subnet_tag=subnet_tag,
         driver=driver,
         network=network,
-        event_consumer=log_summary(log_event_repr),
     ) as golem:
         cluster = await golem.run_service(
             ErigonService,
