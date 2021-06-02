@@ -9,7 +9,7 @@ from yapapi.executor.services import Service
 from yapapi.payload import vm
 
 DATE_OUTPUT_PATH = "/golem/work/date.txt"
-POLLING_INTERVAL_SEC = 5
+REFRESH_INTERVAL_SEC = 5
 
 
 class DateService(Service):
@@ -23,13 +23,13 @@ class DateService(Service):
         self._ctx.run(
             "/bin/sh",
             "-c",
-            f"while true; do date > {DATE_OUTPUT_PATH}; sleep {POLLING_INTERVAL_SEC}; done &",
+            f"while true; do date > {DATE_OUTPUT_PATH}; sleep {REFRESH_INTERVAL_SEC}; done &",
         )
         yield self._ctx.commit()
 
     async def run(self):
         while True:
-            await asyncio.sleep(POLLING_INTERVAL_SEC)
+            await asyncio.sleep(REFRESH_INTERVAL_SEC)
             self._ctx.run(
                 "/bin/sh",
                 "-c",
@@ -53,7 +53,7 @@ async def main():
         while datetime.now() < start_time + timedelta(minutes=1):
             cluster_state = [(i.provider_name, i.state.value) for i in cluster.instances]
             print(cluster_state)
-            await asyncio.sleep(POLLING_INTERVAL_SEC)
+            await asyncio.sleep(REFRESH_INTERVAL_SEC)
 
 
 if __name__ == "__main__":
