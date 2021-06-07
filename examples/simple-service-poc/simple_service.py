@@ -15,8 +15,8 @@ from yapapi import (
     __version__ as yapapi_version,
     windows_event_loop_fix,
 )
-from yapapi.executor import Golem
-from yapapi.executor.services import Service, ServiceState
+from yapapi import Golem
+from yapapi.services import Service, ServiceState
 
 from yapapi.log import enable_default_logger, pluralize
 from yapapi.payload import vm

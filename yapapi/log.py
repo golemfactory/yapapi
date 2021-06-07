@@ -55,7 +55,7 @@ from typing import Any, Callable, Dict, Iterator, List, Optional, Set
 
 from yapapi import __version__ as yapapi_version
 import yapapi.executor.events as events
-from yapapi.executor.services import MAX_AGREEMENT_EXPIRATION, MIN_AGREEMENT_EXPIRATION
+from yapapi.services import MAX_AGREEMENT_EXPIRATION, MIN_AGREEMENT_EXPIRATION
 from yapapi.rest.activity import CommandExecutionError
 
 event_logger = logging.getLogger("yapapi.events")
@@ -498,14 +498,14 @@ class SummaryLogger:
                     self.logger.warning("Computation cancelled")
                 else:
                     reason = str(exc) or repr(exc) or "unexpected error"
-                    self.logger.error(f"Computation failed, reason: %s", reason)
+                    self.logger.error("Computation failed, reason: %s", reason)
             self._print_summary()
 
         elif isinstance(event, events.ShutdownFinished):
             self._print_total_cost()
             self.provider_cost = {}
             if not event.exc_info:
-                self.logger.info(f"Executor has shut down")
+                self.logger.info("Executor has shut down")
             else:
                 _exc_type, exc, _tb = event.exc_info
                 reason = str(exc) or repr(exc) or "unexpected error"
