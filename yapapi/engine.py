@@ -29,8 +29,8 @@ else:
     from async_exit_stack import AsyncExitStack  # type: ignore
 
 
-from yapapi import rest
-from yapapi.executor import AgreementsPool, events
+from yapapi import rest, events
+from yapapi.executor import AgreementsPool
 from yapapi.executor.ctx import CommandContainer, ExecOptions, Work
 from yapapi.executor.utils import AsyncWrapper
 from yapapi.payload import Payload

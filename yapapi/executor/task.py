@@ -4,7 +4,7 @@ from enum import Enum, auto
 import itertools
 from typing import Callable, ClassVar, Iterator, Generic, Optional, Set, Tuple, TypeVar, Union
 
-from . import events
+from yapapi import events
 from ._smartq import SmartQueue, Handle
 
 

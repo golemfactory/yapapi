@@ -53,8 +53,7 @@ import sys
 import time
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set
 
-from yapapi import __version__ as yapapi_version
-import yapapi.executor.events as events
+from yapapi import events, __version__ as yapapi_version
 from yapapi.services import MAX_AGREEMENT_EXPIRATION, MIN_AGREEMENT_EXPIRATION
 from yapapi.rest.activity import CommandExecutionError
 

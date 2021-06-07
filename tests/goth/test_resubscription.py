@@ -20,15 +20,15 @@ from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
 
 from yapapi import Executor, Task
-from yapapi.executor.events import (
+from yapapi.events import (
     Event,
     ComputationStarted,
     ComputationFinished,
     SubscriptionCreated,
 )
-import yapapi.rest.market
 from yapapi.log import enable_default_logger
 from yapapi.package import vm
+import yapapi.rest.market
 
 import ya_market.api.requestor_api
 from ya_market import ApiException

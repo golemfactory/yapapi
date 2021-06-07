@@ -19,23 +19,20 @@ from typing import (
     cast,
     overload,
 )
+from typing_extensions import Final, AsyncGenerator
 import warnings
 
+from yapapi.events import Event
 from yapapi.executor.agreements_pool import AgreementsPool
-from typing_extensions import Final, AsyncGenerator
+from yapapi.strategy import MarketStrategy
 
 from .ctx import CaptureContext, CommandContainer, ExecOptions, Work, WorkContext
-from .events import Event
-from . import events
 from .task import Task, TaskStatus
 from ..payload import Payload
 from ..props import NodeInfo
-from .. import rest
+from .. import rest, events
 from ._smartq import SmartQueue
 
-from yapapi.strategy import (
-    MarketStrategy,
-)
 
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack

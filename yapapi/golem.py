@@ -15,8 +15,9 @@ from typing import (
 )
 from typing_extensions import AsyncGenerator
 
+from yapapi import events
 from yapapi.engine import _Engine, WorkItem
-from yapapi.executor import events, Executor
+from yapapi.executor import Executor
 from yapapi.executor.ctx import WorkContext
 from yapapi.executor.task import Task
 from yapapi.payload import Payload
