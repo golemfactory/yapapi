@@ -50,7 +50,7 @@ from ..storage import gftp
 from ._smartq import SmartQueue
 
 if TYPE_CHECKING:
-    from .services import Cluster, Service
+    from yapapi.services import Cluster, Service
 from .strategy import (
     DecreaseScoreForUnconfirmedAgreement,
     LeastExpensiveLinearPayuMS,
@@ -179,9 +179,9 @@ class Golem(AsyncContextManager):
         if not event_consumer:
             # Use local import to avoid cyclic imports when yapapi.log
             # is imported by client code
-            from ..log import log_event_repr
+            from ..log import log_event_repr, log_summary
 
-            event_consumer = log_event_repr
+            event_consumer = log_summary(log_event_repr)
 
         # Add buffering to the provided event emitter to make sure
         # that emitting events will not block
@@ -635,7 +635,7 @@ class Golem(AsyncContextManager):
         :return: a `Cluster` of service instances
         """
 
-        from .services import Cluster  # avoid circular dependency
+        from yapapi.services import Cluster  # avoid circular dependency
 
         payload = payload or await service_class.get_payload()
 
