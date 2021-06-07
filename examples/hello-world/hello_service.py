@@ -19,6 +19,7 @@ class DateService(Service):
         )
 
     async def start(self):
+        # every `DATE_POLL_INTERVAL` write output of `date` to `DATE_OUTPUT_PATH`
         self._ctx.run(
             "/bin/sh",
             "-c",
@@ -41,7 +42,7 @@ class DateService(Service):
 
 
 async def main():
-    async with Golem(budget=1.0, subnet_tag="goth") as golem:
+    async with Golem(budget=1.0, subnet_tag="devnet-beta.2") as golem:
         cluster = await golem.run_service(DateService, num_instances=1)
         start_time = datetime.now()
 
