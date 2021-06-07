@@ -2,6 +2,7 @@
 import asyncio
 import logging
 from typing import AsyncContextManager, Callable, Optional
+import warnings
 
 
 logger = logging.getLogger(__name__)
@@ -75,3 +76,14 @@ class AsyncWrapper(AsyncContextManager):
         if not self._task or self._task.done():
             raise RuntimeError("AsyncWrapper is closed")
         self._args_buffer.put_nowait((args, kwargs))
+
+
+def show_module_deprecation_warning(old_module: str, new_module: str, since_version: str) -> None:
+
+    warnings.filterwarnings("default", category=DeprecationWarning, module=old_module)
+    warnings.warn(
+        f"Module `{old_module}` is deprecated since version {since_version}, "
+        f"please use module `{new_module}` instead",
+        category=DeprecationWarning,
+        stacklevel=2,
+    )
