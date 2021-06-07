@@ -10,12 +10,12 @@ from .executor import (
     CaptureContext,
     ExecOptions,
     Executor,
-    Golem,
-    Job,
-    NoPaymentAccountError,
     Task,
     WorkContext,
 )
+
+from yapapi.engine import NoPaymentAccountError, WorkItem
+from yapapi.golem import Golem
 
 
 def get_version() -> str:
@@ -58,6 +58,8 @@ __all__ = [
     "Task",
     "WorkContext",
     "CaptureContext",
+    "ExecOptions",
     "Golem",
-    "Job",
+    "NoPaymentAccountError",
+    "WorkItem",
 ]
