@@ -155,9 +155,9 @@ class _Engine(AsyncContextManager):
         if not event_consumer:
             # Use local import to avoid cyclic imports when yapapi.log
             # is imported by client code
-            from yapapi.log import log_event_repr
+            from yapapi.log import log_event_repr, log_summary
 
-            event_consumer = log_event_repr
+            event_consumer = log_summary(log_event_repr)
 
         # Add buffering to the provided event emitter to make sure
         # that emitting events will not block

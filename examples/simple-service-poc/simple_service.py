@@ -18,7 +18,7 @@ from yapapi import (
 from yapapi import Golem
 from yapapi.services import Service, ServiceState
 
-from yapapi.log import enable_default_logger, log_summary, log_event_repr, pluralize  # noqa
+from yapapi.log import enable_default_logger, pluralize
 from yapapi.payload import vm
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
@@ -92,7 +92,6 @@ async def main(subnet_tag, driver=None, network=None):
         subnet_tag=subnet_tag,
         driver=driver,
         network=network,
-        event_consumer=log_summary(log_event_repr),
     ) as golem:
 
         print(

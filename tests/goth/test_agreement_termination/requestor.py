@@ -5,7 +5,7 @@ from datetime import timedelta
 import logging
 
 from yapapi import Executor, Task, WorkContext
-from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
+from yapapi.log import enable_default_logger
 from yapapi.payload import vm
 
 
@@ -56,7 +56,6 @@ async def main():
         subnet_tag="goth",
         driver="zksync",
         network="rinkeby",
-        event_consumer=log_event_repr,
     ) as executor:
 
         tasks = [Task(data=n) for n in range(6)]
