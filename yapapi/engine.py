@@ -32,12 +32,6 @@ else:
 from yapapi import rest
 from yapapi.executor import AgreementsPool, events
 from yapapi.executor.ctx import CommandContainer, ExecOptions, Work
-from yapapi.executor.strategy import (
-    DecreaseScoreForUnconfirmedAgreement,
-    LeastExpensiveLinearPayuMS,
-    MarketStrategy,
-    SCORE_NEUTRAL,
-)
 from yapapi.executor.utils import AsyncWrapper
 from yapapi.payload import Payload
 from yapapi.props import com, Activity, NodeInfo, NodeInfoKeys
@@ -45,6 +39,12 @@ from yapapi.props.builder import DemandBuilder, DemandDecorator
 from yapapi.rest.activity import CommandExecutionError
 from yapapi.rest.market import OfferProposal, Subscription
 from yapapi.storage import gftp
+from yapapi.strategy import (
+    DecreaseScoreForUnconfirmedAgreement,
+    LeastExpensiveLinearPayuMS,
+    MarketStrategy,
+    SCORE_NEUTRAL,
+)
 
 
 DEBIT_NOTE_MIN_TIMEOUT: Final[int] = 30  # in seconds

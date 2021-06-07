@@ -33,11 +33,8 @@ from ..props import NodeInfo
 from .. import rest
 from ._smartq import SmartQueue
 
-from .strategy import (
-    DecreaseScoreForUnconfirmedAgreement,
-    LeastExpensiveLinearPayuMS,
+from yapapi.strategy import (
     MarketStrategy,
-    SCORE_NEUTRAL,
 )
 
 if sys.version_info >= (3, 7):

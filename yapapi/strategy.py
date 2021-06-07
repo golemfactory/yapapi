@@ -10,9 +10,9 @@ from typing import Dict, Mapping, Optional
 from dataclasses import dataclass, field
 from typing_extensions import Final, Protocol
 
-from ..props import com, Activity
-from ..props.builder import DemandBuilder, DemandDecorator
-from .. import rest
+from yapapi.props import com, Activity
+from yapapi.props.builder import DemandBuilder, DemandDecorator
+from yapapi import rest
 
 
 SCORE_NEUTRAL: Final[float] = 0.0
