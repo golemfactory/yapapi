@@ -12,7 +12,7 @@ from yapapi import (
     WorkContext,
     windows_event_loop_fix,
 )
-from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
+from yapapi.log import enable_default_logger
 from yapapi.payload import vm
 from yapapi.rest.activity import BatchTimeoutError
 
@@ -90,9 +90,6 @@ async def main(subnet_tag, driver=None, network=None):
 
     timeout = timedelta(minutes=max(min(init_overhead + len(frames) * 2, max_timeout), min_timeout))
 
-    # By passing `event_consumer=log_summary()` we enable summary logging.
-    # See the documentation of the `yapapi.log` module on how to set
-    # the level of detail and format of the logged information.
     async with Executor(
         payload=package,
         max_workers=3,
@@ -101,7 +98,6 @@ async def main(subnet_tag, driver=None, network=None):
         subnet_tag=subnet_tag,
         driver=driver,
         network=network,
-        event_consumer=log_summary(log_event_repr),
     ) as executor:
 
         print(
