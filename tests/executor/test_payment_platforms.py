@@ -5,7 +5,9 @@ import pytest
 
 from ya_payment import RequestorApi
 
-from yapapi.executor import Executor, NoPaymentAccountError, DEFAULT_NETWORK, DEFAULT_DRIVER
+from yapapi import NoPaymentAccountError
+from yapapi.engine import DEFAULT_NETWORK, DEFAULT_DRIVER
+from yapapi.executor import Executor
 from yapapi.rest.payment import Account, Payment
 
 

@@ -3,7 +3,7 @@ from itertools import product
 import pytest
 from unittest.mock import Mock
 
-from yapapi.executor import Golem
+from yapapi import Golem
 from yapapi.executor.strategy import (
     DecreaseScoreForUnconfirmedAgreement,
     LeastExpensiveLinearPayuMS,
