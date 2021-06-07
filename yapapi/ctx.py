@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union, Any, Awaitable
 
 from yapapi.events import DownloadStarted, DownloadFinished
-from ..props import NodeInfo
-from ..storage import StorageProvider, Source, Destination, DOWNLOAD_BYTES_LIMIT_DEFAULT
+from yapapi.props import NodeInfo
+from yapapi.storage import StorageProvider, Source, Destination, DOWNLOAD_BYTES_LIMIT_DEFAULT
 
 
 class CommandContainer:

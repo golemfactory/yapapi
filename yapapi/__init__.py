@@ -6,15 +6,9 @@ import toml
 from pathlib import Path
 from pkg_resources import get_distribution
 
-from .executor import (
-    CaptureContext,
-    ExecOptions,
-    Executor,
-    Task,
-    WorkContext,
-)
-
+from yapapi.ctx import CaptureContext, ExecOptions, WorkContext
 from yapapi.engine import NoPaymentAccountError, WorkItem
+from yapapi.executor import Executor, Task
 from yapapi.golem import Golem
 
 

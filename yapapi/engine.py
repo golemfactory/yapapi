@@ -30,9 +30,8 @@ else:
 
 
 from yapapi import rest, events
-from yapapi.executor import AgreementsPool
-from yapapi.executor.ctx import CommandContainer, ExecOptions, Work
-from yapapi.executor.utils import AsyncWrapper
+from yapapi.agreements_pool import AgreementsPool
+from yapapi.ctx import CommandContainer, ExecOptions, Work
 from yapapi.payload import Payload
 from yapapi.props import com, Activity, NodeInfo, NodeInfoKeys
 from yapapi.props.builder import DemandBuilder, DemandDecorator
@@ -45,6 +44,7 @@ from yapapi.strategy import (
     MarketStrategy,
     SCORE_NEUTRAL,
 )
+from yapapi.utils import AsyncWrapper
 
 
 DEBIT_NOTE_MIN_TIMEOUT: Final[int] = 30  # in seconds

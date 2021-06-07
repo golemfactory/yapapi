@@ -2,7 +2,7 @@ import asyncio
 import pytest
 import time
 
-from yapapi.executor.utils import AsyncWrapper
+from yapapi.utils import AsyncWrapper
 
 
 def test_async_wrapper_ordering():

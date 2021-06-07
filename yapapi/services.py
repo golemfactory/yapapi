@@ -20,8 +20,8 @@ else:
     from typing_extensions import Final
 
 from yapapi import rest, events
+from yapapi.ctx import WorkContext
 from yapapi.engine import _Engine, Job
-from yapapi.executor.ctx import WorkContext
 from yapapi.payload import Payload
 from yapapi.props import NodeInfo
 

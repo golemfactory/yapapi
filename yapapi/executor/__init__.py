@@ -22,15 +22,14 @@ from typing import (
 from typing_extensions import Final, AsyncGenerator
 import warnings
 
+from yapapi import rest, events
+from yapapi.ctx import WorkContext
 from yapapi.events import Event
-from yapapi.executor.agreements_pool import AgreementsPool
+from yapapi.payload import Payload
+from yapapi.props import NodeInfo
 from yapapi.strategy import MarketStrategy
 
-from .ctx import CaptureContext, CommandContainer, ExecOptions, Work, WorkContext
 from .task import Task, TaskStatus
-from ..payload import Payload
-from ..props import NodeInfo
-from .. import rest, events
 from ._smartq import SmartQueue
 
 
@@ -54,8 +53,6 @@ DEFAULT_GET_OFFERS_TIMEOUT = timedelta(seconds=20)
 
 
 from yapapi.engine import _Engine, Job, WorkItem
-from yapapi.executor.ctx import Work
-
 
 D = TypeVar("D")  # Type var for task data
 R = TypeVar("R")  # Type var for task result

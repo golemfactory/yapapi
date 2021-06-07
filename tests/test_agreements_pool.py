@@ -3,7 +3,7 @@ from unittest import mock
 
 import pytest
 
-from yapapi.executor import agreements_pool
+from yapapi import agreements_pool
 
 
 def mock_agreement(**properties):
