@@ -103,7 +103,7 @@ exescript_ids: Iterator[int] = itertools.count(1)
 """An iterator providing unique ids used to correlate events related to a single exe script."""
 
 
-class Engine(AsyncContextManager):
+class _Engine(AsyncContextManager):
     """Base execution engine containing functions common to all modes of operation."""
 
     def __init__(
@@ -216,7 +216,7 @@ class Engine(AsyncContextManager):
         if self._wrapped_consumer:
             self._wrapped_consumer.async_call(event)
 
-    async def __aenter__(self) -> "Engine":
+    async def __aenter__(self) -> "_Engine":
         """Initialize resources and start background services used by this engine."""
 
         try:
@@ -241,7 +241,7 @@ class Engine(AsyncContextManager):
             payment_client = await stack.enter_async_context(self._api_config.payment())
             self._payment_api = rest.Payment(payment_client)
 
-            self.payment_decorator = Engine.PaymentDecorator(await self._create_allocations())
+            self.payment_decorator = _Engine.PaymentDecorator(await self._create_allocations())
 
             # TODO: make the method starting the process_invoices() task an async context manager
             # to simplify code in __aexit__()
@@ -561,7 +561,7 @@ class Job:
 
     def __init__(
         self,
-        engine: Engine,
+        engine: _Engine,
         expiration_time: datetime,
         payload: Payload,
     ):

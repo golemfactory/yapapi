@@ -10,13 +10,11 @@ from .executor import (
     CaptureContext,
     ExecOptions,
     Executor,
-    Engine,
-    Job,
     Task,
     WorkContext,
 )
 
-from yapapi.engine import NoPaymentAccountError
+from yapapi.engine import NoPaymentAccountError, WorkItem
 from yapapi.golem import Golem
 
 
@@ -60,6 +58,8 @@ __all__ = [
     "Task",
     "WorkContext",
     "CaptureContext",
-    "Engine",
-    "Job",
+    "ExecOptions",
+    "Golem",
+    "NoPaymentAccountError",
+    "WorkItem",
 ]

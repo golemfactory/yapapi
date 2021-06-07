@@ -15,7 +15,7 @@ from typing import (
 )
 from typing_extensions import AsyncGenerator
 
-from yapapi.engine import Engine, WorkItem
+from yapapi.engine import _Engine, WorkItem
 from yapapi.executor import events, Executor
 from yapapi.executor.ctx import WorkContext
 from yapapi.executor.task import Task
@@ -26,7 +26,7 @@ D = TypeVar("D")  # Type var for task data
 R = TypeVar("R")  # Type var for task result
 
 
-class Golem(Engine):
+class Golem(_Engine):
     async def execute_tasks(
         self,
         worker: Callable[

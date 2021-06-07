@@ -15,7 +15,6 @@ from typing import (
     Optional,
     Set,
     TypeVar,
-    TYPE_CHECKING,
     Union,
     cast,
     overload,
@@ -29,7 +28,6 @@ from .ctx import CaptureContext, CommandContainer, ExecOptions, Work, WorkContex
 from .events import Event
 from . import events
 from .task import Task, TaskStatus
-from .utils import AsyncWrapper
 from ..payload import Payload
 from ..props import NodeInfo
 from .. import rest
@@ -61,7 +59,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_GET_OFFERS_TIMEOUT = timedelta(seconds=20)
 
 
-from yapapi.engine import Engine, Job, WorkItem
+from yapapi.engine import _Engine, Job, WorkItem
 from yapapi.executor.ctx import Work
 
 
@@ -83,7 +81,7 @@ class Executor(AsyncContextManager):
         payload: Optional[Payload] = None,
         max_workers: int = 5,
         timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
-        _engine: Engine,
+        _engine: _Engine,
     ):
         """Initialize the `Executor` to use a specific Golem `_engine`."""
 
@@ -135,7 +133,7 @@ class Executor(AsyncContextManager):
         timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
         package: Optional[Payload] = None,
         payload: Optional[Payload] = None,
-        _engine: Optional[Engine] = None,
+        _engine: Optional[_Engine] = None,
     ):
         """Initialize an `Executor`.
 
@@ -173,7 +171,7 @@ class Executor(AsyncContextManager):
             if not budget:
                 raise ValueError("Missing value for `budget` argument.")
 
-            self._engine = Engine(
+            self._engine = _Engine(
                 budget=budget,
                 strategy=strategy,
                 subnet_tag=subnet_tag,
