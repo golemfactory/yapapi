@@ -4,9 +4,7 @@ import os
 import sys
 import tempfile
 
-import pytest
-
-from yapapi.executor.events import ComputationFinished
+from yapapi.events import ComputationFinished
 from yapapi.log import enable_default_logger, log_event, log_event_repr
 
 

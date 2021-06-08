@@ -6,7 +6,7 @@ import random
 import sys
 from typing import Dict, NamedTuple, Optional, Set, Tuple
 
-from yapapi.executor import events
+from yapapi import events
 from yapapi.props import Activity, NodeInfo
 from yapapi.rest.market import Agreement, ApiException, OfferProposal
 

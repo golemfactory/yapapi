@@ -19,26 +19,19 @@ from typing import (
     cast,
     overload,
 )
+from typing_extensions import Final, AsyncGenerator
 import warnings
 
-from yapapi.executor.agreements_pool import AgreementsPool
-from typing_extensions import Final, AsyncGenerator
+from yapapi import rest, events
+from yapapi.ctx import WorkContext
+from yapapi.events import Event
+from yapapi.payload import Payload
+from yapapi.props import NodeInfo
+from yapapi.strategy import MarketStrategy
 
-from .ctx import CaptureContext, CommandContainer, ExecOptions, Work, WorkContext
-from .events import Event
-from . import events
 from .task import Task, TaskStatus
-from ..payload import Payload
-from ..props import NodeInfo
-from .. import rest
 from ._smartq import SmartQueue
 
-from .strategy import (
-    DecreaseScoreForUnconfirmedAgreement,
-    LeastExpensiveLinearPayuMS,
-    MarketStrategy,
-    SCORE_NEUTRAL,
-)
 
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
@@ -60,8 +53,6 @@ DEFAULT_GET_OFFERS_TIMEOUT = timedelta(seconds=20)
 
 
 from yapapi.engine import _Engine, Job, WorkItem
-from yapapi.executor.ctx import Work
-
 
 D = TypeVar("D")  # Type var for task data
 R = TypeVar("R")  # Type var for task result
@@ -165,7 +156,8 @@ class Executor(AsyncContextManager):
             self._engine = _engine
         else:
             warnings.warn(
-                "stand-alone usage is deprecated, please use `Golem.execute_task` class instead.",
+                "Stand-alone usage of `Executor` is deprecated, "
+                "please use `Golem.execute_task` instead.",
                 DeprecationWarning,
             )
             if not budget:

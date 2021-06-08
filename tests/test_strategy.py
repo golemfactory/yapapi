@@ -4,15 +4,15 @@ import pytest
 from unittest.mock import Mock
 
 from yapapi import Golem
-from yapapi.executor.strategy import (
+from yapapi.props.com import Counter
+import yapapi.rest.configuration
+from yapapi.strategy import (
     DecreaseScoreForUnconfirmedAgreement,
     LeastExpensiveLinearPayuMS,
     SCORE_TRUSTED,
     SCORE_REJECTED,
     SCORE_NEUTRAL,
 )
-from yapapi.props.com import Counter
-import yapapi.rest.configuration
 
 from tests.factories.rest.market import OfferProposalFactory
 

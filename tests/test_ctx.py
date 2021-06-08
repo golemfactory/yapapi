@@ -5,7 +5,7 @@ import pytest
 import sys
 from unittest import mock
 
-from yapapi.executor.ctx import CommandContainer, WorkContext
+from yapapi.ctx import CommandContainer, WorkContext
 
 from tests.factories.props import NodeInfoFactory
 

@@ -1,6 +1,5 @@
 import abc
 import asyncio
-import contextlib
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import json
@@ -21,7 +20,7 @@ from ya_activity import (
     exceptions as yexc,
 )
 
-from ..executor import events
+from yapapi import events
 
 _log = logging.getLogger("yapapi.rest")
 

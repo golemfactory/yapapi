@@ -9,7 +9,7 @@ from tempfile import NamedTemporaryFile
 from typing import AsyncIterable, List, Optional
 
 from yapapi import Golem, NoPaymentAccountError, Task, WorkContext, windows_event_loop_fix
-from yapapi.executor.events import CommandExecuted
+from yapapi.events import CommandExecuted
 from yapapi.log import enable_default_logger
 from yapapi.payload import vm
 from yapapi.rest.activity import CommandExecutionError
