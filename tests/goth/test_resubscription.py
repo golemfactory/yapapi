@@ -27,7 +27,7 @@ from yapapi.events import (
     SubscriptionCreated,
 )
 from yapapi.log import enable_default_logger
-from yapapi.package import vm
+from yapapi.payload import vm
 import yapapi.rest.market
 
 import ya_market.api.requestor_api
