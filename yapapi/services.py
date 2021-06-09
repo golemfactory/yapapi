@@ -401,12 +401,15 @@ class Cluster(AsyncContextManager):
 
         logger.debug("No handler for %s in state %s", instance.service, instance.state.value)
 
-        if batch_task:
-            batch_task.cancel()
-            await batch_task
-        if signal_task:
-            signal_task.cancel()
-            await signal_task
+        try:
+            if batch_task:
+                batch_task.cancel()
+                await batch_task
+            if signal_task:
+                signal_task.cancel()
+                await signal_task
+        except asyncio.CancelledError:
+            pass
 
         logger.info("%s decomissioned", instance.service)
 
