@@ -162,9 +162,8 @@ class Service:
     async def run(self):
         """Implement the `running` state of the service."""
 
-        while True:
-            await asyncio.sleep(10)
-            yield
+        await asyncio.Future()
+        yield
 
     async def shutdown(self):
         """Implement the `stopping` state of the service."""
