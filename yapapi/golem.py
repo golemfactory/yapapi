@@ -28,16 +28,15 @@ R = TypeVar("R")  # Type var for task result
 
 
 class Golem(_Engine):
-    """
-    The main entrypoint of Golem's high-level API.
+    """The main entrypoint of Golem's high-level API.
 
     Provides two methods that reflect the two modes of operation, or two types of jobs
-    that can currently be executed on Golem.
+    that can currently be executed on the Golem network.
 
-    The first one - `execute_tasks` - instructs Golem to take a sequence of task fragments
+    The first one - `execute_tasks` - instructs `Golem` to take a sequence of tasks
     that the user wishes to compute on Golem and distributes those among the providers.
 
-    The second one - `run_service` - instructs Golem to spawn a certain number of instances
+    The second one - `run_service` - instructs `Golem` to spawn a certain number of instances
     of a service based on a single service specification (a specialized implementation
     inheriting from `yapapi.Service`).
 
@@ -48,15 +47,16 @@ class Golem(_Engine):
 
     Whereas a task-based job exists for the purpose of computing the specific
     sequence of tasks and is done once the whole sequence has been processed, the
-    service-based job is created for an indefinite period and the services spawned
-    within it are kept alive for as long as they're needed.
+    service-based job is created for a potentially indefinite period and the services
+    spawned within it are kept alive for as long as they're needed.
 
     Additionally, the service interface provides a way to easily define handlers for
     certain, discrete phases of a lifetime of each service instance - startup, running and
     shutdown.
 
     As `Golem`'s job includes tracking and executing payments for activities spawned by
-    either mode of operation, it's usually good to have just one instance of `Golem`.
+    either mode of operation, it's usually good to have just one instance of `Golem` active
+    at any given time.
     """
 
     async def execute_tasks(
