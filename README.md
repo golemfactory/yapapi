@@ -55,8 +55,7 @@ There are a few components that are crucial for any requestor agent app:
 The heart of the high-level API is the `Golem` class (`yapapi.Golem`), which serves as 
 the "engine" of a requestor agent. `Golem` is responsible for finding providers interested in
 the jobs you want to execute, negotiating agreements with them and processing payments. It also
-implements core functionality required for sending commands to providers that 
-agreed to run your tasks.
+implements core functionality required to execute commands on providers that have signed such agreements.
 
 `Golem` provides two entry points for executing jobs on the Golem network, corresponding to the
 two basic modes of operation of a requestor agent:
@@ -74,9 +73,7 @@ class (a subclass of `yapapi.Service`) that implements the behaviour of your ser
 stages of its lifecycle (when it's _starting_, _running_ etc.). Additionally, you may specify
 the number of _service instances_ you want to run and the service expiration datetime.
 
-Prior to version `0.6.0`, only task-based jobs could be executed. They are probably conceptually
-simpler than services, and therefore in this `README` we focus on jobs of this type. 
-For more information on both types of jobs please refer to our [handbook](https://handbook.golem.network).
+Prior to version `0.6.0`, only task-based jobs could be executed. For more information on both types of jobs please refer to our [handbook](https://handbook.golem.network).
  
 #### Worker function
 
@@ -104,7 +101,7 @@ processing of the file using a set of parameters specified for a particular task
 The _task_ (`yapapi.Task`) object describes a unit of work that your application needs
 to carry out.
 
-A `Golem` object will feed an instance of your worker - bound to a single provider node -
+`Golem` will feed an instance of your worker - bound to a single provider node -
 with `Task` objects. The worker will be responsible for completing those tasks. Typically,
 it will turn each task into a sequence of steps to be executed in a single run
 of the execution script on a provider's machine, in order to compute the task's result.
@@ -112,7 +109,7 @@ of the execution script on a provider's machine, in order to compute the task's 
 
 ### Example
 
-An example task-based Golem application, using a Docker image containing Alpine Linux installation
+An example task-based Golem application, using a minimal Docker image
 (Python file with the example and the Dockerfile for the image reside in
 [`examples/hello-world/`](https://github.com/golemfactory/yapapi/tree/master/examples/hello-world)):
 ```python
