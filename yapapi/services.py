@@ -418,10 +418,15 @@ class Cluster(AsyncContextManager):
 
         logger.debug("spawning instance within %s", self)
         spawned = False
+        agreement_id: Optional[str]  # set in start_worker
 
         async def start_worker(agreement: rest.market.Agreement, node_info: NodeInfo) -> None:
-            nonlocal spawned
+
+            nonlocal agreement_id, spawned
+
+            agreement_id = agreement.id
             self.emit(events.WorkerStarted(agr_id=agreement.id))
+
             try:
                 act = await self._engine.create_activity(agreement.id)
             except Exception:
@@ -430,12 +435,12 @@ class Cluster(AsyncContextManager):
                         agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
                     )
                 )
-                self.emit(events.WorkerFinished(agr_id=agreement.id))
                 raise
 
             async with act:
                 spawned = True
                 self.emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
+
                 self._engine.accept_debit_notes_for_agreement(agreement.id)
                 work_context = WorkContext(
                     act.id, node_info, self._engine.storage_manager, emitter=self.emit
@@ -463,13 +468,6 @@ class Cluster(AsyncContextManager):
                         )
                     )
                     self.emit(events.WorkerFinished(agr_id=agreement.id))
-                except Exception:
-                    self.emit(
-                        events.WorkerFinished(
-                            agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
-                        )
-                    )
-                    raise
                 finally:
                     await self._engine.accept_payments_for_agreement(agreement.id)
                     await self._job.agreements_pool.release_agreement(
@@ -479,12 +477,22 @@ class Cluster(AsyncContextManager):
         loop = asyncio.get_event_loop()
 
         while not spawned:
+            agreement_id = None
             await asyncio.sleep(1.0)
             task = await self._job.agreements_pool.use_agreement(
                 lambda agreement, node: loop.create_task(start_worker(agreement, node))
             )
-            if task:
+            if not task:
+                continue
+            try:
                 await task
+            except Exception:
+                if agreement_id:
+                    self.emit(events.WorkerFinished(agr_id=agreement_id, exc_info=sys.exc_info()))
+                else:
+                    # This shouldn't happen, we may log and return as well
+                    logger.error("Failed to spawn instance", exc_info=True)
+                    return
 
     def stop_instance(self, service: Service):
         """Stop the specific service instance belonging to this Cluster."""
