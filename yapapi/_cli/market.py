@@ -87,7 +87,7 @@ class Create:
             timeout = timedelta(minutes=timeout)
         assert isinstance(timeout, timedelta)
         expires = now + timeout
-        pacakge = await vm.repo(
+        pacakge = vm.repo(
             image_hash=image_hash, min_mem_gib=min_mem_gib, min_storage_gib=min_storage_gib
         )
         package_url = await pacakge.resolve_url()

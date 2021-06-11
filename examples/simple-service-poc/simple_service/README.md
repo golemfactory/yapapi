@@ -30,7 +30,7 @@ and update the service's `get_payload` method to point to this image:
 
 ```python
     async def get_payload():
-        return await vm.repo(
+        return vm.repo(
         image_hash="b742b6cb04123d07bacb36a2462f8b2347b20c32223c1ac49664635f",
         min_mem_gib=0.5,
         min_storage_gib=2.0,

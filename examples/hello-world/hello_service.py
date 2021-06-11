@@ -14,7 +14,7 @@ REFRESH_INTERVAL_SEC = 5
 class DateService(Service):
     @staticmethod
     async def get_payload():
-        return await vm.repo(
+        return vm.repo(
             image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
         )
 

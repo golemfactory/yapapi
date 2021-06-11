@@ -71,9 +71,7 @@ class _VmPackage(Package):
         demand.add(VmRequest(package_url=image_url, package_format=VmPackageFormat.GVMKIT_SQUASH))
 
 
-async def repo(
-    *, image_hash: str, min_mem_gib: float = 0.5, min_storage_gib: float = 2.0
-) -> Package:
+def repo(*, image_hash: str, min_mem_gib: float = 0.5, min_storage_gib: float = 2.0) -> Package:
     """
     Build a reference to application package.
 
