@@ -64,6 +64,17 @@ executor_logger = logging.getLogger("yapapi.executor")
 _agreements_pool_logger = logging.getLogger("yapapi.agreements_pool")
 
 
+class _YagnaDatetimeFormatter(logging.Formatter):
+    """Custom log Formatter that formats datetime using the same convention yagna uses."""
+
+    LOCAL_TZ = datetime.now(timezone.utc).astimezone().tzinfo
+
+    def formatTime(self, record: logging.LogRecord, datefmt=None):
+        """Format datetime; example: `2021-06-11T14:55:43.156.123+0200`."""
+        dt = datetime.fromtimestamp(record.created, tz=self.LOCAL_TZ)
+        return dt.strftime(f"%Y-%m-%dT%H:%M:%S.{dt.microsecond / 1000}%z")
+
+
 def enable_default_logger(
     format_: str = "[%(asctime)s %(levelname)s %(name)s] %(message)s",
     log_file: Optional[str] = None,
@@ -79,8 +90,8 @@ def enable_default_logger(
     logger = logging.getLogger("yapapi")
     logger.setLevel(logging.DEBUG)
     logger.disabled = False
-    formatter = logging.Formatter(format_)
 
+    formatter = _YagnaDatetimeFormatter(fmt=format_)
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
     console_handler.setLevel(logging.INFO)
