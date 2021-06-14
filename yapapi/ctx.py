@@ -6,7 +6,7 @@ from datetime import timedelta
 from os import PathLike
 from functools import partial
 from pathlib import Path
-from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union, Any, Awaitable
+from typing import BinaryIO, Callable, Iterable, Optional, Dict, List, Tuple, Union, Any, Awaitable
 
 from yapapi.events import DownloadStarted, DownloadFinished
 from yapapi.props import NodeInfo
@@ -189,7 +189,7 @@ class _ReceiveFile(_ReceiveContent):
         self,
         storage: StorageProvider,
         src_path: str,
-        dst_path: str,
+        dst_path: Union[PathLike, BinaryIO],
         emitter: Optional[Callable[[StorageEvent], None]] = None,
     ):
         super().__init__(storage, src_path, emitter)
@@ -385,7 +385,7 @@ class WorkContext:
         self.__prepare()
         self._pending_steps.append(_Run(cmd, *args, env=env, stdout=stdout, stderr=stderr))
 
-    def download_file(self, src_path: str, dst_path: str):
+    def download_file(self, src_path: str, dst_path: Union[PathLike, BinaryIO]):
         """Schedule downloading remote file from the provider.
 
         :param src_path: remote (provider) path

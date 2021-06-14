@@ -106,7 +106,7 @@ async def perform_mask_attack(ctx: WorkContext, tasks: AsyncIterable[Task]):
 
         ctx.run(f"/bin/sh", "-c", _make_attack_command(skip, limit, worker_output_path))
         output_file = NamedTemporaryFile()
-        ctx.download_file(worker_output_path, output_file.name)
+        ctx.download_file(worker_output_path, output_file)
 
         yield ctx.commit(timeout=MASK_ATTACK_TIMEOUT)
 

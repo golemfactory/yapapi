@@ -7,7 +7,7 @@ import os
 import pathlib
 import io
 from os import PathLike
-from typing import AsyncIterator, NamedTuple, Union, Optional
+from typing import AsyncIterator, BinaryIO, NamedTuple, Union, Optional
 import asyncio
 import aiohttp
 
@@ -65,9 +65,13 @@ class Destination(abc.ABC):
 
         return output
 
-    async def download_file(self, destination_file: PathLike):
+    async def download_file(self, destination_file: Union[PathLike, BinaryIO]):
         content = await self.download_stream()
-        with open(destination_file, "wb") as f:
+
+        if isinstance(destination_file, PathLike):
+            destination_file = open(destination_file, "wb")
+
+        with destination_file as f:
             async for chunk in content.stream:
                 f.write(chunk)
 
