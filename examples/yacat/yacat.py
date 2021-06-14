@@ -3,9 +3,10 @@ import argparse
 import asyncio
 from datetime import datetime, timedelta
 import math
+import os
 from pathlib import Path
 import sys
-from tempfile import NamedTemporaryFile
+import tempfile
 from typing import AsyncIterable, List, Optional
 
 from yapapi import Golem, NoPaymentAccountError, Task, WorkContext, windows_event_loop_fix
@@ -104,15 +105,16 @@ async def perform_mask_attack(ctx: WorkContext, tasks: AsyncIterable[Task]):
         limit = skip + args.chunk_size
         worker_output_path = f"/golem/output/hashcat_{skip}.potfile"
 
-        ctx.run(f"/bin/sh", "-c", _make_attack_command(skip, limit, worker_output_path))
-        output_file = NamedTemporaryFile()
+        ctx.run("/bin/sh", "-c", _make_attack_command(skip, limit, worker_output_path))
+        output_file = Path(tempfile.gettempdir()) / os.urandom(16).hex()
         ctx.download_file(worker_output_path, output_file)
 
         yield ctx.commit(timeout=MASK_ATTACK_TIMEOUT)
 
-        result = output_file.file.readline()
-        task.accept_result(result)
-        output_file.close()
+        with output_file.open() as f:
+            result = f.readline()
+            task.accept_result(result)
+        os.remove(str(output_file))
 
 
 def _make_attack_command(skip: int, limit: int, output_path: str) -> str:
