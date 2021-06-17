@@ -56,7 +56,7 @@ class SuppressedExceptions:
 def repeat_on_error(
     max_tries: int,
     condition: Callable[[Exception], bool] = is_intermittent_error,
-    interval: float = 0.0,
+    interval: float = 1.0,
 ):
     """Decorate a function to repeat calls up to `max_tries` times when errors occur.
 

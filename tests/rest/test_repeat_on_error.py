@@ -45,7 +45,7 @@ async def test_repeat_on_error(max_tries, exceptions, calls_expected, expected_e
 
     calls_made = 0
 
-    @repeat_on_error(max_tries=max_tries)
+    @repeat_on_error(max_tries=max_tries, interval=0.0)
     async def request():
         nonlocal calls_made, exceptions
         calls_made += 1
