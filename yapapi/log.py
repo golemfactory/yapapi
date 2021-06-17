@@ -72,7 +72,8 @@ class _YagnaDatetimeFormatter(logging.Formatter):
     def formatTime(self, record: logging.LogRecord, datefmt=None):
         """Format datetime; example: `2021-06-11T14:55:43.156.123+0200`."""
         dt = datetime.fromtimestamp(record.created, tz=self.LOCAL_TZ)
-        return dt.strftime(f"%Y-%m-%dT%H:%M:%S.{dt.microsecond / 1000}%z")
+        millis = f"{(dt.microsecond // 1000):03d}"
+        return dt.strftime(f"%Y-%m-%dT%H:%M:%S.{millis}%z")
 
 
 def enable_default_logger(
