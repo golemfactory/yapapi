@@ -7,13 +7,17 @@ on:
 
 jobs:
   goth-tests:
-    name: Run integration tests (stable)
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: ["master", "b0.6"]
+    name: Run integration tests (nightly) on ${{ matrix.branch }}
     runs-on: goth
     steps:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          ref: 'b0.5'
+          ref: ${{ matrix.branch }}
 
       - name: Configure python
         uses: actions/setup-python@v2
