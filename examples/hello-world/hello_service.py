@@ -3,7 +3,7 @@ import asyncio
 from datetime import datetime, timedelta
 
 from yapapi import Golem
-from yapapi.executor.services import Service
+from yapapi.services import Service
 from yapapi.log import enable_default_logger
 from yapapi.payload import vm
 
