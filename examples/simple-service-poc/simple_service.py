@@ -37,8 +37,6 @@ STARTING_TIMEOUT = timedelta(minutes=4)
 
 
 class SimpleService(Service):
-    STATS_PATH = "/golem/out/stats"
-    PLOT_INFO_PATH = "/golem/out/plot"
     SIMPLE_SERVICE = "/golem/run/simple_service.py"
     SIMPLE_SERVICE_CTL = "/golem/run/simulate_observations_ctl.py"
 
