@@ -176,6 +176,8 @@ class _Engine(AsyncContextManager):
         self._jobs: Set[Job] = set()
         self._process_invoices_job: Optional[asyncio.Task] = None
 
+        # a set of async generators created by executors that use this engine
+        self._generators: Set[AsyncGenerator] = set()
         self._services: Set[asyncio.Task] = set()
         self._stack = AsyncExitStack()
 
@@ -267,7 +269,13 @@ class _Engine(AsyncContextManager):
 
         logger.info("Golem is shutting down...")
 
+        # Some generators created by `execute_tasks` may still have elements;
+        # if we don't close them now, their jobs will never be marked as finished.
+        for gen in self._generators:
+            await gen.aclose()
+
         # Wait until all computations are finished
+        logger.debug("Waiting for the jobs to finish...")
         await asyncio.gather(*[job.finished.wait() for job in self._jobs])
         logger.info("All jobs have finished")
 
@@ -306,8 +314,8 @@ class _Engine(AsyncContextManager):
         except Exception:
             logger.debug("Got error when waiting for services to finish", exc_info=True)
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self._stack.aclose()
+    async def __aexit__(self, *exc_info) -> Optional[bool]:
+        return await self._stack.__aexit__(*exc_info)
 
     async def _create_allocations(self) -> rest.payment.MarketDecoration:
 
@@ -457,6 +465,10 @@ class _Engine(AsyncContextManager):
     def finalize_job(job: "Job"):
         """Mark a job as finished."""
         job.finished.set()
+
+    def register_generator(self, generator: AsyncGenerator) -> None:
+        """Register a generator with this engine."""
+        self._generators.add(generator)
 
     @dataclass
     class PaymentDecorator(DemandDecorator):
