@@ -167,6 +167,7 @@ async def main(args):
             timeout=KEYSPACE_TIMEOUT,
         )
 
+        keyspace = 0
         async for task in completed:
             keyspace = task.result
 
