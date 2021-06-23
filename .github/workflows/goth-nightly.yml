@@ -6,14 +6,42 @@ on:
     - cron: '0 1 * * *'
 
 jobs:
-  goth-tests:
-    name: Run integration tests (stable)
-    runs-on: goth
+  prepare-matrix:
+    name: Prepare matrix JSON
+    runs-on: ubuntu-latest
+    outputs:
+      matrix-json: ${{ steps.get-matrix.outputs.matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          ref: 'b0.5'
+          fetch-depth: 0
+
+      # finds branches with names matching 'b[0-9](\.[0-9])+' (e.g. b0.6) and returns the one with highest version
+      - name: Get latest stable branch
+        id: latest-stable
+        # sed removes leading whitespaces and '*' characters (git uses it to indicate the current branch)
+        run: |
+          branch=$(git branch -a | sed 's/remotes\/origin\///' | sed 's/^[ \t*]*//' | grep -E '^b[0-9](\.[0-9])+$' | sort -Vr | head -1)
+          echo "::set-output name=branch::$branch"
+
+      # prepares JSON object representing strategy matrix which contains two 'branch' variants: master and latest stable
+      - name: Get matrix JSON
+        id: get-matrix
+        run: echo "::set-output name=matrix::{\"include\":[{\"branch\":\"master\"},{\"branch\":\"${{ steps.latest-stable.outputs.branch }}\"}]}"
+
+  goth-tests:
+    runs-on: goth
+    needs: prepare-matrix
+    strategy:
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix-json) }}
+      fail-fast: false
+    name: Run integration tests (nightly) on ${{ matrix.branch }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ matrix.branch }}
 
       - name: Configure python
         uses: actions/setup-python@v2
