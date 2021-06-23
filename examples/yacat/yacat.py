@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import math
 from pathlib import Path
 import sys
-from tempfile import NamedTemporaryFile
+from tempfile import gettempdir
 from typing import AsyncIterable, List, Optional
 
 from yapapi import Golem, NoPaymentAccountError, Task, WorkContext, windows_event_loop_fix
@@ -102,17 +102,22 @@ async def perform_mask_attack(ctx: WorkContext, tasks: AsyncIterable[Task]):
     async for task in tasks:
         skip = task.data
         limit = skip + args.chunk_size
-        worker_output_path = f"/golem/output/hashcat_{skip}.potfile"
+
+        output_name = f"yacat_{skip}.potfile"
+        worker_output_path = f"/golem/output/{output_name}"
 
         ctx.run(f"/bin/sh", "-c", _make_attack_command(skip, limit, worker_output_path))
-        output_file = NamedTemporaryFile()
-        ctx.download_file(worker_output_path, output_file.name)
+        try:
+            output_file = Path(gettempdir()) / output_name
+            ctx.download_file(worker_output_path, str(output_file))
 
-        yield ctx.commit(timeout=MASK_ATTACK_TIMEOUT)
+            yield ctx.commit(timeout=MASK_ATTACK_TIMEOUT)
 
-        result = output_file.file.readline()
-        task.accept_result(result)
-        output_file.close()
+            with output_file.open() as f:
+                result = f.readline()
+                task.accept_result(result)
+        finally:
+            output_file.unlink()
 
 
 def _make_attack_command(skip: int, limit: int, output_path: str) -> str:
@@ -125,13 +130,12 @@ def _make_attack_command(skip: int, limit: int, output_path: str) -> str:
     )
 
 
-def _parse_result(potfile_line: bytes) -> Optional[str]:
+def _parse_result(potfile_line: str) -> Optional[str]:
     """Helper function which parses a single .potfile line and returns the password part.
 
     Hashcat uses its .potfile format to report results. In this format, each line consists of the
     hash and its matching word, separated with a colon (e.g. `asdf1234:password`).
     """
-    potfile_line = potfile_line.decode("utf-8")
     if potfile_line:
         return potfile_line.split(":")[-1].strip()
     return None
