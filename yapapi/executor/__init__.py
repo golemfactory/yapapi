@@ -307,13 +307,7 @@ class Executor(AsyncContextManager):
 
         work_queue = SmartQueue(input_tasks())
 
-        last_wid = 0
-
         async def start_worker(agreement: rest.market.Agreement, node_info: NodeInfo) -> None:
-
-            nonlocal last_wid
-            wid = last_wid
-            last_wid += 1
 
             self.emit(events.WorkerStarted(agr_id=agreement.id))
 
@@ -333,7 +327,7 @@ class Executor(AsyncContextManager):
                 self.emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
                 self._engine.accept_debit_notes_for_agreement(agreement.id)
                 work_context = WorkContext(
-                    f"worker-{wid}", node_info, self._engine.storage_manager, emitter=self.emit
+                    act.id, node_info, self._engine.storage_manager, emitter=self.emit
                 )
 
                 with work_queue.new_consumer() as consumer:
