@@ -215,7 +215,7 @@ class Executor(AsyncContextManager):
         """Emit a computation event using this `Executor`'s engine."""
         self._engine.emit(event)
 
-    async def submit(
+    def submit(
         self,
         worker: Callable[
             [WorkContext, AsyncIterator[Task[D, R]]],
@@ -231,6 +231,19 @@ class Executor(AsyncContextManager):
             on providers
         :return: yields computation progress events
         """
+        generator = self._create_task_generator(worker, data)
+        self._engine.register_generator(generator)
+        return generator
+
+    async def _create_task_generator(
+        self,
+        worker: Callable[
+            [WorkContext, AsyncIterator[Task[D, R]]],
+            AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
+        ],
+        data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
+    ) -> AsyncGenerator[Task[D, R], None]:
+        """Create an async generator yielding completed tasks."""
 
         job = Job(self._engine, expiration_time=self._expires, payload=self._payload)
         self._engine.add_job(job)
