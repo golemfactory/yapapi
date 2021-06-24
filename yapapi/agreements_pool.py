@@ -4,7 +4,7 @@ import datetime
 import logging
 import random
 import sys
-from typing import Dict, NamedTuple, Optional, Set, Tuple
+from typing import Dict, NamedTuple, Optional, Set, Tuple, Callable
 
 from yapapi import events
 from yapapi.props import Activity, NodeInfo
@@ -68,8 +68,8 @@ class AgreementsPool:
                 datetime.datetime.now(), score, proposal
             )
 
-    async def use_agreement(self, cbk):
-        """Gets an agreement and performs cbk() on it"""
+    async def use_agreement(self, cbk: Callable[[Agreement, NodeInfo], asyncio.Task]) -> Optional[asyncio.Task]:
+        """Get an agreement and start the `cbk()` task within it."""
         async with self._lock:
             agreement_with_info = await self._get_agreement()
             if agreement_with_info is None:

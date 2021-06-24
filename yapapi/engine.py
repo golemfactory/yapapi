@@ -31,12 +31,13 @@ else:
 
 from yapapi import rest, events
 from yapapi.agreements_pool import AgreementsPool
-from yapapi.ctx import CommandContainer, ExecOptions, Work
+from yapapi.ctx import CommandContainer, ExecOptions, Work, WorkContext
 from yapapi.payload import Payload
-from yapapi.props import com, Activity, NodeInfo, NodeInfoKeys
+from yapapi import props
+from yapapi.props import com, NodeInfo
 from yapapi.props.builder import DemandBuilder, DemandDecorator
-from yapapi.rest.activity import CommandExecutionError
-from yapapi.rest.market import OfferProposal, Subscription
+from yapapi.rest.activity import CommandExecutionError, Activity
+from yapapi.rest.market import Agreement, OfferProposal, Subscription
 from yapapi.storage import gftp
 from yapapi.strategy import (
     DecreaseScoreForUnconfirmedAgreement,
@@ -186,10 +187,10 @@ class _Engine(AsyncContextManager):
     ) -> DemandBuilder:
         """Create a `DemandBuilder` for given `payload` and `expiration_time`."""
         builder = DemandBuilder()
-        builder.add(Activity(expiration=expiration_time, multi_activity=True))
-        builder.add(NodeInfo(subnet_tag=self._subnet))
+        builder.add(props.Activity(expiration=expiration_time, multi_activity=True))
+        builder.add(props.NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
-            builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
+            builder.ensure(f"({props.NodeInfoKeys.subnet_tag}={self._subnet})")
         await builder.decorate(self.payment_decorator, self.strategy, payload)
         return builder
 
@@ -482,10 +483,39 @@ class _Engine(AsyncContextManager):
                 demand.ensure(constraint)
             demand.properties.update({p.key: p.value for p in self.market_decoration.properties})
 
-    async def create_activity(self, agreement_id: str):
+    async def create_activity(self, agreement_id: str) -> Activity:
         """Create an activity for given `agreement_id`."""
         return await self._activity_api.new_activity(
             agreement_id, stream_events=self._stream_output
+        )
+
+    async def start_worker(self, job: "Job", worker: Callable[[Agreement, Activity, WorkContext], Awaitable]) -> asyncio.Task:
+        loop = asyncio.get_event_loop()
+
+        async def _worker(agreement: Agreement, node_info: NodeInfo):
+            self.emit(events.WorkerStarted(agr_id=agreement.id))
+
+            try:
+                activity = await self.create_activity(agreement.id)
+            except Exception:
+                self.emit(
+                    events.ActivityCreateFailed(
+                        agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
+                    )
+                )
+                raise
+
+            async with activity:
+                self.emit(events.ActivityCreated(act_id=activity.id, agr_id=agreement.id))
+
+                self.accept_debit_notes_for_agreement(agreement.id)
+                work_context = WorkContext(
+                    activity.id, node_info, self.storage_manager, emitter=self.emit
+                )
+                await worker(agreement, activity, work_context)
+
+        return await job.agreements_pool.use_agreement(
+            lambda agreement, node: loop.create_task(_worker(agreement, node))
         )
 
     async def process_batches(
