@@ -25,7 +25,7 @@ from yapapi.ctx import WorkContext
 from yapapi.engine import _Engine, Job
 from yapapi.payload import Payload
 from yapapi.props import NodeInfo
-from yapapi.rest.activity import CommandExecutionError, BatchTimeoutError
+from yapapi.rest.activity import BatchError
 
 
 logger = logging.getLogger(__name__)
@@ -419,8 +419,8 @@ class Cluster(AsyncContextManager):
                     # Errors in service code will be raised by `batch_task.result()`.
                     # These include:
                     # - StopAsyncIteration's resulting from normal exit from handler function
-                    # - CommandExecutionError's or BatchTimeout's that were thrown into
-                    #   the service code the `except (CommandExecutionError, ...)` clause below
+                    # - BatchErrors that were thrown into the service code by
+                    #   the `except BatchError` clause below
                     batch = batch_task.result()
                 except StopAsyncIteration:
                     change_state()
@@ -431,7 +431,7 @@ class Cluster(AsyncContextManager):
                     try:
                         # Errors in commands executed on provider will be raised here:
                         fut_result = yield batch
-                    except (CommandExecutionError, BatchTimeoutError):
+                    except BatchError:
                         # Throw the error into the service code so it can be handled there
                         logger.warning("Command execution error", exc_info=True)
                         batch_task = loop.create_task(handler.athrow(*sys.exc_info()))

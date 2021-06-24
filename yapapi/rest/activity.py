@@ -100,7 +100,20 @@ class Result:
     message: Optional[str]
 
 
-class CommandExecutionError(Exception):
+class BatchError(Exception):
+    """An error that occurs during execution of a batch of commands on a provider.
+
+    The error may originate on the provider side, for example when a remote command
+    returns a non-zero exit code (`CommandExecutionError'), or on the requestor side,
+    for example when a time within which the batch of commands should finish executing
+    elapses (`BatchTimeoutError`).
+
+    Errors of this class are passed by the engine to user code (a worker function
+    or a service handler) which may catch them and attempt a recovery.
+    """
+
+
+class CommandExecutionError(BatchError):
     """An exception that indicates that a command failed on a provider."""
 
     command: str
@@ -126,7 +139,7 @@ class CommandExecutionError(Exception):
         return msg
 
 
-class BatchTimeoutError(Exception):
+class BatchTimeoutError(BatchError):
     """An exception that indicates that an execution of a batch of commands timed out."""
 
 
