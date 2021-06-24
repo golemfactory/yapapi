@@ -11,6 +11,7 @@ from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union, Any, 
 from yapapi.events import DownloadStarted, DownloadFinished
 from yapapi.props import NodeInfo
 from yapapi.storage import StorageProvider, Source, Destination, DOWNLOAD_BYTES_LIMIT_DEFAULT
+from yapapi.rest.activity import Activity
 
 
 class CommandContainer:
@@ -289,24 +290,26 @@ class ExecOptions:
 class WorkContext:
     """An object used to schedule commands to be sent to provider."""
 
-    id: str
-    """Unique identifier for this work context."""
-
     def __init__(
         self,
-        ctx_id: str,
+        activity: Activity,
         node_info: NodeInfo,
         storage: StorageProvider,
         emitter: Optional[Callable[[StorageEvent], None]] = None,
         implicit_init: bool = True,
     ):
-        self.id = ctx_id
+        self._activity = activity
         self._node_info = node_info
         self._storage: StorageProvider = storage
         self._pending_steps: List[Work] = []
         self._started: bool = False
         self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
         self._implicit_init = implicit_init
+
+    @property
+    def id(self) -> str:
+        """Unique identifier for this work context."""
+        return self._activity.id
 
     @property
     def provider_name(self) -> Optional[str]:
@@ -439,6 +442,13 @@ class WorkContext:
         self._pending_steps = []
         return Steps(*steps, timeout=timeout)
 
+    async def get_usage(self):
+        usage = await self._activity.usage()
+        return usage
+
+    async def get_state(self):
+        state = await self._activity.state()
+        return state
 
 class CaptureMode(enum.Enum):
     HEAD = "head"

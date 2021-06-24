@@ -67,6 +67,11 @@ class Activity(AsyncContextManager["Activity"]):
         state: yaa.ActivityState = await self._state.get_activity_state(self._id)
         return state
 
+    async def usage(self) -> yaa.ActivityUsage:
+        """Retrieve the current usage of the activity."""
+        usage: yaa.ActivityUsage = await self._state.get_activity_usage(self._id)
+        return usage
+
     async def send(self, script: List[dict], deadline: Optional[datetime] = None) -> "Batch":
         """Send the execution script to the provider's execution unit."""
         script_txt = json.dumps(script)

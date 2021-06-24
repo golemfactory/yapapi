@@ -78,6 +78,10 @@ class SimpleService(Service):
             steps = self._ctx.commit()
             yield steps
 
+            usage = await self._ctx.get_usage()
+            print(f" -------------------------- USAGE: {usage}")
+            # await self._ctx.get_state()
+
     async def shutdown(self):
         # handler reponsible for executing operations on shutdown
         self._ctx.run(self.SIMPLE_SERVICE_CTL, "--stop")

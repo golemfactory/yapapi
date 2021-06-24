@@ -512,7 +512,7 @@ class _Engine(AsyncContextManager):
 
                 self.accept_debit_notes_for_agreement(agreement.id)
                 work_context = WorkContext(
-                    activity.id, node_info, self.storage_manager, emitter=self.emit
+                    activity, node_info, self.storage_manager, emitter=self.emit
                 )
                 await worker(agreement, activity, work_context)
 
