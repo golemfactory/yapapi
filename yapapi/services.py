@@ -420,7 +420,9 @@ class Cluster(AsyncContextManager):
         spawned = False
         agreement_id: Optional[str]  # set in start_worker
 
-        async def _worker(agreement: rest.market.Agreement, activity: Activity, work_context: WorkContext) -> None:
+        async def _worker(
+            agreement: rest.market.Agreement, activity: Activity, work_context: WorkContext
+        ) -> None:
             nonlocal agreement_id, spawned
             agreement_id = agreement.id
             spawned = True
@@ -450,9 +452,7 @@ class Cluster(AsyncContextManager):
                 self.emit(events.WorkerFinished(agr_id=agreement.id))
             finally:
                 await self._engine.accept_payments_for_agreement(agreement.id)
-                await self._job.agreements_pool.release_agreement(
-                    agreement.id, allow_reuse=False
-                )
+                await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
 
         while not spawned:
             agreement_id = None

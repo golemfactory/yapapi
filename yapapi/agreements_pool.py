@@ -68,7 +68,9 @@ class AgreementsPool:
                 datetime.datetime.now(), score, proposal
             )
 
-    async def use_agreement(self, cbk: Callable[[Agreement, NodeInfo], asyncio.Task]) -> Optional[asyncio.Task]:
+    async def use_agreement(
+        self, cbk: Callable[[Agreement, NodeInfo], asyncio.Task]
+    ) -> Optional[asyncio.Task]:
         """Get an agreement and start the `cbk()` task within it."""
         async with self._lock:
             agreement_with_info = await self._get_agreement()

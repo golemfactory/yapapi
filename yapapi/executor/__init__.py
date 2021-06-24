@@ -307,7 +307,9 @@ class Executor(AsyncContextManager):
 
         work_queue = SmartQueue(input_tasks())
 
-        async def _worker(agreement: rest.market.Agreement, activity: Activity, work_context: WorkContext) -> None:
+        async def _worker(
+            agreement: rest.market.Agreement, activity: Activity, work_context: WorkContext
+        ) -> None:
 
             with work_queue.new_consumer() as consumer:
                 try:

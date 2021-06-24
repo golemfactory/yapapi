@@ -489,7 +489,9 @@ class _Engine(AsyncContextManager):
             agreement_id, stream_events=self._stream_output
         )
 
-    async def start_worker(self, job: "Job", worker: Callable[[Agreement, Activity, WorkContext], Awaitable]) -> asyncio.Task:
+    async def start_worker(
+        self, job: "Job", worker: Callable[[Agreement, Activity, WorkContext], Awaitable]
+    ) -> asyncio.Task:
         loop = asyncio.get_event_loop()
 
         async def _worker(agreement: Agreement, node_info: NodeInfo):
