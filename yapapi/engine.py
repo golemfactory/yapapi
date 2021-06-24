@@ -28,7 +28,6 @@ if sys.version_info >= (3, 7):
 else:
     from async_exit_stack import AsyncExitStack  # type: ignore
 
-
 from yapapi import rest, events
 from yapapi.agreements_pool import AgreementsPool
 from yapapi.ctx import CommandContainer, ExecOptions, Work
@@ -524,7 +523,13 @@ class _Engine(AsyncContextManager):
             await batch.prepare()
             cc = CommandContainer()
             batch.register(cc)
-            remote = await activity.send(cc.commands(), deadline=batch_deadline)
+
+            try:
+                remote = await activity.send(cc.commands(), deadline=batch_deadline)
+            except Exception:
+                item = await command_generator.athrow(*sys.exc_info())
+                continue
+
             cmds = cc.commands()
             self.emit(events.ScriptSent(agr_id=agreement_id, script_id=script_id, cmds=cmds))
 
