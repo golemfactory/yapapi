@@ -145,6 +145,7 @@ class Payment(object):
                 total_amount=str(amount),
                 timeout=allocation_timeout,
                 make_deposit=make_deposit,
+                timestamp=datetime.now(timezone.utc),
                 # TODO: fix this
                 spent_amount="",
                 remaining_amount="",
