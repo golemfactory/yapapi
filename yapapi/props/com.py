@@ -1,5 +1,6 @@
 """Payment-related properties."""
-from typing import Dict, Any
+import abc
+from typing import Dict, Any, List
 import enum
 from dataclasses import dataclass, field
 from .base import Model, Props, as_list
@@ -32,6 +33,10 @@ class Com(Model):
     scheme: BillingScheme = field(metadata={"key": SCHEME})
     price_model: PriceModel = field(metadata={"key": PRICE_MODEL})
 
+    @abc.abstractmethod
+    def calculate_cost(self, usage: List) -> float:
+        """Calculate the cost by applying the provided usage vector to the underlying pricing model."""
+
 
 @dataclass(frozen=True)
 class ComLinear(Com):
@@ -49,3 +54,7 @@ class ComLinear(Com):
         price_for = ((Counter(usages[i]), float(coeffs[i])) for i in range(len(coeffs)))
 
         data.update(fixed_price=fixed_price, price_for=dict(price_for))
+
+    def calculate_cost(self, usage: List):
+        # todo add implementation
+        return 0
