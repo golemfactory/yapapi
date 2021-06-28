@@ -360,6 +360,26 @@ class Cluster(AsyncContextManager):
         if handler:
             return handler()
 
+    @staticmethod
+    def _change_state(
+        instance: ServiceInstance, stop: bool = False, exc_info: ExcInfo = (None, None, None)
+    ):
+        """Initiate a state transition for `instance`, possibly due to an error."""
+
+        if not stop and exc_info == (None, None, None):
+            # Normal, i.e. non-error, state transition
+            instance.service_state.lifecycle()
+        else:
+            # Transition due to an error or `ControlSignal.stop`
+            # TODO: define this transition just like Service.lifecycle()?
+            # isn't it the same as `(stop | terminate)()`?
+            if instance.state == ServiceState.running:
+                instance.service_state.stop()
+            else:
+                instance.service_state.terminate()
+
+        instance.service._exc_info = exc_info
+
     async def _run_instance(self, ctx: WorkContext):
 
         loop = asyncio.get_event_loop()
@@ -390,24 +410,12 @@ class Cluster(AsyncContextManager):
 
             def change_state(stop=False, exc_info=(None, None, None)):
                 """Initiate state transition, possibly due to an error."""
-
                 nonlocal batch_task, handler, instance
 
-                if not stop and exc_info == (None, None, None):
-                    # Normal, i.e. non-error, state transition
-                    instance.service_state.lifecycle()
-                else:
-                    # Transition due to an error or `ControlSignal.stop`
-                    # TODO: define this transition just like Service.lifecycle()?
-                    # isn't it the same as `(stop | terminate)()`?
-                    if instance.state == ServiceState.running:
-                        instance.service_state.stop()
-                    else:
-                        instance.service_state.terminate()
-
+                self._change_state(instance, stop, exc_info)
                 handler = self._get_handler(instance)
                 logger.debug("%s state changed to %s", instance.service, instance.state.value)
-                instance.service._exc_info = exc_info
+
                 if batch_task:
                     batch_task.cancel()
                     # TODO: await batch_task here?
