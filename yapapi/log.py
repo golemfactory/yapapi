@@ -255,6 +255,9 @@ class SummaryLogger:
     # Set of confirmed proposal ids
     confirmed_proposals: Set[str]
 
+    # Last logged confirmed proposal time (seconds)
+    last_logged_proposal_time: Optional[float]
+
     # Maps agreement ids to provider infos
     agreement_provider_info: Dict[str, ProviderInfo]
 
@@ -307,6 +310,7 @@ class SummaryLogger:
         self.finished = False
         self.error_occurred = False
         self.time_waiting_for_proposals = timedelta(0)
+        self.last_logged_proposal_time = None
 
     def _register_job(self, job_id: str) -> None:
         """Initialize counters for a new job."""
@@ -384,9 +388,17 @@ class SummaryLogger:
             confirmed_providers = set(
                 self.received_proposals[prop_id] for prop_id in self.confirmed_proposals
             )
-            self.logger.info(
-                "Received proposals from %s so far", pluralize(len(confirmed_providers), "provider")
-            )
+            now = time.time()
+            if (
+                self.last_logged_proposal_time is None
+                or now - self.last_logged_proposal_time >= 3
+                or len(confirmed_providers) < 10
+            ):
+                self.logger.info(
+                    "Received proposals from %s so far",
+                    pluralize(len(confirmed_providers), "provider")
+                )
+                self.last_logged_proposal_time = now
 
         elif isinstance(event, events.NoProposalsConfirmed):
             self.time_waiting_for_proposals += event.timeout
