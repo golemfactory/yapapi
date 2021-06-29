@@ -122,7 +122,10 @@ class Service:
         return f"<{self.__class__.__name__}: {self.id}>"
 
     def exc_info(self) -> ExcInfo:
-        """Return exception info for an exception that caused the last state transition."""
+        """Return exception info for an exception that caused the last state transition.
+
+        If no such exception occurred, return `(None, None, None)`.
+        """
         return self._exc_info
 
     async def send_message(self, message: Any = None):
@@ -362,23 +365,39 @@ class Cluster(AsyncContextManager):
 
     @staticmethod
     def _change_state(
-        instance: ServiceInstance, stop: bool = False, exc_info: ExcInfo = (None, None, None)
-    ):
-        """Initiate a state transition for `instance`, possibly due to an error."""
+        instance: ServiceInstance,
+        event: Union[ControlSignal, ExcInfo] = (None, None, None),
+    ) -> bool:
+        """Initiate a state transition for `instance` caused by `event`.
 
-        if not stop and exc_info == (None, None, None):
+        Return `True` if instance's state changed as result of the transition
+        (i.e., if resulting state is different from the original one),
+        `False` otherwise.
+
+        The transition may be due to a control signal, an error,
+        or the handler method for the current state terminating normally.
+        """
+        prev_state = instance.state
+
+        if event == (None, None, None):
             # Normal, i.e. non-error, state transition
             instance.service_state.lifecycle()
-        else:
-            # Transition due to an error or `ControlSignal.stop`
+        elif isinstance(event, tuple) or event == ControlSignal.stop:
+            # Transition due to an error or `stop` signal
             # TODO: define this transition just like Service.lifecycle()?
             # isn't it the same as `(stop | terminate)()`?
             if instance.state == ServiceState.running:
                 instance.service_state.stop()
             else:
                 instance.service_state.terminate()
+        else:
+            # Unhandled signal, don't change the state
+            assert isinstance(event, ControlSignal)
+            logger.warning("Don't know how to handle control signal %s", event)
 
-        instance.service._exc_info = exc_info
+        if isinstance(event, tuple):
+            instance.service._exc_info = event
+        return instance.state != prev_state
 
     async def _run_instance(self, ctx: WorkContext):
 
@@ -408,13 +427,13 @@ class Cluster(AsyncContextManager):
                 (batch_task, signal_task), return_when=asyncio.FIRST_COMPLETED
             )
 
-            def change_state(stop=False, exc_info=(None, None, None)):
-                """Initiate state transition, possibly due to an error."""
+            def change_state(event: Union[ControlSignal, ExcInfo] = (None, None, None)) -> None:
+                """Initiate state transition, due to a signal, an error, or handler termination."""
                 nonlocal batch_task, handler, instance
 
-                self._change_state(instance, stop, exc_info)
-                handler = self._get_handler(instance)
-                logger.debug("%s state changed to %s", instance.service, instance.state.value)
+                if self._change_state(instance, event):
+                    handler = self._get_handler(instance)
+                    logger.debug("%s state changed to %s", instance.service, instance.state.value)
 
                 if batch_task:
                     batch_task.cancel()
@@ -434,7 +453,7 @@ class Cluster(AsyncContextManager):
                     change_state()
                 except Exception:
                     logger.warning("Unhandled exception in service", exc_info=True)
-                    change_state(exc_info=sys.exc_info())
+                    change_state(sys.exc_info())
                 else:
                     try:
                         # Errors in commands executed on provider will be raised here:
@@ -448,7 +467,7 @@ class Cluster(AsyncContextManager):
                         # operations of Activity API. Currently we do not pass such exceptions
                         # to service handlers but initiate a state transition
                         logger.error("Unhandled engine error", exc_info=True)
-                        change_state(exc_info=sys.exc_info())
+                        change_state(sys.exc_info())
                     else:
                         result = await fut_result
                         wrapped_results = loop.create_future()
@@ -459,8 +478,7 @@ class Cluster(AsyncContextManager):
                 # Process a signal
                 ctl = signal_task.result()
                 logger.debug("Processing control signal %s", ctl)
-                if ctl == ControlSignal.stop:
-                    change_state(stop=True)
+                change_state(ctl)
                 signal_task = None
 
         logger.debug("No handler for %s in state %s", instance.service, instance.state.value)
