@@ -396,7 +396,7 @@ class SummaryLogger:
             ):
                 self.logger.info(
                     "Received proposals from %s so far",
-                    pluralize(len(confirmed_providers), "provider")
+                    pluralize(len(confirmed_providers), "provider"),
                 )
                 self.last_logged_proposal_time = now
 
