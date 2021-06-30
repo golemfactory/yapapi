@@ -28,7 +28,7 @@ class Counter(enum.Enum):
     UNKNOWN = ""
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True)  # type: ignore  # mypy doesn't allow abstract methods in dataclasses
 class Com(Model):
     scheme: BillingScheme = field(metadata={"key": SCHEME})
     price_model: PriceModel = field(metadata={"key": PRICE_MODEL})
@@ -48,8 +48,8 @@ class ComLinear(Com):
         # we don't need mapping per-se but we'll do some validation instead
         assert data["price_model"] == PriceModel.LINEAR, "expected linear pricing model"
         assert len(data["linear_coeffs"]) == len(data["usage_vector"]) + 1, "expecting the number of linear_coeffs to correspond to usage_vector + 1 (fixed price)"
-        assert all([isinstance(lc, float) for lc in data["linear_coeffs"]]), "linear_coeffs must be `float`"
-        assert all([isinstance(uv, str) for uv in data["usage_vector"]]), "usage_vector must be `str`"
+        assert all([isinstance(lc, float) for lc in data["linear_coeffs"]]), "linear_coeffs values must be `float`"
+        assert all([isinstance(u, str) for u in data["usage_vector"]]), "usage_vector values must be `str`"
 
     @property
     def fixed_price(self) -> float:

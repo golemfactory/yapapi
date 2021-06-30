@@ -70,7 +70,7 @@ from yapapi.props import com, InvalidPropertiesError
                 "golem.com.usage.vector": ["golem.usage.cpu_sec", "golem.usage.duration_sec"],
                 "golem.com.scheme": "payu",
             },
-            "Invalid properties: linear_coeffs must be `float`",
+            "Invalid properties: linear_coeffs values must be `float`",
         ),
         (
             {
