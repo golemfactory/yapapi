@@ -460,7 +460,7 @@ class Cluster(AsyncContextManager):
                         fut_result = yield batch
                     except BatchError:
                         # Throw the error into the service code so it can be handled there
-                        logger.warning("Command execution error", exc_info=True)
+                        logger.debug("Batch execution failed", exc_info=True)
                         batch_task = loop.create_task(handler.athrow(*sys.exc_info()))
                     except Exception:
                         # Could be an ApiException thrown in call_exec or get_exec_batch_results
