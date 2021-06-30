@@ -80,7 +80,9 @@ class SimpleService(Service):
 
             usage = await self._ctx.get_usage()
             print(f" -------------------------- USAGE: {usage}")
-            # await self._ctx.get_state()
+
+            state = await self._ctx.get_state()
+            print(f" -------------------------- STATE: {state}")
 
     async def shutdown(self):
         # handler reponsible for executing operations on shutdown
