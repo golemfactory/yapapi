@@ -354,9 +354,8 @@ class SummaryLogger:
         )
         now = time.time()
         if (
-            (self.last_logged_proposal_time is None or now - self.last_logged_proposal_time >= 3)
-            and self.last_confirmed_providers_number < len(confirmed_providers)
-        ):
+            self.last_logged_proposal_time is None or now - self.last_logged_proposal_time >= 3
+        ) and self.last_confirmed_providers_number < len(confirmed_providers):
             self.logger.info(
                 "Received proposals from %s so far",
                 pluralize(len(confirmed_providers), "provider"),
