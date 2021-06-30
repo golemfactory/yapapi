@@ -450,6 +450,7 @@ class WorkContext:
         state = await self._activity.state()
         return state
 
+
 class CaptureMode(enum.Enum):
     HEAD = "head"
     TAIL = "tail"
