@@ -258,6 +258,9 @@ class SummaryLogger:
     # Last logged confirmed proposal time (seconds)
     last_logged_proposal_time: Optional[float]
 
+    # Last number of confirmed providers
+    last_confirmed_providers_number: int
+
     # Maps agreement ids to provider infos
     agreement_provider_info: Dict[str, ProviderInfo]
 
@@ -311,6 +314,7 @@ class SummaryLogger:
         self.error_occurred = False
         self.time_waiting_for_proposals = timedelta(0)
         self.last_logged_proposal_time = None
+        self.last_confirmed_providers_number = 0
 
     def _register_job(self, job_id: str) -> None:
         """Initialize counters for a new job."""
@@ -343,6 +347,22 @@ class SummaryLogger:
         total_cost = sum(self.provider_cost.values(), Decimal(0))
         label = "Total cost" if not partial else "The cost so far"
         self.logger.info("%s: %s", label, total_cost.normalize())
+
+    def _print_confirmed_providers_if_needed(self) -> None:
+        confirmed_providers = set(
+            self.received_proposals[prop_id] for prop_id in self.confirmed_proposals
+        )
+        now = time.time()
+        if (
+            (self.last_logged_proposal_time is None or now - self.last_logged_proposal_time >= 3)
+            and self.last_confirmed_providers_number < len(confirmed_providers)
+        ):
+            self.logger.info(
+                "Received proposals from %s so far",
+                pluralize(len(confirmed_providers), "provider"),
+            )
+            self.last_logged_proposal_time = now
+            self.last_confirmed_providers_number = len(confirmed_providers)
 
     def log(self, event: events.Event) -> None:
         """Register an event."""
@@ -385,20 +405,6 @@ class SummaryLogger:
 
         elif isinstance(event, events.ProposalConfirmed):
             self.confirmed_proposals.add(event.prop_id)
-            confirmed_providers = set(
-                self.received_proposals[prop_id] for prop_id in self.confirmed_proposals
-            )
-            now = time.time()
-            if (
-                self.last_logged_proposal_time is None
-                or now - self.last_logged_proposal_time >= 3
-                or len(confirmed_providers) < 10
-            ):
-                self.logger.info(
-                    "Received proposals from %s so far",
-                    pluralize(len(confirmed_providers), "provider"),
-                )
-                self.last_logged_proposal_time = now
 
         elif isinstance(event, events.NoProposalsConfirmed):
             self.time_waiting_for_proposals += event.timeout
@@ -540,6 +546,8 @@ class SummaryLogger:
             else:
                 prov_info = self.agreement_provider_info[event.agr_id]
                 self.logger.info(f"Terminated agreement with {prov_info.name}")
+
+        self._print_confirmed_providers_if_needed()
 
 
 def log_summary(wrapped_emitter: Optional[Callable[[events.Event], None]] = None):
