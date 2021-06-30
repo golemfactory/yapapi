@@ -30,6 +30,8 @@ class Counter(enum.Enum):
 
 @dataclass(frozen=True)  # type: ignore  # mypy doesn't allow abstract methods in dataclasses
 class Com(Model):
+    """Base model representing the payment model used."""
+
     scheme: BillingScheme = field(metadata={"key": SCHEME})
     price_model: PriceModel = field(metadata={"key": PRICE_MODEL})
 
@@ -40,6 +42,8 @@ class Com(Model):
 
 @dataclass(frozen=True)
 class ComLinear(Com):
+    """Linear payment model."""
+
     linear_coeffs: List[float] = field(metadata={"key": LINEAR_COEFFS})
     usage_vector: List[str] = field(metadata={"key": DEFINED_USAGES})
 

@@ -9,8 +9,9 @@ from pathlib import Path
 from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union, Any, Awaitable
 
 from yapapi.events import DownloadStarted, DownloadFinished
-from yapapi.props import NodeInfo
+from yapapi.props.com import ComLinear
 from yapapi.storage import StorageProvider, Source, Destination, DOWNLOAD_BYTES_LIMIT_DEFAULT
+from yapapi.rest.market import AgreementDetails
 from yapapi.rest.activity import Activity
 
 
@@ -288,23 +289,28 @@ class ExecOptions:
 
 
 class WorkContext:
-    """An object used to schedule commands to be sent to provider."""
+    """Provider node's work context.
+
+    Used to schedule commands to be sent to the provider and enable other interactions between the
+    requestor agent's client code and the activity on provider's end.
+    """
 
     def __init__(
         self,
         activity: Activity,
-        node_info: NodeInfo,
+        agreement_details: AgreementDetails,
         storage: StorageProvider,
         emitter: Optional[Callable[[StorageEvent], None]] = None,
         implicit_init: bool = True,
     ):
         self._activity = activity
-        self._node_info = node_info
+        self._agreement_details = agreement_details
         self._storage: StorageProvider = storage
-        self._pending_steps: List[Work] = []
-        self._started: bool = False
         self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
         self._implicit_init = implicit_init
+
+        self._pending_steps: List[Work] = []
+        self._started: bool = False
 
     @property
     def id(self) -> str:
@@ -314,7 +320,18 @@ class WorkContext:
     @property
     def provider_name(self) -> Optional[str]:
         """Return the name of the provider associated with this work context."""
-        return self._node_info.name
+        return self._agreement_details.provider_node_info.name
+
+    @property
+    def _payment_model(self) -> ComLinear:
+        """Return the characteristics of the payment model associated with this work context."""
+
+        # @TODO ideally, this should return `Com` rather than `ComLinear` and the WorkContext itself
+        # should be agnostic of the nature of the given payment model - but that also requires
+        # automatic casting of the payment model-related properties to an appropriate model
+        # inheriting from `Com`
+
+        return self._agreement_details.provider_view.extract(ComLinear)
 
     def __prepare(self):
         if not self._started and self._implicit_init:
@@ -449,6 +466,12 @@ class WorkContext:
     async def get_state(self):
         state = await self._activity.state()
         return state
+
+    async def get_cost(self) -> Optional[float]:
+        usage = await self.get_usage()
+        if usage.current_usage:
+            return self._payment_model.calculate_cost(usage.current_usage)
+        return None
 
 
 class CaptureMode(enum.Enum):

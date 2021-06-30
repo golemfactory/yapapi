@@ -78,6 +78,10 @@ async def main(subnet_tag, driver=None, network=None):
                 )
                 raise
 
+            print(f" --- {ctx.provider_name} USAGE: {await ctx.get_usage()}")
+            print(f" --- {ctx.provider_name} STATE: {await ctx.get_state()}")
+            print(f" --- {ctx.provider_name}  COST: {await ctx.get_cost()}")
+
     # Iterator over the frame indices that we want to render
     frames: range = range(0, 60, 10)
     # Worst-case overhead, in minutes, for initialization (negotiation, file transfer etc.)

@@ -78,16 +78,15 @@ class SimpleService(Service):
             steps = self._ctx.commit()
             yield steps
 
-            usage = await self._ctx.get_usage()
-            print(f" -------------------------- USAGE: {usage}")
-
-            state = await self._ctx.get_state()
-            print(f" -------------------------- STATE: {state}")
+            print(f" --- {self._ctx.provider_name} USAGE: {await self._ctx.get_usage()}")
+            print(f" --- {self._ctx.provider_name} STATE: {await self._ctx.get_state()}")
+            print(f" --- {self._ctx.provider_name}  COST: {await self._ctx.get_cost()}")
 
     async def shutdown(self):
         # handler reponsible for executing operations on shutdown
         self._ctx.run(self.SIMPLE_SERVICE_CTL, "--stop")
         yield self._ctx.commit()
+        print(f" --- {self._ctx.provider_name}  COST: {await self._ctx.get_cost()}")
 
 
 async def main(subnet_tag, driver=None, network=None):
