@@ -43,7 +43,7 @@ from yapapi.props import com, InvalidPropertiesError
                 "golem.com.usage.vector": ["golem.usage.cpu_sec", "golem.usage.duration_sec"],
                 "golem.com.scheme": "payu",
             },
-            "Missing key: 'golem.com.pricing.model.linear.coeffs'",
+            "Invalid properties: Missing key: 'linear_coeffs'",
         ),
         (
             {
@@ -52,7 +52,7 @@ from yapapi.props import com, InvalidPropertiesError
                 "golem.com.usage.vector": ["golem.usage.cpu_sec", "golem.usage.duration_sec"],
                 "golem.com.scheme": "payu",
             },
-            "pop from empty list",
+            "Invalid properties: expecting the number of linear_coeffs to correspond to usage_vector + 1 (fixed price)",
         ),
         (
             {
@@ -61,7 +61,7 @@ from yapapi.props import com, InvalidPropertiesError
                 "golem.com.usage.vector": ["golem.usage.cpu_sec"],
                 "golem.com.scheme": "payu",
             },
-            "list index out of range",
+            "Invalid properties: expecting the number of linear_coeffs to correspond to usage_vector + 1 (fixed price)",
         ),
         (
             {
@@ -70,16 +70,16 @@ from yapapi.props import com, InvalidPropertiesError
                 "golem.com.usage.vector": ["golem.usage.cpu_sec", "golem.usage.duration_sec"],
                 "golem.com.scheme": "payu",
             },
-            "could not convert string to float",
+            "Invalid properties: linear_coeffs must be `float`",
         ),
         (
             {
                 "golem.com.pricing.model": "linear",
-                "golem.com.pricing.model.linear.coeffs": ["spam", 0.002, 0.0],
+                "golem.com.pricing.model.linear.coeffs": [0.001, 0.002, 0.0],
                 "golem.com.usage.vector": "not a vector",
                 "golem.com.scheme": "payu",
             },
-            "Error when decoding 'not a vector'",
+            "Invalid properties: expecting the number of linear_coeffs to correspond to usage_vector + 1 (fixed price)",
         ),
     ],
 )

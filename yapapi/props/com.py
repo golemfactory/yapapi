@@ -40,21 +40,25 @@ class Com(Model):
 
 @dataclass(frozen=True)
 class ComLinear(Com):
-    fixed_price: float
-    price_for: Dict[Counter, float]
+    linear_coeffs: List[float] = field(metadata={"key": LINEAR_COEFFS})
+    usage_vector: List[str] = field(metadata={"key": DEFINED_USAGES})
 
     @classmethod
     def _custom_mapping(cls, props: Props, data: Dict[str, Any]):
+        # we don't need mapping per-se but we'll do some validation instead
         assert data["price_model"] == PriceModel.LINEAR, "expected linear pricing model"
+        assert len(data["linear_coeffs"]) == len(data["usage_vector"]) + 1, "expecting the number of linear_coeffs to correspond to usage_vector + 1 (fixed price)"
+        assert all([isinstance(lc, float) for lc in data["linear_coeffs"]]), "linear_coeffs must be `float`"
+        assert all([isinstance(uv, str) for uv in data["usage_vector"]]), "usage_vector must be `str`"
 
-        coeffs = as_list(props[LINEAR_COEFFS])
-        usages = as_list(props[DEFINED_USAGES])
+    @property
+    def fixed_price(self) -> float:
+        return self.linear_coeffs[-1]
 
-        fixed_price = float(coeffs.pop())
-        price_for = ((Counter(usages[i]), float(coeffs[i])) for i in range(len(coeffs)))
-
-        data.update(fixed_price=fixed_price, price_for=dict(price_for))
+    @property
+    def price_for(self) -> Dict[Counter, float]:
+        return {Counter(self.usage_vector[i]): self.linear_coeffs[i] for i in range(len(self.usage_vector))}
 
     def calculate_cost(self, usage: List):
-        # todo add implementation
-        return 0
+        usage = usage + [1.0] # append the "usage" of the fixed component
+        return sum([self.linear_coeffs[i] * usage[i] for i in range(len(self.linear_coeffs))])
