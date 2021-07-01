@@ -21,7 +21,7 @@ TEXT_COLOR_DEFAULT = "\033[0m"
 colorama.init()
 
 
-def build_parser(description: str):
+def build_parser(description: str) -> argparse.ArgumentParser:
     current_time_str = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S%z")
     default_log_path = Path(tempfile.gettempdir()) / f"yapapi_{current_time_str}.log"
 
