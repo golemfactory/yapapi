@@ -164,7 +164,7 @@ class TestLeastExpensiveLinearPayuMS:
     async def test_score_unknown_price(self):
         offer = OfferProposalFactory(
             **{
-                "proposal__proposal__properties__defined_usages": [
+                "proposal__proposal__properties__usage_vector": [
                     Counter.MAXMEM.value,
                     Counter.TIME.value,
                 ]
