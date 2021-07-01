@@ -26,7 +26,7 @@ from yapapi import rest, events
 from yapapi.ctx import WorkContext
 from yapapi.events import Event
 from yapapi.payload import Payload
-from yapapi.props import NodeInfo
+from yapapi.rest.activity import Activity
 from yapapi.strategy import MarketStrategy
 
 from .task import Task, TaskStatus
@@ -307,66 +307,41 @@ class Executor(AsyncContextManager):
 
         work_queue = SmartQueue(input_tasks())
 
-        last_wid = 0
+        async def _worker(
+            agreement: rest.market.Agreement, activity: Activity, work_context: WorkContext
+        ) -> None:
 
-        async def start_worker(agreement: rest.market.Agreement, node_info: NodeInfo) -> None:
+            with work_queue.new_consumer() as consumer:
+                try:
 
-            nonlocal last_wid
-            wid = last_wid
-            last_wid += 1
-
-            self.emit(events.WorkerStarted(agr_id=agreement.id))
-
-            try:
-                act = await self._engine.create_activity(agreement.id)
-            except Exception:
-                self.emit(
-                    events.ActivityCreateFailed(
-                        agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
-                    )
-                )
-                self.emit(events.WorkerFinished(agr_id=agreement.id))
-                raise
-
-            async with act:
-
-                self.emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
-                self._engine.accept_debit_notes_for_agreement(agreement.id)
-                work_context = WorkContext(
-                    f"worker-{wid}", node_info, self._engine.storage_manager, emitter=self.emit
-                )
-
-                with work_queue.new_consumer() as consumer:
-                    try:
-
-                        async def task_generator() -> AsyncIterator[Task[D, R]]:
-                            async for handle in consumer:
-                                task = Task.for_handle(handle, work_queue, self.emit)
-                                self._engine.emit(
-                                    events.TaskStarted(
-                                        agr_id=agreement.id, task_id=task.id, task_data=task.data
-                                    )
+                    async def task_generator() -> AsyncIterator[Task[D, R]]:
+                        async for handle in consumer:
+                            task = Task.for_handle(handle, work_queue, self.emit)
+                            self._engine.emit(
+                                events.TaskStarted(
+                                    agr_id=agreement.id, task_id=task.id, task_data=task.data
                                 )
-                                yield task
-                                self._engine.emit(
-                                    events.TaskFinished(agr_id=agreement.id, task_id=task.id)
-                                )
-
-                        batch_generator = worker(work_context, task_generator())
-                        try:
-                            await self._engine.process_batches(agreement.id, act, batch_generator)
-                        except StopAsyncIteration:
-                            pass
-                        self.emit(events.WorkerFinished(agr_id=agreement.id))
-                    except Exception:
-                        self.emit(
-                            events.WorkerFinished(
-                                agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
                             )
+                            yield task
+                            self._engine.emit(
+                                events.TaskFinished(agr_id=agreement.id, task_id=task.id)
+                            )
+
+                    batch_generator = worker(work_context, task_generator())
+                    try:
+                        await self._engine.process_batches(agreement.id, activity, batch_generator)
+                    except StopAsyncIteration:
+                        pass
+                    self.emit(events.WorkerFinished(agr_id=agreement.id))
+                except Exception:
+                    self.emit(
+                        events.WorkerFinished(
+                            agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
                         )
-                        raise
-                    finally:
-                        await self._engine.accept_payments_for_agreement(agreement.id)
+                    )
+                    raise
+                finally:
+                    await self._engine.accept_payments_for_agreement(agreement.id)
 
         async def worker_starter() -> None:
             while True:
@@ -375,9 +350,7 @@ class Executor(AsyncContextManager):
                 if len(workers) < self._max_workers and work_queue.has_unassigned_items():
                     new_task = None
                     try:
-                        new_task = await job.agreements_pool.use_agreement(
-                            lambda agreement, node: loop.create_task(start_worker(agreement, node))
-                        )
+                        new_task = await self._engine.start_worker(job, _worker)
                         if new_task is None:
                             continue
                         workers.add(new_task)

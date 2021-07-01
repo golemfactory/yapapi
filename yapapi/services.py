@@ -24,8 +24,7 @@ from yapapi import rest, events
 from yapapi.ctx import WorkContext
 from yapapi.engine import _Engine, Job
 from yapapi.payload import Payload
-from yapapi.props import NodeInfo
-from yapapi.rest.activity import BatchError
+from yapapi.rest.activity import Activity, BatchError
 
 
 logger = logging.getLogger(__name__)
@@ -502,68 +501,44 @@ class Cluster(AsyncContextManager):
         spawned = False
         agreement_id: Optional[str]  # set in start_worker
 
-        async def start_worker(agreement: rest.market.Agreement, node_info: NodeInfo) -> None:
-
+        async def _worker(
+            agreement: rest.market.Agreement, activity: Activity, work_context: WorkContext
+        ) -> None:
             nonlocal agreement_id, spawned
-
             agreement_id = agreement.id
-            self.emit(events.WorkerStarted(agr_id=agreement.id))
+            spawned = True
+
+            task_id = f"{self.id}:{next(self._task_ids)}"
+            self.emit(
+                events.TaskStarted(
+                    agr_id=agreement.id,
+                    task_id=task_id,
+                    task_data=f"Service: {self._service_class.__name__}",
+                )
+            )
 
             try:
-                act = await self._engine.create_activity(agreement.id)
-            except Exception:
-                self.emit(
-                    events.ActivityCreateFailed(
-                        agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
-                    )
-                )
-                raise
+                instance_batches = self._run_instance(work_context)
+                try:
+                    await self._engine.process_batches(agreement.id, activity, instance_batches)
+                except StopAsyncIteration:
+                    pass
 
-            async with act:
-                spawned = True
-                self.emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
-
-                self._engine.accept_debit_notes_for_agreement(agreement.id)
-                work_context = WorkContext(
-                    act.id, node_info, self._engine.storage_manager, emitter=self.emit
-                )
-                task_id = f"{self.id}:{next(self._task_ids)}"
                 self.emit(
-                    events.TaskStarted(
+                    events.TaskFinished(
                         agr_id=agreement.id,
                         task_id=task_id,
-                        task_data=f"Service: {self._service_class.__name__}",
                     )
                 )
-
-                try:
-                    instance_batches = self._run_instance(work_context)
-                    try:
-                        await self._engine.process_batches(agreement.id, act, instance_batches)
-                    except StopAsyncIteration:
-                        pass
-
-                    self.emit(
-                        events.TaskFinished(
-                            agr_id=agreement.id,
-                            task_id=task_id,
-                        )
-                    )
-                    self.emit(events.WorkerFinished(agr_id=agreement.id))
-                finally:
-                    await self._engine.accept_payments_for_agreement(agreement.id)
-                    await self._job.agreements_pool.release_agreement(
-                        agreement.id, allow_reuse=False
-                    )
-
-        loop = asyncio.get_event_loop()
+                self.emit(events.WorkerFinished(agr_id=agreement.id))
+            finally:
+                await self._engine.accept_payments_for_agreement(agreement.id)
+                await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
 
         while not spawned:
             agreement_id = None
             await asyncio.sleep(1.0)
-            task = await self._job.agreements_pool.use_agreement(
-                lambda agreement, node: loop.create_task(start_worker(agreement, node))
-            )
+            task = await self._engine.start_worker(self._job, _worker)
             if not task:
                 continue
             try:
