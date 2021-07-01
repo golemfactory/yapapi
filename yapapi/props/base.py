@@ -58,7 +58,6 @@ class _PyField:
             else:
                 return getattr(t, "__args__")
 
-        # print("name=", self.name, "type=", self.type, type(self.type), "value=", value)
         if get_type_origin(self.type) == Union:
             if datetime in get_type_args(self.type):
                 # TODO: fix this.
