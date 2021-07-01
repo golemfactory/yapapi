@@ -42,7 +42,9 @@ class VmRequest(ExeUnitRequest):
 class _VmConstraints:
     min_mem_gib: float = prop_base.constraint(inf.INF_MEM, operator=">=")
     min_storage_gib: float = prop_base.constraint(inf.INF_STORAGE, operator=">=")
+    min_cpu_threads: int = prop_base.constraint(inf.INF_THREADS, operator=">=")
     # cores: int = prop_base.constraint(inf.INF_CORES, operator=">=")
+
     runtime: str = prop_base.constraint(inf.INF_RUNTIME_NAME, operator="=", default=RUNTIME_VM)
 
     def __str__(self):
@@ -72,7 +74,11 @@ class _VmPackage(Package):
 
 
 async def repo(
-    *, image_hash: str, min_mem_gib: float = 0.5, min_storage_gib: float = 2.0
+    *,
+    image_hash: str,
+    min_mem_gib: float = 0.5,
+    min_storage_gib: float = 2.0,
+    min_available_logical_cpu_cores: int = 1,
 ) -> Package:
     """
     Build a reference to application package.
@@ -80,12 +86,13 @@ async def repo(
     :param image_hash: hash of the package's image
     :param min_mem_gib: minimal memory required to execute application code
     :param min_storage_gib: minimal disk storage to execute tasks
+    :param min_available_logical_cpu_cores: minimal available logical CPU cores
     :return: the payload definition for the given VM image
     """
     return _VmPackage(
         repo_url=resolve_repo_srv(_DEFAULT_REPO_SRV),
         image_hash=image_hash,
-        constraints=_VmConstraints(min_mem_gib, min_storage_gib),
+        constraints=_VmConstraints(min_mem_gib, min_storage_gib, min_available_logical_cpu_cores),
     )
 
 
