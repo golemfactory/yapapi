@@ -41,7 +41,7 @@ as an argument to `log_summary`:
     )
 ```
 """
-from asyncio import CancelledError
+from asyncio import get_event_loop, CancelledError
 from collections import defaultdict, Counter
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -52,6 +52,10 @@ import os
 import sys
 import time
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set
+if sys.version_info >= (3, 8):
+    from typing import Final
+else:
+    from typing_extensions import Final
 
 from yapapi import events, __version__ as yapapi_version
 from yapapi.services import MAX_AGREEMENT_EXPIRATION, MIN_AGREEMENT_EXPIRATION
@@ -63,6 +67,7 @@ executor_logger = logging.getLogger("yapapi.executor")
 # Initializing loggers, so that logger.setLevel() in enable_default_logger will work.
 _agreements_pool_logger = logging.getLogger("yapapi.agreements_pool")
 
+REPORT_CONFIRMED_PROVIDERS_INTERVAL: Final[float] = 3.0
 
 class _YagnaDatetimeFormatter(logging.Formatter):
     """Custom log Formatter that formats datetime using the same convention yagna uses."""
@@ -255,11 +260,8 @@ class SummaryLogger:
     # Set of confirmed proposal ids
     confirmed_proposals: Set[str]
 
-    # Last logged confirmed proposal time (seconds)
-    last_logged_proposal_time: Optional[float]
-
     # Last number of confirmed providers
-    last_confirmed_providers_number: int
+    prev_confirmed_providers: int
 
     # Maps agreement ids to provider infos
     agreement_provider_info: Dict[str, ProviderInfo]
@@ -285,6 +287,9 @@ class SummaryLogger:
     # Has computation finished?
     finished: bool
 
+    # Has Executor shut down?
+    shutdown_complete: bool = False
+
     # Total time waiting for the first proposal
     time_waiting_for_proposals: timedelta
 
@@ -294,6 +299,7 @@ class SummaryLogger:
         self._wrapped_emitter = wrapped_emitter
         self.numbers: Iterator[int] = itertools.count(1)
         self._reset_counters()
+        self._print_confirmed_providers()
 
     def _reset_counters(self):
         """Reset all information aggregated by this logger related to a single Executor instance."""
@@ -313,8 +319,7 @@ class SummaryLogger:
         self.finished = False
         self.error_occurred = False
         self.time_waiting_for_proposals = timedelta(0)
-        self.last_logged_proposal_time = None
-        self.last_confirmed_providers_number = 0
+        self.prev_confirmed_providers = 0
 
     def _register_job(self, job_id: str) -> None:
         """Initialize counters for a new job."""
@@ -348,20 +353,21 @@ class SummaryLogger:
         label = "Total cost" if not partial else "The cost so far"
         self.logger.info("%s: %s", label, total_cost.normalize())
 
-    def _print_confirmed_providers_if_needed(self) -> None:
+    def _print_confirmed_providers(self) -> None:
         confirmed_providers = set(
             self.received_proposals[prop_id] for prop_id in self.confirmed_proposals
         )
-        now = time.time()
-        if (
-            self.last_logged_proposal_time is None or now - self.last_logged_proposal_time >= 3
-        ) and self.last_confirmed_providers_number < len(confirmed_providers):
+        if self.prev_confirmed_providers < len(confirmed_providers):
             self.logger.info(
                 "Received proposals from %s so far",
                 pluralize(len(confirmed_providers), "provider"),
             )
-            self.last_logged_proposal_time = now
-            self.last_confirmed_providers_number = len(confirmed_providers)
+            self.prev_confirmed_providers = len(confirmed_providers)
+        if not self.shutdown_complete:
+            get_event_loop().call_later(
+                REPORT_CONFIRMED_PROVIDERS_INTERVAL,
+                self._print_confirmed_providers,
+            )
 
     def log(self, event: events.Event) -> None:
         """Register an event."""
@@ -538,6 +544,7 @@ class SummaryLogger:
                 _exc_type, exc, _tb = event.exc_info
                 reason = str(exc) or repr(exc) or "unexpected error"
                 self.logger.error("Error when shutting down Executor: %s", reason)
+            self.shutdown_complete = True
 
         elif isinstance(event, events.AgreementTerminated):
             if event.reason.get("golem.requestor.code") == "Success":
@@ -545,8 +552,6 @@ class SummaryLogger:
             else:
                 prov_info = self.agreement_provider_info[event.agr_id]
                 self.logger.info(f"Terminated agreement with {prov_info.name}")
-
-        self._print_confirmed_providers_if_needed()
 
 
 def log_summary(wrapped_emitter: Optional[Callable[[events.Event], None]] = None):
