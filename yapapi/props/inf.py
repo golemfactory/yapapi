@@ -9,6 +9,7 @@ from .base import Model, prop
 INF_MEM: str = "golem.inf.mem.gib"
 INF_STORAGE: str = "golem.inf.storage.gib"
 INF_CORES: str = "golem.inf.cpu.cores"
+INF_THREADS: str = "golem.inf.cpu.threads"
 TRANSFER_CAPS: str = "golem.activity.caps.transfer.protocol"
 INF_RUNTIME_NAME = "golem.runtime.name"
 
@@ -50,6 +51,7 @@ class InfBase(Model):
 class InfVm(InfBase):
     runtime = RUNTIME_VM
     cores: int = prop(INF_CORES, default=1)
+    threads: int = prop(INF_THREADS, default=1)
 
 
 InfVmKeys = InfVm.property_keys()
