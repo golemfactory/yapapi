@@ -78,7 +78,7 @@ async def repo(
     image_hash: str,
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,
-    min_available_logical_cpu_cores: int = 1,
+    min_cpu_threads: int = 1,
 ) -> Package:
     """
     Build a reference to application package.
@@ -86,13 +86,13 @@ async def repo(
     :param image_hash: hash of the package's image
     :param min_mem_gib: minimal memory required to execute application code
     :param min_storage_gib: minimal disk storage to execute tasks
-    :param min_available_logical_cpu_cores: minimal available logical CPU cores
+    :param min_cpu_threads: minimal available logical CPU cores
     :return: the payload definition for the given VM image
     """
     return _VmPackage(
         repo_url=resolve_repo_srv(_DEFAULT_REPO_SRV),
         image_hash=image_hash,
-        constraints=_VmConstraints(min_mem_gib, min_storage_gib, min_available_logical_cpu_cores),
+        constraints=_VmConstraints(min_mem_gib, min_storage_gib, min_cpu_threads),
     )
 
 
