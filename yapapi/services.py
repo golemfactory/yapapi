@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from datetime import timedelta, datetime, timezone
 import enum
 import logging
-from typing import Any, AsyncContextManager, List, Optional, Set, Type
+from typing import Any, AsyncContextManager, List, Optional, Set, Type, Iterable, Dict
 import statemachine  # type: ignore
 import sys
 
@@ -35,6 +35,10 @@ MAX_AGREEMENT_EXPIRATION: Final[timedelta] = timedelta(minutes=180)
 DEFAULT_SERVICE_EXPIRATION: Final[timedelta] = MAX_AGREEMENT_EXPIRATION - timedelta(minutes=5)
 
 cluster_ids = itertools.count(1)
+
+
+class ServiceError(Exception):
+    pass
 
 
 class ServiceState(statemachine.StateMachine):
@@ -214,7 +218,6 @@ class Cluster(AsyncContextManager):
         engine: "_Engine",
         service_class: Type[Service],
         payload: Payload,
-        num_instances: int = 1,
         expiration: Optional[datetime] = None,
     ):
         """Initialize this Cluster.
@@ -222,7 +225,6 @@ class Cluster(AsyncContextManager):
         :param engine: an engine for running service instance
         :param service_class: service specification
         :param payload: definition of service runtime for this Cluster
-        :param num_instances: number of instances to spawn in this Cluster
         :param expiration: a date before which all agreements related to running services
             in this Cluster should be terminated
         """
@@ -232,7 +234,6 @@ class Cluster(AsyncContextManager):
         self._engine = engine
         self._service_class = service_class
         self._payload = payload
-        self._num_instances = num_instances
         self._expiration = expiration or datetime.now(timezone.utc) + DEFAULT_SERVICE_EXPIRATION
         self._task_ids = itertools.count(1)
         self._stack = AsyncExitStack()
@@ -245,7 +246,7 @@ class Cluster(AsyncContextManager):
 
     def __repr__(self):
         return (
-            f"Cluster {self.id}: {self._num_instances}x[Service: {self._service_class.__name__}, "
+            f"Cluster {self.id}: {len(self.__instances)}x[Service: {self._service_class.__name__}, "
             f"Payload: {self._payload}]"
         )
 
@@ -338,10 +339,10 @@ class Cluster(AsyncContextManager):
         if handler:
             return handler()
 
-    async def _run_instance(self, ctx: WorkContext):
+    async def _run_instance(self, ctx: WorkContext, params: Dict):
 
         loop = asyncio.get_event_loop()
-        instance = ServiceInstance(service=self._service_class(self, ctx))
+        instance = ServiceInstance(service=self._service_class(self, ctx, **params))  # type: ignore
         self.__instances.append(instance)
 
         logger.info("%s commissioned", instance.service)
@@ -413,7 +414,7 @@ class Cluster(AsyncContextManager):
 
         logger.info("%s decomissioned", instance.service)
 
-    async def spawn_instance(self) -> None:
+    async def spawn_instance(self, params: Dict) -> None:
         """Spawn a new service instance within this Cluster."""
 
         logger.debug("spawning instance within %s", self)
@@ -437,7 +438,7 @@ class Cluster(AsyncContextManager):
             )
 
             try:
-                instance_batches = self._run_instance(work_context)
+                instance_batches = self._run_instance(work_context, params)
                 try:
                     await self._engine.process_batches(agreement.id, activity, instance_batches)
                 except StopAsyncIteration:
@@ -476,21 +477,48 @@ class Cluster(AsyncContextManager):
         instance = self.__get_service_instance(service)
         instance.control_queue.put_nowait(ControlSignal.stop)
 
-    def spawn_instances(self, num_instances: Optional[int] = None) -> None:
+    def spawn_instances(
+            self,
+            num_instances: Optional[int] = None,
+            instance_params: Optional[Iterable[Dict]] = None,
+    ) -> None:
         """Spawn new instances within this Cluster.
 
-        :param num_instances: number of instances to commission.
-            if not given, spawns the number that the Cluster has been initialized with.
+        :param num_instances: optional number of service instances to run, defaults to a single
+            instance, unless `instance_params` is given, in which case, the Cluster will spawn
+            as many instances as there are elements in the `instance_params` iterable
+        :param instance_params: optional list of dictionaries of keyword arguments that will be passed
+            to consecutive, spawned instances. The number of elements in the iterable determines the
+            number of instances spawned, unless `num_instances` is given, in which case the latter takes
+            precedence.
+            In other words, if both `num_instances` and `instance_params` are provided,
+            the number of instances spawned will be equal to `num_instances` and if there are
+            too few elements in the `instance_params` iterable, it will results in an error.
+
         """
-        if num_instances:
-            self._num_instances += num_instances
-        else:
-            num_instances = self._num_instances
+
+        # if the parameters iterable was not given, assume a default of a single instance
+        if not num_instances and not instance_params:
+            num_instances = 1
+
+        # convert the parameters iterable to an iterator
+        # if not provided, make a default iterator consisting of empty dictionaries
+        instance_params = iter(instance_params or (dict() for _ in range(num_instances)))
 
         loop = asyncio.get_event_loop()
-        for i in range(num_instances):
-            task = loop.create_task(self.spawn_instance())
-            self._instance_tasks.add(task)
+        spawned_instances = 0
+        while not num_instances or spawned_instances < num_instances:
+            try:
+                params = next(instance_params)
+                task = loop.create_task(self.spawn_instance(params))
+                self._instance_tasks.add(task)
+                spawned_instances += 1
+            except StopIteration:
+                if num_instances and spawned_instances < num_instances:
+                    raise ServiceError(
+                        f"`instance_params` iterable depleted after {spawned_instances} spawned instances."
+                    )
+                break
 
     def stop(self):
         """Signal the whole cluster to stop."""
