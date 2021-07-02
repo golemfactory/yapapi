@@ -52,6 +52,7 @@ import os
 import sys
 import time
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set
+
 if sys.version_info >= (3, 8):
     from typing import Final
 else:
@@ -68,6 +69,7 @@ executor_logger = logging.getLogger("yapapi.executor")
 _agreements_pool_logger = logging.getLogger("yapapi.agreements_pool")
 
 REPORT_CONFIRMED_PROVIDERS_INTERVAL: Final[float] = 3.0
+
 
 class _YagnaDatetimeFormatter(logging.Formatter):
     """Custom log Formatter that formats datetime using the same convention yagna uses."""
