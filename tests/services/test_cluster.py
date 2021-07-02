@@ -53,7 +53,7 @@ def _get_cluster():
             [call({}) for _ in range(3)],
             "`instance_params` iterable depleted after 3 spawned instances.",
         ),
-    ]
+    ],
 )
 def test_spawn_instances(kwargs, calls, error):
     with patch("yapapi.services.Cluster.spawn_instance") as spawn_instance:

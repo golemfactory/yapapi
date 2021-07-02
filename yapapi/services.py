@@ -478,9 +478,9 @@ class Cluster(AsyncContextManager):
         instance.control_queue.put_nowait(ControlSignal.stop)
 
     def spawn_instances(
-            self,
-            num_instances: Optional[int] = None,
-            instance_params: Optional[Iterable[Dict]] = None,
+        self,
+        num_instances: Optional[int] = None,
+        instance_params: Optional[Iterable[Dict]] = None,
     ) -> None:
         """Spawn new instances within this Cluster.
 
