@@ -84,7 +84,7 @@ class SimpleService(Service):
         yield self._ctx.commit()
 
 
-async def main(subnet_tag, driver=None, network=None):
+async def main(subnet_tag, running_time, driver=None, network=None):
     async with Golem(
         budget=1.0,
         subnet_tag=subnet_tag,
@@ -102,7 +102,9 @@ async def main(subnet_tag, driver=None, network=None):
         commissioning_time = datetime.now()
 
         print(
-            f"{TEXT_COLOR_YELLOW}starting {pluralize(NUM_INSTANCES, 'instance')}{TEXT_COLOR_DEFAULT}"
+            f"{TEXT_COLOR_YELLOW}"
+            f"Starting {pluralize(NUM_INSTANCES, 'instance')}..."
+            f"{TEXT_COLOR_DEFAULT}"
         )
 
         # start the service
@@ -135,18 +137,18 @@ async def main(subnet_tag, driver=None, network=None):
         if still_starting():
             raise Exception(f"Failed to start instances before {STARTING_TIMEOUT} elapsed :( ...")
 
-        print("All instances started :)")
+        print(f"{TEXT_COLOR_YELLOW}All instances started :){TEXT_COLOR_DEFAULT}")
 
         # allow the service to run for a short while
         # (and allowing its requestor-end handlers to interact with it)
 
         start_time = datetime.now()
 
-        while datetime.now() < start_time + timedelta(minutes=2):
+        while datetime.now() < start_time + timedelta(seconds=running_time):
             print(f"instances: {instances()}")
             await asyncio.sleep(5)
 
-        print(f"{TEXT_COLOR_YELLOW}stopping instances{TEXT_COLOR_DEFAULT}")
+        print(f"{TEXT_COLOR_YELLOW}Stopping instances...{TEXT_COLOR_DEFAULT}")
         cluster.stop()
 
         # wait for instances to stop
@@ -162,6 +164,12 @@ async def main(subnet_tag, driver=None, network=None):
 if __name__ == "__main__":
     parser = build_parser(
         "A very simple / POC example of a service running on Golem, utilizing the VM runtime"
+    )
+    parser.add_argument(
+        "--running-time", default=120, type=int, help=(
+            "How long should the instance run before the cluster is stopped "
+            "(in seconds, default: %(default)s)"
+        )
     )
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     parser.set_defaults(log_file=f"simple-service-yapapi-{now}.log")
@@ -179,7 +187,12 @@ if __name__ == "__main__":
 
     loop = asyncio.get_event_loop()
     task = loop.create_task(
-        main(subnet_tag=args.subnet_tag, driver=args.driver, network=args.network)
+        main(
+            subnet_tag=args.subnet_tag,
+            running_time=args.running_time,
+            driver=args.driver,
+            network=args.network,
+        )
     )
 
     try:
