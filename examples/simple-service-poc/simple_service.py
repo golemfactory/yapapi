@@ -166,10 +166,13 @@ if __name__ == "__main__":
         "A very simple / POC example of a service running on Golem, utilizing the VM runtime"
     )
     parser.add_argument(
-        "--running-time", default=120, type=int, help=(
+        "--running-time",
+        default=120,
+        type=int,
+        help=(
             "How long should the instance run before the cluster is stopped "
             "(in seconds, default: %(default)s)"
-        )
+        ),
     )
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     parser.set_defaults(log_file=f"simple-service-yapapi-{now}.log")
