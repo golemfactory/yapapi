@@ -5,9 +5,10 @@ from dataclasses import dataclass, field
 from datetime import timedelta, datetime, timezone
 import enum
 import logging
-from typing import Any, AsyncContextManager, List, Optional, Set, Type
 import statemachine  # type: ignore
 import sys
+from types import TracebackType
+from typing import Any, AsyncContextManager, List, Optional, Set, Tuple, Type, Union
 
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
@@ -23,7 +24,7 @@ from yapapi import rest, events
 from yapapi.ctx import WorkContext
 from yapapi.engine import _Engine, Job
 from yapapi.payload import Payload
-from yapapi.rest.activity import Activity
+from yapapi.rest.activity import Activity, BatchError
 
 
 logger = logging.getLogger(__name__)
@@ -67,6 +68,13 @@ class ServiceSignal:
     response_to: Optional["ServiceSignal"] = None
 
 
+# Return type for `sys.exc_info()`
+ExcInfo = Union[
+    Tuple[Type[BaseException], BaseException, TracebackType],
+    Tuple[None, None, None],
+]
+
+
 class Service:
     """Base class for service specifications.
 
@@ -87,6 +95,15 @@ class Service:
         self.__inqueue: asyncio.Queue[ServiceSignal] = asyncio.Queue()
         self.__outqueue: asyncio.Queue[ServiceSignal] = asyncio.Queue()
 
+        # Information on exception that caused the service change state,
+        # as returned by `sys.exc_info()`.
+        # Tuple of `None`'s means that the transition was not caused by an exception.
+        self._exc_info: ExcInfo = (None, None, None)
+
+        # TODO: maybe transition due to a control signal should also set this? To distinguish
+        # stopping the service externally (e.g., via `cluster.stop()`) from internal transition
+        # (e.g., via returning from `Service.run()`).
+
     @property
     def id(self):
         """Return the id of this service instance.
@@ -102,6 +119,13 @@ class Service:
 
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.id}>"
+
+    def exc_info(self) -> ExcInfo:
+        """Return exception info for an exception that caused the last state transition.
+
+        If no such exception occurred, return `(None, None, None)`.
+        """
+        return self._exc_info
 
     async def send_message(self, message: Any = None):
         """Send a control message to this instance."""
@@ -338,6 +362,42 @@ class Cluster(AsyncContextManager):
         if handler:
             return handler()
 
+    @staticmethod
+    def _change_state(
+        instance: ServiceInstance,
+        event: Union[ControlSignal, ExcInfo] = (None, None, None),
+    ) -> bool:
+        """Initiate a state transition for `instance` caused by `event`.
+
+        Return `True` if instance's state changed as result of the transition
+        (i.e., if resulting state is different from the original one),
+        `False` otherwise.
+
+        The transition may be due to a control signal, an error,
+        or the handler method for the current state terminating normally.
+        """
+        prev_state = instance.state
+
+        if event == (None, None, None):
+            # Normal, i.e. non-error, state transition
+            instance.service_state.lifecycle()
+        elif isinstance(event, tuple) or event == ControlSignal.stop:
+            # Transition due to an error or `stop` signal
+            # TODO: define this transition just like Service.lifecycle()?
+            # isn't it the same as `(stop | terminate)()`?
+            if instance.state == ServiceState.running:
+                instance.service_state.stop()
+            else:
+                instance.service_state.terminate()
+        else:
+            # Unhandled signal, don't change the state
+            assert isinstance(event, ControlSignal)
+            logger.warning("Don't know how to handle control signal %s", event)
+
+        if isinstance(event, tuple):
+            instance.service._exc_info = event
+        return instance.state != prev_state
+
     async def _run_instance(self, ctx: WorkContext):
 
         loop = asyncio.get_event_loop()
@@ -366,38 +426,59 @@ class Cluster(AsyncContextManager):
                 (batch_task, signal_task), return_when=asyncio.FIRST_COMPLETED
             )
 
+            def change_state(event: Union[ControlSignal, ExcInfo] = (None, None, None)) -> None:
+                """Initiate state transition, due to a signal, an error, or handler termination."""
+                nonlocal batch_task, handler, instance
+
+                if self._change_state(instance, event):
+                    handler = self._get_handler(instance)
+                    logger.debug("%s state changed to %s", instance.service, instance.state.value)
+
+                if batch_task:
+                    batch_task.cancel()
+                    # TODO: await batch_task here?
+                batch_task = None
+
             if batch_task in done:
                 # Process a batch
                 try:
+                    # Errors in service code will be raised by `batch_task.result()`.
+                    # These include:
+                    # - StopAsyncIteration's resulting from normal exit from handler function
+                    # - BatchErrors that were thrown into the service code by
+                    #   the `except BatchError` clause below
                     batch = batch_task.result()
-                    fut_result = yield batch
-                    result = await fut_result
-                    wrapped_results = loop.create_future()
-                    wrapped_results.set_result(result)
-                    batch_task = loop.create_task(handler.asend(wrapped_results))
                 except StopAsyncIteration:
-                    instance.service_state.lifecycle()
-                    handler = None
-                    batch_task = None
+                    change_state()
+                except Exception:
+                    logger.warning("Unhandled exception in service", exc_info=True)
+                    change_state(sys.exc_info())
+                else:
+                    try:
+                        # Errors in commands executed on provider will be raised here:
+                        fut_result = yield batch
+                    except BatchError:
+                        # Throw the error into the service code so it can be handled there
+                        logger.debug("Batch execution failed", exc_info=True)
+                        batch_task = loop.create_task(handler.athrow(*sys.exc_info()))
+                    except Exception:
+                        # Could be an ApiException thrown in call_exec or get_exec_batch_results
+                        # operations of Activity API. Currently we do not pass such exceptions
+                        # to service handlers but initiate a state transition
+                        logger.error("Unhandled engine error", exc_info=True)
+                        change_state(sys.exc_info())
+                    else:
+                        result = await fut_result
+                        wrapped_results = loop.create_future()
+                        wrapped_results.set_result(result)
+                        batch_task = loop.create_task(handler.asend(wrapped_results))
 
             if signal_task in done:
                 # Process a signal
                 ctl = signal_task.result()
                 logger.debug("Processing control signal %s", ctl)
-                if ctl == ControlSignal.stop:
-                    if instance.state == ServiceState.running:
-                        instance.service_state.stop()
-                    else:
-                        instance.service_state.terminate()
-                    handler = None
-                    if batch_task:
-                        batch_task.cancel()
-                        batch_task = None
+                change_state(ctl)
                 signal_task = None
-
-            if handler is None:
-                handler = self._get_handler(instance)
-                logger.debug("%s state changed to %s", instance.service, instance.state.value)
 
         logger.debug("No handler for %s in state %s", instance.service, instance.state.value)
 
