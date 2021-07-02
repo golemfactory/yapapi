@@ -503,7 +503,7 @@ class Cluster(AsyncContextManager):
 
         # convert the parameters iterable to an iterator
         # if not provided, make a default iterator consisting of empty dictionaries
-        instance_params = iter(instance_params or (dict() for _ in range(num_instances)))
+        instance_params = iter(instance_params or (dict() for _ in range(num_instances)))  # type: ignore
 
         loop = asyncio.get_event_loop()
         spawned_instances = 0
