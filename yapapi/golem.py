@@ -131,9 +131,9 @@ class Golem(_Engine):
         """Run a number of instances of a service represented by a given `Service` subclass.
 
         :param service_class: a subclass of `Service` that represents the service to be run
-        :param num_instances: optional number of service instances to run, defaults to a single
+        :param num_instances: optional number of service instances to run. Defaults to a single
             instance, unless `instance_params` is given, in which case, the Cluster will be created
-            with as many instances as there are elements in the `instance_params` iterable
+            with as many instances as there are elements in the `instance_params` iterable.
         :param instance_params: optional list of dictionaries of keyword arguments that will be passed
             to consecutive, spawned instances. The number of elements in the iterable determines the
             number of instances spawned, unless `num_instances` is given, in which case the latter takes
