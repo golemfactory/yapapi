@@ -40,7 +40,7 @@ def project_dir() -> Path:
     return package_dir.parent.resolve()
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def log_dir() -> Path:
     base_dir = Path("/", "tmp", "goth-tests")
     date_str = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S%z")
