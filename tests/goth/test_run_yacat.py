@@ -11,7 +11,12 @@ from goth.runner.log import configure_logging
 from goth.runner import Runner
 from goth.runner.probe import RequestorProbe
 
-from .assertions import assert_no_errors, assert_all_invoices_accepted, assert_tasks_processed
+from tests.goth.assertions import (
+    assert_no_errors,
+    assert_all_invoices_accepted,
+    assert_tasks_processed,
+)
+
 
 logger = logging.getLogger("goth.test.run_yacat")
 

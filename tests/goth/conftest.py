@@ -1,11 +1,11 @@
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import cast, List, Tuple
+from typing import cast, List
 
 import pytest
 
 from goth.configuration import Override
-from yapapi.package import Package, vm
+from yapapi.package import vm
 
 
 def pytest_addoption(parser):
