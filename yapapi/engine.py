@@ -33,10 +33,10 @@ from yapapi.agreements_pool import AgreementsPool
 from yapapi.ctx import CommandContainer, ExecOptions, Work, WorkContext
 from yapapi.payload import Payload
 from yapapi import props
-from yapapi.props import com, NodeInfo
+from yapapi.props import com
 from yapapi.props.builder import DemandBuilder, DemandDecorator
 from yapapi.rest.activity import CommandExecutionError, Activity
-from yapapi.rest.market import Agreement, OfferProposal, Subscription
+from yapapi.rest.market import Agreement, AgreementDetails, OfferProposal, Subscription
 from yapapi.storage import gftp
 from yapapi.strategy import (
     DecreaseScoreForUnconfirmedAgreement,
@@ -493,7 +493,7 @@ class _Engine(AsyncContextManager):
     ) -> Optional[asyncio.Task]:
         loop = asyncio.get_event_loop()
 
-        async def _worker(agreement: Agreement, node_info: NodeInfo):
+        async def _worker(agreement: Agreement, agreement_details: AgreementDetails):
             self.emit(events.WorkerStarted(agr_id=agreement.id))
 
             try:
@@ -511,12 +511,12 @@ class _Engine(AsyncContextManager):
 
                 self.accept_debit_notes_for_agreement(agreement.id)
                 work_context = WorkContext(
-                    activity.id, node_info, self.storage_manager, emitter=self.emit
+                    activity, agreement_details, self.storage_manager, emitter=self.emit
                 )
                 await worker(agreement, activity, work_context)
 
         return await job.agreements_pool.use_agreement(
-            lambda agreement, node: loop.create_task(_worker(agreement, node))
+            lambda agreement, details: loop.create_task(_worker(agreement, details))
         )
 
     async def process_batches(
