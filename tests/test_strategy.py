@@ -52,8 +52,8 @@ async def test_LeastExpensiveLinearPauyuMS_score(expected_time):
 async def test_LeastExpensiveLinearPayuMS_price_caps():
     """Test if LeastExpenciveLinearPayuMS correctly handles price caps."""
 
-    prices = [Decimal(p) for p in [0.0, 0.01, 1.0, 100.0]]
-    epsilon = Decimal(0.0000001)
+    prices = [0.0, 0.01, 1.0, 100.0]
+    epsilon = 0.0000001
 
     triples = list(product(prices, repeat=3))  # get triples of (cpu_price, time_price, fixed_price)
 
@@ -164,7 +164,7 @@ class TestLeastExpensiveLinearPayuMS:
     async def test_score_unknown_price(self):
         offer = OfferProposalFactory(
             **{
-                "proposal__proposal__properties__defined_usages": [
+                "proposal__proposal__properties__usage_vector": [
                     Counter.MAXMEM.value,
                     Counter.TIME.value,
                 ]
