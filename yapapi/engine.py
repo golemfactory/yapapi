@@ -498,6 +498,7 @@ class _Engine(AsyncContextManager):
 
             try:
                 activity = await self.create_activity(agreement.id)
+                self.emit(events.ActivityCreated(act_id=activity.id, agr_id=agreement.id))
             except Exception:
                 self.emit(
                     events.ActivityCreateFailed(
@@ -507,8 +508,6 @@ class _Engine(AsyncContextManager):
                 raise
 
             async with activity:
-                self.emit(events.ActivityCreated(act_id=activity.id, agr_id=agreement.id))
-
                 self.accept_debit_notes_for_agreement(agreement.id)
                 work_context = WorkContext(
                     activity, agreement_details, self.storage_manager, emitter=self.emit

@@ -58,10 +58,21 @@ class ServiceState(statemachine.StateMachine):
     terminate = terminated.from_(starting, running, stopping, terminated)
     mark_unresponsive = unresponsive.from_(starting, running, stopping, terminated)
 
+    # transition performed when handler for the current state terminates normally,
+    # that is, not due to an error or `ControlSignal.stop`
     lifecycle = ready | stop | terminate
+
+    # transition performed on error or `ControlSignal.stop`
+    error_or_stop = stop | terminate
 
     # just a helper set of states in which the service can be interacted-with
     AVAILABLE = (starting, running, stopping)
+
+    instance: "ServiceInstance"
+
+    def on_enter_state(self, state: statemachine.State):
+        """Register `state` in the instance's list of visited states."""
+        self.instance.visited_states.append(state)
 
 
 @dataclass
@@ -227,11 +238,20 @@ class ServiceInstance:
     service: Service
     control_queue: "asyncio.Queue[ControlSignal]" = field(default_factory=asyncio.Queue)
     service_state: ServiceState = field(default_factory=ServiceState)
+    visited_states: List[ServiceState] = field(default_factory=list)
+
+    def __post_init__(self):
+        self.service_state.instance = self
 
     @property
     def state(self) -> ServiceState:
         """Return the current state of this instance."""
         return self.service_state.current_state
+
+    @property
+    def started_successfully(self) -> bool:
+        """Return `True` if this instance has entered `running` state, `False` otherwise."""
+        return ServiceState.running in self.visited_states
 
 
 class Cluster(AsyncContextManager):
@@ -243,6 +263,7 @@ class Cluster(AsyncContextManager):
         service_class: Type[Service],
         payload: Payload,
         expiration: Optional[datetime] = None,
+        respawn_unstarted_instances: bool = True,
     ):
         """Initialize this Cluster.
 
@@ -251,6 +272,8 @@ class Cluster(AsyncContextManager):
         :param payload: definition of service runtime for this Cluster
         :param expiration: a date before which all agreements related to running services
             in this Cluster should be terminated
+        :param respawn_unstarted_instances: if an instance fails in the `starting` state,
+            should this Cluster try to spawn another instance
         """
 
         self.id = str(next(cluster_ids))
@@ -261,6 +284,7 @@ class Cluster(AsyncContextManager):
         self._expiration = expiration or datetime.now(timezone.utc) + DEFAULT_SERVICE_EXPIRATION
         self._task_ids = itertools.count(1)
         self._stack = AsyncExitStack()
+        self._respawn_unstarted_instances = respawn_unstarted_instances
 
         self.__instances: List[ServiceInstance] = []
         """List of Service instances"""
@@ -383,13 +407,8 @@ class Cluster(AsyncContextManager):
             # Normal, i.e. non-error, state transition
             instance.service_state.lifecycle()
         elif isinstance(event, tuple) or event == ControlSignal.stop:
-            # Transition due to an error or `stop` signal
-            # TODO: define this transition just like Service.lifecycle()?
-            # isn't it the same as `(stop | terminate)()`?
-            if instance.state == ServiceState.running:
-                instance.service_state.stop()
-            else:
-                instance.service_state.terminate()
+            # Transition on error or `stop` signal
+            instance.service_state.error_or_stop()
         else:
             # Unhandled signal, don't change the state
             assert isinstance(event, ControlSignal)
@@ -399,9 +418,8 @@ class Cluster(AsyncContextManager):
             instance.service._exc_info = event
         return instance.state != prev_state
 
-    async def _run_instance(self, ctx: WorkContext, params: Dict):
+    async def _run_instance(self, instance: ServiceInstance):
         loop = asyncio.get_event_loop()
-        instance = ServiceInstance(service=self._service_class(self, ctx, **params))  # type: ignore
         self.__instances.append(instance)
 
         logger.info("%s commissioned", instance.service)
@@ -498,15 +516,14 @@ class Cluster(AsyncContextManager):
         """Spawn a new service instance within this Cluster."""
 
         logger.debug("spawning instance within %s", self)
-        spawned = False
+        instance: Optional[ServiceInstance] = None
         agreement_id: Optional[str]  # set in start_worker
 
         async def _worker(
             agreement: rest.market.Agreement, activity: Activity, work_context: WorkContext
         ) -> None:
-            nonlocal agreement_id, spawned
+            nonlocal agreement_id, instance
             agreement_id = agreement.id
-            spawned = True
 
             task_id = f"{self.id}:{next(self._task_ids)}"
             self.emit(
@@ -516,9 +533,9 @@ class Cluster(AsyncContextManager):
                     task_data=f"Service: {self._service_class.__name__}",
                 )
             )
-
+            instance = ServiceInstance(service=self._service_class(self, work_context, **params))  # type: ignore
             try:
-                instance_batches = self._run_instance(work_context, params)
+                instance_batches = self._run_instance(instance)
                 try:
                     await self._engine.process_batches(agreement.id, activity, instance_batches)
                 except StopAsyncIteration:
@@ -535,7 +552,7 @@ class Cluster(AsyncContextManager):
                 await self._engine.accept_payments_for_agreement(agreement.id)
                 await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
 
-        while not spawned:
+        while instance is None:
             agreement_id = None
             await asyncio.sleep(1.0)
             task = await self._engine.start_worker(self._job, _worker)
@@ -543,6 +560,13 @@ class Cluster(AsyncContextManager):
                 continue
             try:
                 await task
+                if (
+                    instance is not None
+                    and not instance.started_successfully
+                    and self._respawn_unstarted_instances
+                ):
+                    logger.warning("Instance failed when starting, trying to create another one...")
+                    instance = None
             except Exception:
                 if agreement_id:
                     self.emit(events.WorkerFinished(agr_id=agreement_id, exc_info=sys.exc_info()))

@@ -127,6 +127,7 @@ class Golem(_Engine):
         instance_params: Optional[Iterable[Dict]] = None,
         payload: Optional[Payload] = None,
         expiration: Optional[datetime] = None,
+        respawn_unstarted_instances=True,
     ) -> Cluster:
         """Run a number of instances of a service represented by a given `Service` subclass.
 
@@ -147,6 +148,8 @@ class Golem(_Engine):
         :param payload: optional runtime definition for the service; if not provided, the
             payload specified by the `get_payload()` method of `service_class` is used
         :param expiration: optional expiration datetime for the service
+        :param respawn_unstarted_instances: if an instance fails in the `starting` state, should
+            the returned Cluster try to spawn another instance
         :return: a `Cluster` of service instances
 
         example usage:
@@ -213,6 +216,7 @@ class Golem(_Engine):
             service_class=service_class,
             payload=payload,
             expiration=expiration,
+            respawn_unstarted_instances=respawn_unstarted_instances,
         )
         await self._stack.enter_async_context(cluster)
         cluster.spawn_instances(num_instances=num_instances, instance_params=instance_params)
