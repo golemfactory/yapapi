@@ -11,11 +11,21 @@ class ComLinearPropsFactory(factory.DictFactory):
         rename = {
             "price_model": _com_linear["price_model"].metadata["key"],
             "linear_coeffs": com.LINEAR_COEFFS,
-            "defined_usages": com.DEFINED_USAGES,
+            "usage_vector": com.DEFINED_USAGES,
             "scheme": _com_linear["scheme"].metadata["key"],
         }
 
     price_model = com.PriceModel.LINEAR.value
-    linear_coeffs = [0.001, 0.002, 0.0]
-    defined_usages = [com.Counter.CPU.value, com.Counter.TIME.value]
     scheme = com.BillingScheme.PAYU.value
+    linear_coeffs = [0.001, 0.002, 0.0]
+    usage_vector = [com.Counter.CPU.value, com.Counter.TIME.value]
+
+
+class ComLinearFactory(factory.Factory):
+    class Meta:
+        model = com.ComLinear
+
+    price_model = com.PriceModel.LINEAR.value
+    scheme = com.BillingScheme.PAYU.value
+    linear_coeffs = [0.001, 0.002, 0.0]
+    usage_vector = [com.Counter.CPU.value, com.Counter.TIME.value]

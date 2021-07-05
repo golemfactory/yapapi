@@ -1,5 +1,6 @@
 import abc
 import enum
+import inspect
 import json
 import sys
 import typing
@@ -57,13 +58,12 @@ class _PyField:
             else:
                 return getattr(t, "__args__")
 
-        # print("name=", self.name, "type=", self.type, type(self.type))
         if get_type_origin(self.type) == Union:
             if datetime in get_type_args(self.type):
                 # TODO: fix this.
                 return self.name, datetime.fromtimestamp(int(float(value) * 0.001), timezone.utc)
             return self.name, value
-        if issubclass(self.type, enum.Enum):
+        if inspect.isclass(self.type) and issubclass(self.type, enum.Enum):
             return self.name, self.type(value)
         return self.name, value
 
