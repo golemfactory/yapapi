@@ -1,6 +1,6 @@
 import itertools
 import pytest
-from unittest.mock import Mock, patch, call
+from unittest.mock import Mock, patch, call, AsyncMock
 from yapapi.services import Cluster, Service, ServiceError
 
 
@@ -55,10 +55,9 @@ def _get_cluster():
         ),
     ],
 )
-def test_spawn_instances(kwargs, calls, error):
-    with patch("yapapi.services.Cluster.spawn_instance") as spawn_instance, patch(
-        "yapapi.services.asyncio.get_event_loop", Mock()
-    ):
+@pytest.mark.asyncio
+async def test_spawn_instances(kwargs, calls, error):
+    with patch("yapapi.services.Cluster.spawn_instance", AsyncMock()) as spawn_instance:
         cluster = _get_cluster()
         try:
             cluster.spawn_instances(**kwargs)
