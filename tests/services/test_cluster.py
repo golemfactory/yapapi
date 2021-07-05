@@ -54,6 +54,11 @@ def _get_cluster():
             [call({}) for _ in range(3)],
             "`instance_params` iterable depleted after 3 spawned instances.",
         ),
+        (
+            {"num_instances": 0},
+            [],
+            None,
+        ),
     ],
 )
 @pytest.mark.asyncio
