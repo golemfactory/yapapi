@@ -1,6 +1,7 @@
 import itertools
+import sys
 import pytest
-from unittest.mock import Mock, patch, call, AsyncMock
+from unittest.mock import Mock, patch, call
 from yapapi.services import Cluster, Service, ServiceError
 
 
@@ -56,8 +57,9 @@ def _get_cluster():
     ],
 )
 @pytest.mark.asyncio
+@pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
 async def test_spawn_instances(kwargs, calls, error):
-    with patch("yapapi.services.Cluster.spawn_instance", AsyncMock()) as spawn_instance:
+    with patch("yapapi.services.Cluster.spawn_instance") as spawn_instance:
         cluster = _get_cluster()
         try:
             cluster.spawn_instances(**kwargs)
