@@ -56,7 +56,8 @@ def _get_cluster():
     ],
 )
 def test_spawn_instances(kwargs, calls, error):
-    with patch("yapapi.services.Cluster.spawn_instance") as spawn_instance:
+    with patch("yapapi.services.Cluster.spawn_instance") as spawn_instance, \
+            patch("yapapi.services.asyncio.get_event_loop", Mock()):
         cluster = _get_cluster()
         try:
             cluster.spawn_instances(**kwargs)
