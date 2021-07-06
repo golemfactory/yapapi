@@ -1,11 +1,11 @@
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import cast, List, Tuple
+from typing import cast, List
 
 import pytest
 
 from goth.configuration import Override
-from yapapi.package import Package, vm
+from yapapi.package import vm
 
 
 def pytest_addoption(parser):
@@ -47,6 +47,11 @@ def log_dir() -> Path:
     log_dir = base_dir / f"goth_{date_str}"
     log_dir.mkdir(parents=True)
     return log_dir
+
+
+@pytest.fixture(scope="session")
+def goth_config_path(project_dir) -> Path:
+    return project_dir / "tests" / "goth_tests" / "assets" / "goth-config.yml"
 
 
 @pytest.fixture()
