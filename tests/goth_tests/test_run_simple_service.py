@@ -3,10 +3,11 @@ import logging
 import os
 from pathlib import Path
 import time
+from typing import List
 
 import pytest
 
-from goth.configuration import load_yaml
+from goth.configuration import load_yaml, Override
 from goth.runner.log import configure_logging
 from goth.runner import Runner
 from goth.runner.probe import RequestorProbe
@@ -18,16 +19,19 @@ logger = logging.getLogger("goth.test.run_simple_service")
 
 
 @pytest.mark.asyncio
-async def test_run_simple_service(log_dir: Path, project_dir: Path, config_overrides) -> None:
-
-    # This is the default configuration with 2 wasm/VM providers
-    goth_config = load_yaml(
-        Path(__file__).parent / "assets" / "goth-config.yml", overrides=config_overrides
-    )
-
-    requestor_path = project_dir / "examples" / "simple-service-poc" / "simple_service.py"
+async def test_run_simple_service(
+    log_dir: Path,
+    project_dir: Path,
+    goth_config_path: Path,
+    config_overrides: List[Override],
+) -> None:
 
     configure_logging(log_dir)
+
+    # This is the default configuration with 2 wasm/VM providers
+    goth_config = load_yaml(goth_config_path, config_overrides)
+
+    requestor_path = project_dir / "examples" / "simple-service-poc" / "simple_service.py"
 
     runner = Runner(
         base_log_dir=log_dir,

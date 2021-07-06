@@ -49,6 +49,11 @@ def log_dir() -> Path:
     return log_dir
 
 
+@pytest.fixture(scope="session")
+def goth_config_path(project_dir) -> Path:
+    return project_dir / "tests" / "goth_tests" / "assets" / "goth-config.yml"
+
+
 @pytest.fixture()
 def blender_vm_package():
     async def coro():

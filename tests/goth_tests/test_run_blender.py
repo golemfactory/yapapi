@@ -1,11 +1,12 @@
 import logging
 import os
 from pathlib import Path
+from typing import List
 
 import pytest
 
 from goth.assertions import EventStream
-from goth.configuration import load_yaml
+from goth.configuration import load_yaml, Override
 from goth.runner.log import configure_logging
 from goth.runner import Runner
 from goth.runner.probe import RequestorProbe
@@ -33,12 +34,12 @@ async def assert_all_tasks_computed(output_lines: EventStream[str]):
 
 
 @pytest.mark.asyncio
-async def test_run_blender(log_dir: Path, project_dir: Path, config_overrides) -> None:
+async def test_run_blender(
+    project_dir: Path, log_dir: Path, goth_config_path: Path, config_overrides: List[Override]
+) -> None:
 
     # This is the default configuration with 2 wasm/VM providers
-    goth_config = load_yaml(
-        Path(__file__).parent / "assets" / "goth-config.yml", overrides=config_overrides
-    )
+    goth_config = load_yaml(goth_config_path, config_overrides)
 
     blender_path = project_dir / "examples" / "blender" / "blender.py"
 
