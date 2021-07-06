@@ -107,6 +107,7 @@ jobs:
           DISCORD_AVATAR: https://i.imgur.com/EOX16Mx.jpg
           DISCORD_USERNAME: 'Goth night watch'
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          REPO_NAME: ${{ github.repository }}
           WORKFLOW_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         with:
-          args: 'Goth nightly run failed for `{{ EVENT_PAYLOAD.repository.full_name }}` on branch `{{ BRANCH_NAME }}`! {{ WORKFLOW_URL }}'
+          args: 'Goth nightly run failed for `{{ REPO_NAME }}` on branch `{{ BRANCH_NAME }}`! {{ WORKFLOW_URL }}'
