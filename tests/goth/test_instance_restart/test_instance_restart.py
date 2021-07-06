@@ -55,6 +55,3 @@ async def test_instance_restart(project_dir: Path, log_dir: Path, config_overrid
             )
             await cmd_monitor.wait_for_pattern("STARTING$", timeout=20)
             await cmd_monitor.wait_for_pattern("RUNNING$", timeout=20)
-            await cmd_monitor.wait_for_pattern(
-                r".*INFO yapapi\.services\] .* decommissioned$", timeout=20
-            )
