@@ -16,4 +16,4 @@ async def test_autodecorating_model():
     demand = DemandBuilder()
     await foo.decorate_demand(demand)
     assert demand.properties == {"some.bar": "a nice one"}
-    assert demand.constraints == "(((baz<=50)))"
+    assert demand.constraints == "(baz<=50)"

@@ -22,5 +22,5 @@ async def test_payload():
     assert builder.properties == {"golem.srv.app.foo.port": 1234}
     assert (
         builder.constraints
-        == "((&(golem.runtime.name=foo)\n\t(golem.inf.mem.gib>=32)\n\t(golem.inf.storage.gib>=1024)))"
+        == "(&(golem.runtime.name=foo)\n\t(golem.inf.mem.gib>=32)\n\t(golem.inf.storage.gib>=1024))"
     )
