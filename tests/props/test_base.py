@@ -77,19 +77,19 @@ def test_constraint_model_serialize():
         (
             FooToo,
             "!",
-            "(!((baz=21)))",
+            "(!(baz=21))",
             False,
         ),
         (
             FooToo,
             "&",
-            "((baz=21))",
+            "(baz=21)",
             False,
         ),
         (
             FooToo,
             "|",
-            "((baz=21))",
+            "(baz=21)",
             False,
         ),
         (

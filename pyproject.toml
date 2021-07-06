@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "yapapi"
-version = "0.6.1"
+version = "0.6.2-alpha.0"
 description = "High-level Python API for the New Golem"
 authors = ["Przemysław K. Rekucki <przemyslaw.rekucki@golem.network>", "GolemFactory <contact@golem.network>"]
 license = "LGPL-3.0-or-later"
@@ -44,7 +44,7 @@ colorama = "^0.4.4"
 # It will be then installable with `poetry install -E integration-tests`.
 # Note that putting `goth` in `poetry.dev-dependencies` instead of `poetry.dependencies`
 # would not work: see https://github.com/python-poetry/poetry/issues/129.
-goth = { version = "^0.4", optional = true, python = "^3.8.0" }
+goth = { version = "^0.5", optional = true, python = "^3.8.0" }
 Deprecated = "^1.2.12"
 python-statemachine = "^0.8.0"
 
