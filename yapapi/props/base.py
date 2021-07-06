@@ -318,7 +318,7 @@ def join_str_constraints(constraints: List[str], operator: ConstraintGroupOperat
     """
     if operator == "!":
         if len(constraints) == 1:
-            return f"({operator}({constraints[0]}))"
+            return f"({operator}{constraints[0]})"
         else:
             raise ConstraintException(f"{operator} requires exactly one component.")
 
@@ -326,7 +326,7 @@ def join_str_constraints(constraints: List[str], operator: ConstraintGroupOperat
         return f"({operator})"
 
     if len(constraints) == 1:
-        return f"({constraints[0]})"
+        return f"{constraints[0]}"
 
     rules = "\n\t".join(constraints)
     return f"({operator}{rules})"
