@@ -511,7 +511,7 @@ class Cluster(AsyncContextManager):
         except asyncio.CancelledError:
             pass
 
-        logger.info("%s decomissioned", instance.service)
+        logger.info("%s decommissioned", instance.service)
 
     async def spawn_instance(self) -> None:
         """Spawn a new service instance within this Cluster.

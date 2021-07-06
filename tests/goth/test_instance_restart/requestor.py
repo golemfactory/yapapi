@@ -73,7 +73,7 @@ async def main():
 
 
 if __name__ == "__main__":
-
+    now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     enable_default_logger(
         log_file=f"test-instance-restart-{now}.log",
         debug_activity_api=True,
