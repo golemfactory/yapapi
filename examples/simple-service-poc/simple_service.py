@@ -39,7 +39,7 @@ class SimpleService(Service):
     SIMPLE_SERVICE = "/golem/run/simple_service.py"
     SIMPLE_SERVICE_CTL = "/golem/run/simulate_observations_ctl.py"
 
-    def __init__(self, *args, instance_name, show_usage: bool = False, **kwargs):
+    def __init__(self, *args, instance_name: str, show_usage: bool = False, **kwargs):
         super().__init__(*args, **kwargs)
         self.name = instance_name
         self._show_usage = show_usage
