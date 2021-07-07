@@ -30,6 +30,8 @@ from utils import (
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_RED,
     TEXT_COLOR_YELLOW,
+    TEXT_COLOR_MAGENTA,
+    format_usage,
 )
 
 STARTING_TIMEOUT = timedelta(minutes=4)
@@ -83,16 +85,32 @@ class SimpleService(Service):
             yield steps
 
             if self._show_usage:
-                print(f" --- {self.name} USAGE: {await self._ctx.get_usage()}")
-                print(f" --- {self.name} STATE: {await self._ctx.get_state()}")
-                print(f" --- {self.name}  COST: {await self._ctx.get_cost()}")
+                print(
+                    f"{TEXT_COLOR_MAGENTA}"
+                    f" --- {self.name} STATE: {await self._ctx.get_raw_state()}"
+                    f"{TEXT_COLOR_DEFAULT}"
+                )
+                print(
+                    f"{TEXT_COLOR_MAGENTA}"
+                    f" --- {self.name} USAGE: {format_usage(await self._ctx.get_usage())}"
+                    f"{TEXT_COLOR_DEFAULT}"
+                )
+                print(
+                    f"{TEXT_COLOR_MAGENTA}"
+                    f" --- {self.name}  COST: {await self._ctx.get_cost()}"
+                    f"{TEXT_COLOR_DEFAULT}"
+                )
 
     async def shutdown(self):
         # handler reponsible for executing operations on shutdown
         self._ctx.run(self.SIMPLE_SERVICE_CTL, "--stop")
         yield self._ctx.commit()
         if self._show_usage:
-            print(f" --- {self.name}  COST: {await self._ctx.get_cost()}")
+            print(
+                f"{TEXT_COLOR_MAGENTA}"
+                f" --- {self.name}  COST: {await self._ctx.get_cost()}"
+                f"{TEXT_COLOR_DEFAULT}"
+            )
 
 
 async def main(

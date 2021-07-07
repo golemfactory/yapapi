@@ -61,6 +61,7 @@ else:
 from yapapi import events, __version__ as yapapi_version
 from yapapi.services import MAX_AGREEMENT_EXPIRATION, MIN_AGREEMENT_EXPIRATION
 from yapapi.rest.activity import CommandExecutionError
+from yapapi.utils import get_local_timezone
 
 event_logger = logging.getLogger("yapapi.events")
 executor_logger = logging.getLogger("yapapi.executor")
@@ -74,7 +75,7 @@ REPORT_CONFIRMED_PROVIDERS_INTERVAL: Final[float] = 3.0
 class _YagnaDatetimeFormatter(logging.Formatter):
     """Custom log Formatter that formats datetime using the same convention yagna uses."""
 
-    LOCAL_TZ = datetime.now(timezone.utc).astimezone().tzinfo
+    LOCAL_TZ = get_local_timezone()
 
     def formatTime(self, record: logging.LogRecord, datefmt=None):
         """Format datetime; example: `2021-06-11T14:55:43.156.123+0200`."""

@@ -25,6 +25,8 @@ from utils import (
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_RED,
     TEXT_COLOR_YELLOW,
+    TEXT_COLOR_MAGENTA,
+    format_usage,
 )
 
 
@@ -79,9 +81,21 @@ async def main(subnet_tag, driver=None, network=None, show_usage=False):
                 raise
 
             if show_usage:
-                print(f" --- {ctx.provider_name} USAGE: {await ctx.get_usage()}")
-                print(f" --- {ctx.provider_name} STATE: {await ctx.get_state()}")
-                print(f" --- {ctx.provider_name}  COST: {await ctx.get_cost()}")
+                print(
+                    f"{TEXT_COLOR_MAGENTA}"
+                    f" --- {ctx.provider_name} STATE: {await ctx.get_raw_state()}"
+                    f"{TEXT_COLOR_DEFAULT}"
+                )
+                print(
+                    f"{TEXT_COLOR_MAGENTA}"
+                    f" --- {ctx.provider_name} USAGE: {format_usage(await ctx.get_usage())}"
+                    f"{TEXT_COLOR_DEFAULT}"
+                )
+                print(
+                    f"{TEXT_COLOR_MAGENTA}"
+                    f" --- {ctx.provider_name}  COST: {await ctx.get_cost()}"
+                    f"{TEXT_COLOR_DEFAULT}"
+                )
 
     # Iterator over the frame indices that we want to render
     frames: range = range(0, 60, 10)
