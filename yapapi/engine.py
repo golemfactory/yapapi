@@ -520,11 +520,10 @@ class _Engine(AsyncContextManager):
                 else None
             )
 
-            await batch.prepare()
             cc = CommandContainer()
-            batch.register(cc)
-
             try:
+                await batch.prepare()
+                batch.register(cc)
                 remote = await activity.send(cc.commands(), deadline=batch_deadline)
             except Exception:
                 item = await command_generator.athrow(*sys.exc_info())
