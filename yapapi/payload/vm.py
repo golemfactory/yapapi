@@ -1,4 +1,3 @@
-import aiohttp
 from dns.exception import DNSException
 from dataclasses import dataclass, field
 from enum import Enum
@@ -7,7 +6,12 @@ from typing import Optional
 from typing_extensions import Final
 from srvresolver.srv_resolver import SRVResolver, SRVRecord  # type: ignore
 
-from yapapi.payload.package import Package, PackageException
+from yapapi.payload.package import (
+    Package,
+    PackageException,
+    resolve_package_url,
+    resolve_package_repo_url,
+)
 from yapapi.props import base as prop_base
 from yapapi.props.builder import DemandBuilder
 from yapapi.props import inf
@@ -55,17 +59,13 @@ class _VmConstraints:
 class _VmPackage(Package):
     repo_url: str
     image_hash: str
+    image_url: Optional[str]
     constraints: _VmConstraints
 
     async def resolve_url(self) -> str:
-        async with aiohttp.ClientSession() as client:
-            resp = await client.get(f"{self.repo_url}/image.{self.image_hash}.link")
-            if resp.status != 200:
-                resp.raise_for_status()
-
-            image_url = await resp.text()
-            image_hash = self.image_hash
-            return f"hash:sha3:{image_hash}:{image_url}"
+        if not self.image_url:
+            return await resolve_package_repo_url(self.repo_url, self.image_hash)
+        return await resolve_package_url(self.image_url, self.image_hash)
 
     async def decorate_demand(self, demand: DemandBuilder):
         image_url = await self.resolve_url()
@@ -76,6 +76,7 @@ class _VmPackage(Package):
 async def repo(
     *,
     image_hash: str,
+    image_url: Optional[str] = None,
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,
     min_cpu_threads: int = 1,
@@ -84,6 +85,7 @@ async def repo(
     Build a reference to application package.
 
     :param image_hash: hash of the package's image
+    :param image_url: URL of the package's image
     :param min_mem_gib: minimal memory required to execute application code
     :param min_storage_gib: minimal disk storage to execute tasks
     :param min_cpu_threads: minimal available logical CPU cores
@@ -92,6 +94,7 @@ async def repo(
     return _VmPackage(
         repo_url=resolve_repo_srv(_DEFAULT_REPO_SRV),
         image_hash=image_hash,
+        image_url=image_url,
         constraints=_VmConstraints(min_mem_gib, min_storage_gib, min_cpu_threads),
     )
 
