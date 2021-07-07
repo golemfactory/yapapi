@@ -95,7 +95,9 @@ class SimpleService(Service):
             print(f" --- {self.name}  COST: {await self._ctx.get_cost()}")
 
 
-async def main(subnet_tag, running_time, driver=None, network=None, num_instances=1, show_usage=False):
+async def main(
+    subnet_tag, running_time, driver=None, network=None, num_instances=1, show_usage=False
+):
     async with Golem(
         budget=1.0,
         subnet_tag=subnet_tag,
@@ -123,7 +125,8 @@ async def main(subnet_tag, running_time, driver=None, network=None, num_instance
         cluster = await golem.run_service(
             SimpleService,
             instance_params=[
-                {"instance_name": f"simple-service-{i+1}", "show_usage": show_usage} for i in range(num_instances)
+                {"instance_name": f"simple-service-{i+1}", "show_usage": show_usage}
+                for i in range(num_instances)
             ],
             expiration=datetime.now(timezone.utc) + timedelta(minutes=120),
         )
@@ -187,8 +190,17 @@ if __name__ == "__main__":
             "(in seconds, default: %(default)s)"
         ),
     )
-    parser.add_argument("--num-instances", type=int, default=1, help="The number of instances of the service to spawn")
-    parser.add_argument("--show-usage", action="store_true", help="Show usage and cost of each instance while running.")
+    parser.add_argument(
+        "--num-instances",
+        type=int,
+        default=1,
+        help="The number of instances of the service to spawn",
+    )
+    parser.add_argument(
+        "--show-usage",
+        action="store_true",
+        help="Show usage and cost of each instance while running.",
+    )
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     parser.set_defaults(log_file=f"simple-service-yapapi-{now}.log")
     args = parser.parse_args()
