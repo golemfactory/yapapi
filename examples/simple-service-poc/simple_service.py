@@ -32,13 +32,16 @@ from utils import (
     TEXT_COLOR_YELLOW,
 )
 
-NUM_INSTANCES = 1
 STARTING_TIMEOUT = timedelta(minutes=4)
 
 
 class SimpleService(Service):
     SIMPLE_SERVICE = "/golem/run/simple_service.py"
     SIMPLE_SERVICE_CTL = "/golem/run/simulate_observations_ctl.py"
+
+    def __init__(self, *args, instance_name, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.name = instance_name
 
     @staticmethod
     async def get_payload():
@@ -78,13 +81,18 @@ class SimpleService(Service):
             steps = self._ctx.commit()
             yield steps
 
+            print(f" --- {self._ctx.provider_name} USAGE: {await self._ctx.get_usage()}")
+            print(f" --- {self._ctx.provider_name} STATE: {await self._ctx.get_state()}")
+            print(f" --- {self._ctx.provider_name}  COST: {await self._ctx.get_cost()}")
+
     async def shutdown(self):
         # handler reponsible for executing operations on shutdown
         self._ctx.run(self.SIMPLE_SERVICE_CTL, "--stop")
         yield self._ctx.commit()
+        print(f" --- {self._ctx.provider_name}  COST: {await self._ctx.get_cost()}")
 
 
-async def main(subnet_tag, running_time, driver=None, network=None):
+async def main(subnet_tag, running_time, driver=None, network=None, num_instances=1):
     async with Golem(
         budget=1.0,
         subnet_tag=subnet_tag,
@@ -103,7 +111,7 @@ async def main(subnet_tag, running_time, driver=None, network=None):
 
         print(
             f"{TEXT_COLOR_YELLOW}"
-            f"Starting {pluralize(NUM_INSTANCES, 'instance')}..."
+            f"Starting {pluralize(num_instances, 'instance')}..."
             f"{TEXT_COLOR_DEFAULT}"
         )
 
@@ -111,20 +119,22 @@ async def main(subnet_tag, running_time, driver=None, network=None):
 
         cluster = await golem.run_service(
             SimpleService,
-            num_instances=NUM_INSTANCES,
+            instance_params=[
+                {"instance_name": f"simple-service-{i+1}"} for i in range(num_instances)
+            ],
             expiration=datetime.now(timezone.utc) + timedelta(minutes=120),
         )
 
         # helper functions to display / filter instances
 
         def instances():
-            return [(s.provider_name, s.state.value) for s in cluster.instances]
+            return [f"{s.name}: {s.state.value} on {s.provider_name}" for s in cluster.instances]
 
         def still_running():
             return any([s for s in cluster.instances if s.is_available])
 
         def still_starting():
-            return len(cluster.instances) < NUM_INSTANCES or any(
+            return len(cluster.instances) < num_instances or any(
                 [s for s in cluster.instances if s.state == ServiceState.starting]
             )
 
@@ -174,6 +184,7 @@ if __name__ == "__main__":
             "(in seconds, default: %(default)s)"
         ),
     )
+    parser.add_argument("--num-instances", type=int, default=1)
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     parser.set_defaults(log_file=f"simple-service-yapapi-{now}.log")
     args = parser.parse_args()
@@ -195,6 +206,7 @@ if __name__ == "__main__":
             running_time=args.running_time,
             driver=args.driver,
             network=args.network,
+            num_instances=args.num_instances,
         )
     )
 

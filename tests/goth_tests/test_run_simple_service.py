@@ -57,7 +57,7 @@ async def test_run_simple_service(
             cmd_monitor.add_assertion(assert_all_invoices_accepted)
 
             await cmd_monitor.wait_for_pattern("Starting 1 instance", timeout=20)
-            await cmd_monitor.wait_for_pattern("instances:.*'starting'", timeout=20)
+            await cmd_monitor.wait_for_pattern("instances:.*starting", timeout=20)
             logger.info(f"The instance is starting ({elapsed_time()})")
 
             # A longer timeout to account for downloading a VM image
@@ -65,7 +65,7 @@ async def test_run_simple_service(
             logger.info(f"The instance was started successfully ({elapsed_time()})")
 
             for _ in range(3):
-                await cmd_monitor.wait_for_pattern("instances:.*'running'", timeout=20)
+                await cmd_monitor.wait_for_pattern("instances:.*running", timeout=20)
                 logger.info("The instance is running")
 
             await cmd_monitor.wait_for_pattern("Stopping instances", timeout=60)

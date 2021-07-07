@@ -10,7 +10,7 @@ from typing_extensions import Awaitable, AsyncContextManager
 from ya_market import ApiClient, ApiException, RequestorApi, models  # type: ignore
 
 from .common import is_intermittent_error, SuppressedExceptions
-from ..props import Model
+from ..props import Model, NodeInfo
 
 
 _ModelType = TypeVar("_ModelType", bound=Model)
@@ -43,6 +43,14 @@ class AgreementDetails(object):
         demand: models.Demand = self.raw_details.demand
         return self.View(properties=demand.properties)
 
+    @property
+    def agreement_id(self):
+        return self.raw_details.agreement_id
+
+    @property
+    def provider_node_info(self) -> NodeInfo:
+        return self.provider_view.extract(NodeInfo)
+
     def __init__(self, *, _ref: models.Agreement):
         self.raw_details = _ref
 
@@ -54,13 +62,19 @@ class Agreement(object):
         self._api = api
         self._subscription = subscription
         self._id = agreement_id
+        self._details: Optional[AgreementDetails] = None
 
     @property
     def id(self) -> str:
         return self._id
 
-    async def details(self) -> AgreementDetails:
-        return AgreementDetails(_ref=await self._api.get_agreement(self._id))
+    async def details(self, force_refresh=False) -> AgreementDetails:
+        """Retrieve and cache the details of the Agreement.
+        :param force_refresh: if set to True, the API call to get the details will always be made
+        """
+        if not self._details or force_refresh:
+            self._details = AgreementDetails(_ref=await self._api.get_agreement(self._id))
+        return self._details
 
     async def confirm(self) -> bool:
         """Sign and send the agreement to the provider and then wait for it to be approved.
