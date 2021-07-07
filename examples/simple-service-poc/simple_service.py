@@ -41,6 +41,9 @@ class SimpleService(Service):
     SIMPLE_SERVICE = "/golem/run/simple_service.py"
     SIMPLE_SERVICE_CTL = "/golem/run/simulate_observations_ctl.py"
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self.name}>"
+
     def __init__(self, *args, instance_name: str, show_usage: bool = False, **kwargs):
         super().__init__(*args, **kwargs)
         self.name = instance_name

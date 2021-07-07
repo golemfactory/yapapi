@@ -1,7 +1,7 @@
 import abc
 import enum
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta, datetime
 import logging
 from os import PathLike
@@ -9,10 +9,13 @@ from functools import partial
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union, Any, Awaitable
 
-from ya_activity.models import ActivityUsage, ActivityState
+from ya_activity.models import (
+    ActivityUsage as yaa_ActivityUsage,
+    ActivityState as yaa_ActivityState,
+)
 
 from yapapi.events import DownloadStarted, DownloadFinished
-from yapapi.props.com import ComLinear
+from yapapi.props.com import ComLinear, Counter
 from yapapi.storage import StorageProvider, Source, Destination, DOWNLOAD_BYTES_LIMIT_DEFAULT
 from yapapi.rest.market import AgreementDetails
 from yapapi.rest.activity import Activity
@@ -470,26 +473,24 @@ class WorkContext:
         self._pending_steps = []
         return Steps(*steps, timeout=timeout)
 
-    async def get_raw_usage(self) -> ActivityUsage:
+    async def get_raw_usage(self) -> yaa_ActivityUsage:
         """Get the raw usage vector for the activity bound to this work context.
         The value comes directly from the low level API and is not interpreted in any way."""
         usage = await self._activity.usage()
         logger.debug(f"WorkContext raw usage: id={self.id}, usage={usage}")
         return usage
 
-    async def get_usage(self):
+    async def get_usage(self) -> "ActivityUsage":
         """Get the current usage for the activity bound to this work context."""
         raw_usage = await self.get_raw_usage()
-        usage = {}
+        usage = ActivityUsage()
         if raw_usage.current_usage:
-            usage["current_usage"] = self._payment_model.usage_as_dict(raw_usage.current_usage)
+            usage.current_usage = self._payment_model.usage_as_dict(raw_usage.current_usage)
         if raw_usage.timestamp:
-            usage["timestamp"] = datetime.fromtimestamp(
-                raw_usage.timestamp, tz=get_local_timezone()
-            )
+            usage.timestamp = datetime.fromtimestamp(raw_usage.timestamp, tz=get_local_timezone())
         return usage
 
-    async def get_raw_state(self) -> ActivityState:
+    async def get_raw_state(self) -> yaa_ActivityState:
         """Get the state activity bound to this work context.
         The value comes directly from the low level API and is not interpreted in any way."""
         return await self._activity.state()
@@ -556,3 +557,11 @@ class CaptureContext:
 
     def is_streaming(self) -> bool:
         return self.mode == CaptureMode.STREAM
+
+
+@dataclass
+class ActivityUsage:
+    """A high-level representation of activity usage record."""
+
+    current_usage: Dict[Counter, float] = field(default_factory=dict)
+    timestamp: Optional[datetime] = None
