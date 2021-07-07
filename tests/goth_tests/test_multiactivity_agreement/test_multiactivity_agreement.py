@@ -4,6 +4,7 @@ import logging
 import os
 from pathlib import Path
 import re
+from typing import List
 
 import pytest
 
@@ -49,7 +50,11 @@ async def assert_multiple_workers_run(agr_id, events):
 
 
 @pytest.mark.asyncio
-async def test_multiactivity_agreement(project_dir: Path, log_dir: Path, config_overrides) -> None:
+async def test_multiactivity_agreement(
+    log_dir: Path,
+    goth_config_path: Path,
+    config_overrides: List[goth.configuration.Override],
+) -> None:
 
     configure_logging(log_dir)
 
@@ -59,10 +64,7 @@ async def test_multiactivity_agreement(project_dir: Path, log_dir: Path, config_
         {"name": "provider-1", "type": "VM-Wasm-Provider", "use-proxy": True},
     ]
     config_overrides.append(("nodes", nodes))
-    goth_config = goth.configuration.load_yaml(
-        project_dir / "tests" / "goth" / "assets" / "goth-config.yml",
-        config_overrides,
-    )
+    goth_config = goth.configuration.load_yaml(goth_config_path, config_overrides)
 
     runner = Runner(base_log_dir=log_dir, compose_config=goth_config.compose_config)
 

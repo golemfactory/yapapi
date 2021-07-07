@@ -44,7 +44,7 @@ colorama = "^0.4.4"
 # It will be then installable with `poetry install -E integration-tests`.
 # Note that putting `goth` in `poetry.dev-dependencies` instead of `poetry.dependencies`
 # would not work: see https://github.com/python-poetry/poetry/issues/129.
-goth = { version = "^0.4", optional = true, python = "^3.8.0" }
+goth = { version = "^0.5", optional = true, python = "^3.8.0" }
 Deprecated = "^1.2.12"
 python-statemachine = "^0.8.0"
 
@@ -105,9 +105,9 @@ ya-client-payment = "0.1.0"
 ya-market = "0.1.0"
 
 [tool.poe.tasks]
-test = "pytest --cov=yapapi --ignore tests/goth"
-goth-assets = "python -m goth create-assets tests/goth/assets"
-goth-tests = "pytest -svx tests/goth"
+test = "pytest --cov=yapapi --ignore tests/goth_tests"
+goth-assets = "python -m goth create-assets tests/goth_tests/assets"
+goth-tests = "pytest -svx tests/goth_tests"
 typecheck = "mypy ."
 codestyle = "black --check --diff ."
 _liccheck_export = "poetry export -E cli -f requirements.txt -o .requirements.txt"

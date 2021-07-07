@@ -4,10 +4,11 @@ import logging
 import os
 from pathlib import Path
 import re
+from typing import List
 
 import pytest
 
-from goth.configuration import load_yaml
+from goth.configuration import load_yaml, Override
 from goth.runner.log import configure_logging
 from goth.runner import Runner
 from goth.runner.probe import RequestorProbe
@@ -59,16 +60,13 @@ async def assert_all_tasks_computed(stream):
 
 @pytest.mark.asyncio
 async def test_agreement_termination(
-    project_dir: Path,
     log_dir: Path,
-    config_overrides,
+    goth_config_path: Path,
+    config_overrides: List[Override],
 ) -> None:
 
     # This is the default configuration with 2 wasm/VM providers
-    goth_config = load_yaml(
-        project_dir / "tests" / "goth" / "assets" / "goth-config.yml",
-        config_overrides,
-    )
+    goth_config = load_yaml(goth_config_path, config_overrides)
     test_script_path = str(Path(__file__).parent / "requestor.py")
 
     configure_logging(log_dir)

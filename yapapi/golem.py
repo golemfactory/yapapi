@@ -200,9 +200,6 @@ class Golem(_Engine):
                     await asyncio.sleep(REFRESH_INTERVAL_SEC)
         ```
         """
-
-        from .services import Cluster  # avoid circular dependency
-
         payload = payload or await service_class.get_payload()
 
         if not payload:

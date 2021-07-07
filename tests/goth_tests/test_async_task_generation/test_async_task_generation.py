@@ -1,6 +1,7 @@
 import logging
 import os
 from pathlib import Path
+from typing import List
 
 import pytest
 
@@ -14,7 +15,11 @@ logger = logging.getLogger("goth.test.async_task_generation")
 
 
 @pytest.mark.asyncio
-async def test_async_task_generation(project_dir: Path, log_dir: Path, config_overrides) -> None:
+async def test_async_task_generation(
+    log_dir: Path,
+    goth_config_path: Path,
+    config_overrides: List[goth.configuration.Override],
+) -> None:
     """Run the `requestor.py` and make sure that it's standard output is as expected."""
 
     configure_logging(log_dir)
@@ -25,10 +30,7 @@ async def test_async_task_generation(project_dir: Path, log_dir: Path, config_ov
         {"name": "provider-1", "type": "VM-Wasm-Provider", "use-proxy": True},
     ]
     config_overrides.append(("nodes", nodes))
-    goth_config = goth.configuration.load_yaml(
-        project_dir / "tests" / "goth" / "assets" / "goth-config.yml",
-        config_overrides,
-    )
+    goth_config = goth.configuration.load_yaml(goth_config_path, config_overrides)
 
     runner = Runner(base_log_dir=log_dir, compose_config=goth_config.compose_config)
 

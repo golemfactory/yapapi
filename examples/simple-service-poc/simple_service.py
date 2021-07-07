@@ -92,7 +92,7 @@ class SimpleService(Service):
         print(f" --- {self._ctx.provider_name}  COST: {await self._ctx.get_cost()}")
 
 
-async def main(subnet_tag, driver=None, network=None, num_instances=1):
+async def main(subnet_tag, running_time, driver=None, network=None, num_instances=1):
     async with Golem(
         budget=1.0,
         subnet_tag=subnet_tag,
@@ -110,7 +110,9 @@ async def main(subnet_tag, driver=None, network=None, num_instances=1):
         commissioning_time = datetime.now()
 
         print(
-            f"{TEXT_COLOR_YELLOW}starting {pluralize(num_instances, 'instance')}{TEXT_COLOR_DEFAULT}"
+            f"{TEXT_COLOR_YELLOW}"
+            f"Starting {pluralize(num_instances, 'instance')}..."
+            f"{TEXT_COLOR_DEFAULT}"
         )
 
         # start the service
@@ -145,18 +147,18 @@ async def main(subnet_tag, driver=None, network=None, num_instances=1):
         if still_starting():
             raise Exception(f"Failed to start instances before {STARTING_TIMEOUT} elapsed :( ...")
 
-        print("All instances started :)")
+        print(f"{TEXT_COLOR_YELLOW}All instances started :){TEXT_COLOR_DEFAULT}")
 
         # allow the service to run for a short while
         # (and allowing its requestor-end handlers to interact with it)
 
         start_time = datetime.now()
 
-        while datetime.now() < start_time + timedelta(minutes=2):
+        while datetime.now() < start_time + timedelta(seconds=running_time):
             print(f"instances: {instances()}")
             await asyncio.sleep(5)
 
-        print(f"{TEXT_COLOR_YELLOW}stopping instances{TEXT_COLOR_DEFAULT}")
+        print(f"{TEXT_COLOR_YELLOW}Stopping instances...{TEXT_COLOR_DEFAULT}")
         cluster.stop()
 
         # wait for instances to stop
@@ -172,6 +174,15 @@ async def main(subnet_tag, driver=None, network=None, num_instances=1):
 if __name__ == "__main__":
     parser = build_parser(
         "A very simple / POC example of a service running on Golem, utilizing the VM runtime"
+    )
+    parser.add_argument(
+        "--running-time",
+        default=120,
+        type=int,
+        help=(
+            "How long should the instance run before the cluster is stopped "
+            "(in seconds, default: %(default)s)"
+        ),
     )
     parser.add_argument("--num-instances", type=int, default=1)
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
@@ -192,6 +203,7 @@ if __name__ == "__main__":
     task = loop.create_task(
         main(
             subnet_tag=args.subnet_tag,
+            running_time=args.running_time,
             driver=args.driver,
             network=args.network,
             num_instances=args.num_instances,

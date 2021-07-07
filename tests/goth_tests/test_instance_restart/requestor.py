@@ -6,14 +6,9 @@ sends an error command in its `start()` method which results in the instance's
 termination before going to the `running` state.
 """
 import asyncio
-from datetime import datetime, timedelta
-import pathlib
-import sys
-from types import TracebackType
-from typing import Optional, Type
+from datetime import datetime
 
 from yapapi import Golem
-from yapapi.rest.activity import CommandExecutionError, BatchTimeoutError
 from yapapi.services import Service
 
 from yapapi.log import enable_default_logger, log_summary, log_event_repr, pluralize  # noqa
@@ -73,7 +68,7 @@ async def main():
 
 
 if __name__ == "__main__":
-
+    now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     enable_default_logger(
         log_file=f"test-instance-restart-{now}.log",
         debug_activity_api=True,
