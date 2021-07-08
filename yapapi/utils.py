@@ -1,5 +1,6 @@
 """Utility functions and classes used within the `yapapi.executor` package."""
 import asyncio
+from datetime import datetime, timezone, tzinfo
 import logging
 from typing import AsyncContextManager, Callable, Optional
 import warnings
@@ -87,3 +88,7 @@ def show_module_deprecation_warning(old_module: str, new_module: str, since_vers
         category=DeprecationWarning,
         stacklevel=2,
     )
+
+
+def get_local_timezone() -> Optional[tzinfo]:
+    return datetime.now(timezone.utc).astimezone().tzinfo
