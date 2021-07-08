@@ -6,6 +6,8 @@ import random
 import sys
 from typing import Dict, NamedTuple, Optional, Set, Tuple, Callable
 
+import aiohttp
+
 from yapapi import events
 from yapapi.props import Activity, NodeInfo
 from yapapi.rest.market import Agreement, AgreementDetails, ApiException, OfferProposal
@@ -134,7 +136,7 @@ class AgreementsPool:
                     agr_id=agreement.id, provider_id=provider_id, provider_info=node_info
                 )
             )
-        except (ApiException, asyncio.TimeoutError):
+        except (ApiException, asyncio.TimeoutError, aiohttp.ClientOSError):
             logger.debug("Cannot get agreement details. id: %s", agreement.id, exc_info=True)
             emit(events.AgreementRejected(agr_id=agreement.id))
             return None
@@ -185,7 +187,7 @@ class AgreementsPool:
         try:
             agreement_details = await buffered_agreement.agreement.details()
             provider = agreement_details.provider_view.extract(NodeInfo).name
-        except (ApiException, asyncio.TimeoutError):
+        except (ApiException, asyncio.TimeoutError, aiohttp.ClientOSError):
             logger.debug("Cannot get details for agreement %s", agreement_id, exc_info=True)
             provider = "<couldn't get provider name>"
 
