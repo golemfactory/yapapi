@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "yapapi"
-version = "0.6.2-alpha.0"
+version = "0.6.2"
 description = "High-level Python API for the New Golem"
 authors = ["Przemysław K. Rekucki <przemyslaw.rekucki@golem.network>", "GolemFactory <contact@golem.network>"]
 license = "LGPL-3.0-or-later"
@@ -105,9 +105,9 @@ ya-client-payment = "0.1.0"
 ya-market = "0.1.0"
 
 [tool.poe.tasks]
-test = "pytest --cov=yapapi --ignore tests/goth"
-goth-assets = "python -m goth create-assets tests/goth/assets"
-goth-tests = "pytest -svx tests/goth"
+test = "pytest --cov=yapapi --ignore tests/goth_tests"
+goth-assets = "python -m goth create-assets tests/goth_tests/assets"
+goth-tests = "pytest -svx tests/goth_tests"
 typecheck = "mypy ."
 codestyle = "black --check --diff ."
 _liccheck_export = "poetry export -E cli -f requirements.txt -o .requirements.txt"
