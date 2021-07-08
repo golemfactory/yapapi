@@ -1,8 +1,8 @@
 import abc
-import enum
-import json
 from dataclasses import dataclass, field
 from datetime import timedelta, datetime
+import enum
+import json
 import logging
 from os import PathLike
 from functools import partial
@@ -475,13 +475,17 @@ class WorkContext:
 
     async def get_raw_usage(self) -> yaa_ActivityUsage:
         """Get the raw usage vector for the activity bound to this work context.
-        The value comes directly from the low level API and is not interpreted in any way."""
+
+        The value comes directly from the low level API and is not interpreted in any way.
+        """
+
         usage = await self._activity.usage()
         logger.debug(f"WorkContext raw usage: id={self.id}, usage={usage}")
         return usage
 
     async def get_usage(self) -> "ActivityUsage":
         """Get the current usage for the activity bound to this work context."""
+
         raw_usage = await self.get_raw_usage()
         usage = ActivityUsage()
         if raw_usage.current_usage:
@@ -492,11 +496,15 @@ class WorkContext:
 
     async def get_raw_state(self) -> yaa_ActivityState:
         """Get the state activity bound to this work context.
-        The value comes directly from the low level API and is not interpreted in any way."""
+
+        The value comes directly from the low level API and is not interpreted in any way.
+        """
+
         return await self._activity.state()
 
     async def get_cost(self) -> Optional[float]:
         """Get the accumulated cost of the activity based on the reported usage."""
+
         usage = await self.get_raw_usage()
         if usage.current_usage:
             return self._payment_model.calculate_cost(usage.current_usage)

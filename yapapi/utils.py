@@ -1,8 +1,8 @@
 """Utility functions and classes used within the `yapapi.executor` package."""
 import asyncio
+from datetime import datetime, timezone, tzinfo
 import logging
 from typing import AsyncContextManager, Callable, Optional
-from datetime import datetime, timezone, tzinfo
 import warnings
 
 
