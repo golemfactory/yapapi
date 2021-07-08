@@ -30,6 +30,8 @@ from utils import (
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_RED,
     TEXT_COLOR_YELLOW,
+    TEXT_COLOR_MAGENTA,
+    format_usage,
 )
 
 STARTING_TIMEOUT = timedelta(minutes=4)
@@ -39,9 +41,13 @@ class SimpleService(Service):
     SIMPLE_SERVICE = "/golem/run/simple_service.py"
     SIMPLE_SERVICE_CTL = "/golem/run/simulate_observations_ctl.py"
 
-    def __init__(self, *args, instance_name, **kwargs):
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self.name}>"
+
+    def __init__(self, *args, instance_name: str, show_usage: bool = False, **kwargs):
         super().__init__(*args, **kwargs)
         self.name = instance_name
+        self._show_usage = show_usage
 
     @staticmethod
     async def get_payload():
@@ -81,18 +87,38 @@ class SimpleService(Service):
             steps = self._ctx.commit()
             yield steps
 
-            print(f" --- {self._ctx.provider_name} USAGE: {await self._ctx.get_usage()}")
-            print(f" --- {self._ctx.provider_name} STATE: {await self._ctx.get_state()}")
-            print(f" --- {self._ctx.provider_name}  COST: {await self._ctx.get_cost()}")
+            if self._show_usage:
+                print(
+                    f"{TEXT_COLOR_MAGENTA}"
+                    f" --- {self.name} STATE: {await self._ctx.get_raw_state()}"
+                    f"{TEXT_COLOR_DEFAULT}"
+                )
+                print(
+                    f"{TEXT_COLOR_MAGENTA}"
+                    f" --- {self.name} USAGE: {format_usage(await self._ctx.get_usage())}"
+                    f"{TEXT_COLOR_DEFAULT}"
+                )
+                print(
+                    f"{TEXT_COLOR_MAGENTA}"
+                    f" --- {self.name}  COST: {await self._ctx.get_cost()}"
+                    f"{TEXT_COLOR_DEFAULT}"
+                )
 
     async def shutdown(self):
         # handler reponsible for executing operations on shutdown
         self._ctx.run(self.SIMPLE_SERVICE_CTL, "--stop")
         yield self._ctx.commit()
-        print(f" --- {self._ctx.provider_name}  COST: {await self._ctx.get_cost()}")
+        if self._show_usage:
+            print(
+                f"{TEXT_COLOR_MAGENTA}"
+                f" --- {self.name}  COST: {await self._ctx.get_cost()}"
+                f"{TEXT_COLOR_DEFAULT}"
+            )
 
 
-async def main(subnet_tag, running_time, driver=None, network=None, num_instances=1):
+async def main(
+    subnet_tag, running_time, driver=None, network=None, num_instances=1, show_usage=False
+):
     async with Golem(
         budget=1.0,
         subnet_tag=subnet_tag,
@@ -120,7 +146,8 @@ async def main(subnet_tag, running_time, driver=None, network=None, num_instance
         cluster = await golem.run_service(
             SimpleService,
             instance_params=[
-                {"instance_name": f"simple-service-{i+1}"} for i in range(num_instances)
+                {"instance_name": f"simple-service-{i+1}", "show_usage": show_usage}
+                for i in range(num_instances)
             ],
             expiration=datetime.now(timezone.utc) + timedelta(minutes=120),
         )
@@ -184,7 +211,17 @@ if __name__ == "__main__":
             "(in seconds, default: %(default)s)"
         ),
     )
-    parser.add_argument("--num-instances", type=int, default=1)
+    parser.add_argument(
+        "--num-instances",
+        type=int,
+        default=1,
+        help="The number of instances of the service to spawn",
+    )
+    parser.add_argument(
+        "--show-usage",
+        action="store_true",
+        help="Show usage and cost of each instance while running.",
+    )
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     parser.set_defaults(log_file=f"simple-service-yapapi-{now}.log")
     args = parser.parse_args()
@@ -207,6 +244,7 @@ if __name__ == "__main__":
             driver=args.driver,
             network=args.network,
             num_instances=args.num_instances,
+            show_usage=args.show_usage,
         )
     )
 

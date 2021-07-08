@@ -39,6 +39,10 @@ class Com(Model):
     def calculate_cost(self, usage: List) -> float:
         """Calculate the cost by applying the provided usage vector to the underlying pricing model."""
 
+    @abc.abstractmethod
+    def usage_as_dict(self, usage: List) -> Dict:
+        """Return usage as a dictionary where keys are the appropriate usage counters."""
+
 
 @dataclass(frozen=True)
 class ComLinear(Com):
@@ -75,3 +79,6 @@ class ComLinear(Com):
     def calculate_cost(self, usage: List):
         usage = usage + [1.0]  # append the "usage" of the fixed component
         return sum([self.linear_coeffs[i] * usage[i] for i in range(len(self.linear_coeffs))])
+
+    def usage_as_dict(self, usage: List) -> Dict[Counter, float]:
+        return {Counter(self.usage_vector[i]): usage[i] for i in range(len(usage))}
