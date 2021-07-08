@@ -5,6 +5,7 @@ import logging
 from types import TracebackType
 from typing import AsyncIterator, Optional, TypeVar, Type, Generator, Any, Generic
 
+import aiohttp
 from typing_extensions import Awaitable, AsyncContextManager
 
 from ya_market import ApiClient, ApiException, RequestorApi, models  # type: ignore
@@ -85,7 +86,7 @@ class Agreement(object):
             await self._api.confirm_agreement(self._id)
             await self._api.wait_for_approval(self._id, timeout=15, _request_timeout=16)
             return True
-        except (ApiException, asyncio.TimeoutError):
+        except (ApiException, asyncio.TimeoutError, aiohttp.ClientOSError):
             logger.debug("waitForApproval(%s) failed", self._id, exc_info=True)
             return False
 
@@ -98,7 +99,7 @@ class Agreement(object):
             await self._api.terminate_agreement(self._id, request_body=reason)
             logger.debug("terminateAgreement(%s) returned successfully", self._id)
             return True
-        except (ApiException, asyncio.TimeoutError):
+        except (ApiException, asyncio.TimeoutError, aiohttp.ClientOSError):
             logger.debug("terminateAgreement(%s) failed", self._id, exc_info=True)
             return False
 
