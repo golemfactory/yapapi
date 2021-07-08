@@ -40,10 +40,10 @@ async def main(subnet_tag, driver=None, network=None):
     async def worker(ctx: WorkContext, tasks):
         async for task in tasks:
             output_file = f"output_{datetime.now()}_{random.random()}.txt"
-            ctx.run("/golem/task.sh", "-o", "1024", "-t", "10")
+            ctx.run("/golem/task.sh", "-o", "1024", "-t", "5")
             ctx.run("/golem/task.sh", "-f", "/golem/output/output.txt,1048576")
             ctx.download_file(f"/golem/output/output.txt", output_file)
-            ctx.run("/golem/task.sh", "-e", "1024", "-t", "10")
+            ctx.run("/golem/task.sh", "-e", "1024", "-t", "5")
 
             try:
                 yield ctx.commit(timeout=timedelta(minutes=10))
