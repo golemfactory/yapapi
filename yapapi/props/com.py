@@ -1,5 +1,6 @@
 """Payment-related properties."""
-from typing import Dict, Any
+import abc
+from typing import Dict, Any, List
 import enum
 from dataclasses import dataclass, field
 from .base import Model, Props, as_list
@@ -27,25 +28,57 @@ class Counter(enum.Enum):
     UNKNOWN = ""
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True)  # type: ignore  # mypy doesn't allow abstract methods in dataclasses
 class Com(Model):
+    """Base model representing the payment model used."""
+
     scheme: BillingScheme = field(metadata={"key": SCHEME})
     price_model: PriceModel = field(metadata={"key": PRICE_MODEL})
+
+    @abc.abstractmethod
+    def calculate_cost(self, usage: List) -> float:
+        """Calculate the cost by applying the provided usage vector to the underlying pricing model."""
+
+    @abc.abstractmethod
+    def usage_as_dict(self, usage: List) -> Dict:
+        """Return usage as a dictionary where keys are the appropriate usage counters."""
 
 
 @dataclass(frozen=True)
 class ComLinear(Com):
-    fixed_price: float
-    price_for: Dict[Counter, float]
+    """Linear payment model."""
+
+    linear_coeffs: List[float] = field(metadata={"key": LINEAR_COEFFS})
+    usage_vector: List[str] = field(metadata={"key": DEFINED_USAGES})
 
     @classmethod
     def _custom_mapping(cls, props: Props, data: Dict[str, Any]):
+        # we don't need mapping per-se but we'll do some validation instead
         assert data["price_model"] == PriceModel.LINEAR, "expected linear pricing model"
+        assert (
+            len(data["linear_coeffs"]) == len(data["usage_vector"]) + 1
+        ), "expecting the number of linear_coeffs to correspond to usage_vector + 1 (fixed price)"
+        assert all(
+            [isinstance(lc, float) for lc in data["linear_coeffs"]]
+        ), "linear_coeffs values must be `float`"
+        assert all(
+            [isinstance(u, str) for u in data["usage_vector"]]
+        ), "usage_vector values must be `str`"
 
-        coeffs = as_list(props[LINEAR_COEFFS])
-        usages = as_list(props[DEFINED_USAGES])
+    @property
+    def fixed_price(self) -> float:
+        return self.linear_coeffs[-1]
 
-        fixed_price = float(coeffs.pop())
-        price_for = ((Counter(usages[i]), float(coeffs[i])) for i in range(len(coeffs)))
+    @property
+    def price_for(self) -> Dict[Counter, float]:
+        return {
+            Counter(self.usage_vector[i]): self.linear_coeffs[i]
+            for i in range(len(self.usage_vector))
+        }
 
-        data.update(fixed_price=fixed_price, price_for=dict(price_for))
+    def calculate_cost(self, usage: List):
+        usage = usage + [1.0]  # append the "usage" of the fixed component
+        return sum([self.linear_coeffs[i] * usage[i] for i in range(len(self.linear_coeffs))])
+
+    def usage_as_dict(self, usage: List) -> Dict[Counter, float]:
+        return {Counter(self.usage_vector[i]): usage[i] for i in range(len(usage))}
