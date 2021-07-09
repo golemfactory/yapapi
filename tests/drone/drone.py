@@ -5,7 +5,7 @@ import pathlib
 import sys
 import random
 
-examples_dir = pathlib.Path(__file__).resolve().parent.parent
+examples_dir = pathlib.Path(__file__).resolve().parents[2] / "examples"
 sys.path.append(str(examples_dir))
 
 from yapapi import (
