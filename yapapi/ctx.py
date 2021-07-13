@@ -95,6 +95,10 @@ class _SendWork(Work, abc.ABC):
             _from=self._src.download_url, _to=f"container:{self._dst_path}"
         )
 
+    async def post(self) -> None:
+        assert self._src is not None
+        await self._storage.release_source(self._src)
+
 
 class _SendBytes(_SendWork):
     def __init__(self, storage: StorageProvider, data: bytes, dst_path: str):

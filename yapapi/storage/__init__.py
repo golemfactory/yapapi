@@ -97,6 +97,12 @@ class InputStorageProvider(abc.ABC):
 
         return await self.upload_stream(file_size, read_file())
 
+    async def release_source(self, source: Source) -> None:
+        """Release a source returned by `upload_file` or `upload_bytes`.
+
+        The default implementation is to do nothing."""
+        pass
+
 
 class OutputStorageProvider(abc.ABC):
     @abc.abstractmethod
