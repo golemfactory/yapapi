@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 import itertools
 import logging
+import os
 import sys
 from typing import (
     AsyncContextManager,
@@ -52,8 +53,9 @@ DEBIT_NOTE_MIN_TIMEOUT: Final[int] = 30  # in seconds
 
 DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: Final[str] = "golem.com.payment.debit-notes.accept-timeout?"
 
-DEFAULT_DRIVER = "zksync"
-DEFAULT_NETWORK = "rinkeby"
+DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "zksync").lower()
+DEFAULT_NETWORK: str = os.getenv("YAGNA_NETWORK", "rinkeby").lower()
+DEFAULT_SUBNET: Optional[str] = os.getenv("YAGNA_SUBNET")
 
 
 logger = logging.getLogger("yapapi.executor")
@@ -123,11 +125,14 @@ class _Engine(AsyncContextManager):
         :param budget: maximum budget for payments
         :param strategy: market strategy used to select providers from the market
             (e.g. LeastExpensiveLinearPayuMS or DummyMS)
-        :param subnet_tag: use only providers in the subnet with the subnet_tag name
-        :param driver: name of the payment driver to use or `None` to use the default driver;
-            only payment platforms with the specified driver will be used
-        :param network: name of the network to use or `None` to use the default network;
-            only payment platforms with the specified network will be used
+        :param subnet_tag: use only providers in the subnet with the subnet_tag name.
+            Uses `YAGNA_SUBNET` environment variable, defaults to `None`
+        :param driver: name of the payment driver to use. Uses `YAGNA_PAYMENT_DRIVER`
+            environment variable, defaults to `zksync`. Only payment platforms with
+            the specified driver will be used
+        :param network: name of the network to use. Uses `YAGNA_NETWORK` environment
+            variable, defaults to `rinkeby`. Only payment platforms with the specified
+            network will be used
         :param event_consumer: a callable that processes events related to the
             computation; by default it is a function that logs all events
         :param stream_output: stream computation output from providers
@@ -148,9 +153,9 @@ class _Engine(AsyncContextManager):
             strategy = DecreaseScoreForUnconfirmedAgreement(strategy, 0.5)
         self._strategy = strategy
 
-        self._subnet: Optional[str] = subnet_tag
-        self._driver = driver.lower() if driver else DEFAULT_DRIVER
-        self._network = network.lower() if network else DEFAULT_NETWORK
+        self._subnet: Optional[str] = subnet_tag or DEFAULT_SUBNET
+        self._driver: str = driver.lower() if driver else DEFAULT_DRIVER
+        self._network: str = network.lower() if network else DEFAULT_NETWORK
 
         if not event_consumer:
             # Use local import to avoid cyclic imports when yapapi.log

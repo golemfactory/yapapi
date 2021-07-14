@@ -149,3 +149,16 @@ if __name__ == "__main__":
     task = loop.create_task(main())
     loop.run_until_complete(task)
 ```
+
+## Environment variables
+
+It's possible to set various elements of `yagna` configuration through environment variables.
+`yapapi` currently supports the following environment variables:
+- `YAGNA_ACTIVITY_URL`, URL to `yagna` activity API, e.g. `http://localhost:7500/activity-api/v1`
+- `YAGNA_API_URL`, base URL to `yagna` REST API, e.g. `http://localhost:7500`
+- `YAGNA_APPKEY`, `yagna` app key to be used, e.g. `a70facb9501d4528a77f25574ab0f12b`
+- `YAGNA_MARKET_URL`, URL to `yagna` market API, e.g. `http://localhost:7500/market-api/v1`
+- `YAGNA_NETWORK`, Ethereum network name for `yagna` to use, e.g. `rinkeby`
+- `YAGNA_PAYMENT_DRIVER`, payment driver name for `yagna` to use, e.g. `zksync`
+- `YAGNA_PAYMENT_URL`, URL to `yagna` payment API, e.g. `http://localhost:7500/payment-api/v1`
+- `YAGNA_SUBNET`, name of the `yagna` sub network to be used, e.g. `devnet-beta.2`
