@@ -6,6 +6,7 @@ import json
 import sys
 import pathlib
 
+
 from yapapi import props as yp
 from yapapi.log import enable_default_logger
 from yapapi.props.builder import DemandBuilder
