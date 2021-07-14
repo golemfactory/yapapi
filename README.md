@@ -6,6 +6,44 @@
 [![GitHub license](https://img.shields.io/github/license/golemfactory/yapapi)](https://github.com/golemfactory/yapapi/blob/master/LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/golemfactory/yapapi)](https://github.com/golemfactory/yapapi/issues)
 
+## Installation
+
+`yapapi` is available as a [PyPI package](https://pypi.org/project/yapapi/0.6.2/).
+
+You can install it through `pip`:
+```
+pip install yapapi
+```
+
+Or if your project uses [`poetry`](https://python-poetry.org/) you can add it to your dependencies like this:
+```
+poetry add yapapi
+```
+
+### Local development setup
+
+#### Poetry
+`yapapi` uses [`poetry`](https://python-poetry.org/) to manage its dependencies and provide a runner for common tasks.
+
+If you don't have `poetry` available on your system then follow its [installation instructions](https://python-poetry.org/docs/#installation) before proceeding.
+Verify your installation by running:
+```
+poetry --version
+```
+
+#### Project dependencies
+To install the project's dependencies run:
+```
+poetry install
+```
+By default, `poetry` looks for the required Python version on your `PATH` and creates a virtual environment for the project if there's none active (or already configured by Poetry).
+
+All of the project's dependencies will be installed to that virtual environment.
+
+If you'd like to run the `yapapi` integration test suite locally then you'll need to install an additional set of dependencies separately by running:
+```
+poetry install -E integration-tests
+```
 ## What's Golem, btw?
 
 [Golem](https://golem.network) is a global, open-source, decentralized supercomputer
@@ -44,7 +82,6 @@ do that in the [yagna repository](https://github.com/golemfactory/yagna) and in 
   [`examples/hello-world/`](https://github.com/golemfactory/yapapi/tree/master/examples/hello-world)
   contains minimal examples of fully functional requestor agents and
   is therefore the best place to start exploring.
-
 
 ### Components
 
