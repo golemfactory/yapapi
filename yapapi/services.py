@@ -593,8 +593,13 @@ class Cluster(AsyncContextManager):
             try:
                 await task
                 if (
+                    # if the instance was created ...
                     instance
+                    # but failed to start ...
                     and not instance.started_successfully
+                    # due to an error (and not a `STOP` signal) ...
+                    and instance.service.exc_info() != (None, None, None)
+                    # and re-spawning instances is enabled for this cluster
                     and self._respawn_unstarted_instances
                 ):
                     logger.warning("Instance failed when starting, trying to create another one...")
