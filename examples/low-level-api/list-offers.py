@@ -17,7 +17,6 @@ sys.path.append(str(examples_dir))
 import utils
 
 
-
 async def list_offers(conf: Configuration, subnet_tag: str):
     async with conf.market() as client:
         market_api = Market(client)
