@@ -120,6 +120,11 @@ class Service:
         # (e.g., via returning from `Service.run()`).
 
     @property
+    def cluster(self) -> "Cluster":
+        """Return the Cluster to which this service instance belongs."""
+        return self._cluster
+
+    @property
     def id(self):
         """Return the id of this service instance.
 
@@ -281,7 +286,9 @@ class Cluster(AsyncContextManager):
         self._engine = engine
         self._service_class = service_class
         self._payload = payload
-        self._expiration = expiration or datetime.now(timezone.utc) + DEFAULT_SERVICE_EXPIRATION
+        self._expiration: datetime = (
+            expiration or datetime.now(timezone.utc) + DEFAULT_SERVICE_EXPIRATION
+        )
         self._task_ids = itertools.count(1)
         self._stack = AsyncExitStack()
         self._respawn_unstarted_instances = respawn_unstarted_instances
@@ -291,6 +298,21 @@ class Cluster(AsyncContextManager):
 
         self._instance_tasks: Set[asyncio.Task] = set()
         """Set of asyncio tasks that run spawn_service()"""
+
+    @property
+    def expiration(self) -> datetime:
+        """Return the expiration datetime for agreements related to services in this Cluster."""
+        return self._expiration
+
+    @property
+    def payload(self) -> Payload:
+        """Return the service runtime definition for this Cluster."""
+        return self._payload
+
+    @property
+    def service_class(self) -> Type[Service]:
+        """Return the class instantiated by all service instances in this Cluster."""
+        return self._service_class
 
     def __repr__(self):
         return (
