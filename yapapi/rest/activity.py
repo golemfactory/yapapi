@@ -198,7 +198,7 @@ class PollingBatch(Batch):
                     self._activity_id,
                     self._batch_id,
                     command_index=last_idx,
-                    # timeout=min(timeout, 5),
+                    timeout=min(timeout, 5),
                     _request_timeout=min(timeout, 5),
                 )
             except asyncio.TimeoutError:
