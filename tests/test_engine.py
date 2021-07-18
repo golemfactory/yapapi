@@ -32,4 +32,4 @@ def test_set_subnet_tag(default_subnet, subnet_arg, expected_subnet, monkeypatch
         golem = Golem(budget=1.0, subnet_tag=subnet_arg)
     else:
         golem = Golem(budget=1.0)
-    assert golem.subnet_tag is expected_subnet
+    assert golem.subnet_tag == expected_subnet
