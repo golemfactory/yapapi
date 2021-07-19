@@ -77,9 +77,9 @@ async def test_run_blender(
             await all_sent.wait_for_result(timeout=120)
             logger.info("All tasks sent")
 
-            await all_computed.wait_for_result(timeout=30)
+            await all_computed.wait_for_result(timeout=120)
             logger.info("All tasks computed, waiting for Executor shutdown")
 
-            await cmd_monitor.wait_for_pattern(".*Executor has shut down", timeout=120)
+            await cmd_monitor.wait_for_pattern(".*Executor has shut down", timeout=180)
 
             logger.info("Requestor script finished")

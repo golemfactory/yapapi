@@ -81,13 +81,13 @@ async def test_run_yacat(
             )
             logger.info("Keyspace found")
 
-            await all_sent.wait_for_result(timeout=30)
+            await all_sent.wait_for_result(timeout=60)
             logger.info("All tasks sent")
 
-            await all_computed.wait_for_result(timeout=60)
+            await all_computed.wait_for_result(timeout=120)
             logger.info("All tasks computed")
 
-            await cmd_monitor.wait_for_pattern(".*Password found: yo", timeout=10)
+            await cmd_monitor.wait_for_pattern(".*Password found: yo", timeout=60)
             logger.info("Password found, waiting for Executor shutdown")
 
             await cmd_monitor.wait_for_pattern(".*Executor has shut down", timeout=120)
