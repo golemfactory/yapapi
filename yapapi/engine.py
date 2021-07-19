@@ -218,6 +218,11 @@ class _Engine(AsyncContextManager):
         """Return the instance of `MarketStrategy` used by this engine."""
         return self._strategy
 
+    @property
+    def subnet_tag(self) -> Optional[str]:
+        """Return the name of the subnet used by this engine, or `None` if it is not set."""
+        return self._subnet
+
     def emit(self, event: events.Event) -> None:
         """Emit an event to be consumed by this engine's event consumer."""
         if self._wrapped_consumer:
