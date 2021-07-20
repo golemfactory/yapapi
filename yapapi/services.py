@@ -197,7 +197,30 @@ class Service:
         pass
 
     async def start(self):
-        """Implement the `starting` state of the service."""
+        """Implement the `starting` state of the service.
+
+        Should perform the minimum set of operations after which the instance of a service can be
+        treated as "started", or, in other words, ready to receive service requests.
+
+        The default implementation assumes that, in order to accept commands, the runtime needs to
+        be first deployed using the `deploy` command, which is analogous to creation of a container
+        corresponding with the desired payload, and then started using the `start` command,
+        actually launching the process that runs the aforementioned container.
+
+        Additionally, it also assumes that the exe-unit doesn't need any additional parameters
+        in its `start()` call (e.g. for the VM runtime, all the required parameters are already
+        passed as part of the agreement between the requestor and the provider).
+
+        Therefore, this default implementation performs the minimum required for a VM payload to
+        start responding to `run` commands. If your service requires any additional operations -
+        you'll need to override this method (possibly starting with a call to `super().start()`)
+        to add appropriate preparatory steps.
+
+        In case of runtimes other than VM, `deploy` and/or `start` might be optional or altogether
+        disallowed, plus `start` itself might take some parameters. It is up to the author of the
+        specific `Service` implementation that uses such a payload to adjust this method accordingly
+        based on the requirements for the given runtime/exe-unit type.
+        """
 
         self._ctx.deploy()
         self._ctx.start()
