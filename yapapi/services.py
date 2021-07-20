@@ -243,7 +243,7 @@ class ServiceInstance:
     service: Service
     control_queue: "asyncio.Queue[ControlSignal]" = field(default_factory=asyncio.Queue)
     service_state: ServiceState = field(default_factory=ServiceState)
-    visited_states: List[ServiceState] = field(default_factory=list)
+    visited_states: List[statemachine.State] = field(default_factory=list)
 
     def __post_init__(self):
         self.service_state.instance = self
