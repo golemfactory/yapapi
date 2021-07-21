@@ -273,7 +273,7 @@ class Service:
 
         To be overridden by the author of a specific Service class.
 
-        Should contain any operations needed ensure the continual operation of a service.
+        Should contain any operations needed to ensure the continual operation of a service.
 
         As a handler, it's expected to be a generator that yields `WorkItems` (generated using the
         service's instance of the work context) that are then dispatched to the activity by the
