@@ -312,7 +312,7 @@ class Service:
         To be overridden by the author of a specific Service class.
 
         Should contain any operations that the requestor needs to ensure the instance is correctly
-        shut-down - e.g. that it's final state is retrieved.
+        shut-down - e.g. that its final state is retrieved.
 
         As a handler, it's expected to be a generator that yields `WorkItems` (generated using the
         service's instance of the work context) that are then dispatched to the activity by the
