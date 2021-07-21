@@ -222,7 +222,8 @@ class Service:
         service startup.
 
         As a handler, it's expected to be a generator that yields `WorkItems` (generated using the
-        service's instance of the work context) that are then dispatched to the activity by engine.
+        service's instance of the work context) that are then dispatched to the activity by the
+        engine.
 
         Results of those batches can then be captured by awaiting the values captured from yield
         statements.
@@ -275,7 +276,8 @@ class Service:
         Should contain any operations needed ensure the continual operation of a service.
 
         As a handler, it's expected to be a generator that yields `WorkItems` (generated using the
-        service's instance of the work context) that are then dispatched to the activity by engine.
+        service's instance of the work context) that are then dispatched to the activity by the
+        engine.
 
         Results of those batches can then be captured by awaiting the values captured from yield
         statements.
@@ -313,7 +315,8 @@ class Service:
         shut-down - e.g. that it's final state is retrieved.
 
         As a handler, it's expected to be a generator that yields `WorkItems` (generated using the
-        service's instance of the work context) that are then dispatched to the activity by engine.
+        service's instance of the work context) that are then dispatched to the activity by the
+        engine.
 
         Results of those batches can then be captured by awaiting the values captured from yield
         statements.
