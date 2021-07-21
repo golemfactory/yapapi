@@ -281,7 +281,7 @@ class Service:
 
         To be overridden by the author of a specific Service class.
 
-        Should contain any operations needed ensure the continual operation of a service.
+        Should contain any operations needed to ensure the continual operation of a service.
 
         As a handler implementing the [work generator pattern](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern),
         it's expected to be a generator that yields `WorkItems` (generated using the service's
