@@ -8,7 +8,20 @@ import logging
 import statemachine  # type: ignore
 import sys
 from types import TracebackType
-from typing import Any, AsyncContextManager, List, Optional, Set, Tuple, Type, Union, Iterable, Dict
+from typing import (
+    Any,
+    AsyncContextManager,
+    AsyncGenerator,
+    Awaitable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    Iterable,
+    Dict,
+)
 
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
@@ -22,7 +35,7 @@ else:
 
 from yapapi import rest, events
 from yapapi.ctx import WorkContext
-from yapapi.engine import _Engine, Job
+from yapapi.engine import _Engine, Job, WorkItem
 from yapapi.payload import Payload
 from yapapi.rest.activity import Activity, BatchError
 
@@ -191,16 +204,44 @@ class Service:
     async def get_payload() -> Optional[Payload]:
         """Return the payload (runtime) definition for this service.
 
+        To be overridden by the author of a specific Service class.
+
         If `get_payload` is not implemented, the payload will need to be provided in the
         `Golem.run_service` call.
         """
         pass
 
-    async def start(self):
-        """Implement the `starting` state of the service.
+    async def start(self) -> AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]]:
+        """Implement the handler for the `starting` state of the service.
+
+        To be overridden by the author of a specific Service class.
 
         Should perform the minimum set of operations after which the instance of a service can be
-        treated as "started", or, in other words, ready to receive service requests.
+        treated as "started", or, in other words, ready to receive service requests. It's up to the
+        developer of the specific Service class to decide what exact operations constitute a
+        service startup.
+
+        As a handler, it's expected to be a generator that yields `WorkItems` (generated using the
+        service's instance of the work context) that are then dispatched to the activity by engine.
+
+        Results of those batches can then be captured by awaiting the values captured from yield
+        statements.
+
+        ### Example
+
+        ```
+        async def start(self):
+            # deploy the exe-unit
+            self._ctx.deploy()
+            # start the exe-unit's container
+            self._ctx.start()
+            # start some service process within the container
+            self._ctx.run("/golem/run/service_ctl", "--start")
+            # send the batch to the provider
+            yield self._ctx.commit()
+        ```
+
+        ### Default implementation
 
         The default implementation assumes that, in order to accept commands, the runtime needs to
         be first deployed using the `deploy` command, which is analogous to creation of a container
@@ -226,14 +267,77 @@ class Service:
         self._ctx.start()
         yield self._ctx.commit()
 
-    async def run(self):
-        """Implement the `running` state of the service."""
+    async def run(self) -> AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]]:
+        """Implement the handler for the `running` state of the service.
+
+        To be overridden by the author of a specific Service class.
+
+        Should contain any operations needed ensure the continual operation of a service.
+
+        As a handler, it's expected to be a generator that yields `WorkItems` (generated using the
+        service's instance of the work context) that are then dispatched to the activity by engine.
+
+        Results of those batches can then be captured by awaiting the values captured from yield
+        statements.
+
+        ### Example
+
+        ```
+        async def run(self):
+            while True:
+                self._ctx.run("/golem/run/report", "--stats")  # index 0
+                future_results = yield self._ctx.commit()
+                results = await future_results
+                stats = results[0].stdout.strip()  # retrieve from index 0
+                print(f"stats: {stats}")
+        ```
+
+        ### Default implementation
+
+        Because the nature of the operations required during the "running" state depends directly
+        on the specifics of a given Service and because it's entirely plausible for a service
+        not to require any direct interaction with the exe-unit (runtime) from the requestor's end
+        after the service has been started, the default is to just wait indefinitely without
+        producing any batches.
+        """
 
         await asyncio.Future()
-        yield
+        yield  # type: ignore # unreachable because of the indefinite wait above
 
-    async def shutdown(self):
-        """Implement the `stopping` state of the service."""
+    async def shutdown(self) -> AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]]:
+        """Implement the handler for the `stopping` state of the service.
+
+        To be overridden by the author of a specific Service class.
+
+        Should contain any operations that the requestor needs to ensure the instance is correctly
+        shut-down - e.g. that it's final state is retrieved.
+
+        As a handler, it's expected to be a generator that yields `WorkItems` (generated using the
+        service's instance of the work context) that are then dispatched to the activity by engine.
+
+        Results of those batches can then be captured by awaiting the values captured from yield
+        statements.
+
+        This handler will only be called if the activity running the service is still available.
+        If the activity has already been deemed terminated or if the connection with the provider
+        has been lost, the service will transition to the `terminated` state and the shutdown
+        handler won't be run.
+
+        ### Example
+
+        ```
+        async def shutdown(self):
+            self._ctx.run("/golem/run/dump_state")
+            self._ctx.download_file("/golem/output/state", "/some/local/path/state")
+            self._ctx.terminate()
+            yield self._ctx.commit()
+        ```
+
+        ### Default implementation
+
+        By default, the activity is just sent a `terminate` command.
+
+        """
 
         self._ctx.terminate()
         yield self._ctx.commit()
