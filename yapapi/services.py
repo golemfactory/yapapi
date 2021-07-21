@@ -221,12 +221,20 @@ class Service:
         developer of the specific Service class to decide what exact operations constitute a
         service startup.
 
-        As a handler, it's expected to be a generator that yields `WorkItems` (generated using the
-        service's instance of the work context) that are then dispatched to the activity by the
-        engine.
+        As a handler implementing the [work generator pattern](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern),
+        it's expected to be a generator that yields `WorkItems` (generated using the service's
+        instance of the work context) that are then dispatched to the activity by the engine.
 
         Results of those batches can then be captured by awaiting the values captured from yield
         statements.
+
+        A clean exit from a handler function triggers the engine to transition the state of the
+        instance to the next stage in service's lifecycle - in this case, to `running`.
+
+        On the other hand, any unhandled exception will cause the instance to be either retried on
+        another provider node, if the Cluster's `respawn_unstarted_instances` argument is set to
+        `True`, which is also the default behavior, or altogether terminated, if
+        `respawn_unstarted_instances` is set to `False`.
 
         ### Example
 
@@ -275,12 +283,17 @@ class Service:
 
         Should contain any operations needed ensure the continual operation of a service.
 
-        As a handler, it's expected to be a generator that yields `WorkItems` (generated using the
-        service's instance of the work context) that are then dispatched to the activity by the
-        engine.
+        As a handler implementing the [work generator pattern](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern),
+        it's expected to be a generator that yields `WorkItems` (generated using the service's
+        instance of the work context) that are then dispatched to the activity by the engine.
 
         Results of those batches can then be captured by awaiting the values captured from yield
         statements.
+
+        A clean exit from a handler function triggers the engine to transition the state of the
+        instance to the next stage in service's lifecycle - in this case, to `stopping`.
+
+        Any unhandled exception will cause the instance to be terminated.
 
         ### Example
 
@@ -314,12 +327,14 @@ class Service:
         Should contain any operations that the requestor needs to ensure the instance is correctly
         shut-down - e.g. that its final state is retrieved.
 
-        As a handler, it's expected to be a generator that yields `WorkItems` (generated using the
-        service's instance of the work context) that are then dispatched to the activity by the
-        engine.
+        As a handler implementing the [work generator pattern](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern),
+        it's expected to be a generator that yields `WorkItems` (generated using the service's
+        instance of the work context) that are then dispatched to the activity by the engine.
 
         Results of those batches can then be captured by awaiting the values captured from yield
         statements.
+
+        Finishing the execution of this handler will trigger termination of this instance.
 
         This handler will only be called if the activity running the service is still available.
         If the activity has already been deemed terminated or if the connection with the provider
@@ -338,7 +353,8 @@ class Service:
 
         ### Default implementation
 
-        By default, the activity is just sent a `terminate` command.
+        By default, the activity is just sent a `terminate` command. Whether it's absolutely
+        required or not, again, depends on the implementation of the given runtime.
 
         """
 
