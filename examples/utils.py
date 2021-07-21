@@ -28,7 +28,7 @@ def build_parser(description: str) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--driver", help="Payment driver name, for example `zksync`")
     parser.add_argument("--network", help="Network name, for example `rinkeby`")
-    parser.add_argument("--subnet-tag", help="Subnet name; default: %(default)s")
+    parser.add_argument("--subnet-tag", help="Subnet name, for example `devnet-beta.2`")
     parser.add_argument(
         "--log-file",
         default=str(default_log_path),
