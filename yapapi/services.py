@@ -8,7 +8,20 @@ import logging
 import statemachine  # type: ignore
 import sys
 from types import TracebackType
-from typing import Any, AsyncContextManager, List, Optional, Set, Tuple, Type, Union, Iterable, Dict
+from typing import (
+    Any,
+    AsyncContextManager,
+    AsyncGenerator,
+    Awaitable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    Iterable,
+    Dict,
+)
 
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
@@ -22,7 +35,7 @@ else:
 
 from yapapi import rest, events
 from yapapi.ctx import WorkContext
-from yapapi.engine import _Engine, Job
+from yapapi.engine import _Engine, Job, WorkItem
 from yapapi.payload import Payload
 from yapapi.rest.activity import Activity, BatchError
 
@@ -191,26 +204,162 @@ class Service:
     async def get_payload() -> Optional[Payload]:
         """Return the payload (runtime) definition for this service.
 
+        To be overridden by the author of a specific Service class.
+
         If `get_payload` is not implemented, the payload will need to be provided in the
         `Golem.run_service` call.
         """
         pass
 
-    async def start(self):
-        """Implement the `starting` state of the service."""
+    async def start(self) -> AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]]:
+        """Implement the handler for the `starting` state of the service.
+
+        To be overridden by the author of a specific Service class.
+
+        Should perform the minimum set of operations after which the instance of a service can be
+        treated as "started", or, in other words, ready to receive service requests. It's up to the
+        developer of the specific Service class to decide what exact operations constitute a
+        service startup.
+
+        As a handler implementing the [work generator pattern](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern),
+        it's expected to be a generator that yields `WorkItems` (generated using the service's
+        instance of the work context - `self._ctx`) that are then dispatched to the activity by
+        the engine.
+
+        Results of those batches can then be retrieved by awaiting the values captured from yield
+        statements.
+
+        A clean exit from a handler function triggers the engine to transition the state of the
+        instance to the next stage in service's lifecycle - in this case, to `running`.
+
+        On the other hand, any unhandled exception will cause the instance to be either retried on
+        another provider node, if the Cluster's `respawn_unstarted_instances` argument is set to
+        `True`, which is also the default behavior, or altogether terminated, if
+        `respawn_unstarted_instances` is set to `False`.
+
+        ### Example
+
+        ```
+        async def start(self):
+            # deploy the exe-unit
+            self._ctx.deploy()
+            # start the exe-unit's container
+            self._ctx.start()
+            # start some service process within the container
+            self._ctx.run("/golem/run/service_ctl", "--start")
+            # send the batch to the provider
+            yield self._ctx.commit()
+        ```
+
+        ### Default implementation
+
+        The default implementation assumes that, in order to accept commands, the runtime needs to
+        be first deployed using the `deploy` command, which is analogous to creation of a container
+        corresponding with the desired payload, and then started using the `start` command,
+        actually launching the process that runs the aforementioned container.
+
+        Additionally, it also assumes that the exe-unit doesn't need any additional parameters
+        in its `start()` call (e.g. for the VM runtime, all the required parameters are already
+        passed as part of the agreement between the requestor and the provider).
+
+        Therefore, this default implementation performs the minimum required for a VM payload to
+        start responding to `run` commands. If your service requires any additional operations -
+        you'll need to override this method (possibly starting with a call to `super().start()`)
+        to add appropriate preparatory steps.
+
+        In case of runtimes other than VM, `deploy` and/or `start` might be optional or altogether
+        disallowed, plus `start` itself might take some parameters. It is up to the author of the
+        specific `Service` implementation that uses such a payload to adjust this method accordingly
+        based on the requirements for the given runtime/exe-unit type.
+        """
 
         self._ctx.deploy()
         self._ctx.start()
         yield self._ctx.commit()
 
-    async def run(self):
-        """Implement the `running` state of the service."""
+    async def run(self) -> AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]]:
+        """Implement the handler for the `running` state of the service.
+
+        To be overridden by the author of a specific Service class.
+
+        Should contain any operations needed to ensure continuous operation of a service.
+
+        As a handler implementing the [work generator pattern](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern),
+        it's expected to be a generator that yields `WorkItems` (generated using the service's
+        instance of the work context - `self._ctx`) that are then dispatched to the activity by
+        the engine.
+
+        Results of those batches can then be retrieved by awaiting the values captured from yield
+        statements.
+
+        A clean exit from a handler function triggers the engine to transition the state of the
+        instance to the next stage in service's lifecycle - in this case, to `stopping`.
+
+        Any unhandled exception will cause the instance to be terminated.
+
+        ### Example
+
+        ```
+        async def run(self):
+            while True:
+                self._ctx.run("/golem/run/report", "--stats")  # index 0
+                future_results = yield self._ctx.commit()
+                results = await future_results
+                stats = results[0].stdout.strip()  # retrieve from index 0
+                print(f"stats: {stats}")
+        ```
+
+        ### Default implementation
+
+        Because the nature of the operations required during the "running" state depends directly
+        on the specifics of a given Service and because it's entirely plausible for a service
+        not to require any direct interaction with the exe-unit (runtime) from the requestor's end
+        after the service has been started, the default is to just wait indefinitely without
+        producing any batches.
+        """
 
         await asyncio.Future()
-        yield
+        yield  # type: ignore # unreachable because of the indefinite wait above
 
-    async def shutdown(self):
-        """Implement the `stopping` state of the service."""
+    async def shutdown(self) -> AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]]:
+        """Implement the handler for the `stopping` state of the service.
+
+        To be overridden by the author of a specific Service class.
+
+        Should contain any operations that the requestor needs to ensure the instance is correctly
+        and gracefully shut-down - e.g. that its final state is retrieved.
+
+        As a handler implementing the [work generator pattern](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern),
+        it's expected to be a generator that yields `WorkItems` (generated using the service's
+        instance of the work context - `self._ctx`) that are then dispatched to the activity by
+        the engine.
+
+        Results of those batches can then be retrieved by awaiting the values captured from yield
+        statements.
+
+        Finishing the execution of this handler will trigger termination of this instance.
+
+        This handler will only be called if the activity running the service is still available.
+        If the activity has already been deemed terminated or if the connection with the provider
+        has been lost, the service will transition to the `terminated` state and the shutdown
+        handler won't be run.
+
+        ### Example
+
+        ```
+        async def shutdown(self):
+            self._ctx.run("/golem/run/dump_state")
+            self._ctx.download_file("/golem/output/state", "/some/local/path/state")
+            self._ctx.terminate()
+            yield self._ctx.commit()
+        ```
+
+        ### Default implementation
+
+        By default, the activity is just sent a `terminate` command. Whether it's absolutely
+        required or not, again, depends on the implementation of the given runtime.
+
+        """
 
         self._ctx.terminate()
         yield self._ctx.commit()
@@ -243,7 +392,7 @@ class ServiceInstance:
     service: Service
     control_queue: "asyncio.Queue[ControlSignal]" = field(default_factory=asyncio.Queue)
     service_state: ServiceState = field(default_factory=ServiceState)
-    visited_states: List[ServiceState] = field(default_factory=list)
+    visited_states: List[statemachine.State] = field(default_factory=list)
 
     def __post_init__(self):
         self.service_state.instance = self
