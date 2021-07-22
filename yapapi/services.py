@@ -223,7 +223,8 @@ class Service:
 
         As a handler implementing the [work generator pattern](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern),
         it's expected to be a generator that yields `WorkItems` (generated using the service's
-        instance of the work context) that are then dispatched to the activity by the engine.
+        instance of the work context - `self._ctx`) that are then dispatched to the activity by
+        the engine.
 
         Results of those batches can then be retrieved by awaiting the values captured from yield
         statements.
@@ -285,7 +286,8 @@ class Service:
 
         As a handler implementing the [work generator pattern](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern),
         it's expected to be a generator that yields `WorkItems` (generated using the service's
-        instance of the work context) that are then dispatched to the activity by the engine.
+        instance of the work context - `self._ctx`) that are then dispatched to the activity by
+        the engine.
 
         Results of those batches can then be retrieved by awaiting the values captured from yield
         statements.
@@ -325,11 +327,12 @@ class Service:
         To be overridden by the author of a specific Service class.
 
         Should contain any operations that the requestor needs to ensure the instance is correctly
-        shut-down - e.g. that its final state is retrieved.
+        and gracefully shut-down - e.g. that its final state is retrieved.
 
         As a handler implementing the [work generator pattern](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern),
         it's expected to be a generator that yields `WorkItems` (generated using the service's
-        instance of the work context) that are then dispatched to the activity by the engine.
+        instance of the work context - `self._ctx`) that are then dispatched to the activity by
+        the engine.
 
         Results of those batches can then be retrieved by awaiting the values captured from yield
         statements.
