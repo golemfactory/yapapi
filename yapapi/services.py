@@ -225,7 +225,7 @@ class Service:
         it's expected to be a generator that yields `WorkItems` (generated using the service's
         instance of the work context) that are then dispatched to the activity by the engine.
 
-        Results of those batches can then be captured by awaiting the values captured from yield
+        Results of those batches can then be retrieved by awaiting the values captured from yield
         statements.
 
         A clean exit from a handler function triggers the engine to transition the state of the
@@ -287,7 +287,7 @@ class Service:
         it's expected to be a generator that yields `WorkItems` (generated using the service's
         instance of the work context) that are then dispatched to the activity by the engine.
 
-        Results of those batches can then be captured by awaiting the values captured from yield
+        Results of those batches can then be retrieved by awaiting the values captured from yield
         statements.
 
         A clean exit from a handler function triggers the engine to transition the state of the
@@ -331,7 +331,7 @@ class Service:
         it's expected to be a generator that yields `WorkItems` (generated using the service's
         instance of the work context) that are then dispatched to the activity by the engine.
 
-        Results of those batches can then be captured by awaiting the values captured from yield
+        Results of those batches can then be retrieved by awaiting the values captured from yield
         statements.
 
         Finishing the execution of this handler will trigger termination of this instance.
