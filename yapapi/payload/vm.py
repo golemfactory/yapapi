@@ -14,7 +14,7 @@ from yapapi.props import inf
 from yapapi.props.inf import InfBase, INF_CORES, RUNTIME_VM, ExeUnitRequest
 
 _DEFAULT_REPO_SRV: Final = "_girepo._tcp.dev.golem.network"
-_FALLBACK_REPO_URL: Final = "http://yacn2.dev.golem.network:8000"
+_FALLBACK_REPO_URL: Final = "http://girepo.dev.golem.network:8000"
 
 logger = logging.getLogger(__name__)
 
