@@ -160,14 +160,15 @@ class __Process(jsonrpc_base.Server):
 
 @contextlib.contextmanager
 def _temp_file(temp_dir: Path) -> Iterator[Path]:
-    _, file_name = tempfile.mkstemp(prefix="yapapi_", dir=temp_dir)
-    yield Path(file_name)
-    if os.path.exists(file_name):
-        try:
-            os.remove(file_name)
-            print(f"Removed {file_name}")
-        except Exception:
-            _logger.error("Cannot remove temp file %s", file_name, exc_info=True)
+    """Create a new temporary file in `temp_dir`.
+
+    Implements the ContextManager interface. Deletes the file on ContextManager's exit.
+    """
+    fd, file_name = tempfile.mkstemp(prefix="yapapi_", dir=temp_dir)
+    os.close(fd)
+    path = Path(file_name)
+    yield path
+    _delete_if_exists(path)
 
 
 class GftpSource(Source):
@@ -215,17 +216,11 @@ class GftpDestination(Destination):
         return await super().download_file(destination_file)
 
 
-# def _try_delete(path: Path) -> None:
-#     try:
-#         if path.exists():
-#             path.unlink()
-#             _logger.debug("Deleted %s", path)
-#             print(f"Deleted {path}")
-#     except Exception as e:
-#         # Dont' report it as an error, `path` could be removed
-#         # by some external process
-#         _logger.debug("Cannot remove path %s: %s", path, e)
-#         print(f"Cannot remove path {path}: {e}")
+def _delete_if_exists(path: Path) -> None:
+
+    if path.exists():
+        path.unlink()
+        _logger.debug("Deleted temporary file %s", path)
 
 
 class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
@@ -289,10 +284,7 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
         if self._temp_dir and self._temp_dir.exists():
             for info in self._published_sources.values():
                 for path in info.temporary_files:
-                    if path.exists():
-                        path.unlink()
-                        _logger.debug("Deleted temp file %s on GftpProvider exit", path)
-                    # _try_delete(path)
+                    _delete_if_exists(path)
 
         return None
 
@@ -382,10 +374,7 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
                     await process.close(urls=[url])
 
                 for path in info.temporary_files:
-                    if path.exists():
-                        path.unlink()
-                        _logger.debug("Deleted temp file %s", path)
-                    # _try_delete(path)
+                    _delete_if_exists(path)
 
                 del self._published_sources[url]
 

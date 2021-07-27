@@ -3,7 +3,7 @@ from collections import defaultdict
 from pathlib import Path
 import random
 import tempfile
-from typing import cast, List, Optional
+from typing import cast, List
 
 import pytest
 
