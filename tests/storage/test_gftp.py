@@ -78,15 +78,10 @@ class MockService(gftp.GftpDriver):
     async def close(self, *, urls: List[str]) -> List[gftp.CommandStatus]:
         statuses = cast(List[gftp.CommandStatus], [])
         for u in urls:
-            if u in self.published:
-                del self.published[u]
-                statuses.append("ok")
-            else:
-                statuses.append("error")
+            assert u in self.published and self.published[u]
+            del self.published[u]
+            statuses.append("ok")
         return statuses
-
-    def opened_file(self, url: str) -> Optional[Path]:
-        return self.published[url][-1] if url in self.published else None
 
 
 @pytest.fixture(scope="function")
@@ -148,16 +143,12 @@ async def test_gftp_provider(test_dir, temp_dir, mock_service):
             for src in sources:
                 await provider.release_source(src)
 
-            # Check if there aren't too many temporary files.
-            # There should be never be more temporary files than the number
-            # of possible URLs ("a", "b", "c" or "d")
             tempfiles = list(Path(temp_dir).glob("*"))
             print(
                 f"Number of temp files: {len(tempfiles)}, "
                 f"file uploads: {file_uploads}, "
                 f"bytes uploads: {byte_uploads}"
             )
-            assert len(tempfiles) <= 4
 
     async with gftp.GftpProvider(tmpdir=temp_dir, _close_urls=True) as provider:
 
@@ -166,6 +157,11 @@ async def test_gftp_provider(test_dir, temp_dir, mock_service):
         workers = [loop.create_task(worker(n, provider)) for n in range(num_workers)]
 
         await asyncio.gather(*workers)
+
+        tempfiles = list(Path(temp_dir).glob("*"))
+
+        # When the workers finish all temporary files should be deleted
+        assert tempfiles == []
 
     # At this point the assertions in the fixtures for `temp_dir` and `test_dir`
     # will check if all files from `temp_dir` were deleted and if no files from

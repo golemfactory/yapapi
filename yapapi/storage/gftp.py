@@ -165,6 +165,7 @@ def _temp_file(temp_dir: Path) -> Iterator[Path]:
     if os.path.exists(file_name):
         try:
             os.remove(file_name)
+            print(f"Removed {file_name}")
         except Exception:
             _logger.error("Cannot remove temp file %s", file_name, exc_info=True)
 
@@ -214,15 +215,17 @@ class GftpDestination(Destination):
         return await super().download_file(destination_file)
 
 
-def _try_delete(path: Path) -> None:
-    try:
-        if path.exists():
-            path.unlink()
-            _logger.debug("Deleted %s", path)
-    except Exception as e:
-        # Dont' report it as an error, `path` could be removed
-        # by some external process
-        _logger.debug("Cannot remove path %s: %s", path, e)
+# def _try_delete(path: Path) -> None:
+#     try:
+#         if path.exists():
+#             path.unlink()
+#             _logger.debug("Deleted %s", path)
+#             print(f"Deleted {path}")
+#     except Exception as e:
+#         # Dont' report it as an error, `path` could be removed
+#         # by some external process
+#         _logger.debug("Cannot remove path %s: %s", path, e)
+#         print(f"Cannot remove path {path}: {e}")
 
 
 class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
@@ -235,24 +238,16 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
         publish_count: int
         """Number of `gftp publish` operations for this URL.
 
-        Serves as a reference counter. When it drops to 0, `gftp close <url>` should be invoked,
-        in order to release `self.current_file` kept open by `gftp`.
-        Note that this field may be larger than the number of files published, since a single
-        file may be published more than once."""
+        Serves as a reference counter. When it drops to 0, `gftp close {URL}` is invoked
+        in order to release any file published with this URL that is kept open by `gftp`.
+        Note that the value of this field may be larger than the number of files published,
+        since a single file may be published more than once."""
 
         temporary_files: Set[Path]
         """Set of temporary files published with this URL.
 
-        When a temporary file is released, it may be safely deleted,
-        unless it's `self.current_file`.
-        """
-
-        current_file: Path
-        """Most recently published file with this URL.
-
-        The assumption is that for each URL, `gftp` keeps open only the most recently
-        file that resolves to this URL. So we keep track of this file in order not to
-        delete is while it is still needed.
+        When the URL is unpublished by calling `gftp close {URL}`, all temporary files with this
+        URL can be safely deleted.
         """
 
     def __init__(self, *, tmpdir: Optional[str] = None, _close_urls: bool = False):
@@ -264,10 +259,10 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
         self._lock = asyncio.Lock()
         # If set to `True` then the provider will call `gftp close <URL>` for an URL
         # that has no longer any published files. This should be the default behavior,
-        # but is currently turned off until a bug in `gftp` is fixed in `yagna 0.7.3`
-        # (see https://github.com/golemfactory/yagna/pull/1501)
+        # but is currently turned off until `gftp` is able to handle the `close` command
+        # correctly (see https://github.com/golemfactory/yagna/pull/1501).
         self._close_urls = _close_urls
-
+        # A reference to an external process running the `gftp server` command
         self._process = None
 
     async def __aenter__(self) -> StorageProvider:
@@ -294,7 +289,10 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
         if self._temp_dir and self._temp_dir.exists():
             for info in self._published_sources.values():
                 for path in info.temporary_files:
-                    _try_delete(path)
+                    if path.exists():
+                        path.unlink()
+                        _logger.debug("Deleted temp file %s on GftpProvider exit", path)
+                    # _try_delete(path)
 
         return None
 
@@ -336,7 +334,6 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
                 info = GftpProvider.URLInfo(
                     publish_count=1,
                     temporary_files=({path} if _temporary else set()),
-                    current_file=path,
                 )
                 self._published_sources[url] = info
             else:
@@ -348,11 +345,6 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
                 if _temporary:
                     info.temporary_files.add(path)
                 info.publish_count += 1
-                prev_file = info.current_file
-                info.current_file = path
-
-                if prev_file != info.current_file and prev_file in info.temporary_files:
-                    _try_delete(prev_file)
 
             _logger.debug(
                 "File %s published with URL = %s, count = %d", path, url, info.publish_count
@@ -382,20 +374,18 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
                 "File %s released, URL = %s, count = %d", source.path, url, info.publish_count
             )
 
-            if source.path in info.temporary_files and source.path != info.current_file:
-                _try_delete(source.path)
-                info.temporary_files.remove(source.path)
-
             if info.publish_count == 0:
 
                 _logger.debug("Unpublishing URL %s...", url)
-                # TODO: make it a default when this is supported by `gftp`:
                 if self._close_urls:
                     process = await self.__get_process()
                     await process.close(urls=[url])
 
                 for path in info.temporary_files:
-                    _try_delete(path)
+                    if path.exists():
+                        path.unlink()
+                        _logger.debug("Deleted temp file %s", path)
+                    # _try_delete(path)
 
                 del self._published_sources[url]
 
