@@ -55,7 +55,7 @@ DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: Final[str] = "golem.com.payment.debit-notes.
 
 DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "zksync").lower()
 DEFAULT_NETWORK: str = os.getenv("YAGNA_NETWORK", "rinkeby").lower()
-DEFAULT_SUBNET: Optional[str] = os.getenv("YAGNA_SUBNET")
+DEFAULT_SUBNET: Optional[str] = os.getenv("YAGNA_SUBNET", "devnet-beta.2")
 
 
 logger = logging.getLogger("yapapi.executor")
@@ -217,6 +217,11 @@ class _Engine(AsyncContextManager):
     def strategy(self) -> MarketStrategy:
         """Return the instance of `MarketStrategy` used by this engine."""
         return self._strategy
+
+    @property
+    def subnet_tag(self) -> Optional[str]:
+        """Return the name of the subnet used by this engine, or `None` if it is not set."""
+        return self._subnet
 
     def emit(self, event: events.Event) -> None:
         """Emit an event to be consumed by this engine's event consumer."""
