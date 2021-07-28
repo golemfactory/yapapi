@@ -17,12 +17,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      # finds branches with names matching 'b[0-9](\.[0-9])+' (e.g. b0.6) and returns the one with highest version
+      # finds branches with names matching the release branch convention (e.g. release/v0.7) and returns one with highest version
       - name: Get latest stable branch
         id: latest-stable
-        # sed removes leading whitespaces and '*' characters (git uses it to indicate the current branch)
+        # second sed expression removes leading whitespaces and '*' characters (git uses it to indicate the current branch)
         run: |
-          branch=$(git branch -a | sed 's/remotes\/origin\///' | sed 's/^[ \t*]*//' | grep -E '^b[0-9](\.[0-9])+$' | sort -Vr | head -1)
+          branch=$(git branch -a | sed -e 's:remotes/origin/::' -e 's:^[ \t*]*::' | grep -E '^release\/v[0-9]+(\.[0-9]+)+$' | sort -Vr | head -1)
           echo "::set-output name=branch::$branch"
 
       # prepares JSON object representing strategy matrix which contains two 'branch' variants: master and latest stable
