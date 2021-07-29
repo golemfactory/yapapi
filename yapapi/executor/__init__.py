@@ -319,6 +319,7 @@ class Executor(AsyncContextManager):
         async def _worker(
             agreement: rest.market.Agreement, activity: Activity, work_context: WorkContext
         ) -> None:
+            nonlocal job
 
             with work_queue.new_consumer() as consumer:
                 try:
@@ -328,29 +329,36 @@ class Executor(AsyncContextManager):
                             task = Task.for_handle(handle, work_queue, self.emit)
                             self._engine.emit(
                                 events.TaskStarted(
-                                    agr_id=agreement.id, task_id=task.id, task_data=task.data
+                                    job_id=job.id,
+                                    agr_id=agreement.id,
+                                    task_id=task.id,
+                                    task_data=task.data,
                                 )
                             )
                             yield task
                             self._engine.emit(
-                                events.TaskFinished(agr_id=agreement.id, task_id=task.id)
+                                events.TaskFinished(
+                                    job_id=job.id, agr_id=agreement.id, task_id=task.id
+                                )
                             )
 
                     batch_generator = worker(work_context, task_generator())
                     try:
-                        await self._engine.process_batches(agreement.id, activity, batch_generator)
+                        await self._engine.process_batches(
+                            job.id, agreement.id, activity, batch_generator
+                        )
                     except StopAsyncIteration:
                         pass
-                    self.emit(events.WorkerFinished(agr_id=agreement.id))
+                    self.emit(events.WorkerFinished(job_id=job.id, agr_id=agreement.id))
                 except Exception:
                     self.emit(
                         events.WorkerFinished(
-                            agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
+                            job_id=job.id, agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
                         )
                     )
                     raise
                 finally:
-                    await self._engine.accept_payments_for_agreement(agreement.id)
+                    await self._engine.accept_payments_for_agreement(job.id, agreement.id)
 
         async def worker_starter() -> None:
             while True:
