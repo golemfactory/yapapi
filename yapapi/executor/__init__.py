@@ -222,6 +222,7 @@ class Executor(AsyncContextManager):
             AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
         ],
         data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
+        job_id: Optional[str] = None,
     ) -> AsyncIterator[Task[D, R]]:
         """Submit a computation to be executed on providers.
 
@@ -229,9 +230,11 @@ class Executor(AsyncContextManager):
             adds commands to the context object and yields committed commands
         :param data: an iterable or an async generator iterator of Task objects to be computed
             on providers
+        :param job_id: an optional string to identify the job created by this method.
+            Passed as the value of the `id` parameter to `Job()`.
         :return: yields computation progress events
         """
-        generator = self._create_task_generator(worker, data)
+        generator = self._create_task_generator(worker, data, job_id)
         self._engine.register_generator(generator)
         return generator
 
@@ -242,10 +245,16 @@ class Executor(AsyncContextManager):
             AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
         ],
         data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
+        job_id: Optional[str],
     ) -> AsyncGenerator[Task[D, R], None]:
         """Create an async generator yielding completed tasks."""
 
-        job = Job(self._engine, expiration_time=self._expires, payload=self._payload)
+        job = Job(
+            self._engine,
+            expiration_time=self._expires,
+            payload=self._payload,
+            id=job_id,
+        )
         self._engine.add_job(job)
 
         services: Set[asyncio.Task] = set()

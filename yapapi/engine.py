@@ -616,11 +616,19 @@ class Job:
     Responsible for posting a Demand to market and collecting Offer proposals for the Demand.
     """
 
+    # Infinite supply of generated job ids: "1", "2", ...
+    # We prefer short ids since they would make log messages more readable.
+    _generated_job_ids: Iterator[str] = (str(n) for n in itertools.count(1))
+
+    # Job ids already used, tracked to avoid duplicates
+    _used_job_ids: Set[str] = set()
+
     def __init__(
         self,
         engine: _Engine,
         expiration_time: datetime,
         payload: Payload,
+        id: Optional[str] = None,
     ):
         """Initialize a `Job` instance.
 
@@ -629,9 +637,19 @@ class Job:
             must expire before this date
         param payload: definition of a service runtime or a runtime package that needs to
             be deployed on providers for executing this job
+        param id: an optional string to be used to identify this job in events emitted
+            by the engine. ValueError is raised if a job with the same id has already been created.
+            If not specified, a unique identifier will be generated.
         """
 
-        self.id = str(uuid.uuid4())
+        if id:
+            if id in Job._used_job_ids:
+                raise ValueError(f"Non unique job id {id}")
+            self.id = id
+        else:
+            self.id = next(id for id in Job._generated_job_ids if id not in Job._used_job_ids)
+        Job._used_job_ids.add(self.id)
+
         self.engine = engine
         self.offers_collected: int = 0
         self.proposals_confirmed: int = 0
