@@ -17,12 +17,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      # finds branches with names matching 'b[0-9](\.[0-9])+' (e.g. b0.6) and returns the one with highest version
+      # finds branches with names matching the release branch convention (e.g. release/v0.7) and returns one with highest version
       - name: Get latest stable branch
         id: latest-stable
-        # sed removes leading whitespaces and '*' characters (git uses it to indicate the current branch)
+        # second sed expression removes leading whitespaces and '*' characters (git uses it to indicate the current branch)
         run: |
-          branch=$(git branch -a | sed 's/remotes\/origin\///' | sed 's/^[ \t*]*//' | grep -E '^b[0-9](\.[0-9])+$' | sort -Vr | head -1)
+          branch=$(git branch -a | sed -e 's:remotes/origin/::' -e 's:^[ \t*]*::' | grep -E '^release\/v[0-9]+(\.[0-9]+)+$' | sort -Vr | head -1)
           echo "::set-output name=branch::$branch"
 
       # prepares JSON object representing strategy matrix which contains two 'branch' variants: master and latest stable
@@ -60,6 +60,7 @@ jobs:
 
       - name: Disconnect Docker containers from default network
         continue-on-error: true
+        # related to this issue: https://github.com/moby/moby/issues/23302
         run: |
           docker network inspect docker_default
           sudo apt-get install -y jq
@@ -68,6 +69,10 @@ jobs:
       - name: Remove Docker containers
         continue-on-error: true
         run: docker rm -f $(docker ps -a -q)
+
+      - name: Restart Docker daemon
+        # related to this issue: https://github.com/moby/moby/issues/23302
+        run: sudo systemctl restart docker
 
       - name: Log in to GitHub Docker repository
         run: echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{github.actor}} --password-stdin
