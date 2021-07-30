@@ -105,6 +105,11 @@ exescript_ids: Iterator[int] = itertools.count(1)
 """An iterator providing unique ids used to correlate events related to a single exe script."""
 
 
+# Type aliases to make some type annotations more meaningful
+JobId = str
+AgrId = str
+
+
 class _Engine(AsyncContextManager):
     """Base execution engine containing functions common to all modes of operation."""
 
@@ -175,8 +180,6 @@ class _Engine(AsyncContextManager):
         self._jobs: Set[Job] = set()
 
         # initialize the payment structures
-        JobId = str
-        AgrId = str
         self._agreements_to_pay: Dict[JobId, Set[AgrId]] = defaultdict(set)
         self._agreements_accepting_debit_notes: Dict[JobId, Set[AgrId]] = defaultdict(set)
         self._invoices: Dict[AgrId, rest.payment.Invoice] = dict()
