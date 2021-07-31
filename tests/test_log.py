@@ -5,7 +5,7 @@ import sys
 import tempfile
 
 from yapapi.events import ComputationFinished
-from yapapi.log import enable_default_logger, log_event, log_event_repr
+from yapapi.log import enable_default_logger, get_logger, log_event, log_event_repr
 
 
 def test_log_file_encoding(capsys):
@@ -51,3 +51,21 @@ def test_log_event_repr_emit_traceback():
         raise Exception("Hello!")
     except:
         log_event_repr(ComputationFinished(exc_info=sys.exc_info(), job_id="42"))
+
+
+def test_get_logger_job_id(capsys):
+    """Test that loggers created by `yapapi.log.get_logger` include job_id in messages."""
+
+    job_id = "some-unique-job-id"
+    logger = get_logger("yapapi.test")
+    logger.info("Hello!", job_id=job_id)
+    logs = capsys.readouterr().err
+    assert job_id in logs
+
+
+def test_get_logger_caches():
+    """Test `yapapi.log.get_logger` caches the results (just like `logging.getLogger`)."""
+
+    logger_1 = get_logger("yapapi.test")
+    logger_2 = get_logger("yapapi.test")
+    assert logger_1 is logger_2

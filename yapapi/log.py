@@ -61,10 +61,10 @@ else:
 from yapapi import events, __version__ as yapapi_version
 from yapapi.services import MAX_AGREEMENT_EXPIRATION, MIN_AGREEMENT_EXPIRATION
 from yapapi.rest.activity import CommandExecutionError
-from yapapi.utils import get_local_timezone
+from yapapi.utils import get_local_timezone, get_logger
+
 
 event_logger = logging.getLogger("yapapi.events")
-executor_logger = logging.getLogger("yapapi.executor")
 
 # Initializing loggers, so that logger.setLevel() in enable_default_logger will work.
 _agreements_pool_logger = logging.getLogger("yapapi.agreements_pool")

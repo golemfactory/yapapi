@@ -3,7 +3,6 @@ import asyncio
 from asyncio import CancelledError
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-import logging
 import sys
 from typing import (
     AsyncContextManager,
@@ -28,6 +27,7 @@ from yapapi.events import Event
 from yapapi.payload import Payload
 from yapapi.rest.activity import Activity
 from yapapi.strategy import MarketStrategy
+import yapapi.utils
 
 from .task import Task, TaskStatus
 from ._smartq import SmartQueue
@@ -46,8 +46,7 @@ DEFAULT_EXECUTOR_TIMEOUT: Final[timedelta] = timedelta(minutes=15)
 "Joint timeout for all tasks submitted to an executor."
 
 
-logger = logging.getLogger(__name__)
-
+logger = yapapi.utils.get_logger(__name__)
 
 DEFAULT_GET_OFFERS_TIMEOUT = timedelta(seconds=20)
 
@@ -468,23 +467,32 @@ class Executor(AsyncContextManager):
                     workers, timeout=1, return_when=asyncio.ALL_COMPLETED
                 )
                 if pending:
-                    logger.info("Waiting for %s to finish...", pluralize(len(pending), "worker"))
+                    logger.info(
+                        "Waiting for %s to finish...",
+                        pluralize(len(pending), "worker"),
+                        job_id=job.id,
+                    )
                     await asyncio.wait(workers, timeout=9, return_when=asyncio.ALL_COMPLETED)
 
             try:
-                logger.debug("Terminating agreements...")
+                logger.debug("Terminating agreements...", job_id=job.id)
                 await job.agreements_pool.terminate_all(reason=reason)
             except Exception:
-                logger.debug("Problem with agreements termination", exc_info=True)
+                logger.debug("Problem with agreements termination", exc_info=True, job_id=job.id)
 
             try:
-                logger.info("Waiting for Executor services to finish...")
+                logger.info("Waiting for Executor services to finish...", job_id=job.id)
                 _, pending = await asyncio.wait(
                     workers.union(services), timeout=10, return_when=asyncio.ALL_COMPLETED
                 )
                 if pending:
                     logger.debug(
-                        "%s still running: %s", pluralize(len(pending), "service"), pending
+                        "%s still running: %s",
+                        pluralize(len(pending), "service"),
+                        pending,
+                        job_id=job.id,
                     )
             except Exception:
-                logger.debug("Got error when waiting for services to finish", exc_info=True)
+                logger.debug(
+                    "Got error when waiting for services to finish", exc_info=True, job_id=job.id
+                )
