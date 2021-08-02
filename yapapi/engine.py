@@ -107,7 +107,7 @@ exescript_ids: Iterator[int] = itertools.count(1)
 
 # Type aliases to make some type annotations more meaningful
 JobId = str
-AgrId = str
+AgreementId = str
 
 
 class _Engine(AsyncContextManager):
@@ -180,9 +180,9 @@ class _Engine(AsyncContextManager):
         self._jobs: Set[Job] = set()
 
         # initialize the payment structures
-        self._agreements_to_pay: Dict[JobId, Set[AgrId]] = defaultdict(set)
-        self._agreements_accepting_debit_notes: Dict[JobId, Set[AgrId]] = defaultdict(set)
-        self._invoices: Dict[AgrId, rest.payment.Invoice] = dict()
+        self._agreements_to_pay: Dict[JobId, Set[AgreementId]] = defaultdict(set)
+        self._agreements_accepting_debit_notes: Dict[JobId, Set[AgreementId]] = defaultdict(set)
+        self._invoices: Dict[AgreementId, rest.payment.Invoice] = dict()
         self._payment_closing: bool = False
 
         self._process_invoices_job: Optional[asyncio.Task] = None
