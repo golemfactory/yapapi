@@ -58,10 +58,9 @@ async def renegotiate_offers(conf: Configuration, subnet_tag: str):
                         continue
                     proposals += 1
                     issuers.add(event.issuer)
-                    print(f"[{node_name}] Responded {proposals} {len(issuers)}")
+                    print(f"[{node_name}] Responded. proposals={proposals}, issuers={len(issuers)}")
                     continue
 
-                # print(f"props {json.dumps(event.props, indent=4)}")
                 print(
                     f"[{node_name}] Offer: {proposal_id} from {event.issuer} is_draft: {event.is_draft}"
                 )
