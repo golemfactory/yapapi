@@ -51,11 +51,7 @@ async def renegotiate_offers(conf: Configuration, subnet_tag: str):
                     if proposals > PROPOSALS_LIMIT:
                         print(f"[node_name] Skipping additional proposal")
                         break
-                    try:
-                        await _respond(event, dbuild)
-                    except ya_market.exceptions.ApiException as e:
-                        print(f"[{node_name}] respond error: {e}")
-                        continue
+                    await _respond(event, dbuild)
                     proposals += 1
                     issuers.add(event.issuer)
                     print(f"[{node_name}] Responded. proposals={proposals}, issuers={len(issuers)}")
@@ -69,13 +65,9 @@ async def renegotiate_offers(conf: Configuration, subnet_tag: str):
                     print(f"[{node_name}] Rejected {len(rejected_proposals)}. id: {proposal_id}")
                     await asyncio.sleep(1)
                     print(f"[{node_name}] Renegotiating. id: {proposal_id}")
-                    try:
-                        new_offer_id = await _respond(event, dbuild)
-                        print(f"[{node_name}] new_offer_id: {new_offer_id}")
-                        rejected_proposals.add(new_offer_id)
-                    except ya_market.exceptions.ApiException as e:
-                        print(f"[{node_name}] respond error: {e}")
-                        continue
+                    new_offer_id = await _respond(event, dbuild)
+                    print(f"[{node_name}] new_offer_id: {new_offer_id}")
+                    rejected_proposals.add(new_offer_id)
                     continue
                 print(".create_agreement()")
                 agreement = await event.create_agreement()
