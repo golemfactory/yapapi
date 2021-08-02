@@ -257,6 +257,10 @@ class SummaryLogger:
     ```
     """
 
+    # Define some messages a string constants here, so they can be used e.g. in
+    # integration tests, in assertions that expect certain messages to be logged
+    GOLEM_SHUTDOWN_SUCCESSFUL_MESSAGE = "Golem engine has shut down"
+
     logger = get_logger("yapapi.summary")
 
     # Generates subsequent numbers, for use in generated provider names
@@ -582,7 +586,7 @@ class SummaryLogger:
             self._print_total_cost()
             self.provider_cost = {}
             if not event.exc_info:
-                self.logger.info("Golem engine has shut down")
+                self.logger.info(SummaryLogger.GOLEM_SHUTDOWN_SUCCESSFUL_MESSAGE)
             else:
                 _exc_type, exc, _tb = event.exc_info
                 reason = str(exc) or repr(exc) or "unexpected error"

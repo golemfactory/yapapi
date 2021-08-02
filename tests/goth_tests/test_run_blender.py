@@ -11,6 +11,8 @@ from goth.runner.log import configure_logging
 from goth.runner import Runner
 from goth.runner.probe import RequestorProbe
 
+from yapapi.log import SummaryLogger
+
 from .assertions import assert_no_errors, assert_all_invoices_accepted, assert_tasks_processed
 
 
@@ -78,8 +80,10 @@ async def test_run_blender(
             logger.info("All tasks sent")
 
             await all_computed.wait_for_result(timeout=120)
-            logger.info("All tasks computed, waiting for Executor shutdown")
+            logger.info("All tasks computed, waiting for Golem shutdown")
 
-            await cmd_monitor.wait_for_pattern(".*Executor has shut down", timeout=180)
+            await cmd_monitor.wait_for_pattern(
+                f".*{SummaryLogger.GOLEM_SHUTDOWN_SUCCESSFUL_MESSAGE}", timeout=120
+            )
 
             logger.info("Requestor script finished")
