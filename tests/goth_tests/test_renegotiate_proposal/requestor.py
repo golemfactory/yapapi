@@ -14,6 +14,7 @@ from yapapi.rest.market import OfferProposal
 from examples import utils
 
 DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: Final[str] = "golem.com.payment.debit-notes.accept-timeout?"
+PROPOSALS_LIMIT: Final[int] = 4
 
 
 async def _respond(proposal: OfferProposal, dbuild) -> str:
@@ -47,7 +48,7 @@ async def renegotiate_offers(conf: Configuration, subnet_tag: str):
                 prev_proposal_id = event._proposal.proposal.prev_proposal_id
                 print(f"[{node_name}] prev_proposal_id: {prev_proposal_id}")
                 if not event.is_draft:
-                    if proposals > 4:
+                    if proposals > PROPOSALS_LIMIT:
                         print(f"[node_name] Skipping additional proposal")
                         break
                     try:
@@ -94,7 +95,6 @@ async def renegotiate_offers(conf: Configuration, subnet_tag: str):
 
 def main():
     subnet = "goth"
-    sys.stderr.write(f"Using subnet: {utils.TEXT_COLOR_YELLOW}{subnet}{utils.TEXT_COLOR_DEFAULT}\n")
 
     enable_default_logger()
     try:
