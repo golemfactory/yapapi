@@ -15,6 +15,25 @@ from goth.runner.probe import RequestorProbe
 logger = logging.getLogger("goth.test.async_task_generation")
 
 
+instances_started = set()
+instances_running = set()
+
+
+async def count_instances(events):
+    global instances_started, instances_running
+
+    async for line in events:
+        line = line.strip()
+        try:
+            word, num = line.split()
+            if word == "STARTING":
+                instances_started.add(int(num))
+            elif word == "RUNNING":
+                instances_running.add(int(num))
+        except ValueError:
+            pass
+
+
 @pytest.mark.asyncio
 async def test_instance_restart(
     log_dir: Path,
@@ -43,17 +62,27 @@ async def test_instance_restart(
             str(Path(__file__).parent / "requestor.py"), env=os.environ
         ) as (_cmd_task, cmd_monitor):
 
+            cmd_monitor.add_assertion(count_instances)
+
             # The first attempt to create an instance should fail
-            await cmd_monitor.wait_for_pattern(
-                r".*INFO yapapi\.services\] .* commissioned$", timeout=60
-            )
+            await cmd_monitor.wait_for_pattern("STARTING 1$", timeout=60)
             await cmd_monitor.wait_for_pattern(".*CommandExecutionError", timeout=20)
-            await cmd_monitor.wait_for_pattern(
-                r".*INFO yapapi\.services\] .* decommissioned$", timeout=20
+
+            # The second one should successfully start and fail in `running` state
+            await cmd_monitor.wait_for_pattern("STARTING 2$", timeout=20)
+            await cmd_monitor.wait_for_pattern("RUNNING 2$", timeout=20)
+            await cmd_monitor.wait_for_pattern(".*CommandExecutionError", timeout=20)
+            await cmd_monitor.wait_for_pattern("STOPPING 2$", timeout=20)
+
+            # The third instance should be started, but not running
+            await cmd_monitor.wait_for_pattern("STARTING 3$", timeout=20)
+            await cmd_monitor.wait_for_pattern("Cluster stopped$", timeout=60)
+
+            assert instances_started == {1, 2, 3}, (
+                "Expected to see instances 1, 2, 3 starting, saw instances "
+                f"{', '.join(str(n) for n in instances_started)} instead"
             )
-            # The second one should succeed
-            await cmd_monitor.wait_for_pattern(
-                r".*INFO yapapi\.services\] .* commissioned$", timeout=30
+            assert instances_running == {2}, (
+                "Expected to see only instance 2 running, saw instances "
+                f"{', '.join(str(n) for n in instances_running)} instead"
             )
-            await cmd_monitor.wait_for_pattern("STARTING$", timeout=20)
-            await cmd_monitor.wait_for_pattern("RUNNING$", timeout=20)

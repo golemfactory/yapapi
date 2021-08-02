@@ -7,6 +7,7 @@ termination before going to the `running` state.
 """
 import asyncio
 from datetime import datetime
+import sys
 
 from yapapi import Golem
 from yapapi.services import Service
@@ -17,6 +18,12 @@ from yapapi.payload import vm
 
 instances_started = 0
 instances_running = 0
+instances_stopped = 0
+
+
+def log(*args):
+    # Like `print` but outputs to stderr to avoid buffering
+    print(*args, file=sys.stderr)
 
 
 class FirstInstanceFailsToStart(Service):
@@ -31,40 +38,90 @@ class FirstInstanceFailsToStart(Service):
     async def start(self):
 
         global instances_started
-        instances_started += 1
 
-        await asyncio.sleep(1)
+        self._ctx.run("/bin/echo", "STARTING", str(instances_started + 1))
+        future_results = yield self._ctx.commit()
+        results = await future_results
+        log(f"{results[-1].stdout.strip()}")
+        instances_started += 1
 
         if instances_started == 1:
             self._ctx.run("/no/such/command")
-        else:
-            self._ctx.run("/bin/echo", "STARTING")
-        future_results = yield self._ctx.commit()
-        results = await future_results
-        print(f"{results[-1].stdout.strip()}")
+            future_results = yield self._ctx.commit()
+            await future_results
+
+        if instances_started > 2:
+            # Wait for the stop signal here
+            await asyncio.sleep(30)
 
     async def run(self):
 
         global instances_running
         instances_running += 1
 
-        await asyncio.sleep(1)
-        self._ctx.run("/bin/echo", "RUNNING")
+        self._ctx.run("/bin/echo", "RUNNING", str(instances_started))
         future_results = yield self._ctx.commit()
         results = await future_results
-        print(f"{results[-1].stdout.strip()}")
+        log(f"{results[-1].stdout.strip()}")
+
+        self._ctx.run("/no/such/command")
+        future_results = yield self._ctx.commit()
+        await future_results
+
+    async def shutdown(self):
+
+        global instances_stopped
+
+        log("STOPPING", instances_started)
+        if False:
+            yield
+        instances_stopped += 1
 
 
 async def main():
 
     async with Golem(budget=1.0, subnet_tag="goth") as golem:
 
-        print("Starting cluster...")
+        # Start a cluster with a single service.
+        # The first instance will fail before reaching the `running` state
+        # due to an error. Another instance should be spawned in its place.
+
+        log("Starting cluster...")
         await golem.run_service(FirstInstanceFailsToStart)
 
+        # This another instance should get to `running` state.
+
         while not instances_running:
-            print("Waiting for an instance...")
-            await asyncio.sleep(5)
+            log("Waiting for an instance...")
+            await asyncio.sleep(2)
+
+        # And then stop.
+
+        while not instances_stopped:
+            log("Waiting until the instance stops...")
+            await asyncio.sleep(2)
+
+        # Then we start another cluster with a single instance.
+        # This time the instance is stopped by a signal before it reaches the `running` state,
+        # but in that case the cluster should not spawn another instance.
+
+        log("Starting another cluster...")
+        cluster = await golem.run_service(FirstInstanceFailsToStart)
+
+        while instances_started < 3:
+            log("Waiting for another instance...")
+            await asyncio.sleep(2)
+
+        assert [i for i in cluster.instances if i.is_available]
+
+        log("Closing the second cluster...")
+        cluster.stop()
+
+        while [i for i in cluster.instances if i.is_available]:
+            log("Waiting for the cluster to stop...")
+            await asyncio.sleep(2)
+
+        log("Cluster stopped")
 
 
 if __name__ == "__main__":
