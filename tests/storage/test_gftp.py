@@ -12,7 +12,7 @@ from yapapi.storage import gftp
 
 @pytest.fixture(scope="function")
 def test_dir():
-    """Creates a temporary directory containing test files.
+    """Create a temporary directory containing test files.
 
     The directory contains files `a_0.txt`, `a_1.txt` and `a_2.txt`
     containing the text `a`, and similarly with `b`, `c` and `d`.
@@ -40,7 +40,7 @@ def test_dir():
 
 @pytest.fixture(scope="function")
 def temp_dir():
-    """Creates a temporary directory for temporary files.
+    """Create a directory for temporary files.
 
     On exit asserts that the directory is empty.
     """
@@ -53,7 +53,15 @@ def temp_dir():
 
 
 class MockService(gftp.GftpDriver):
-    """A mock for a `gftp service` command."""
+    """A mock for the `gftp service` command.
+
+    To be used as a replacement for the real command in `yapapi.storage.gftp.GftpProvider`.
+
+    As with the real `gftp service` command, URL returned by `MockService.publish(file)`
+    is based on file's contents: files with the same content will have the same URL.
+    In case of this mock implementation, the URL is simply the contents of the file,
+    stripped from whitespaces.
+    """
 
     def __init__(self):
         self.published = defaultdict(list)

@@ -164,11 +164,13 @@ def _temp_file(temp_dir: Path) -> Iterator[Path]:
 
     Implements the ContextManager interface. Deletes the file on ContextManager's exit.
     """
-    fd, file_name = tempfile.mkstemp(prefix="yapapi_", dir=temp_dir)
+    fd, name = tempfile.mkstemp(prefix="yapapi_", dir=temp_dir)
     os.close(fd)
-    path = Path(file_name)
-    yield path
-    _delete_if_exists(path)
+    path = Path(name)
+    try:
+        yield path
+    finally:
+        _delete_if_exists(path)
 
 
 class GftpSource(Source):
@@ -217,7 +219,6 @@ class GftpDestination(Destination):
 
 
 def _delete_if_exists(path: Path) -> None:
-
     if path.exists():
         path.unlink()
         _logger.debug("Deleted temporary file %s", path)
@@ -247,18 +248,25 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
 
     def __init__(self, *, tmpdir: Optional[str] = None, _close_urls: bool = False):
         self.__exit_stack = AsyncExitStack()
+
+        # Directory for temporal files created by this provider
         self._temp_dir: Optional[Path] = Path(tmpdir) if tmpdir else None
+
         # Mapping of URLs to info on files published with this URL
         self._published_sources: Dict[str, GftpProvider.URLInfo] = dict()
+
         # Lock used to synchronize access to self._published_sources
-        self._lock = asyncio.Lock()
+        self._lock: asyncio.Lock = asyncio.Lock()
+
+        # Flag indicating if this `GftpProvider` will close unpublished URLs.
         # If set to `True` then the provider will call `gftp close <URL>` for an URL
         # that has no longer any published files. This should be the default behavior,
         # but is currently turned off until `gftp` is able to handle the `close` command
         # correctly (see https://github.com/golemfactory/yagna/pull/1501).
-        self._close_urls = _close_urls
-        # A reference to an external process running the `gftp server` command
-        self._process = None
+        self._close_urls: bool = _close_urls
+
+        # Reference to an external process running the `gftp server` command
+        self._process: Optional["__Process"] = None
 
     async def __aenter__(self) -> StorageProvider:
         if not self._temp_dir:
