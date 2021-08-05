@@ -17,6 +17,9 @@ from .assertions import assert_no_errors, assert_all_invoices_accepted
 
 logger = logging.getLogger("goth.test.run_simple_service")
 
+RUNNING_TIME = 40  # in seconds
+SUBNET_TAG = "goth"
+
 
 @pytest.mark.asyncio
 async def test_run_simple_service(
@@ -43,7 +46,7 @@ async def test_run_simple_service(
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
-            f"{requestor_path} --running-time 40 --subnet-tag goth",
+            f"{requestor_path} --running-time {RUNNING_TIME} --subnet-tag {SUBNET_TAG}",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor):
 
@@ -52,14 +55,10 @@ async def test_run_simple_service(
             def elapsed_time():
                 return f"time: {(time.time() - start_time):.1f}"
 
-            # Add assertions to the command output monitor `cmd_monitor`:
             cmd_monitor.add_assertion(assert_no_errors)
             cmd_monitor.add_assertion(assert_all_invoices_accepted)
 
             await cmd_monitor.wait_for_pattern("Starting 1 instance", timeout=20)
-            await cmd_monitor.wait_for_pattern("instances:.*starting", timeout=20)
-            logger.info(f"The instance is starting ({elapsed_time()})")
-
             # A longer timeout to account for downloading a VM image
             await cmd_monitor.wait_for_pattern("All instances started", timeout=120)
             logger.info(f"The instance was started successfully ({elapsed_time()})")
@@ -72,4 +71,4 @@ async def test_run_simple_service(
             logger.info(f"The instance is stopping ({elapsed_time()})")
 
             await cmd_monitor.wait_for_pattern(".*All jobs have finished", timeout=20)
-            logger.info(f"Requestor script finished ({elapsed_time()}")
+            logger.info(f"Requestor script finished ({elapsed_time()})")
