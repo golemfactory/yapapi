@@ -277,6 +277,14 @@ class _Engine(AsyncContextManager):
             await self.__aexit__(*sys.exc_info())
             raise
 
+    def _unpaid_agreement_ids(self) -> Set[AgreementId]:
+        """Return the set of all yet unpaid agreement ids."""
+
+        unpaid_agreement_ids = set()
+        for job_id, agreement_ids in self._agreements_to_pay.items():
+            unpaid_agreement_ids.update(agreement_ids)
+        return unpaid_agreement_ids
+
     async def _shutdown(self, *exc_info):
         """Shutdown this Golem instance."""
 
@@ -306,7 +314,7 @@ class _Engine(AsyncContextManager):
         # then cancel the invoices service
         if self._process_invoices_job:
 
-            unpaid_agreements = {id for ids in self._agreements_to_pay.values() for id in ids}
+            unpaid_agreements = self._unpaid_agreement_ids()
             if unpaid_agreements:
                 logger.info(
                     "%s still unpaid, waiting for invoices...",
@@ -316,7 +324,7 @@ class _Engine(AsyncContextManager):
                     await asyncio.wait_for(self._process_invoices_job, timeout=30)
                 except asyncio.TimeoutError:
                     logger.debug("process_invoices_job cancelled")
-                unpaid_agreements = {id for ids in self._agreements_to_pay.values() for id in ids}
+                unpaid_agreements = self._unpaid_agreement_ids()
                 if unpaid_agreements:
                     logger.warning("Unpaid agreements: %s", unpaid_agreements)
 
