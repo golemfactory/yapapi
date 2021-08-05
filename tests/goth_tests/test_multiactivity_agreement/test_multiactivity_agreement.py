@@ -21,7 +21,7 @@ async def assert_agreement_created(events):
     """Assert that `AgreementCreated` event occurs."""
 
     async for line in events:
-        m = re.match(r"AgreementCreated\(agr_id='([^']+)'", line)
+        m = re.match(r"AgreementCreated\(.*agr_id='([^']+)'", line)
         if m:
             return m.group(1)
     raise AssertionError("Expected AgreementCreated event")
@@ -35,7 +35,7 @@ async def assert_multiple_workers_run(agr_id, events):
     workers_finished = 0
 
     async for line in events:
-        m = re.match(r"WorkerFinished\(agr_id='([^']+)'", line)
+        m = re.match(r"WorkerFinished\(.*agr_id='([^']+)'", line)
         if m:
             worker_agr_id = m.group(1)
             assert worker_agr_id == agr_id, "Worker run for another agreement"

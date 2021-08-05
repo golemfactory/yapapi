@@ -3,7 +3,6 @@ import asyncio
 from asyncio import CancelledError
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-import logging
 import sys
 from typing import (
     AsyncContextManager,
@@ -28,6 +27,7 @@ from yapapi.events import Event
 from yapapi.payload import Payload
 from yapapi.rest.activity import Activity
 from yapapi.strategy import MarketStrategy
+import yapapi.utils
 
 from .task import Task, TaskStatus
 from ._smartq import SmartQueue
@@ -46,8 +46,7 @@ DEFAULT_EXECUTOR_TIMEOUT: Final[timedelta] = timedelta(minutes=15)
 "Joint timeout for all tasks submitted to an executor."
 
 
-logger = logging.getLogger(__name__)
-
+logger = yapapi.utils.get_logger(__name__)
 
 DEFAULT_GET_OFFERS_TIMEOUT = timedelta(seconds=20)
 
@@ -222,6 +221,7 @@ class Executor(AsyncContextManager):
             AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
         ],
         data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
+        job_id: Optional[str] = None,
     ) -> AsyncIterator[Task[D, R]]:
         """Submit a computation to be executed on providers.
 
@@ -229,9 +229,11 @@ class Executor(AsyncContextManager):
             adds commands to the context object and yields committed commands
         :param data: an iterable or an async generator iterator of Task objects to be computed
             on providers
+        :param job_id: an optional string to identify the job created by this method.
+            Passed as the value of the `id` parameter to `Job()`.
         :return: yields computation progress events
         """
-        generator = self._create_task_generator(worker, data)
+        generator = self._create_task_generator(worker, data, job_id)
         self._engine.register_generator(generator)
         return generator
 
@@ -242,10 +244,16 @@ class Executor(AsyncContextManager):
             AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
         ],
         data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
+        job_id: Optional[str],
     ) -> AsyncGenerator[Task[D, R], None]:
         """Create an async generator yielding completed tasks."""
 
-        job = Job(self._engine, expiration_time=self._expires, payload=self._payload)
+        job = Job(
+            self._engine,
+            expiration_time=self._expires,
+            payload=self._payload,
+            id=job_id,
+        )
         self._engine.add_job(job)
 
         services: Set[asyncio.Task] = set()
@@ -310,6 +318,7 @@ class Executor(AsyncContextManager):
         async def _worker(
             agreement: rest.market.Agreement, activity: Activity, work_context: WorkContext
         ) -> None:
+            nonlocal job
 
             with work_queue.new_consumer() as consumer:
                 try:
@@ -319,29 +328,36 @@ class Executor(AsyncContextManager):
                             task = Task.for_handle(handle, work_queue, self.emit)
                             self._engine.emit(
                                 events.TaskStarted(
-                                    agr_id=agreement.id, task_id=task.id, task_data=task.data
+                                    job_id=job.id,
+                                    agr_id=agreement.id,
+                                    task_id=task.id,
+                                    task_data=task.data,
                                 )
                             )
                             yield task
                             self._engine.emit(
-                                events.TaskFinished(agr_id=agreement.id, task_id=task.id)
+                                events.TaskFinished(
+                                    job_id=job.id, agr_id=agreement.id, task_id=task.id
+                                )
                             )
 
                     batch_generator = worker(work_context, task_generator())
                     try:
-                        await self._engine.process_batches(agreement.id, activity, batch_generator)
+                        await self._engine.process_batches(
+                            job.id, agreement.id, activity, batch_generator
+                        )
                     except StopAsyncIteration:
                         pass
-                    self.emit(events.WorkerFinished(agr_id=agreement.id))
+                    self.emit(events.WorkerFinished(job_id=job.id, agr_id=agreement.id))
                 except Exception:
                     self.emit(
                         events.WorkerFinished(
-                            agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
+                            job_id=job.id, agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
                         )
                     )
                     raise
                 finally:
-                    await self._engine.accept_payments_for_agreement(agreement.id)
+                    await self._engine.accept_payments_for_agreement(job.id, agreement.id)
 
         async def worker_starter() -> None:
             while True:
@@ -451,23 +467,32 @@ class Executor(AsyncContextManager):
                     workers, timeout=1, return_when=asyncio.ALL_COMPLETED
                 )
                 if pending:
-                    logger.info("Waiting for %s to finish...", pluralize(len(pending), "worker"))
+                    logger.info(
+                        "Waiting for %s to finish...",
+                        pluralize(len(pending), "worker"),
+                        job_id=job.id,
+                    )
                     await asyncio.wait(workers, timeout=9, return_when=asyncio.ALL_COMPLETED)
 
             try:
-                logger.debug("Terminating agreements...")
+                logger.debug("Terminating agreements...", job_id=job.id)
                 await job.agreements_pool.terminate_all(reason=reason)
             except Exception:
-                logger.debug("Problem with agreements termination", exc_info=True)
+                logger.debug("Problem with agreements termination", exc_info=True, job_id=job.id)
 
             try:
-                logger.info("Waiting for Executor services to finish...")
+                logger.info("Waiting for Executor services to finish...", job_id=job.id)
                 _, pending = await asyncio.wait(
                     workers.union(services), timeout=10, return_when=asyncio.ALL_COMPLETED
                 )
                 if pending:
                     logger.debug(
-                        "%s still running: %s", pluralize(len(pending), "service"), pending
+                        "%s still running: %s",
+                        pluralize(len(pending), "service"),
+                        pending,
+                        job_id=job.id,
                     )
             except Exception:
-                logger.debug("Got error when waiting for services to finish", exc_info=True)
+                logger.debug(
+                    "Got error when waiting for services to finish", exc_info=True, job_id=job.id
+                )

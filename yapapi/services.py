@@ -699,6 +699,7 @@ class Cluster(AsyncContextManager):
             task_id = f"{self.id}:{next(self._task_ids)}"
             self.emit(
                 events.TaskStarted(
+                    job_id=self._job.id,
                     agr_id=agreement.id,
                     task_id=task_id,
                     task_data=f"Service: {self._service_class.__name__}",
@@ -708,19 +709,22 @@ class Cluster(AsyncContextManager):
             try:
                 instance_batches = self._run_instance(instance)
                 try:
-                    await self._engine.process_batches(agreement.id, activity, instance_batches)
+                    await self._engine.process_batches(
+                        self._job.id, agreement.id, activity, instance_batches
+                    )
                 except StopAsyncIteration:
                     pass
 
                 self.emit(
                     events.TaskFinished(
+                        job_id=self._job.id,
                         agr_id=agreement.id,
                         task_id=task_id,
                     )
                 )
-                self.emit(events.WorkerFinished(agr_id=agreement.id))
+                self.emit(events.WorkerFinished(job_id=self._job.id, agr_id=agreement.id))
             finally:
-                await self._engine.accept_payments_for_agreement(agreement.id)
+                await self._engine.accept_payments_for_agreement(self._job.id, agreement.id)
                 await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
 
         while instance is None:
