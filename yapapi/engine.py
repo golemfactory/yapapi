@@ -1,11 +1,13 @@
 import asyncio
 from asyncio import CancelledError
+from collections import defaultdict
 import contextlib
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
 import itertools
 import logging
+import os
 import sys
 from typing import (
     AsyncContextManager,
@@ -21,7 +23,6 @@ from typing import (
     Union,
 )
 from typing_extensions import Final, AsyncGenerator
-import uuid
 
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
@@ -30,12 +31,13 @@ else:
 
 from yapapi import rest, events
 from yapapi.agreements_pool import AgreementsPool
-from yapapi.ctx import CommandContainer, ExecOptions, Work
+from yapapi.ctx import CommandContainer, ExecOptions, Work, WorkContext
 from yapapi.payload import Payload
-from yapapi.props import com, Activity, NodeInfo, NodeInfoKeys
+from yapapi import props
+from yapapi.props import com
 from yapapi.props.builder import DemandBuilder, DemandDecorator
-from yapapi.rest.activity import CommandExecutionError
-from yapapi.rest.market import OfferProposal, Subscription
+from yapapi.rest.activity import CommandExecutionError, Activity
+from yapapi.rest.market import Agreement, AgreementDetails, OfferProposal, Subscription
 from yapapi.storage import gftp
 from yapapi.strategy import (
     DecreaseScoreForUnconfirmedAgreement,
@@ -51,8 +53,9 @@ DEBIT_NOTE_MIN_TIMEOUT: Final[int] = 30  # in seconds
 
 DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: Final[str] = "golem.com.payment.debit-notes.accept-timeout?"
 
-DEFAULT_DRIVER = "zksync"
-DEFAULT_NETWORK = "rinkeby"
+DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "zksync").lower()
+DEFAULT_NETWORK: str = os.getenv("YAGNA_NETWORK", "rinkeby").lower()
+DEFAULT_SUBNET: Optional[str] = os.getenv("YAGNA_SUBNET", "devnet-beta.2")
 
 
 logger = logging.getLogger("yapapi.executor")
@@ -102,6 +105,11 @@ exescript_ids: Iterator[int] = itertools.count(1)
 """An iterator providing unique ids used to correlate events related to a single exe script."""
 
 
+# Type aliases to make some type annotations more meaningful
+JobId = str
+AgreementId = str
+
+
 class _Engine(AsyncContextManager):
     """Base execution engine containing functions common to all modes of operation."""
 
@@ -122,11 +130,14 @@ class _Engine(AsyncContextManager):
         :param budget: maximum budget for payments
         :param strategy: market strategy used to select providers from the market
             (e.g. LeastExpensiveLinearPayuMS or DummyMS)
-        :param subnet_tag: use only providers in the subnet with the subnet_tag name
-        :param driver: name of the payment driver to use or `None` to use the default driver;
-            only payment platforms with the specified driver will be used
-        :param network: name of the network to use or `None` to use the default network;
-            only payment platforms with the specified network will be used
+        :param subnet_tag: use only providers in the subnet with the subnet_tag name.
+            Uses `YAGNA_SUBNET` environment variable, defaults to `None`
+        :param driver: name of the payment driver to use. Uses `YAGNA_PAYMENT_DRIVER`
+            environment variable, defaults to `zksync`. Only payment platforms with
+            the specified driver will be used
+        :param network: name of the network to use. Uses `YAGNA_NETWORK` environment
+            variable, defaults to `rinkeby`. Only payment platforms with the specified
+            network will be used
         :param event_consumer: a callable that processes events related to the
             computation; by default it is a function that logs all events
         :param stream_output: stream computation output from providers
@@ -147,9 +158,9 @@ class _Engine(AsyncContextManager):
             strategy = DecreaseScoreForUnconfirmedAgreement(strategy, 0.5)
         self._strategy = strategy
 
-        self._subnet: Optional[str] = subnet_tag
-        self._driver = driver.lower() if driver else DEFAULT_DRIVER
-        self._network = network.lower() if network else DEFAULT_NETWORK
+        self._subnet: Optional[str] = subnet_tag or DEFAULT_SUBNET
+        self._driver: str = driver.lower() if driver else DEFAULT_DRIVER
+        self._network: str = network.lower() if network else DEFAULT_NETWORK
 
         if not event_consumer:
             # Use local import to avoid cyclic imports when yapapi.log
@@ -164,15 +175,16 @@ class _Engine(AsyncContextManager):
 
         self._stream_output = stream_output
 
-        # initialize the payment structures
-        self._agreements_to_pay: Set[str] = set()
-        self._agreements_accepting_debit_notes: Set[str] = set()
-        self._invoices: Dict[str, rest.payment.Invoice] = dict()
-        self._payment_closing: bool = False
-
         # a set of `Job` instances used to track jobs - computations or services - started
         # it can be used to wait until all jobs are finished
         self._jobs: Set[Job] = set()
+
+        # initialize the payment structures
+        self._agreements_to_pay: Dict[JobId, Set[AgreementId]] = defaultdict(set)
+        self._agreements_accepting_debit_notes: Dict[JobId, Set[AgreementId]] = defaultdict(set)
+        self._invoices: Dict[AgreementId, rest.payment.Invoice] = dict()
+        self._payment_closing: bool = False
+
         self._process_invoices_job: Optional[asyncio.Task] = None
 
         # a set of async generators created by executors that use this engine
@@ -185,10 +197,10 @@ class _Engine(AsyncContextManager):
     ) -> DemandBuilder:
         """Create a `DemandBuilder` for given `payload` and `expiration_time`."""
         builder = DemandBuilder()
-        builder.add(Activity(expiration=expiration_time, multi_activity=True))
-        builder.add(NodeInfo(subnet_tag=self._subnet))
+        builder.add(props.Activity(expiration=expiration_time, multi_activity=True))
+        builder.add(props.NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
-            builder.ensure(f"({NodeInfoKeys.subnet_tag}={self._subnet})")
+            builder.ensure(f"({props.NodeInfoKeys.subnet_tag}={self._subnet})")
         await builder.decorate(self.payment_decorator, self.strategy, payload)
         return builder
 
@@ -211,6 +223,11 @@ class _Engine(AsyncContextManager):
     def strategy(self) -> MarketStrategy:
         """Return the instance of `MarketStrategy` used by this engine."""
         return self._strategy
+
+    @property
+    def subnet_tag(self) -> Optional[str]:
+        """Return the name of the subnet used by this engine, or `None` if it is not set."""
+        return self._subnet
 
     def emit(self, event: events.Event) -> None:
         """Emit an event to be consumed by this engine's event consumer."""
@@ -260,6 +277,14 @@ class _Engine(AsyncContextManager):
             await self.__aexit__(*sys.exc_info())
             raise
 
+    def _unpaid_agreement_ids(self) -> Set[AgreementId]:
+        """Return the set of all yet unpaid agreement ids."""
+
+        unpaid_agreement_ids = set()
+        for job_id, agreement_ids in self._agreements_to_pay.items():
+            unpaid_agreement_ids.update(agreement_ids)
+        return unpaid_agreement_ids
+
     async def _shutdown(self, *exc_info):
         """Shutdown this Golem instance."""
 
@@ -289,17 +314,19 @@ class _Engine(AsyncContextManager):
         # then cancel the invoices service
         if self._process_invoices_job:
 
-            if self._agreements_to_pay:
+            unpaid_agreements = self._unpaid_agreement_ids()
+            if unpaid_agreements:
                 logger.info(
                     "%s still unpaid, waiting for invoices...",
-                    pluralize(len(self._agreements_to_pay), "agreement"),
+                    pluralize(len(unpaid_agreements), "agreement"),
                 )
                 try:
                     await asyncio.wait_for(self._process_invoices_job, timeout=30)
                 except asyncio.TimeoutError:
                     logger.debug("process_invoices_job cancelled")
-                if self._agreements_to_pay:
-                    logger.warning("Unpaid agreements: %s", self._agreements_to_pay)
+                unpaid_agreements = self._unpaid_agreement_ids()
+                if unpaid_agreements:
+                    logger.warning("Unpaid agreements: %s", unpaid_agreements)
 
             self._process_invoices_job.cancel()
 
@@ -371,9 +398,18 @@ class _Engine(AsyncContextManager):
         """Process incoming invoices."""
 
         async for invoice in self._payment_api.incoming_invoices():
-            if invoice.agreement_id in self._agreements_to_pay:
+            job_id = next(
+                (
+                    id
+                    for id in self._agreements_to_pay
+                    if invoice.agreement_id in self._agreements_to_pay[id]
+                ),
+                None,
+            )
+            if job_id is not None:
                 self.emit(
                     events.InvoiceReceived(
+                        job_id=job_id,
                         agr_id=invoice.agreement_id,
                         inv_id=invoice.invoice_id,
                         amount=invoice.amount,
@@ -387,15 +423,18 @@ class _Engine(AsyncContextManager):
                 except Exception:
                     self.emit(
                         events.PaymentFailed(
-                            agr_id=invoice.agreement_id, exc_info=sys.exc_info()  # type: ignore
+                            job_id=job_id,
+                            agr_id=invoice.agreement_id,
+                            exc_info=sys.exc_info(),  # type: ignore
                         )
                     )
                 else:
-                    self._agreements_to_pay.remove(invoice.agreement_id)
-                    assert invoice.agreement_id in self._agreements_accepting_debit_notes
-                    self._agreements_accepting_debit_notes.remove(invoice.agreement_id)
+                    self._agreements_to_pay[job_id].remove(invoice.agreement_id)
+                    assert invoice.agreement_id in self._agreements_accepting_debit_notes[job_id]
+                    self._agreements_accepting_debit_notes[job_id].remove(invoice.agreement_id)
                     self.emit(
                         events.PaymentAccepted(
+                            job_id=job_id,
                             agr_id=invoice.agreement_id,
                             inv_id=invoice.invoice_id,
                             amount=invoice.amount,
@@ -403,16 +442,27 @@ class _Engine(AsyncContextManager):
                     )
             else:
                 self._invoices[invoice.agreement_id] = invoice
-            if self._payment_closing and not self._agreements_to_pay:
+            if self._payment_closing and not any(
+                agr_ids for agr_ids in self._agreements_to_pay.values()
+            ):
                 break
 
     async def _process_debit_notes(self) -> None:
         """Process incoming debit notes."""
 
         async for debit_note in self._payment_api.incoming_debit_notes():
-            if debit_note.agreement_id in self._agreements_accepting_debit_notes:
+            job_id = next(
+                (
+                    id
+                    for id in self._agreements_accepting_debit_notes
+                    if debit_note.agreement_id in self._agreements_accepting_debit_notes[id]
+                ),
+                None,
+            )
+            if job_id is not None:
                 self.emit(
                     events.DebitNoteReceived(
+                        job_id=job_id,
                         agr_id=debit_note.agreement_id,
                         amount=debit_note.total_amount_due,
                         note_id=debit_note.debit_note_id,
@@ -428,33 +478,35 @@ class _Engine(AsyncContextManager):
                 except Exception:
                     self.emit(
                         events.PaymentFailed(
-                            agr_id=debit_note.agreement_id, exc_info=sys.exc_info()  # type: ignore
+                            job_id=job_id, agr_id=debit_note.agreement_id, exc_info=sys.exc_info()  # type: ignore
                         )
                     )
             if self._payment_closing and not self._agreements_to_pay:
                 break
 
     async def accept_payments_for_agreement(
-        self, agreement_id: str, *, partial: bool = False
+        self, job_id: str, agreement_id: str, *, partial: bool = False
     ) -> None:
         """Add given agreement to the set of agreements for which invoices should be accepted."""
 
-        self.emit(events.PaymentPrepared(agr_id=agreement_id))
+        self.emit(events.PaymentPrepared(job_id=job_id, agr_id=agreement_id))
         inv = self._invoices.get(agreement_id)
         if inv is None:
-            self._agreements_to_pay.add(agreement_id)
-            self.emit(events.PaymentQueued(agr_id=agreement_id))
+            self._agreements_to_pay[job_id].add(agreement_id)
+            self.emit(events.PaymentQueued(job_id=job_id, agr_id=agreement_id))
             return
         del self._invoices[agreement_id]
         allocation = self._get_allocation(inv)
         await inv.accept(amount=inv.amount, allocation=allocation)
         self.emit(
-            events.PaymentAccepted(agr_id=agreement_id, inv_id=inv.invoice_id, amount=inv.amount)
+            events.PaymentAccepted(
+                job_id=job_id, agr_id=agreement_id, inv_id=inv.invoice_id, amount=inv.amount
+            )
         )
 
-    def accept_debit_notes_for_agreement(self, agreement_id: str) -> None:
+    def accept_debit_notes_for_agreement(self, job_id: str, agreement_id: str) -> None:
         """Add given agreement to the set of agreements for which debit notes should be accepted."""
-        self._agreements_accepting_debit_notes.add(agreement_id)
+        self._agreements_accepting_debit_notes[job_id].add(agreement_id)
 
     def add_job(self, job: "Job"):
         """Register a job with this engine."""
@@ -481,14 +533,47 @@ class _Engine(AsyncContextManager):
                 demand.ensure(constraint)
             demand.properties.update({p.key: p.value for p in self.market_decoration.properties})
 
-    async def create_activity(self, agreement_id: str):
+    async def create_activity(self, agreement_id: str) -> Activity:
         """Create an activity for given `agreement_id`."""
         return await self._activity_api.new_activity(
             agreement_id, stream_events=self._stream_output
         )
 
+    async def start_worker(
+        self, job: "Job", worker: Callable[[Agreement, Activity, WorkContext], Awaitable]
+    ) -> Optional[asyncio.Task]:
+        loop = asyncio.get_event_loop()
+
+        async def _worker(agreement: Agreement, agreement_details: AgreementDetails):
+            self.emit(events.WorkerStarted(job_id=job.id, agr_id=agreement.id))
+
+            try:
+                activity = await self.create_activity(agreement.id)
+                self.emit(
+                    events.ActivityCreated(job_id=job.id, act_id=activity.id, agr_id=agreement.id)
+                )
+            except Exception:
+                self.emit(
+                    events.ActivityCreateFailed(
+                        job_id=job.id, agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
+                    )
+                )
+                raise
+
+            async with activity:
+                self.accept_debit_notes_for_agreement(job.id, agreement.id)
+                work_context = WorkContext(
+                    activity, agreement_details, self.storage_manager, emitter=self.emit
+                )
+                await worker(agreement, activity, work_context)
+
+        return await job.agreements_pool.use_agreement(
+            lambda agreement, details: loop.create_task(_worker(agreement, details))
+        )
+
     async def process_batches(
         self,
+        job_id: str,
         agreement_id: str,
         activity: rest.activity.Activity,
         command_generator: AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
@@ -530,21 +615,31 @@ class _Engine(AsyncContextManager):
                 continue
 
             cmds = cc.commands()
-            self.emit(events.ScriptSent(agr_id=agreement_id, script_id=script_id, cmds=cmds))
+            self.emit(
+                events.ScriptSent(
+                    job_id=job_id, agr_id=agreement_id, script_id=script_id, cmds=cmds
+                )
+            )
 
             async def get_batch_results() -> List[events.CommandEvent]:
                 results = []
                 async for evt_ctx in remote:
-                    evt = evt_ctx.event(agr_id=agreement_id, script_id=script_id, cmds=cmds)
+                    evt = evt_ctx.event(
+                        job_id=job_id, agr_id=agreement_id, script_id=script_id, cmds=cmds
+                    )
                     self.emit(evt)
                     results.append(evt)
                     if isinstance(evt, events.CommandExecuted) and not evt.success:
                         raise CommandExecutionError(evt.command, evt.message, evt.stderr)
 
-                self.emit(events.GettingResults(agr_id=agreement_id, script_id=script_id))
+                self.emit(
+                    events.GettingResults(job_id=job_id, agr_id=agreement_id, script_id=script_id)
+                )
                 await batch.post()
-                self.emit(events.ScriptFinished(agr_id=agreement_id, script_id=script_id))
-                await self.accept_payments_for_agreement(agreement_id, partial=True)
+                self.emit(
+                    events.ScriptFinished(job_id=job_id, agr_id=agreement_id, script_id=script_id)
+                )
+                await self.accept_payments_for_agreement(job_id, agreement_id, partial=True)
                 return results
 
             loop = asyncio.get_event_loop()
@@ -575,11 +670,19 @@ class Job:
     Responsible for posting a Demand to market and collecting Offer proposals for the Demand.
     """
 
+    # Infinite supply of generated job ids: "1", "2", ...
+    # We prefer short ids since they would make log messages more readable.
+    _generated_job_ids: Iterator[str] = (str(n) for n in itertools.count(1))
+
+    # Job ids already used, tracked to avoid duplicates
+    _used_job_ids: Set[str] = set()
+
     def __init__(
         self,
         engine: _Engine,
         expiration_time: datetime,
         payload: Payload,
+        id: Optional[str] = None,
     ):
         """Initialize a `Job` instance.
 
@@ -588,16 +691,26 @@ class Job:
             must expire before this date
         param payload: definition of a service runtime or a runtime package that needs to
             be deployed on providers for executing this job
+        param id: an optional string to be used to identify this job in events emitted
+            by the engine. ValueError is raised if a job with the same id has already been created.
+            If not specified, a unique identifier will be generated.
         """
 
-        self.id = str(uuid.uuid4())
+        if id:
+            if id in Job._used_job_ids:
+                raise ValueError(f"Non unique job id {id}")
+            self.id = id
+        else:
+            self.id = next(id for id in Job._generated_job_ids if id not in Job._used_job_ids)
+        Job._used_job_ids.add(self.id)
+
         self.engine = engine
         self.offers_collected: int = 0
         self.proposals_confirmed: int = 0
         self.expiration_time: datetime = expiration_time
         self.payload: Payload = payload
 
-        self.agreements_pool = AgreementsPool(self.engine.emit)
+        self.agreements_pool = AgreementsPool(self.id, self.engine.emit)
         self.finished = asyncio.Event()
 
     async def _handle_proposal(
@@ -615,7 +728,7 @@ class Job:
         async def reject_proposal(reason: str) -> events.ProposalRejected:
             """Reject `proposal` due to given `reason`."""
             await proposal.reject(reason)
-            return events.ProposalRejected(prop_id=proposal.id, reason=reason)
+            return events.ProposalRejected(job_id=self.id, prop_id=proposal.id, reason=reason)
 
         score = await self.engine._strategy.score_offer(proposal, self.agreements_pool)
         logger.debug(
@@ -651,12 +764,12 @@ class Job:
                     demand_builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
 
             await proposal.respond(demand_builder.properties, demand_builder.constraints)
-            return events.ProposalResponded(prop_id=proposal.id)
+            return events.ProposalResponded(job_id=self.id, prop_id=proposal.id)
 
         else:
             # It's a draft agreement
             await self.agreements_pool.add_proposal(score, proposal)
-            return events.ProposalConfirmed(prop_id=proposal.id)
+            return events.ProposalConfirmed(job_id=self.id, prop_id=proposal.id)
 
     async def _find_offers_for_subscription(
         self,
@@ -684,7 +797,9 @@ class Job:
         async for proposal in proposals:
 
             self.engine.emit(
-                events.ProposalReceived(prop_id=proposal.id, provider_id=proposal.issuer)
+                events.ProposalReceived(
+                    job_id=self.id, prop_id=proposal.id, provider_id=proposal.issuer
+                )
             )
             self.offers_collected += 1
 
@@ -702,7 +817,7 @@ class Job:
                     with contextlib.suppress(Exception):
                         self.engine.emit(
                             events.ProposalFailed(
-                                prop_id=proposal_.id, exc_info=sys.exc_info()  # type: ignore
+                                job_id=self.id, prop_id=proposal_.id, exc_info=sys.exc_info()  # type: ignore
                             )
                         )
                 finally:
@@ -723,9 +838,9 @@ class Job:
         while True:
             try:
                 subscription = await builder.subscribe(self.engine._market_api)
-                self.engine.emit(events.SubscriptionCreated(sub_id=subscription.id))
+                self.engine.emit(events.SubscriptionCreated(job_id=self.id, sub_id=subscription.id))
             except Exception as ex:
-                self.engine.emit(events.SubscriptionFailed(reason=str(ex)))
+                self.engine.emit(events.SubscriptionFailed(job_id=self.id, reason=str(ex)))
                 raise
             async with subscription:
                 await self._find_offers_for_subscription(subscription, builder)

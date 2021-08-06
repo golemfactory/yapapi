@@ -70,6 +70,7 @@ class Golem(_Engine):
         max_workers: Optional[int] = None,
         timeout: Optional[timedelta] = None,
         budget: Optional[Union[float, Decimal]] = None,
+        job_id: Optional[str] = None,
     ) -> AsyncIterator[Task[D, R]]:
         """Submit a sequence of tasks to be executed on providers.
 
@@ -86,6 +87,8 @@ class Golem(_Engine):
         :param max_workers: maximum number of concurrent workers, passed to the `Executor` instance
         :param timeout: timeout for computing all tasks, passed to the `Executor` instance
         :param budget: budget for computing all tasks, passed to the `Executor` instance
+        :param job_id: an optional string to identify the job created by this method.
+            Passed as the value of the `id` parameter to `Job()`.
         :return: an iterator that yields completed `Task` objects
 
         example usage:
@@ -117,13 +120,14 @@ class Golem(_Engine):
         kwargs["budget"] = budget if budget is not None else self._budget_amount
 
         async with Executor(_engine=self, **kwargs) as executor:
-            async for t in executor.submit(worker, data):
+            async for t in executor.submit(worker, data, job_id=job_id):
                 yield t
 
     async def run_service(
         self,
         service_class: Type[Service],
-        num_instances: int = 1,
+        num_instances: Optional[int] = None,
+        instance_params: Optional[Iterable[Dict]] = None,
         payload: Optional[Payload] = None,
         expiration: Optional[datetime] = None,
         respawn_unstarted_instances=True,
@@ -131,8 +135,19 @@ class Golem(_Engine):
         """Run a number of instances of a service represented by a given `Service` subclass.
 
         :param service_class: a subclass of `Service` that represents the service to be run
-        :param num_instances: optional number of service instances to run, defaults to a single
-            instance
+        :param num_instances: optional number of service instances to run. Defaults to a single
+            instance, unless `instance_params` is given, in which case, the Cluster will be created
+            with as many instances as there are elements in the `instance_params` iterable.
+            if `num_instances` is set to < 1, the `Cluster` will still be created but no instances
+            will be spawned within it.
+        :param instance_params: optional list of dictionaries of keyword arguments that will be passed
+            to consecutive, spawned instances. The number of elements in the iterable determines the
+            number of instances spawned, unless `num_instances` is given, in which case the latter takes
+            precedence.
+            In other words, if both `num_instances` and `instance_params` are provided,
+            the Cluster will be created with the number of instances determined by `num_instances`
+            and if there are too few elements in the `instance_params` iterable, it will results in
+            an error.
         :param payload: optional runtime definition for the service; if not provided, the
             payload specified by the `get_payload()` method of `service_class` is used
         :param expiration: optional expiration datetime for the service
@@ -200,10 +215,9 @@ class Golem(_Engine):
             engine=self,
             service_class=service_class,
             payload=payload,
-            num_instances=num_instances,
             expiration=expiration,
             respawn_unstarted_instances=respawn_unstarted_instances,
         )
         await self._stack.enter_async_context(cluster)
-        cluster.spawn_instances()
+        cluster.spawn_instances(num_instances=num_instances, instance_params=instance_params)
         return cluster

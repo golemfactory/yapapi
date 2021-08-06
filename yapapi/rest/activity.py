@@ -67,6 +67,11 @@ class Activity(AsyncContextManager["Activity"]):
         state: yaa.ActivityState = await self._state.get_activity_state(self._id)
         return state
 
+    async def usage(self) -> yaa.ActivityUsage:
+        """Retrieve the current usage of the activity."""
+        usage: yaa.ActivityUsage = await self._state.get_activity_usage(self._id)
+        return usage
+
     async def send(self, script: List[dict], deadline: Optional[datetime] = None) -> "Batch":
         """Send the execution script to the provider's execution unit."""
         script_txt = json.dumps(script)
@@ -190,7 +195,11 @@ class PollingBatch(Batch):
                 raise BatchTimeoutError()
             try:
                 results: List[yaa.ExeScriptCommandResult] = await self._api.get_exec_batch_results(
-                    self._activity_id, self._batch_id, _request_timeout=min(timeout, 5)
+                    self._activity_id,
+                    self._batch_id,
+                    command_index=last_idx,
+                    timeout=min(timeout, 5),
+                    _request_timeout=min(timeout, 5) + 1,
                 )
             except asyncio.TimeoutError:
                 continue

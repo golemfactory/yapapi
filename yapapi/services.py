@@ -8,7 +8,20 @@ import logging
 import statemachine  # type: ignore
 import sys
 from types import TracebackType
-from typing import Any, AsyncContextManager, List, Optional, Set, Tuple, Type, Union
+from typing import (
+    Any,
+    AsyncContextManager,
+    AsyncGenerator,
+    Awaitable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    Iterable,
+    Dict,
+)
 
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
@@ -22,10 +35,9 @@ else:
 
 from yapapi import rest, events
 from yapapi.ctx import WorkContext
-from yapapi.engine import _Engine, Job
+from yapapi.engine import _Engine, Job, WorkItem
 from yapapi.payload import Payload
-from yapapi.props import NodeInfo
-from yapapi.rest.activity import BatchError
+from yapapi.rest.activity import Activity, BatchError
 
 
 logger = logging.getLogger(__name__)
@@ -37,6 +49,10 @@ MAX_AGREEMENT_EXPIRATION: Final[timedelta] = timedelta(minutes=180)
 DEFAULT_SERVICE_EXPIRATION: Final[timedelta] = MAX_AGREEMENT_EXPIRATION - timedelta(minutes=5)
 
 cluster_ids = itertools.count(1)
+
+
+class ServiceError(Exception):
+    pass
 
 
 class ServiceState(statemachine.StateMachine):
@@ -117,6 +133,11 @@ class Service:
         # (e.g., via returning from `Service.run()`).
 
     @property
+    def cluster(self) -> "Cluster":
+        """Return the Cluster to which this service instance belongs."""
+        return self._cluster
+
+    @property
     def id(self):
         """Return the id of this service instance.
 
@@ -183,26 +204,162 @@ class Service:
     async def get_payload() -> Optional[Payload]:
         """Return the payload (runtime) definition for this service.
 
+        To be overridden by the author of a specific Service class.
+
         If `get_payload` is not implemented, the payload will need to be provided in the
         `Golem.run_service` call.
         """
         pass
 
-    async def start(self):
-        """Implement the `starting` state of the service."""
+    async def start(self) -> AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]]:
+        """Implement the handler for the `starting` state of the service.
+
+        To be overridden by the author of a specific Service class.
+
+        Should perform the minimum set of operations after which the instance of a service can be
+        treated as "started", or, in other words, ready to receive service requests. It's up to the
+        developer of the specific Service class to decide what exact operations constitute a
+        service startup.
+
+        As a handler implementing the [work generator pattern](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern),
+        it's expected to be a generator that yields `WorkItems` (generated using the service's
+        instance of the work context - `self._ctx`) that are then dispatched to the activity by
+        the engine.
+
+        Results of those batches can then be retrieved by awaiting the values captured from yield
+        statements.
+
+        A clean exit from a handler function triggers the engine to transition the state of the
+        instance to the next stage in service's lifecycle - in this case, to `running`.
+
+        On the other hand, any unhandled exception will cause the instance to be either retried on
+        another provider node, if the Cluster's `respawn_unstarted_instances` argument is set to
+        `True`, which is also the default behavior, or altogether terminated, if
+        `respawn_unstarted_instances` is set to `False`.
+
+        ### Example
+
+        ```
+        async def start(self):
+            # deploy the exe-unit
+            self._ctx.deploy()
+            # start the exe-unit's container
+            self._ctx.start()
+            # start some service process within the container
+            self._ctx.run("/golem/run/service_ctl", "--start")
+            # send the batch to the provider
+            yield self._ctx.commit()
+        ```
+
+        ### Default implementation
+
+        The default implementation assumes that, in order to accept commands, the runtime needs to
+        be first deployed using the `deploy` command, which is analogous to creation of a container
+        corresponding with the desired payload, and then started using the `start` command,
+        actually launching the process that runs the aforementioned container.
+
+        Additionally, it also assumes that the exe-unit doesn't need any additional parameters
+        in its `start()` call (e.g. for the VM runtime, all the required parameters are already
+        passed as part of the agreement between the requestor and the provider).
+
+        Therefore, this default implementation performs the minimum required for a VM payload to
+        start responding to `run` commands. If your service requires any additional operations -
+        you'll need to override this method (possibly starting with a call to `super().start()`)
+        to add appropriate preparatory steps.
+
+        In case of runtimes other than VM, `deploy` and/or `start` might be optional or altogether
+        disallowed, plus `start` itself might take some parameters. It is up to the author of the
+        specific `Service` implementation that uses such a payload to adjust this method accordingly
+        based on the requirements for the given runtime/exe-unit type.
+        """
 
         self._ctx.deploy()
         self._ctx.start()
         yield self._ctx.commit()
 
-    async def run(self):
-        """Implement the `running` state of the service."""
+    async def run(self) -> AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]]:
+        """Implement the handler for the `running` state of the service.
+
+        To be overridden by the author of a specific Service class.
+
+        Should contain any operations needed to ensure continuous operation of a service.
+
+        As a handler implementing the [work generator pattern](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern),
+        it's expected to be a generator that yields `WorkItems` (generated using the service's
+        instance of the work context - `self._ctx`) that are then dispatched to the activity by
+        the engine.
+
+        Results of those batches can then be retrieved by awaiting the values captured from yield
+        statements.
+
+        A clean exit from a handler function triggers the engine to transition the state of the
+        instance to the next stage in service's lifecycle - in this case, to `stopping`.
+
+        Any unhandled exception will cause the instance to be terminated.
+
+        ### Example
+
+        ```
+        async def run(self):
+            while True:
+                self._ctx.run("/golem/run/report", "--stats")  # index 0
+                future_results = yield self._ctx.commit()
+                results = await future_results
+                stats = results[0].stdout.strip()  # retrieve from index 0
+                print(f"stats: {stats}")
+        ```
+
+        ### Default implementation
+
+        Because the nature of the operations required during the "running" state depends directly
+        on the specifics of a given Service and because it's entirely plausible for a service
+        not to require any direct interaction with the exe-unit (runtime) from the requestor's end
+        after the service has been started, the default is to just wait indefinitely without
+        producing any batches.
+        """
 
         await asyncio.Future()
-        yield
+        yield  # type: ignore # unreachable because of the indefinite wait above
 
-    async def shutdown(self):
-        """Implement the `stopping` state of the service."""
+    async def shutdown(self) -> AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]]:
+        """Implement the handler for the `stopping` state of the service.
+
+        To be overridden by the author of a specific Service class.
+
+        Should contain any operations that the requestor needs to ensure the instance is correctly
+        and gracefully shut-down - e.g. that its final state is retrieved.
+
+        As a handler implementing the [work generator pattern](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern),
+        it's expected to be a generator that yields `WorkItems` (generated using the service's
+        instance of the work context - `self._ctx`) that are then dispatched to the activity by
+        the engine.
+
+        Results of those batches can then be retrieved by awaiting the values captured from yield
+        statements.
+
+        Finishing the execution of this handler will trigger termination of this instance.
+
+        This handler will only be called if the activity running the service is still available.
+        If the activity has already been deemed terminated or if the connection with the provider
+        has been lost, the service will transition to the `terminated` state and the shutdown
+        handler won't be run.
+
+        ### Example
+
+        ```
+        async def shutdown(self):
+            self._ctx.run("/golem/run/dump_state")
+            self._ctx.download_file("/golem/output/state", "/some/local/path/state")
+            self._ctx.terminate()
+            yield self._ctx.commit()
+        ```
+
+        ### Default implementation
+
+        By default, the activity is just sent a `terminate` command. Whether it's absolutely
+        required or not, again, depends on the implementation of the given runtime.
+
+        """
 
         self._ctx.terminate()
         yield self._ctx.commit()
@@ -235,7 +392,7 @@ class ServiceInstance:
     service: Service
     control_queue: "asyncio.Queue[ControlSignal]" = field(default_factory=asyncio.Queue)
     service_state: ServiceState = field(default_factory=ServiceState)
-    visited_states: List[ServiceState] = field(default_factory=list)
+    visited_states: List[statemachine.State] = field(default_factory=list)
 
     def __post_init__(self):
         self.service_state.instance = self
@@ -259,7 +416,6 @@ class Cluster(AsyncContextManager):
         engine: "_Engine",
         service_class: Type[Service],
         payload: Payload,
-        num_instances: int = 1,
         expiration: Optional[datetime] = None,
         respawn_unstarted_instances: bool = True,
     ):
@@ -268,7 +424,6 @@ class Cluster(AsyncContextManager):
         :param engine: an engine for running service instance
         :param service_class: service specification
         :param payload: definition of service runtime for this Cluster
-        :param num_instances: number of instances to spawn in this Cluster
         :param expiration: a date before which all agreements related to running services
             in this Cluster should be terminated
         :param respawn_unstarted_instances: if an instance fails in the `starting` state,
@@ -280,8 +435,9 @@ class Cluster(AsyncContextManager):
         self._engine = engine
         self._service_class = service_class
         self._payload = payload
-        self._num_instances = num_instances
-        self._expiration = expiration or datetime.now(timezone.utc) + DEFAULT_SERVICE_EXPIRATION
+        self._expiration: datetime = (
+            expiration or datetime.now(timezone.utc) + DEFAULT_SERVICE_EXPIRATION
+        )
         self._task_ids = itertools.count(1)
         self._stack = AsyncExitStack()
         self._respawn_unstarted_instances = respawn_unstarted_instances
@@ -292,9 +448,24 @@ class Cluster(AsyncContextManager):
         self._instance_tasks: Set[asyncio.Task] = set()
         """Set of asyncio tasks that run spawn_service()"""
 
+    @property
+    def expiration(self) -> datetime:
+        """Return the expiration datetime for agreements related to services in this Cluster."""
+        return self._expiration
+
+    @property
+    def payload(self) -> Payload:
+        """Return the service runtime definition for this Cluster."""
+        return self._payload
+
+    @property
+    def service_class(self) -> Type[Service]:
+        """Return the class instantiated by all service instances in this Cluster."""
+        return self._service_class
+
     def __repr__(self):
         return (
-            f"Cluster {self.id}: {self._num_instances}x[Service: {self._service_class.__name__}, "
+            f"Cluster {self.id}: {len(self.__instances)}x[Service: {self._service_class.__name__}, "
             f"Payload: {self._payload}]"
         )
 
@@ -419,7 +590,6 @@ class Cluster(AsyncContextManager):
         return instance.state != prev_state
 
     async def _run_instance(self, instance: ServiceInstance):
-
         loop = asyncio.get_event_loop()
         self.__instances.append(instance)
 
@@ -513,81 +683,54 @@ class Cluster(AsyncContextManager):
 
         logger.info("%s decommissioned", instance.service)
 
-    async def spawn_instance(self) -> None:
-        """Spawn a new service instance within this Cluster.
-
-        :param respawn_on_failure: if a new instance fails in `starting` state,
-            whether to spawn another instance instead.
-        """
+    async def spawn_instance(self, params: Dict) -> None:
+        """Spawn a new service instance within this Cluster."""
 
         logger.debug("spawning instance within %s", self)
         instance: Optional[ServiceInstance] = None
         agreement_id: Optional[str]  # set in start_worker
 
-        async def start_worker(agreement: rest.market.Agreement, node_info: NodeInfo) -> None:
-
+        async def _worker(
+            agreement: rest.market.Agreement, activity: Activity, work_context: WorkContext
+        ) -> None:
             nonlocal agreement_id, instance
-
             agreement_id = agreement.id
-            self.emit(events.WorkerStarted(agr_id=agreement.id))
 
+            task_id = f"{self.id}:{next(self._task_ids)}"
+            self.emit(
+                events.TaskStarted(
+                    job_id=self._job.id,
+                    agr_id=agreement.id,
+                    task_id=task_id,
+                    task_data=f"Service: {self._service_class.__name__}",
+                )
+            )
+            instance = ServiceInstance(service=self._service_class(self, work_context, **params))  # type: ignore
             try:
-                act = await self._engine.create_activity(agreement.id)
-                self.emit(events.ActivityCreated(act_id=act.id, agr_id=agreement.id))
-            except Exception:
-                self.emit(
-                    events.ActivityCreateFailed(
-                        agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
+                instance_batches = self._run_instance(instance)
+                try:
+                    await self._engine.process_batches(
+                        self._job.id, agreement.id, activity, instance_batches
                     )
-                )
-                raise
+                except StopAsyncIteration:
+                    pass
 
-            async with act:
-
-                self._engine.accept_debit_notes_for_agreement(agreement.id)
-
-                work_context = WorkContext(
-                    act.id, node_info, self._engine.storage_manager, emitter=self.emit
-                )
-                instance = ServiceInstance(service=self._service_class(self, work_context))
-
-                task_id = f"{self.id}:{next(self._task_ids)}"
                 self.emit(
-                    events.TaskStarted(
+                    events.TaskFinished(
+                        job_id=self._job.id,
                         agr_id=agreement.id,
                         task_id=task_id,
-                        task_data=f"Service: {self._service_class.__name__}",
                     )
                 )
-
-                try:
-                    instance_batches = self._run_instance(instance)
-                    try:
-                        await self._engine.process_batches(agreement.id, act, instance_batches)
-                    except StopAsyncIteration:
-                        pass
-
-                    self.emit(
-                        events.TaskFinished(
-                            agr_id=agreement.id,
-                            task_id=task_id,
-                        )
-                    )
-                    self.emit(events.WorkerFinished(agr_id=agreement.id))
-                finally:
-                    await self._engine.accept_payments_for_agreement(agreement.id)
-                    await self._job.agreements_pool.release_agreement(
-                        agreement.id, allow_reuse=False
-                    )
-
-        loop = asyncio.get_event_loop()
+                self.emit(events.WorkerFinished(job_id=self._job.id, agr_id=agreement.id))
+            finally:
+                await self._engine.accept_payments_for_agreement(self._job.id, agreement.id)
+                await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
 
         while instance is None:
             agreement_id = None
             await asyncio.sleep(1.0)
-            task = await self._job.agreements_pool.use_agreement(
-                lambda agreement, node: loop.create_task(start_worker(agreement, node))
-            )
+            task = await self._engine.start_worker(self._job, _worker)
             if not task:
                 continue
             try:
@@ -618,21 +761,55 @@ class Cluster(AsyncContextManager):
         instance = self.__get_service_instance(service)
         instance.control_queue.put_nowait(ControlSignal.stop)
 
-    def spawn_instances(self, num_instances: Optional[int] = None) -> None:
+    def spawn_instances(
+        self,
+        num_instances: Optional[int] = None,
+        instance_params: Optional[Iterable[Dict]] = None,
+    ) -> None:
         """Spawn new instances within this Cluster.
 
-        :param num_instances: number of instances to commission.
-            if not given, spawns the number that the Cluster has been initialized with.
+        :param num_instances: optional number of service instances to run. Defaults to a single
+            instance, unless `instance_params` is given, in which case, the Cluster will spawn
+            as many instances as there are elements in the `instance_params` iterable.
+            if `num_instances` is not None and < 1, the method will immediately return and log a warning.
+        :param instance_params: optional list of dictionaries of keyword arguments that will be passed
+            to consecutive, spawned instances. The number of elements in the iterable determines the
+            number of instances spawned, unless `num_instances` is given, in which case the latter takes
+            precedence.
+            In other words, if both `num_instances` and `instance_params` are provided,
+            the number of instances spawned will be equal to `num_instances` and if there are
+            too few elements in the `instance_params` iterable, it will results in an error.
+
         """
-        if num_instances:
-            self._num_instances += num_instances
-        else:
-            num_instances = self._num_instances
+        # just a sanity check
+        if num_instances is not None and num_instances < 1:
+            logger.warning(
+                "Trying to spawn less than one instance. num_instances: %s", num_instances
+            )
+            return
+
+        # if the parameters iterable was not given, assume a default of a single instance
+        if not num_instances and not instance_params:
+            num_instances = 1
+
+        # convert the parameters iterable to an iterator
+        # if not provided, make a default iterator consisting of empty dictionaries
+        instance_params = iter(instance_params or (dict() for _ in range(num_instances)))  # type: ignore
 
         loop = asyncio.get_event_loop()
-        for i in range(num_instances):
-            task = loop.create_task(self.spawn_instance())
-            self._instance_tasks.add(task)
+        spawned_instances = 0
+        while not num_instances or spawned_instances < num_instances:
+            try:
+                params = next(instance_params)
+                task = loop.create_task(self.spawn_instance(params))
+                self._instance_tasks.add(task)
+                spawned_instances += 1
+            except StopIteration:
+                if num_instances and spawned_instances < num_instances:
+                    raise ServiceError(
+                        f"`instance_params` iterable depleted after {spawned_instances} spawned instances."
+                    )
+                break
 
     def stop(self):
         """Signal the whole cluster to stop."""
