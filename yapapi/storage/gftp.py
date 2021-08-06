@@ -28,7 +28,7 @@ from typing import (
 
 import jsonrpc_base  # type: ignore
 from async_exit_stack import AsyncExitStack  # type: ignore
-import semantic_version
+import semantic_version  # type: ignore
 from typing_extensions import Literal, Protocol, TypedDict
 
 from yapapi.storage import StorageProvider, Destination, Source, Content
