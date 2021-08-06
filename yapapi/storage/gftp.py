@@ -5,6 +5,7 @@ Golem File Transfer Storage Provider
 import asyncio
 import contextlib
 from dataclasses import dataclass
+import distutils.util
 import json
 import os
 import sys
@@ -31,6 +32,7 @@ from typing_extensions import Literal, Protocol, TypedDict
 
 from yapapi.storage import StorageProvider, Destination, Source, Content
 import logging
+
 
 _logger = logging.getLogger(__name__)
 
@@ -158,21 +160,6 @@ class __Process(jsonrpc_base.Server):
             return message.parse_response(msg)
 
 
-@contextlib.contextmanager
-def _temp_file(temp_dir: Path) -> Iterator[Path]:
-    """Create a new temporary file in `temp_dir`.
-
-    Implements the ContextManager interface. Deletes the file on ContextManager's exit.
-    """
-    fd, name = tempfile.mkstemp(prefix="yapapi_", dir=temp_dir)
-    os.close(fd)
-    path = Path(name)
-    try:
-        yield path
-    finally:
-        _delete_if_exists(path)
-
-
 class GftpSource(Source):
     def __init__(self, length: int, link: PubLink):
         self._len = length
@@ -218,10 +205,44 @@ class GftpDestination(Destination):
         return await super().download_file(destination_file)
 
 
+@contextlib.contextmanager
+def _temp_file(temp_dir: Path) -> Iterator[Path]:
+    """Create a new temporary file in `temp_dir`.
+
+    Implements the ContextManager interface. Deletes the file on ContextManager's exit.
+    """
+    fd, name = tempfile.mkstemp(prefix="yapapi_", dir=temp_dir)
+    os.close(fd)
+    path = Path(name)
+    try:
+        yield path
+    finally:
+        _delete_if_exists(path)
+
+
 def _delete_if_exists(path: Path) -> None:
     if path.exists():
         path.unlink()
         _logger.debug("Deleted temporary file %s", path)
+
+
+USE_GFTP_CLOSE_ENV_VAR = "YAPAPI_USE_GFTP_CLOSE"
+"""The environment variable used by GftpProvider to control whether `gftp close` should be used."""
+
+
+def read_use_gftp_close_env_var() -> Optional[bool]:
+    """Determine from the environment whether `GftpProvider` should use the `gftp close` command.
+
+    Reads the value of the environment variable with the name stored in `USE_GFTP_CLOSE_ENV_VAR`.
+    If the environment variable is set and its value can be interpreted as boolean value by
+    `distutils.util.strtobool()` then the corresponding boolean value is returned. Otherwise,
+    returns `None`.
+    """
+    try:
+        env_value = os.environ[USE_GFTP_CLOSE_ENV_VAR]
+        return distutils.util.strtobool(env_value)
+    except Exception:
+        return None
 
 
 class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
@@ -246,7 +267,7 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
         URL can be safely deleted.
         """
 
-    def __init__(self, *, tmpdir: Optional[str] = None, _close_urls: bool = False):
+    def __init__(self, *, tmpdir: Optional[str] = None):
         self.__exit_stack = AsyncExitStack()
 
         # Directory for temporal files created by this provider
@@ -261,9 +282,10 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
         # Flag indicating if this `GftpProvider` will close unpublished URLs.
         # If set to `True` then the provider will call `gftp close <URL>` for an URL
         # that has no longer any published files. This should be the default behavior,
-        # but is currently turned off until `gftp` is able to handle the `close` command
-        # correctly (see https://github.com/golemfactory/yagna/pull/1501).
-        self._close_urls: bool = _close_urls
+        # but it may cause errors, due to a bug in `gftp` prior to version `0.7.3`
+        # (see https://github.com/golemfactory/yagna/pull/1501), and is therefore turned
+        # on only if `read_use_gftp_close_env_var()` returns `True`.
+        self._close_urls: bool = read_use_gftp_close_env_var() or False
 
         # Reference to an external process running the `gftp server` command
         self._process: Optional["__Process"] = None

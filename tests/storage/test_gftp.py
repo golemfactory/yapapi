@@ -46,9 +46,10 @@ def temp_dir():
     """
     with tempfile.TemporaryDirectory() as tmpdir:
         try:
-            yield tmpdir
+            path = Path(tmpdir)
+            yield path
         finally:
-            files = list(Path(tmpdir).glob("*"))
+            files = list(path.glob("*"))
             assert files == []
 
 
@@ -101,7 +102,7 @@ def mock_service(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_gftp_provider(test_dir, temp_dir, mock_service):
+async def test_gftp_provider(test_dir, temp_dir, mock_service, monkeypatch):
     """Simulate a number of workers concurrently uploading files and bytes."""
 
     num_batches = 20
@@ -151,14 +152,25 @@ async def test_gftp_provider(test_dir, temp_dir, mock_service):
             for src in sources:
                 await provider.release_source(src)
 
-            tempfiles = list(Path(temp_dir).glob("*"))
+            tempfiles = set(Path(temp_dir).glob("*"))
             print(
                 f"Number of temp files: {len(tempfiles)}, "
                 f"file uploads: {file_uploads}, "
                 f"bytes uploads: {byte_uploads}"
             )
 
-    async with gftp.GftpProvider(tmpdir=temp_dir, _close_urls=True) as provider:
+            published_tempfiles = {
+                path
+                for files in mock_service.published.values()
+                for path in files
+                if path.parent == temp_dir
+            }
+            assert tempfiles == published_tempfiles
+
+    # Force using `gftp close` by GftpProvider
+    monkeypatch.setenv(gftp.USE_GFTP_CLOSE_ENV_VAR, "1")
+
+    async with gftp.GftpProvider(tmpdir=temp_dir) as provider:
 
         assert isinstance(provider, gftp.GftpProvider)
         loop = asyncio.get_event_loop()
@@ -174,6 +186,58 @@ async def test_gftp_provider(test_dir, temp_dir, mock_service):
     # At this point the assertions in the fixtures for `temp_dir` and `test_dir`
     # will check if all files from `temp_dir` were deleted and if no files from
     # `test_dir` were deleted.
+
+
+@pytest.mark.parametrize(
+    "env_value, expect_unpublished",
+    [
+        ("1", True),
+        ("0", False),
+        ("Y", True),
+        ("N", False),
+        ("y", True),
+        ("n", False),
+        ("yes", True),
+        ("no", False),
+        ("True", True),
+        ("False", False),
+        ("true", True),
+        ("false", False),
+        ("on", True),
+        ("off", False),
+        ("whatever", False),
+        (None, False),
+    ],
+)
+@pytest.mark.asyncio
+async def test_gftp_close_env_var(
+    temp_dir, mock_service, monkeypatch, env_value, expect_unpublished
+):
+    """Test that the GftpProvider calls close() on the underlying service."""
+
+    # Enable or disable using `gftp close` by GftpProvider
+    if env_value is not None:
+        monkeypatch.setenv(gftp.USE_GFTP_CLOSE_ENV_VAR, env_value)
+    else:
+        monkeypatch.delenv(gftp.USE_GFTP_CLOSE_ENV_VAR, raising=False)
+
+    async with gftp.GftpProvider(tmpdir=temp_dir) as provider:
+        assert isinstance(provider, gftp.GftpProvider)
+
+        src_1 = await provider.upload_bytes(b"bytes")
+        assert mock_service.published["bytes"]
+
+        src_2 = await provider.upload_bytes(b"bytes")
+        assert mock_service.published["bytes"]
+
+        assert src_1.download_url == src_2.download_url
+
+        await provider.release_source(src_1)
+        # the URL should not be unpublished just yet
+        assert mock_service.published["bytes"]
+
+        await provider.release_source(src_2)
+        assert (not mock_service.published["bytes"]) == expect_unpublished
 
 
 ME = __file__
