@@ -115,4 +115,5 @@ jobs:
           REPO_NAME: ${{ github.repository }}
           WORKFLOW_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         with:
-          args: 'Goth nightly run failed for `{{ REPO_NAME }}` on branch `{{ BRANCH_NAME }}`! {{ WORKFLOW_URL }}'
+          # <@&717623005911580713> = @sdk-integrations
+          args: '<@&717623005911580713> Goth nightly run failed for `{{ REPO_NAME }}` on branch `{{ BRANCH_NAME }}`! <{{ WORKFLOW_URL }}>'
