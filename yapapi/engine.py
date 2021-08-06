@@ -576,18 +576,16 @@ class _Engine(AsyncContextManager):
         job_id: str,
         agreement_id: str,
         activity: rest.activity.Activity,
-        command_generator: AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
+        batch_generator: AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
     ) -> None:
         """Send command batches produced by `command_generator` to `activity`."""
 
-        item = await command_generator.__anext__()
+        item = await batch_generator.__anext__()
 
         while True:
 
             batch, exec_options = _unpack_work_item(item)
 
-            # TODO: `task_id` should really be `batch_id`, but then we should also rename
-            # `task_id` field of several events (e.g. `ScriptSent`)
             script_id = str(next(exescript_ids))
 
             if batch.timeout:
@@ -611,7 +609,7 @@ class _Engine(AsyncContextManager):
                 batch.register(cc)
                 remote = await activity.send(cc.commands(), deadline=batch_deadline)
             except Exception:
-                item = await command_generator.athrow(*sys.exc_info())
+                item = await batch_generator.athrow(*sys.exc_info())
                 continue
 
             cmds = cc.commands()
@@ -654,14 +652,14 @@ class _Engine(AsyncContextManager):
                     # Raise the exception in `command_generator` (the `worker` coroutine).
                     # If the client code is able to handle it then we'll proceed with
                     # subsequent batches. Otherwise the worker finishes with error.
-                    item = await command_generator.athrow(*sys.exc_info())
+                    item = await batch_generator.athrow(*sys.exc_info())
                 else:
-                    item = await command_generator.asend(future_results)
+                    item = await batch_generator.asend(future_results)
 
             else:
                 # Schedule the coroutine in a separate asyncio task
                 future_results = loop.create_task(get_batch_results())
-                item = await command_generator.asend(future_results)
+                item = await batch_generator.asend(future_results)
 
 
 class Job:

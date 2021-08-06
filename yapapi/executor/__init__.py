@@ -315,7 +315,7 @@ class Executor(AsyncContextManager):
 
         work_queue = SmartQueue(input_tasks())
 
-        async def _worker(
+        async def worker_wrapper(
             agreement: rest.market.Agreement, activity: Activity, work_context: WorkContext
         ) -> None:
             nonlocal job
@@ -366,7 +366,7 @@ class Executor(AsyncContextManager):
                 if len(workers) < self._max_workers and work_queue.has_unassigned_items():
                     new_task = None
                     try:
-                        new_task = await self._engine.start_worker(job, _worker)
+                        new_task = await self._engine.start_worker(job, worker_wrapper)
                         if new_task is None:
                             continue
                         workers.add(new_task)
