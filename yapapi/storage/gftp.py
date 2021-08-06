@@ -28,6 +28,7 @@ from typing import (
 
 import jsonrpc_base  # type: ignore
 from async_exit_stack import AsyncExitStack  # type: ignore
+import semantic_version
 from typing_extensions import Literal, Protocol, TypedDict
 
 from yapapi.storage import StorageProvider, Destination, Source, Content
@@ -222,8 +223,13 @@ def _temp_file(temp_dir: Path) -> Iterator[Path]:
 
 def _delete_if_exists(path: Path) -> None:
     if path.exists():
-        path.unlink()
-        _logger.debug("Deleted temporary file %s", path)
+        try:
+            path.unlink()
+            _logger.debug("Deleted temporary file %s", path)
+        except PermissionError as err:
+            # We're on Windows and using `gftp` < 0.7.3, so the file is kept open
+            # by `gftp` and cannot be deleted.
+            _logger.debug("Cannot delete file: %s", err)
 
 
 USE_GFTP_CLOSE_ENV_VAR = "YAPAPI_USE_GFTP_CLOSE"
@@ -245,8 +251,30 @@ def read_use_gftp_close_env_var() -> Optional[bool]:
         return None
 
 
+MIN_GFTP_VERSION_THAT_CAN_GFTP_CLOSE = semantic_version.Version("0.7.3")
+
+
 class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
-    """A StorageProvider that communicates with `gftp server` through JSON-RPC."""
+    """A StorageProvider that communicates with `gftp server` through JSON-RPC.
+
+    The provider keeps track of the files published by `gftp` and their URLs.
+    If an URL no longer needs to be published then the provider _should_ issue the
+    `gftp close URL` command, so the file published with this URL is closed by `gftp`.
+
+    However, `gftp close URL` may cause errors, due to a bug in `gftp` prior to version 0.7.3
+    (see https://github.com/golemfactory/yagna/pull/1501). Therefore the provider uses
+    the following logic to dermine if it should use the `gftp close URL` command:
+    1. If the environment variable `YAPAPI_USE_GFTP_CLOSE` is set to a truthy value,
+       then `gftp close URL` will be used.
+    2. If the environment variable `YAPAPI_USE_GFTP_CLOSE` is set to a falsy value,
+       then `gftp close URL` will not be used.
+    3. If neither 1 nor 2 holds and the version reported by `gftp` is 0.7.3 or larger
+       (according to Semantic Versioning 2.0.0) then `gftp close URL` will be used.
+    4. Otherwise `gftp close URL` will not be used.
+
+    Note: Reading the `YAPAPI_USE_GFTP_CLOSE` variable is done once, when the provider
+    is instantiated, and the version check is made in the provider's `__aenter__()` method.
+    """
 
     @dataclass
     class URLInfo:
@@ -280,12 +308,8 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
         self._lock: asyncio.Lock = asyncio.Lock()
 
         # Flag indicating if this `GftpProvider` will close unpublished URLs.
-        # If set to `True` then the provider will call `gftp close <URL>` for an URL
-        # that has no longer any published files. This should be the default behavior,
-        # but it may cause errors, due to a bug in `gftp` prior to version `0.7.3`
-        # (see https://github.com/golemfactory/yagna/pull/1501), and is therefore turned
-        # on only if `read_use_gftp_close_env_var()` returns `True`.
-        self._close_urls: bool = read_use_gftp_close_env_var() or False
+        # See this class' docstring for more details.
+        self._close_urls: Optional[bool] = read_use_gftp_close_env_var()
 
         # Reference to an external process running the `gftp server` command
         self._process: Optional["__Process"] = None
@@ -297,8 +321,23 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
             )
             _logger.debug("Creating a temporary directory %s", self._temp_dir)
         process = await self.__get_process()
-        _ver = await process.version()
-        assert _ver
+        gftp_version = await process.version()
+        assert gftp_version
+
+        if self._close_urls is None:
+            try:
+                # Gftp_version could be something like `7.2.3 (10116c7d 2021-07-28 build #164)`,
+                # we need to discard everything after the first space.
+                semver = semantic_version.Version(gftp_version.split()[0])
+                self._close_urls = semver >= MIN_GFTP_VERSION_THAT_CAN_GFTP_CLOSE
+                _logger.debug(
+                    "Setting _close_urls to %s, gftp version: %s", self._close_urls, gftp_version
+                )
+            except ValueError:
+                _logger.warning("Cannot parse gftp version info '%s'", gftp_version)
+                self._close_urls = False
+        assert self._close_urls is not None
+
         return self
 
     async def __aexit__(
