@@ -184,6 +184,8 @@ class PollingBatch(Batch):
 
     async def __aiter__(self) -> AsyncIterator[events.CommandEventContext]:
         last_idx = 0
+        retry_count = 0
+        MAX_RETRIES = 3
         while last_idx < self._size:
             timeout = self.seconds_left()
             if timeout <= 0:
@@ -197,6 +199,16 @@ class PollingBatch(Batch):
             except ApiException as err:
                 if err.status == 408:
                     continue
+                if err.status == 500:
+                    try:
+                        body = json.loads(err.body)
+                        if 'GSB error' in body['message']:
+                            if retry_count < MAX_RETRIES:
+                                retry_count += 1
+                                await asyncio.sleep(min(3, max(0, self.seconds_left())))
+                                continue
+                    except:
+                        pass
                 raise
             any_new: bool = False
             results = results[last_idx:]
