@@ -227,6 +227,10 @@ class ProviderInfo:
     subnet_tag: Optional[str]
 
 
+MAX_AGREEMENT_EXPIRATION_MINUTES = round(MAX_AGREEMENT_EXPIRATION.seconds / 60)
+MIN_AGREEMENT_EXPIRATION_MINUTES = round(MIN_AGREEMENT_EXPIRATION.seconds / 60)
+
+
 class SummaryLogger:
     """Aggregates information from computation events to provide a high-level summary.
 
@@ -399,12 +403,12 @@ class SummaryLogger:
             if not MIN_AGREEMENT_EXPIRATION <= provider_timeout <= MAX_AGREEMENT_EXPIRATION:
                 min, sec = divmod(round(timeout.total_seconds()), 60)
                 seconds_str = f" {sec} sec " if sec else " "
-                max_minutes = round(MAX_AGREEMENT_EXPIRATION.seconds / 60)
                 self.logger.warning(
                     f"Expiration time for your tasks is set to {min} min{seconds_str}from now."
-                    " Providers may not be willing to take up tasks which expire sooner than 5 min"
-                    f" or later than {max_minutes} min, counting from the moment they get your"
-                    " demand."
+                    f" Providers may not be willing to take up tasks which expire sooner than"
+                    f" {MIN_AGREEMENT_EXPIRATION_MINUTES} min or later than"
+                    f" {MAX_AGREEMENT_EXPIRATION_MINUTES} min, counting"
+                    f" from the moment they get your demand."
                 )
 
         elif isinstance(event, events.ProposalReceived):
@@ -427,9 +431,10 @@ class SummaryLogger:
                     f"{self.time_waiting_for_proposals.seconds}s."
                 )
             msg += (
-                " Make sure you're using the latest released versions of yagna and yapapi,"
-                " and the correct subnet. Also make sure that the timeout for computing all"
-                " tasks is within the 5 min to 30 min range."
+                f" Make sure you're using the latest released versions of yagna and yapapi,"
+                f" and the correct subnet. Also make sure that the timeout for computing all"
+                f" tasks is within the {MIN_AGREEMENT_EXPIRATION_MINUTES} min to"
+                f" {MAX_AGREEMENT_EXPIRATION_MINUTES} min range."
             )
             self.logger.warning(msg)
 
