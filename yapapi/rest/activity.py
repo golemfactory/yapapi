@@ -210,6 +210,7 @@ class PollingBatch(Batch):
                     except:
                         pass
                 raise
+            retry_count = 0
             any_new: bool = False
             results = results[last_idx:]
             for result in results:
