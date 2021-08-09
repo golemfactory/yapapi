@@ -202,7 +202,7 @@ class PollingBatch(Batch):
                 if err.status == 500:
                     try:
                         body = json.loads(err.body)
-                        if 'GSB error' in body['message']:
+                        if "GSB error" in body["message"]:
                             if retry_count < MAX_RETRIES:
                                 retry_count += 1
                                 await asyncio.sleep(min(3, max(0, self.seconds_left())))
