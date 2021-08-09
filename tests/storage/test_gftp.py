@@ -64,8 +64,9 @@ class MockService(gftp.GftpDriver):
     stripped from whitespaces.
     """
 
-    def __init__(self):
+    def __init__(self, version="0.0.0"):
         self.published = defaultdict(list)
+        self._version = version
 
     async def __aenter__(self):
         return self
@@ -74,7 +75,7 @@ class MockService(gftp.GftpDriver):
         pass
 
     async def version(self) -> str:
-        return "0.0.0"
+        return self._version
 
     async def publish(self, *, files: List[str]) -> List[gftp.PubLink]:
         links = []
@@ -210,9 +211,7 @@ async def test_gftp_provider(test_dir, temp_dir, mock_service, monkeypatch):
     ],
 )
 @pytest.mark.asyncio
-async def test_gftp_close_env_var(
-    temp_dir, mock_service, monkeypatch, env_value, expect_unpublished
-):
+async def test_gftp_close_env(temp_dir, mock_service, monkeypatch, env_value, expect_unpublished):
     """Test that the GftpProvider calls close() on the underlying service."""
 
     # Enable or disable using `gftp close` by GftpProvider
@@ -238,6 +237,61 @@ async def test_gftp_close_env_var(
 
         await provider.release_source(src_2)
         assert (not mock_service.published["bytes"]) == expect_unpublished
+
+
+@pytest.mark.parametrize(
+    "env_value, gftp_version, expect_unpublished",
+    [
+        ("1", "0.6.0", True),
+        ("1", "0.7.2", True),
+        ("1", "0.7.3", True),
+        ("0", "0.7.2", False),
+        ("0", "0.7.3", False),
+        ("0", "1.0.0", False),
+        ("whatever", "0.6.0", False),
+        ("whatever", "0.7.2", False),
+        ("whatever", "0.7.3-rc.2", False),
+        ("whatever", "0.7.3", True),
+        ("whatever", "1.0.0", True),
+        (None, "0.6.0", False),
+        (None, "0.7.2", False),
+        (None, "0.7.3-rc.2", False),
+        (None, "0.7.3", True),
+        (None, "1.0.0", True),
+    ],
+)
+@pytest.mark.asyncio
+async def test_gftp_close_env_version(
+    temp_dir, monkeypatch, env_value, gftp_version, expect_unpublished
+):
+    """Test that the GftpProvider calls close() on the underlying service."""
+
+    service = MockService(version=gftp_version)
+    monkeypatch.setattr(gftp, "service", lambda _debug: service)
+
+    # Enable or disable using `gftp close` by GftpProvider
+    if env_value is not None:
+        monkeypatch.setenv(gftp.USE_GFTP_CLOSE_ENV_VAR, env_value)
+    else:
+        monkeypatch.delenv(gftp.USE_GFTP_CLOSE_ENV_VAR, raising=False)
+
+    async with gftp.GftpProvider(tmpdir=temp_dir) as provider:
+        assert isinstance(provider, gftp.GftpProvider)
+
+        src_1 = await provider.upload_bytes(b"bytes")
+        assert service.published["bytes"]
+
+        src_2 = await provider.upload_bytes(b"bytes")
+        assert service.published["bytes"]
+
+        assert src_1.download_url == src_2.download_url
+
+        await provider.release_source(src_1)
+        # the URL should not be unpublished just yet
+        assert service.published["bytes"]
+
+        await provider.release_source(src_2)
+        assert (not service.published["bytes"]) == expect_unpublished
 
 
 ME = __file__
