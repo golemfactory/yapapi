@@ -1,47 +1,50 @@
 @startuml
 participant "Client code" #Gold
+participant "executor:Executor" as executor #Violet
 participant "golem:[[../../yapapi/golem.py Golem]]" as engine #Turquoise
-participant ":Executor" as executor #Violet
-collections ":golem.start_worker" as start_worker <<asyncio.Task>> #Turquoise
-participant "ctx:WorkContext" as ctx #SkyBlue
+participant worker_task <<asyncio.Task>>
 participant "batch_generator:worker" as batch_generator <<AsyncGenerator>> #Gold
-participant ":golem.process_batches" as process_batches <<coroutine>> #Turquoise
+participant "ctx:WorkContext" as ctx #SkyBlue
 participant "act:Activity" as act #SkyBlue
+
+' collections "worker_wrapper" as start_worker <<asyncio.Task>> #Violet
+' participant ":golem.process_batches" as process_batches <<coroutine>> #Turquoise
 
 create engine
 "Client code" -> engine : <<create>>
-"Client code" -> engine ++ : execute_tasks(worker)  ' ++ is a shorthand for activating the receiver
+"Client code" -> engine ++ #LightGray : execute_tasks(worker)
+' ++ is a shorthand for activating the receiver
 
 create executor
 engine -> executor : <<create>>
-engine -> executor ++ : submit(worker)
+engine -> executor ++ #LightGray: submit(worker)
 
-create start_worker
-executor -> start_worker : <<create>>
-executor -> start_worker ++ : <<run-in-loop>>
+executor -> engine ++ #LightGray: start_worker(worker)
 
-' activate start_worker
+create worker_task
+engine -> worker_task --++ : <<create_task>>
+note right
+  simplified, task creation
+  involves also agreement_pool
+end note
+
 create act
-start_worker -> act : <<create>>
+worker_task -> act : <<create>>
 create ctx
-start_worker -> ctx : <<create>>(act)
+worker_task -> ctx : <<create>>(act)
 
-start_worker -> executor : executor.submit().worker_wrapper()
-deactivate start_worker
-
-activate executor
+'engine -> executor --++ : worker_wrapper(act, ctx)
+worker_task -> executor ++ : worker_wrapper(act, ctx)
+' deactivate engine
+note left: callback
 
 create batch_generator
 executor -> batch_generator : <<create>>(ctx)
 
-create process_batches
-executor -> process_batches : <<create>>(batch_generator)
-executor -> process_batches : await
-
-activate process_batches
+executor -> engine ++ : process_batches
 
 ' batch 1
-process_batches -> batch_generator : anext()
+engine -> batch_generator : anext()
 activate batch_generator
 batch_generator -> ctx : send_file()
 activate ctx
@@ -54,12 +57,12 @@ activate ctx
 return batch_1
 return yield batch_1
 
-process_batches -> act : send(batch_1)
+engine -> act : send(batch_1)
 activate act
 return batch_results_1
 
 ' batch 2
-process_batches -> batch_generator : asend(batch_results_1)
+engine -> batch_generator : asend(batch_results_1)
 
 activate batch_generator
 batch_generator -> ctx : run()
@@ -73,19 +76,18 @@ activate ctx
 return batch_2
 return yield batch_2
 
-process_batches -> act : send(batch_2)
+engine -> act : send(batch_2)
 activate act
 return batch_results_2
 
 ' ... more batches processed ...
 
 ' last batch processed
-process_batches -> batch_generator : asend(batch_results_2)
+engine -> batch_generator : asend(batch_results_2)
 activate batch_generator
 return StopIteration
 
-executor <-- process_batches
-deactivate process_batches
+return
 
 deactivate executor
 engine <-- executor : task generator
