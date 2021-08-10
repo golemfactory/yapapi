@@ -186,6 +186,18 @@ class PollingBatch(Batch):
         last_idx = 0
         retry_count = 0
         MAX_RETRIES = 3
+
+        def should_repeat_after_http_500(err):
+            try:
+                body = json.loads(err.body)
+            except:
+                return True
+            if "endpoint not registered" in body["message"]:
+                # TODO: return False and log error only if get_activity_state() == "Terminated"
+                return False
+            else:
+                return True
+
         while last_idx < self._size:
             timeout = self.seconds_left()
             if timeout <= 0:
@@ -200,15 +212,10 @@ class PollingBatch(Batch):
                 if err.status == 408:
                     continue
                 if err.status == 500:
-                    try:
-                        body = json.loads(err.body)
-                        if "GSB error" in body["message"]:
-                            if retry_count < MAX_RETRIES:
-                                retry_count += 1
-                                await asyncio.sleep(min(3, max(0, self.seconds_left())))
-                                continue
-                    except:
-                        pass
+                    if should_repeat_after_http_500(err.body) and retry_count < MAX_RETRIES:
+                        retry_count += 1
+                        await asyncio.sleep(min(3, max(0, self.seconds_left())))
+                        continue
                 raise
             retry_count = 0
             any_new: bool = False
