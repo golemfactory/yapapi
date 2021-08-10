@@ -197,7 +197,7 @@ class PollingBatch(Batch):
             return False
         try:
             msg = json.loads(err.body)["message"]
-            return "GSB error" in msg and "Endpoint address not found" in msg
+            return "GSB error" in msg and "endpoint address not found" in msg
         except Exception:
             _log.debug("Cannot read error message from ApiException", exc_info=True)
             return False
