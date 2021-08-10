@@ -184,8 +184,8 @@ class PollingBatch(Batch):
     async def _activity_terminated(self) -> bool:
         """Check if the activity we're using is in "Terminated" state."""
         try:
-            state_list = await self._activity.state().state  # type: ignore
-            return "Terminated" in state_list
+            state = await self._activity.state()
+            return "Terminated" in state.state
         except Exception:
             _log.debug("Cannot query activity state", exc_info=True)
             return False
@@ -220,9 +220,12 @@ class PollingBatch(Batch):
                 if not self._is_endpoint_not_found_error(err):
                     raise err
                 num_tries -= 1
+                msg = "GetExecBatchResults failed due to GSB error"
                 if num_tries:
-                    _log.debug("Retrying ")
+                    _log.debug("%s, retrying in %s s", msg, delay)
                     await asyncio.sleep(delay)
+                else:
+                    _log.debug("%s, giving up", msg)
 
     async def __aiter__(self) -> AsyncIterator[events.CommandEventContext]:
         last_idx = 0
