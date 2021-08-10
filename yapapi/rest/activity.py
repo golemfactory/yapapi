@@ -178,6 +178,19 @@ class Batch(abc.ABC, AsyncIterable[events.CommandEventContext]):
         return self._batch_id
 
 
+def _is_gsb_endpoint_not_found_error(err: ApiException) -> bool:
+    """Check if `err` is caused by "Endpoint address not found" GSB error."""
+
+    if err.status != 500:
+        return False
+    try:
+        msg = json.loads(err.body)["message"]
+        return "GSB error" in msg and "endpoint address not found" in msg
+    except Exception:
+        _log.debug("Cannot read error message from ApiException", exc_info=True)
+        return False
+
+
 class PollingBatch(Batch):
     """A `Batch` implementation that polls the server repeatedly for command status."""
 
@@ -190,22 +203,13 @@ class PollingBatch(Batch):
             _log.debug("Cannot query activity state", exc_info=True)
             return False
 
-    def _is_endpoint_not_found_error(self, err: ApiException) -> bool:
-        """Check if `err` is caused by "Endpoint address not found" GSB error."""
-
-        if err.status != 500:
-            return False
-        try:
-            msg = json.loads(err.body)["message"]
-            return "GSB error" in msg and "endpoint address not found" in msg
-        except Exception:
-            _log.debug("Cannot read error message from ApiException", exc_info=True)
-            return False
-
-    async def _get_results(self, timeout: float, num_tries: int, delay: float = 3.0):
+    async def _get_results(
+        self, timeout: float, num_tries: int, delay: float = 3.0
+    ) -> List[yaa.ExeScriptCommandResult]:
         """Call GetExecBatchResults with re-trying on "Endpoint address not found" GSB error."""
 
-        while num_tries:
+        for n in range(num_tries, 0, -1):
+            # n = num_tries, ... , 1
             try:
                 results = await self._activity._api.get_exec_batch_results(
                     self._activity._id, self._batch_id, _request_timeout=min(timeout, 5)
@@ -217,15 +221,17 @@ class PollingBatch(Batch):
                     # TODO: add and use a new Exception class (subclass of BatchError)
                     # to indicate closing the activity by the provider
                     raise err
-                if not self._is_endpoint_not_found_error(err):
+                if not _is_gsb_endpoint_not_found_error(err):
                     raise err
-                num_tries -= 1
                 msg = "GetExecBatchResults failed due to GSB error"
-                if num_tries:
+                if n > 1:
                     _log.debug("%s, retrying in %s s", msg, delay)
                     await asyncio.sleep(delay)
                 else:
-                    _log.debug("%s, giving up", msg)
+                    _log.debug("%s, giving up after %d attempts", msg, num_tries)
+                    raise err
+
+        return []
 
     async def __aiter__(self) -> AsyncIterator[events.CommandEventContext]:
         last_idx = 0
