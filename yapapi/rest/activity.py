@@ -192,7 +192,7 @@ class PollingBatch(Batch):
                 body = json.loads(err.body)
             except:
                 return True
-            if "endpoint not registered" in body["message"]:
+            if "endpoint not found" in body["message"]:
                 # TODO: return False and log error only if get_activity_state() == "Terminated"
                 return False
             else:
