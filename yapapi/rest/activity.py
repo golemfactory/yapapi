@@ -222,7 +222,7 @@ class PollingBatch(Batch):
                         "Activity %s terminated by provider. Reason: %s, error: %s",
                         self._activity._id,
                         reason,
-                        errMsg
+                        errMsg,
                     )
                     # TODO: add and use a new Exception class (subclass of BatchError)
                     # to indicate closing the activity by the provider
