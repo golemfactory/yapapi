@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import json
 import logging
-from typing import AsyncIterator, List, Optional, Type, Any, Dict
+from typing import AsyncIterator, List, Optional, Tuple, Type, Any, Dict
 
 from typing_extensions import AsyncContextManager, AsyncIterable
 
@@ -194,14 +194,14 @@ def _is_gsb_endpoint_not_found_error(err: ApiException) -> bool:
 class PollingBatch(Batch):
     """A `Batch` implementation that polls the server repeatedly for command status."""
 
-    async def _activity_terminated(self) -> bool:
+    async def _activity_terminated(self) -> Tuple[bool, Optional[str], Optional[str]]:
         """Check if the activity we're using is in "Terminated" state."""
         try:
             state = await self._activity.state()
-            return "Terminated" in state.state
+            return "Terminated" in state.state, state.reason, state.error_message
         except Exception:
             _log.debug("Cannot query activity state", exc_info=True)
-            return False
+            return False, None, None
 
     async def _get_results(
         self, timeout: float, num_tries: int, delay: float = 3.0
@@ -216,8 +216,14 @@ class PollingBatch(Batch):
                 )
                 return results
             except ApiException as err:
-                if await self._activity_terminated():
-                    _log.warning("Activity %s terminated by provider", self._activity._id)
+                terminated, reason, errMsg = await self._activity_terminated()
+                if terminated:
+                    _log.warning(
+                        "Activity %s terminated by provider. Reason: %s, error: %s",
+                        self._activity._id,
+                        reason,
+                        errMsg
+                    )
                     # TODO: add and use a new Exception class (subclass of BatchError)
                     # to indicate closing the activity by the provider
                     raise err
