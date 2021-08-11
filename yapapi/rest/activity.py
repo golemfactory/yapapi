@@ -217,7 +217,7 @@ class PollingBatch(Batch):
                 return results
             except ApiException as err:
                 if await self._activity_terminated():
-                    _log.debug("Activity %s terminated by provider", self._activity._id)
+                    _log.warning("Activity %s terminated by provider", self._activity._id)
                     # TODO: add and use a new Exception class (subclass of BatchError)
                     # to indicate closing the activity by the provider
                     raise err
