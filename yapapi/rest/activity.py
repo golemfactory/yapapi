@@ -194,6 +194,12 @@ def _is_gsb_endpoint_not_found_error(err: ApiException) -> bool:
 class PollingBatch(Batch):
     """A `Batch` implementation that polls the server repeatedly for command status."""
 
+    GET_EXEC_BATCH_RESULTS_MAX_TRIES = 3
+    """Max number of attempts to call GetExecBatchResults if a GSB error occurs."""
+
+    GET_EXEC_BATCH_RESULTS_INTERVAL = 3.0
+    """Time in seconds before retrying GetExecBatchResults after a GSB error occurs."""
+
     async def _activity_terminated(self) -> Tuple[bool, Optional[str], Optional[str]]:
         """Check if the activity we're using is in "Terminated" state."""
         try:
@@ -203,38 +209,33 @@ class PollingBatch(Batch):
             _log.debug("Cannot query activity state", exc_info=True)
             return False, None, None
 
-    async def _get_results(
-        self, timeout: float, num_tries: int, delay: float = 3.0
-    ) -> List[yaa.ExeScriptCommandResult]:
+    async def _get_results(self, timeout: float) -> List[yaa.ExeScriptCommandResult]:
         """Call GetExecBatchResults with re-trying on "Endpoint address not found" GSB error."""
 
-        for n in range(num_tries, 0, -1):
-            # n = num_tries, ... , 1
+        for n in range(self.GET_EXEC_BATCH_RESULTS_MAX_TRIES, 0, -1):
             try:
                 results = await self._activity._api.get_exec_batch_results(
                     self._activity._id, self._batch_id, _request_timeout=min(timeout, 5)
                 )
                 return results
             except ApiException as err:
-                terminated, reason, errMsg = await self._activity_terminated()
+                terminated, reason, error_msg = await self._activity_terminated()
                 if terminated:
-                    _log.warning(
-                        "Activity %s terminated by provider. Reason: %s, error: %s",
-                        self._activity._id,
-                        reason,
-                        errMsg,
-                    )
+                    raise BatchError("Activity terminated by provider", reason, error_msg)
                     # TODO: add and use a new Exception class (subclass of BatchError)
                     # to indicate closing the activity by the provider
-                    raise err
                 if not _is_gsb_endpoint_not_found_error(err):
                     raise err
                 msg = "GetExecBatchResults failed due to GSB error"
                 if n > 1:
-                    _log.debug("%s, retrying in %s s", msg, delay)
-                    await asyncio.sleep(delay)
+                    _log.debug("%s, retrying in %s s", msg, self.GET_EXEC_BATCH_RESULTS_INTERVAL)
+                    await asyncio.sleep(self.GET_EXEC_BATCH_RESULTS_INTERVAL)
                 else:
-                    _log.debug("%s, giving up after %d attempts", msg, num_tries)
+                    _log.debug(
+                        "%s, giving up after %d attempts",
+                        msg,
+                        self.GET_EXEC_BATCH_RESULTS_MAX_TRIES,
+                    )
                     raise err
 
         return []
@@ -249,7 +250,7 @@ class PollingBatch(Batch):
 
             results: List[yaa.ExeScriptCommandResult] = []
             async with SuppressedExceptions(is_intermittent_error):
-                results = await self._get_results(timeout=min(timeout, 5), num_tries=3)
+                results = await self._get_results(timeout=min(timeout, 5))
 
             any_new: bool = False
             results = results[last_idx:]
