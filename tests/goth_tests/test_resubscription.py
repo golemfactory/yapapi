@@ -151,8 +151,8 @@ async def test_demand_resubscription(log_dir: Path, goth_config_path: Path, monk
     async with runner(goth_config.containers):
 
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
-        env = {**os.environ}
-        requestor.set_agent_env_vars(env)
+        env = requestor.get_agent_env_vars()
+        env.update(**os.environ)
 
         # Setup the environment for the requestor
         for key, val in env.items():
