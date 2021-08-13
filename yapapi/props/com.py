@@ -46,6 +46,6 @@ class ComLinear(Com):
         usages = as_list(props[DEFINED_USAGES])
 
         fixed_price = float(coeffs.pop())
-        price_for = ((Counter(usages[i]), float(coeffs[i])) for i in range(len(coeffs)))
+        price_for = ((usages[i], float(coeffs[i])) for i in range(len(coeffs)))
 
         data.update(fixed_price=fixed_price, price_for=dict(price_for))

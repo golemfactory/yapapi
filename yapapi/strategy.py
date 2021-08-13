@@ -115,13 +115,6 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
             )
             return SCORE_REJECTED
 
-        known_time_prices = {com.Counter.TIME, com.Counter.CPU}
-
-        for counter in linear.price_for.keys():
-            if counter not in known_time_prices:
-                self._logger.debug("Rejected offer %s: unsupported counter '%s'", offer.id, counter)
-                return SCORE_REJECTED
-
         if linear.fixed_price > self._max_fixed_price:
             self._logger.debug(
                 "Rejected offer %s: fixed price higher than fixed price cap %f.",
@@ -135,22 +128,25 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
             return SCORE_REJECTED
         expected_price = linear.fixed_price
 
-        for resource in known_time_prices:
+        for counter in linear.price_for.keys():
+            if counter not in self._max_price_for:
+                self._logger.debug("Rejected offer %s: unsupported counter '%s'", offer.id, counter)
+                return SCORE_REJECTED
 
-            if linear.price_for[resource] > self._max_price_for[resource]:
+            if linear.price_for[counter] > self._max_price_for[counter]:
                 self._logger.debug(
                     "Rejected offer %s: price for '%s' higher than price cap %f.",
                     offer.id,
-                    resource,
-                    self._max_price_for[resource],
+                    counter,
+                    self._max_price_for[counter],
                 )
                 return SCORE_REJECTED
 
-            if linear.price_for[resource] < 0:
-                self._logger.debug("Rejected offer %s: negative price for '%s'", offer.id, resource)
+            if linear.price_for[counter] < 0:
+                self._logger.debug("Rejected offer %s: negative price for '%s'", offer.id, counter)
                 return SCORE_REJECTED
 
-            expected_price += linear.price_for[resource] * self._expected_time_secs
+            expected_price += linear.price_for[counter] * self._expected_time_secs
 
         # The higher the expected price value, the lower the score.
         # The score is always lower than SCORE_TRUSTED and is always higher than 0.
