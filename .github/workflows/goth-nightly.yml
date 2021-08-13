@@ -22,7 +22,7 @@ jobs:
         id: latest-stable
         # second sed expression removes leading whitespaces and '*' characters (git uses it to indicate the current branch)
         run: |
-          branch=$(git branch -a | sed -e 's:remotes/origin/::' -e 's:^[ \t*]*::' | grep -E '^release\/v[0-9]+(\.[0-9]+)+$' | sort -Vr | head -1)
+          branch=$(git branch -a | sed -e 's:remotes/origin/::' -e 's:^[ \t*]*::' | grep -E '^b[0-9]+(\.[0-9]+)+$' | sort -Vr | head -1)
           echo "::set-output name=branch::$branch"
 
       # prepares JSON object representing strategy matrix which contains two 'branch' variants: master and latest stable
