@@ -13,8 +13,8 @@ def test_com_linear_fixed_price():
 
 def test_com_linear_price_for():
     com: ComLinear = ComLinearFactory(linear_coeffs=LINEAR_COEFFS, usage_vector=DEFINED_USAGES)
-    assert com.price_for[Counter.CPU] == LINEAR_COEFFS[0]
-    assert com.price_for[Counter.TIME] == LINEAR_COEFFS[1]
+    assert com.price_for[Counter.CPU.value] == LINEAR_COEFFS[0]
+    assert com.price_for[Counter.TIME.value] == LINEAR_COEFFS[1]
 
 
 @pytest.mark.parametrize(
