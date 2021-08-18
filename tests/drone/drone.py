@@ -31,7 +31,7 @@ from utils import (
 
 async def main(subnet_tag, driver=None, network=None):
     package = await vm.repo(
-        image_hash="406b67ccd53ed16a855d78357a93562a365a2f9847e0b808ae10d160",
+        image_hash="a23ce2c0c29ea9711e4a293a2805700e2f0cb6450fddf9506812eb1b",
         min_mem_gib=0.5,
         min_storage_gib=2.0,
     )
@@ -40,6 +40,7 @@ async def main(subnet_tag, driver=None, network=None):
     async def worker(ctx: WorkContext, tasks):
         async for task in tasks:
             output_file = f"output_{datetime.now()}_{random.random()}.txt"
+            ctx.run("/usr/bin/stress-ng", "--cpu", "1", "--timeout", "1")
             ctx.run("/golem/task.sh", "-o", "1024", "-t", "5")
             ctx.run("/golem/task.sh", "-f", "/golem/output/output.txt,1048576")
             ctx.download_file(f"/golem/output/output.txt", output_file)
