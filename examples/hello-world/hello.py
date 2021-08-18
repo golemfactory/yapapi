@@ -25,7 +25,6 @@ async def main():
 
     tasks = [Task(data=None)]
 
-    await golem.start()
     async for completed in golem.execute_tasks(worker, tasks, payload=package):
         print(completed.result.stdout)
     await golem.stop()

@@ -111,6 +111,8 @@ class Golem(_Engine):
                     print(completed.result.stdout)
         ```
         """
+        if not self.operative:
+            await self.start()
 
         kwargs: Dict[str, Any] = {"payload": payload}
         if max_workers:
@@ -203,6 +205,9 @@ class Golem(_Engine):
                     await asyncio.sleep(REFRESH_INTERVAL_SEC)
         ```
         """
+        if not self.operative:
+            await self.start()
+
         payload = payload or await service_class.get_payload()
 
         if not payload:

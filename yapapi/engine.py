@@ -229,6 +229,14 @@ class _Engine(AsyncContextManager):
         """Return the name of the subnet used by this engine, or `None` if it is not set."""
         return self._subnet
 
+    @property
+    def operative(self) -> bool:
+        #   TODO: Implement this in some clean way
+        #         Also: other properties don't work in non-started state, how do we deal with this?
+        started = hasattr(self, '_storage_manager')
+        stopped = hasattr(self, '_stopped')
+        return started and not stopped
+
     def emit(self, event: events.Event) -> None:
         """Emit an event to be consumed by this engine's event consumer."""
         if self._wrapped_consumer:
@@ -248,6 +256,7 @@ class _Engine(AsyncContextManager):
         return await self.stop()
 
     async def stop(self) -> Optional[bool]:
+        self._stopped = True  # TODO -> check "operative" attribute
         return await self._stack.__aexit__(*sys.exc_info())
 
     async def start(self) -> None:
