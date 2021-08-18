@@ -9,6 +9,7 @@ import itertools
 import logging
 import os
 import sys
+import atexit
 from typing import (
     AsyncContextManager,
     Awaitable,
@@ -256,10 +257,20 @@ class _Engine(AsyncContextManager):
         return await self.stop()
 
     async def stop(self) -> Optional[bool]:
-        self._stopped = True  # TODO -> check "operative" attribute
-        return await self._stack.__aexit__(*sys.exc_info())
+        # TODO: clean implementation
+        if not hasattr(self, '_stopped'):
+            self._stopped = True
+            return await self._stack.__aexit__(*sys.exc_info())
 
     async def start(self) -> None:
+        #   TODO: clean implementation
+        def stop_at_exit():
+            loop = asyncio.get_event_loop()
+            task = loop.create_task(self.stop())
+            loop.run_until_complete(task)
+
+        atexit.register(stop_at_exit)
+
         stack = self._stack
 
         await stack.enter_async_context(self._wrapped_consumer)

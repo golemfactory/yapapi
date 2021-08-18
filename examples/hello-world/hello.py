@@ -23,11 +23,10 @@ async def main():
         image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
     )
 
-    tasks = [Task(data=None)]
+    tasks = [Task(data=None) for _ in range(7)]
 
-    async for completed in golem.execute_tasks(worker, tasks, payload=package):
+    async for completed in golem.execute_tasks(worker, tasks, payload=package, max_workers=3):
         print(completed.result.stdout)
-    await golem.stop()
 
 
 if __name__ == "__main__":
@@ -35,4 +34,11 @@ if __name__ == "__main__":
 
     loop = asyncio.get_event_loop()
     task = loop.create_task(main())
-    loop.run_until_complete(task)
+    try:
+        loop.run_until_complete(task)
+    except KeyboardInterrupt:
+        task.cancel()
+        try:
+            loop.run_until_complete(task)
+        except (asyncio.CancelledError, KeyboardInterrupt):
+            pass
