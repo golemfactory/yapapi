@@ -70,15 +70,12 @@ class ComLinear(Com):
         return self.linear_coeffs[-1]
 
     @property
-    def price_for(self) -> Dict[Counter, float]:
-        return {
-            Counter(self.usage_vector[i]): self.linear_coeffs[i]
-            for i in range(len(self.usage_vector))
-        }
+    def price_for(self) -> Dict[str, float]:
+        return {u: self.linear_coeffs[i] for (i, u) in enumerate(self.usage_vector)}
 
     def calculate_cost(self, usage: List):
         usage = usage + [1.0]  # append the "usage" of the fixed component
-        return sum([self.linear_coeffs[i] * usage[i] for i in range(len(self.linear_coeffs))])
+        return sum([c * usage[i] for (i, c) in enumerate(self.linear_coeffs)])
 
-    def usage_as_dict(self, usage: List) -> Dict[Counter, float]:
-        return {Counter(self.usage_vector[i]): usage[i] for i in range(len(usage))}
+    def usage_as_dict(self, usage: List) -> Dict[str, float]:
+        return {self.usage_vector[i]: u for (i, u) in enumerate(usage)}

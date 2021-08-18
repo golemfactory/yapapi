@@ -161,18 +161,6 @@ class TestLeastExpensiveLinearPayuMS:
         assert await self.strategy.score_offer(offer1) == await self.strategy.score_offer(offer2)
 
     @pytest.mark.asyncio
-    async def test_score_unknown_price(self):
-        offer = OfferProposalFactory(
-            **{
-                "proposal__proposal__properties__usage_vector": [
-                    Counter.MAXMEM.value,
-                    Counter.TIME.value,
-                ]
-            }
-        )
-        assert await self.strategy.score_offer(offer) == SCORE_REJECTED
-
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "coeffs", [[-0.001, 0.002, 0.1], [0.001, -0.002, 0.1], [0.001, 0.002, -0.1]]
     )
