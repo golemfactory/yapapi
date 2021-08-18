@@ -238,44 +238,52 @@ class _Engine(AsyncContextManager):
         """Initialize resources and start background services used by this engine."""
 
         try:
-            stack = self._stack
-
-            await stack.enter_async_context(self._wrapped_consumer)
-
-            def report_shutdown(*exc_info):
-                if any(item for item in exc_info):
-                    self.emit(events.ShutdownFinished(exc_info=exc_info))  # noqa
-                else:
-                    self.emit(events.ShutdownFinished())
-
-            stack.push(report_shutdown)
-
-            market_client = await stack.enter_async_context(self._api_config.market())
-            self._market_api = rest.Market(market_client)
-
-            activity_client = await stack.enter_async_context(self._api_config.activity())
-            self._activity_api = rest.Activity(activity_client)
-
-            payment_client = await stack.enter_async_context(self._api_config.payment())
-            self._payment_api = rest.Payment(payment_client)
-
-            self.payment_decorator = _Engine.PaymentDecorator(await self._create_allocations())
-
-            # TODO: make the method starting the process_invoices() task an async context manager
-            # to simplify code in __aexit__()
-            loop = asyncio.get_event_loop()
-            self._process_invoices_job = loop.create_task(self._process_invoices())
-            self._services.add(self._process_invoices_job)
-            self._services.add(loop.create_task(self._process_debit_notes()))
-
-            self._storage_manager = await stack.enter_async_context(gftp.provider())
-
-            stack.push_async_exit(self._shutdown)
-
+            await self.start()
             return self
         except:
-            await self.__aexit__(*sys.exc_info())
+            await self.stop(*sys.exc_info())
             raise
+
+    async def __aexit__(self, *exc_info) -> Optional[bool]:
+        return await self.stop()
+
+    async def stop(self) -> Optional[bool]:
+        return await self._stack.__aexit__(None, None, None)
+
+    async def start(self) -> None:
+        stack = self._stack
+
+        await stack.enter_async_context(self._wrapped_consumer)
+
+        def report_shutdown(*exc_info):
+            if any(item for item in exc_info):
+                self.emit(events.ShutdownFinished(exc_info=exc_info))  # noqa
+            else:
+                self.emit(events.ShutdownFinished())
+
+        stack.push(report_shutdown)
+
+        market_client = await stack.enter_async_context(self._api_config.market())
+        self._market_api = rest.Market(market_client)
+
+        activity_client = await stack.enter_async_context(self._api_config.activity())
+        self._activity_api = rest.Activity(activity_client)
+
+        payment_client = await stack.enter_async_context(self._api_config.payment())
+        self._payment_api = rest.Payment(payment_client)
+
+        self.payment_decorator = _Engine.PaymentDecorator(await self._create_allocations())
+
+        # TODO: make the method starting the process_invoices() task an async context manager
+        # to simplify code in __aexit__()
+        loop = asyncio.get_event_loop()
+        self._process_invoices_job = loop.create_task(self._process_invoices())
+        self._services.add(self._process_invoices_job)
+        self._services.add(loop.create_task(self._process_debit_notes()))
+
+        self._storage_manager = await stack.enter_async_context(gftp.provider())
+
+        stack.push_async_exit(self._shutdown)
 
     def _unpaid_agreement_ids(self) -> Set[AgreementId]:
         """Return the set of all yet unpaid agreement ids."""
@@ -339,9 +347,6 @@ class _Engine(AsyncContextManager):
                 logger.debug("%s still running: %s", pluralize(len(pending), "service"), pending)
         except Exception:
             logger.debug("Got error when waiting for services to finish", exc_info=True)
-
-    async def __aexit__(self, *exc_info) -> Optional[bool]:
-        return await self._stack.__aexit__(*exc_info)
 
     async def _create_allocations(self) -> rest.payment.MarketDecoration:
 
