@@ -241,14 +241,14 @@ class _Engine(AsyncContextManager):
             await self.start()
             return self
         except:
-            await self.stop(*sys.exc_info())
+            await self.stop()
             raise
 
     async def __aexit__(self, *exc_info) -> Optional[bool]:
         return await self.stop()
 
     async def stop(self) -> Optional[bool]:
-        return await self._stack.__aexit__(None, None, None)
+        return await self._stack.__aexit__(*sys.exc_info())
 
     async def start(self) -> None:
         stack = self._stack
