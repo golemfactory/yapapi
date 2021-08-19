@@ -6,9 +6,10 @@ from functools import partial
 import json
 from os import PathLike
 from pathlib import Path
-from typing import Callable, Iterable, Optional, Dict, Union, Any, Awaitable
+from typing import Callable, Iterable, List, Optional, Dict, Union, Any, Awaitable
 
 
+from yapapi.ctx import WorkContext
 from yapapi.events import DownloadStarted, DownloadFinished
 from yapapi.script.capture import CaptureContext
 from yapapi.storage import StorageProvider, Source, Destination, DOWNLOAD_BYTES_LIMIT_DEFAULT
@@ -36,7 +37,14 @@ class CommandContainer:
         return add_command
 
 
+# For example: { "start": { "args": [] } }
+BatchCommand = Dict[str, Dict[str, Union[str, List[str]]]]
+
+
 class Work(abc.ABC):
+    async def evaluate(self, context: WorkContext) -> BatchCommand:
+        """Stuff."""
+
     async def prepare(self):
         """A hook to be executed on requestor's end before the script is sent to the provider."""
         pass
@@ -49,6 +57,11 @@ class Work(abc.ABC):
         """A hook to be executed on requestor's end after the script has finished."""
         pass
 
+    @staticmethod
+    def _make_command(cmd_name: str, **kwargs) -> BatchCommand:
+        kwargs = dict((key[1:] if key[0] == "_" else key, value) for key, value in kwargs.items())
+        return {cmd_name: kwargs}
+
     @property
     def timeout(self) -> Optional[timedelta]:
         """Return the optional timeout set for execution of this work."""
@@ -56,6 +69,9 @@ class Work(abc.ABC):
 
 
 class _Deploy(Work):
+    async def evaluate(self, context: WorkContext):
+        return self._make_command("deploy")
+
     def register(self, commands: CommandContainer):
         commands.deploy()
 
@@ -67,11 +83,17 @@ class _Start(Work):
     def __repr__(self):
         return f"start{self.args}"
 
+    async def evaluate(self, context: WorkContext):
+        return self._make_command("start", args=self.args)
+
     def register(self, commands: CommandContainer):
         commands.start(args=self.args)
 
 
 class _Terminate(Work):
+    async def evaluate(self, context: WorkContext):
+        return self._make_command("terminate")
+
     def register(self, commands: CommandContainer):
         commands.terminate()
 
@@ -86,6 +108,13 @@ class _SendWork(Work, abc.ABC):
     @abc.abstractmethod
     async def do_upload(self, storage: StorageProvider) -> Source:
         pass
+
+    async def evaluate(self, context: WorkContext):
+        self._src = await self.do_upload(context._storage)
+        assert self._src is not None, "cmd prepared"
+        return self._make_command(
+            "transfer", _from=self._src.download_url, _to=f"container:{self._dst_path}"
+        )
 
     async def prepare(self):
         self._src = await self.do_upload(self._storage)
@@ -143,6 +172,14 @@ class _Run(Work):
         self.stderr = stderr
         self._idx = None
 
+    def evaluate(self, context: WorkContext):
+        capture = dict()
+        if self.stdout:
+            capture["stdout"] = self.stdout.to_dict()
+        if self.stderr:
+            capture["stderr"] = self.stderr.to_dict()
+        return self._make_command("run", entry_point=self.cmd, args=self.args, capture=capture)
+
     def register(self, commands: CommandContainer):
         capture = dict()
         if self.stdout:
@@ -168,6 +205,12 @@ class _ReceiveContent(Work):
         self._dst_slot: Optional[Destination] = None
         self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
         self._dst_path: Optional[PathLike] = None
+
+    async def evaluate(self, context: WorkContext):
+        dst_slot = await context._storage.new_destination(destination_file=self._dst_path)
+        return self._make_command(
+            "transfer", _from=f"container:{self._src_path}", to=dst_slot.upload_url
+        )
 
     async def prepare(self):
         self._dst_slot = await self._storage.new_destination(destination_file=self._dst_path)

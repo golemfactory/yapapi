@@ -2,6 +2,7 @@
 
 from typing import Callable, Iterable, Optional, Dict, List, Any, Awaitable
 
+from yapapi.ctx import WorkContext
 from yapapi.script.capture import CaptureContext
 from yapapi.script.work import (
     _Deploy,
@@ -18,6 +19,7 @@ from yapapi.script.work import (
     Work,
 )
 from yapapi.storage import StorageProvider, DOWNLOAD_BYTES_LIMIT_DEFAULT
+from yapapi.work import BatchCommand
 
 
 class Script:
@@ -33,6 +35,13 @@ class Script:
         if implicit_init:
             self.deploy()
             self.start()
+
+    async def _evaluate(self, context: WorkContext) -> List[BatchCommand]:
+        batch_script: List[BatchCommand] = []
+        for step in self._pending_steps:
+            batch_cmd = await step.evaluate(context)
+            batch_script.append(batch_script)
+        return batch_script
 
     def deploy(self):
         """Schedule a Deploy command."""
