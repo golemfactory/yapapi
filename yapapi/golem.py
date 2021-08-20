@@ -28,7 +28,7 @@ R = TypeVar("R")  # Type var for task result
 
 
 class Golem(_Engine):
-    """The main entrypoint of Golem's high-level API.
+    """The main entrypoint of Golem\\'s high-level API.
 
     Provides two methods that reflect the two modes of operation, or two types of jobs
     that can currently be executed on the Golem network.
@@ -91,9 +91,8 @@ class Golem(_Engine):
             Passed as the value of the `id` parameter to `Job()`.
         :return: an iterator that yields completed `Task` objects
 
-        example usage:
+        example usage::
 
-        ```python
             async def worker(context: WorkContext, tasks: AsyncIterable[Task]):
                 async for task in tasks:
                     context.run("/bin/sh", "-c", "date")
@@ -109,7 +108,7 @@ class Golem(_Engine):
             async with Golem(budget=1.0, subnet_tag="devnet-beta.2") as golem:
                 async for completed in golem.execute_tasks(worker, [Task(data=None)], payload=package):
                     print(completed.result.stdout)
-        ```
+        
         """
 
         kwargs: Dict[str, Any] = {"payload": payload}
@@ -155,53 +154,52 @@ class Golem(_Engine):
             the returned Cluster try to spawn another instance
         :return: a `Cluster` of service instances
 
-        example usage:
+        example usage::
 
-        ```python
-        DATE_OUTPUT_PATH = "/golem/work/date.txt"
-        REFRESH_INTERVAL_SEC = 5
+            DATE_OUTPUT_PATH = "/golem/work/date.txt"
+            REFRESH_INTERVAL_SEC = 5
 
 
-        class DateService(Service):
-            @staticmethod
-            async def get_payload():
-                return await vm.repo(
-                    image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
-                )
+            class DateService(Service):
+                @staticmethod
+                async def get_payload():
+                    return await vm.repo(
+                        image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
+                    )
 
-            async def start(self):
-                # every `DATE_POLL_INTERVAL` write output of `date` to `DATE_OUTPUT_PATH`
-                self._ctx.run(
-                    "/bin/sh",
-                    "-c",
-                    f"while true; do date > {DATE_OUTPUT_PATH}; sleep {REFRESH_INTERVAL_SEC}; done &",
-                )
-                yield self._ctx.commit()
-
-            async def run(self):
-                while True:
-                    await asyncio.sleep(REFRESH_INTERVAL_SEC)
+                async def start(self):
+                    # every `DATE_POLL_INTERVAL` write output of `date` to `DATE_OUTPUT_PATH`
                     self._ctx.run(
                         "/bin/sh",
                         "-c",
-                        f"cat {DATE_OUTPUT_PATH}",
+                        f"while true; do date > {DATE_OUTPUT_PATH}; sleep {REFRESH_INTERVAL_SEC}; done &",
                     )
+                    yield self._ctx.commit()
 
-                    future_results = yield self._ctx.commit()
-                    results = await future_results
-                    print(results[0].stdout.strip())
+                async def run(self):
+                    while True:
+                        await asyncio.sleep(REFRESH_INTERVAL_SEC)
+                        self._ctx.run(
+                            "/bin/sh",
+                            "-c",
+                            f"cat {DATE_OUTPUT_PATH}",
+                        )
+
+                        future_results = yield self._ctx.commit()
+                        results = await future_results
+                        print(results[0].stdout.strip())
 
 
-        async def main():
-            async with Golem(budget=1.0, subnet_tag="devnet-beta.2") as golem:
-                cluster = await golem.run_service(DateService, num_instances=1)
-                start_time = datetime.now()
+            async def main():
+                async with Golem(budget=1.0, subnet_tag="devnet-beta.2") as golem:
+                    cluster = await golem.run_service(DateService, num_instances=1)
+                    start_time = datetime.now()
 
-                while datetime.now() < start_time + timedelta(minutes=1):
-                    for num, instance in enumerate(cluster.instances):
-                        print(f"Instance {num} is {instance.state.value} on {instance.provider_name}")
-                    await asyncio.sleep(REFRESH_INTERVAL_SEC)
-        ```
+                    while datetime.now() < start_time + timedelta(minutes=1):
+                        for num, instance in enumerate(cluster.instances):
+                            print(f"Instance {num} is {instance.state.value} on {instance.provider_name}")
+                        await asyncio.sleep(REFRESH_INTERVAL_SEC)
+
         """
         payload = payload or await service_class.get_payload()
 
