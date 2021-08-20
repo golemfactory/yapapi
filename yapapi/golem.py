@@ -58,6 +58,22 @@ class Golem(_Engine):
     either mode of operation, it's usually good to have just one instance of `Golem` active
     at any given time.
     """
+    async def start(self) -> None:
+        """Initialize resources and start background services used by this engine.
+
+        Calling this method is not necessary, it will be called either way internally
+        when the engine is used for the first time.
+        """
+        if not self.operative:
+            await self._start()
+
+    async def stop(self) -> Optional[bool]:
+        """Stop the engine in a graceful way.
+
+        This **must** be called when using Golem in a non-contextmanager way.
+        """
+        if self.operative:
+            return await self._stop(None, None, None)
 
     async def execute_tasks(
         self,

@@ -193,6 +193,9 @@ class _Engine(AsyncContextManager):
         self._services: Set[asyncio.Task] = set()
         self._stack = AsyncExitStack()
 
+        # changed in start/stop methods
+        self._operative: bool = False
+
     async def create_demand_builder(
         self, expiration_time: datetime, payload: Payload
     ) -> DemandBuilder:
@@ -232,11 +235,7 @@ class _Engine(AsyncContextManager):
 
     @property
     def operative(self) -> bool:
-        #   TODO: Implement this in some clean way
-        #         Also: other properties don't work in non-started state, how do we deal with this?
-        started = hasattr(self, '_storage_manager')
-        stopped = hasattr(self, '_stopped')
-        return started and not stopped
+        return self._operative
 
     def emit(self, event: events.Event) -> None:
         """Emit an event to be consumed by this engine's event consumer."""
@@ -244,33 +243,22 @@ class _Engine(AsyncContextManager):
             self._wrapped_consumer.async_call(event)
 
     async def __aenter__(self) -> "_Engine":
-        """Initialize resources and start background services used by this engine."""
-
         try:
-            await self.start()
+            await self._start()
             return self
         except:
-            await self.stop()
+            await self._stop(*sys.exc_info())
             raise
 
     async def __aexit__(self, *exc_info) -> Optional[bool]:
-        return await self.stop()
+        return await self._stop(*exc_info)
 
-    async def stop(self) -> Optional[bool]:
-        # TODO: clean implementation
-        if not hasattr(self, '_stopped'):
-            self._stopped = True
-            return await self._stack.__aexit__(*sys.exc_info())
+    async def _stop(self, *exc_info) -> Optional[bool]:
+        self._operative = False
+        return await self._stack.__aexit__(*exc_info)
 
-    async def start(self) -> None:
-        #   TODO: clean implementation
-        def stop_at_exit():
-            loop = asyncio.get_event_loop()
-            task = loop.create_task(self.stop())
-            loop.run_until_complete(task)
-
-        atexit.register(stop_at_exit)
-
+    async def _start(self) -> None:
+        self._operative = True
         stack = self._stack
 
         await stack.enter_async_context(self._wrapped_consumer)
