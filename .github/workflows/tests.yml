@@ -39,6 +39,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         name: Enable extended checks
         id: extended-checks
+      - run: poetry install
       - run: poetry run poe test
       - run: poetry run poe typecheck
       - run: poetry run poe codestyle
