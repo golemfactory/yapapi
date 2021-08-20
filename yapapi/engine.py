@@ -9,7 +9,6 @@ import itertools
 import logging
 import os
 import sys
-import atexit
 from typing import (
     AsyncContextManager,
     Awaitable,
