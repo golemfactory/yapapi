@@ -58,6 +58,7 @@ class Golem(_Engine):
     either mode of operation, it's usually good to have just one instance of `Golem` active
     at any given time.
     """
+
     async def start(self) -> None:
         """Initialize resources and start background services used by this engine.
 
@@ -74,6 +75,7 @@ class Golem(_Engine):
         """
         if self.operative:
             return await self._stop(None, None, None)
+        return None
 
     async def execute_tasks(
         self,

@@ -192,7 +192,7 @@ class _Engine(AsyncContextManager):
         self._services: Set[asyncio.Task] = set()
         self._stack = AsyncExitStack()
 
-        # changed in start/stop methods
+        # changed in _start/_stop methods
         self._operative: bool = False
 
     async def create_demand_builder(
