@@ -6,4 +6,4 @@ Yapapi - Golem Python API
    :caption: Contents:
 
 .. autoclass:: yapapi.Golem
-    :members: execute_tasks, run_service
+    :members: __init__, execute_tasks, run_service
