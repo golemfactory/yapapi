@@ -19,29 +19,33 @@ from yapapi.script.work import (
     Work,
 )
 from yapapi.storage import StorageProvider, DOWNLOAD_BYTES_LIMIT_DEFAULT
-from yapapi.work import BatchCommand
+from yapapi.script.work import BatchCommand
 
 
 class Script:
-    def __init__(
-        self,
-        storage: StorageProvider,
-        emitter: Optional[Callable[[StorageEvent], None]],
-        implicit_init: bool = True,
-    ):
+    def __init__(self, context: WorkContext):
+        self._ctx: WorkContext = context
         self._pending_steps: List[Work] = []
-        self._storage = storage
-        self._emitter = emitter
-        if implicit_init:
-            self.deploy()
-            self.start()
 
-    async def _evaluate(self, context: WorkContext) -> List[BatchCommand]:
-        batch_script: List[BatchCommand] = []
+    async def _evaluate(self) -> List[BatchCommand]:
+        batch: List[BatchCommand] = []
         for step in self._pending_steps:
-            batch_cmd = await step.evaluate(context)
-            batch_script.append(batch_script)
-        return batch_script
+            batch_cmd = await step.evaluate(self._ctx)
+            batch.append(batch_cmd)
+        return batch
+
+    async def _post(self):
+        for step in self._pending_steps:
+            await step.post(self._ctx)
+
+    async def _prepare(self):
+        if not self._ctx._started and self._ctx._implicit_init:
+            # TODO: maybe check if first two steps already cover this?
+            self._pending_steps.insert(0, _Deploy())
+            self._pending_steps.insert(1, _Start())
+
+        for step in self._pending_steps:
+            await step.prepare(self._ctx)
 
     def deploy(self):
         """Schedule a Deploy command."""

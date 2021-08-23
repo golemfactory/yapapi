@@ -15,45 +15,19 @@ from yapapi.script.capture import CaptureContext
 from yapapi.storage import StorageProvider, Source, Destination, DOWNLOAD_BYTES_LIMIT_DEFAULT
 
 
-class CommandContainer:
-    def __init__(self):
-        self._commands = []
-
-    def commands(self):
-        return self._commands
-
-    def __repr__(self):
-        return f"commands: {self._commands}"
-
-    def __getattr__(self, item):
-        def add_command(**kwargs) -> int:
-            kwargs = dict(
-                (key[1:] if key[0] == "_" else key, value) for key, value in kwargs.items()
-            )
-            idx = len(self._commands)
-            self._commands.append({item: kwargs})
-            return idx
-
-        return add_command
-
-
 # For example: { "start": { "args": [] } }
 BatchCommand = Dict[str, Dict[str, Union[str, List[str]]]]
 
 
 class Work(abc.ABC):
-    async def evaluate(self, context: WorkContext) -> BatchCommand:
+    async def evaluate(self, ctx: WorkContext) -> BatchCommand:
         """Stuff."""
 
-    async def prepare(self):
+    async def prepare(self, ctx: WorkContext) -> None:
         """A hook to be executed on requestor's end before the script is sent to the provider."""
         pass
 
-    def register(self, commands: CommandContainer):
-        """A hook which adds the required command to the exescript."""
-        pass
-
-    async def post(self):
+    async def post(self, ctx: WorkContext) -> None:
         """A hook to be executed on requestor's end after the script has finished."""
         pass
 
@@ -62,18 +36,10 @@ class Work(abc.ABC):
         kwargs = dict((key[1:] if key[0] == "_" else key, value) for key, value in kwargs.items())
         return {cmd_name: kwargs}
 
-    @property
-    def timeout(self) -> Optional[timedelta]:
-        """Return the optional timeout set for execution of this work."""
-        return None
-
 
 class _Deploy(Work):
-    async def evaluate(self, context: WorkContext):
+    async def evaluate(self, ctx: WorkContext):
         return self._make_command("deploy")
-
-    def register(self, commands: CommandContainer):
-        commands.deploy()
 
 
 class _Start(Work):
@@ -83,24 +49,17 @@ class _Start(Work):
     def __repr__(self):
         return f"start{self.args}"
 
-    async def evaluate(self, context: WorkContext):
+    async def evaluate(self, ctx: WorkContext):
         return self._make_command("start", args=self.args)
-
-    def register(self, commands: CommandContainer):
-        commands.start(args=self.args)
 
 
 class _Terminate(Work):
-    async def evaluate(self, context: WorkContext):
+    async def evaluate(self, ctx: WorkContext):
         return self._make_command("terminate")
-
-    def register(self, commands: CommandContainer):
-        commands.terminate()
 
 
 class _SendWork(Work, abc.ABC):
-    def __init__(self, storage: StorageProvider, dst_path: str):
-        self._storage = storage
+    def __init__(self, dst_path: str):
         self._dst_path = dst_path
         self._src: Optional[Source] = None
         self._idx: Optional[int] = None
@@ -109,30 +68,24 @@ class _SendWork(Work, abc.ABC):
     async def do_upload(self, storage: StorageProvider) -> Source:
         pass
 
-    async def evaluate(self, context: WorkContext):
-        self._src = await self.do_upload(context._storage)
+    async def evaluate(self, ctx: WorkContext):
+        self._src = await self.do_upload(ctx._storage)
         assert self._src is not None, "cmd prepared"
         return self._make_command(
             "transfer", _from=self._src.download_url, _to=f"container:{self._dst_path}"
         )
 
-    async def prepare(self):
-        self._src = await self.do_upload(self._storage)
+    async def prepare(self, ctx: WorkContext):
+        self._src = await self.do_upload(ctx._storage)
 
-    def register(self, commands: CommandContainer):
-        assert self._src is not None, "cmd prepared"
-        self._idx = commands.transfer(
-            _from=self._src.download_url, _to=f"container:{self._dst_path}"
-        )
-
-    async def post(self) -> None:
+    async def post(self, ctx: WorkContext) -> None:
         assert self._src is not None
-        await self._storage.release_source(self._src)
+        await ctx._storage.release_source(self._src)
 
 
 class _SendBytes(_SendWork):
-    def __init__(self, storage: StorageProvider, data: bytes, dst_path: str):
-        super().__init__(storage, dst_path)
+    def __init__(self, data: bytes, dst_path: str):
+        super().__init__(dst_path)
         self._data: Optional[bytes] = data
 
     async def do_upload(self, storage: StorageProvider) -> Source:
@@ -143,13 +96,13 @@ class _SendBytes(_SendWork):
 
 
 class _SendJson(_SendBytes):
-    def __init__(self, storage: StorageProvider, data: dict, dst_path: str):
-        super().__init__(storage, json.dumps(data).encode(encoding="utf-8"), dst_path)
+    def __init__(self, data: dict, dst_path: str):
+        super().__init__(json.dumps(data).encode(encoding="utf-8"), dst_path)
 
 
 class _SendFile(_SendWork):
-    def __init__(self, storage: StorageProvider, src_path: str, dst_path: str):
-        super(_SendFile, self).__init__(storage, dst_path)
+    def __init__(self, src_path: str, dst_path: str):
+        super(_SendFile, self).__init__(dst_path)
         self._src_path = Path(src_path)
 
     async def do_upload(self, storage: StorageProvider) -> Source:
@@ -172,21 +125,13 @@ class _Run(Work):
         self.stderr = stderr
         self._idx = None
 
-    def evaluate(self, context: WorkContext):
+    def evaluate(self, ctx: WorkContext):
         capture = dict()
         if self.stdout:
             capture["stdout"] = self.stdout.to_dict()
         if self.stderr:
             capture["stderr"] = self.stderr.to_dict()
         return self._make_command("run", entry_point=self.cmd, args=self.args, capture=capture)
-
-    def register(self, commands: CommandContainer):
-        capture = dict()
-        if self.stdout:
-            capture["stdout"] = self.stdout.to_dict()
-        if self.stderr:
-            capture["stderr"] = self.stderr.to_dict()
-        self._idx = commands.run(entry_point=self.cmd, args=self.args, capture=capture)
 
 
 StorageEvent = Union[DownloadStarted, DownloadFinished]
@@ -195,32 +140,21 @@ StorageEvent = Union[DownloadStarted, DownloadFinished]
 class _ReceiveContent(Work):
     def __init__(
         self,
-        storage: StorageProvider,
         src_path: str,
-        emitter: Optional[Callable[[StorageEvent], None]] = None,
     ):
-        self._storage = storage
         self._src_path: str = src_path
         self._idx: Optional[int] = None
         self._dst_slot: Optional[Destination] = None
-        self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
         self._dst_path: Optional[PathLike] = None
 
-    async def evaluate(self, context: WorkContext):
-        dst_slot = await context._storage.new_destination(destination_file=self._dst_path)
+    async def evaluate(self, ctx: WorkContext):
+        dst_slot = await ctx._storage.new_destination(destination_file=self._dst_path)
         return self._make_command(
             "transfer", _from=f"container:{self._src_path}", to=dst_slot.upload_url
         )
 
-    async def prepare(self):
+    async def prepare(self, ctx: WorkContext):
         self._dst_slot = await self._storage.new_destination(destination_file=self._dst_path)
-
-    def register(self, commands: CommandContainer):
-        assert self._dst_slot, f"{self.__class__} command creation without prepare"
-
-        self._idx = commands.transfer(
-            _from=f"container:{self._src_path}", to=self._dst_slot.upload_url
-        )
 
     def _emit_download_start(self):
         assert self._dst_slot, f"{self.__class__} post without prepare"
@@ -235,15 +169,13 @@ class _ReceiveContent(Work):
 class _ReceiveFile(_ReceiveContent):
     def __init__(
         self,
-        storage: StorageProvider,
         src_path: str,
         dst_path: str,
-        emitter: Optional[Callable[[StorageEvent], None]] = None,
     ):
-        super().__init__(storage, src_path, emitter)
+        super().__init__(src_path)
         self._dst_path = Path(dst_path)
 
-    async def post(self) -> None:
+    async def post(self, ctx: WorkContext) -> None:
         self._emit_download_start()
         assert self._dst_path
         assert self._dst_slot
@@ -255,17 +187,15 @@ class _ReceiveFile(_ReceiveContent):
 class _ReceiveBytes(_ReceiveContent):
     def __init__(
         self,
-        storage: StorageProvider,
         src_path: str,
         on_download: Callable[[bytes], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
-        emitter: Optional[Callable[[StorageEvent], None]] = None,
     ):
-        super().__init__(storage, src_path, emitter)
+        super().__init__(src_path)
         self._on_download = on_download
         self._limit = limit
 
-    async def post(self) -> None:
+    async def post(self, ctx: WorkContext) -> None:
         self._emit_download_start()
         assert self._dst_slot
 
@@ -277,15 +207,11 @@ class _ReceiveBytes(_ReceiveContent):
 class _ReceiveJson(_ReceiveBytes):
     def __init__(
         self,
-        storage: StorageProvider,
         src_path: str,
         on_download: Callable[[Any], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
-        emitter: Optional[Callable[[StorageEvent], None]] = None,
     ):
-        super().__init__(
-            storage, src_path, partial(self.__on_json_download, on_download), limit, emitter
-        )
+        super().__init__(src_path, partial(self.__on_json_download, on_download), limit)
 
     @staticmethod
     async def __on_json_download(on_download: Callable[[bytes], Awaitable], content: bytes):
