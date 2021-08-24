@@ -16,6 +16,7 @@ from ya_activity.models import (
 
 from yapapi.events import DownloadStarted, DownloadFinished
 from yapapi.props.com import ComLinear, Counter
+from yapapi.script import Script
 from yapapi.storage import StorageProvider, Source, Destination, DOWNLOAD_BYTES_LIMIT_DEFAULT
 from yapapi.rest.market import AgreementDetails
 from yapapi.rest.activity import Activity
@@ -357,8 +358,9 @@ class WorkContext:
             self.start()
             self._started = True
 
-    def begin(self):
-        pass
+    def new_script(self, timeout: Optional[timedelta] = None, wait_for_results: bool = True):
+        """Stuff."""
+        return Script(self, timeout, wait_for_results)
 
     def deploy(self):
         """Schedule a Deploy command."""

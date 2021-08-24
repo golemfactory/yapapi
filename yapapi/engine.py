@@ -38,6 +38,7 @@ from yapapi.props import com
 from yapapi.props.builder import DemandBuilder, DemandDecorator
 from yapapi.rest.activity import CommandExecutionError, Activity
 from yapapi.rest.market import Agreement, AgreementDetails, OfferProposal, Subscription
+from yapapi.script import Script
 from yapapi.storage import gftp
 from yapapi.strategy import (
     DecreaseScoreForUnconfirmedAgreement,
@@ -576,48 +577,32 @@ class _Engine(AsyncContextManager):
         job_id: str,
         agreement_id: str,
         activity: rest.activity.Activity,
-        command_generator: AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
+        command_generator: AsyncGenerator[Script, Awaitable[List[events.CommandEvent]]],
     ) -> None:
         """Send command batches produced by `command_generator` to `activity`."""
 
-        item = await command_generator.__anext__()
+        script: Script = await command_generator.__anext__()
 
         while True:
-
-            batch, exec_options = _unpack_work_item(item)
-
             # TODO: `task_id` should really be `batch_id`, but then we should also rename
             # `task_id` field of several events (e.g. `ScriptSent`)
             script_id = str(next(exescript_ids))
 
-            if batch.timeout:
-                if exec_options.batch_timeout:
-                    logger.warning(
-                        "Overriding batch timeout set with commit(batch_timeout)"
-                        "by the value set in exec options"
-                    )
-                else:
-                    exec_options.batch_timeout = batch.timeout
-
             batch_deadline = (
-                datetime.now(timezone.utc) + exec_options.batch_timeout
-                if exec_options.batch_timeout
-                else None
+                datetime.now(timezone.utc) + script._timeout if script._timeout else None
             )
 
-            cc = CommandContainer()
             try:
-                await batch.prepare()
-                batch.register(cc)
-                remote = await activity.send(cc.commands(), deadline=batch_deadline)
+                await script._prepare()
+                commands = script._evaluate()
+                remote = await activity.send(commands, deadline=batch_deadline)
             except Exception:
                 item = await command_generator.athrow(*sys.exc_info())
                 continue
 
-            cmds = cc.commands()
             self.emit(
                 events.ScriptSent(
-                    job_id=job_id, agr_id=agreement_id, script_id=script_id, cmds=cmds
+                    job_id=job_id, agr_id=agreement_id, script_id=script_id, cmds=commands
                 )
             )
 
@@ -635,7 +620,7 @@ class _Engine(AsyncContextManager):
                 self.emit(
                     events.GettingResults(job_id=job_id, agr_id=agreement_id, script_id=script_id)
                 )
-                await batch.post()
+                await script._post()
                 self.emit(
                     events.ScriptFinished(job_id=job_id, agr_id=agreement_id, script_id=script_id)
                 )
@@ -644,7 +629,7 @@ class _Engine(AsyncContextManager):
 
             loop = asyncio.get_event_loop()
 
-            if exec_options.wait_for_results:
+            if script._wait_for_results:
                 # Block until the results are available
                 try:
                     future_results = loop.create_future()

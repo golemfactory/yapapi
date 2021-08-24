@@ -23,9 +23,18 @@ from yapapi.script.work import BatchCommand
 
 
 class Script:
-    def __init__(self, context: WorkContext):
+    """Stuff."""
+
+    def __init__(
+        self,
+        context: WorkContext,
+        timeout: Optional[timedelta] = None,
+        wait_for_results: bool = True,
+    ):
         self._ctx: WorkContext = context
         self._pending_steps: List[Work] = []
+        self._timeout: Optional[timedelta] = timeout
+        self._wait_for_results = wait_for_results
 
     async def _evaluate(self) -> List[BatchCommand]:
         batch: List[BatchCommand] = []
