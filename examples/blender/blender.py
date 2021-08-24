@@ -25,10 +25,12 @@ from utils import (
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_RED,
     TEXT_COLOR_YELLOW,
+    TEXT_COLOR_MAGENTA,
+    format_usage,
 )
 
 
-async def main(subnet_tag, driver=None, network=None):
+async def main(subnet_tag, driver=None, network=None, show_usage=False):
     package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         min_mem_gib=0.5,
@@ -77,6 +79,23 @@ async def main(subnet_tag, driver=None, network=None):
                     f"{TEXT_COLOR_DEFAULT}"
                 )
                 raise
+
+            if show_usage:
+                print(
+                    f"{TEXT_COLOR_MAGENTA}"
+                    f" --- {ctx.provider_name} STATE: {await ctx.get_raw_state()}"
+                    f"{TEXT_COLOR_DEFAULT}"
+                )
+                print(
+                    f"{TEXT_COLOR_MAGENTA}"
+                    f" --- {ctx.provider_name} USAGE: {format_usage(await ctx.get_usage())}"
+                    f"{TEXT_COLOR_DEFAULT}"
+                )
+                print(
+                    f"{TEXT_COLOR_MAGENTA}"
+                    f" --- {ctx.provider_name}  COST: {await ctx.get_cost()}"
+                    f"{TEXT_COLOR_DEFAULT}"
+                )
 
     # Iterator over the frame indices that we want to render
     frames: range = range(0, 60, 10)
@@ -131,6 +150,7 @@ async def main(subnet_tag, driver=None, network=None):
 
 if __name__ == "__main__":
     parser = build_parser("Render a Blender scene")
+    parser.add_argument("--show-usage", action="store_true", help="show activity usage and cost")
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     parser.set_defaults(log_file=f"blender-yapapi-{now}.log")
     args = parser.parse_args()
@@ -147,7 +167,12 @@ if __name__ == "__main__":
 
     loop = asyncio.get_event_loop()
     task = loop.create_task(
-        main(subnet_tag=args.subnet_tag, driver=args.driver, network=args.network)
+        main(
+            subnet_tag=args.subnet_tag,
+            driver=args.driver,
+            network=args.network,
+            show_usage=args.show_usage,
+        )
     )
 
     try:

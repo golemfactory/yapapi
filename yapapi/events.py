@@ -45,27 +45,27 @@ class HasExcInfo(Event):
 
 
 @dataclass(init=False)
-class ComputationEvent(Event):
+class JobEvent(Event):
     job_id: str
 
 
 @dataclass
-class ComputationStarted(ComputationEvent):
+class ComputationStarted(JobEvent):
     expires: datetime
 
 
 @dataclass
-class ComputationFinished(HasExcInfo, ComputationEvent):
+class ComputationFinished(HasExcInfo, JobEvent):
     """Indicates successful completion if `exc_info` is `None` and a failure otherwise."""
 
 
 @dataclass
-class SubscriptionCreated(Event):
+class SubscriptionCreated(JobEvent):
     sub_id: str
 
 
 @dataclass
-class SubscriptionFailed(Event):
+class SubscriptionFailed(JobEvent):
     reason: str
 
 
@@ -76,7 +76,7 @@ class CollectFailed(Event):
 
 
 @dataclass(init=False)
-class ProposalEvent(Event):
+class ProposalEvent(JobEvent):
     prop_id: str
 
 
@@ -112,7 +112,7 @@ class NoProposalsConfirmed(Event):
 
 
 @dataclass(init=False)
-class AgreementEvent(Event):
+class AgreementEvent(JobEvent):
     agr_id: str
 
 
@@ -289,8 +289,8 @@ class CommandEventContext:
             self.kwargs["cmd_idx"] >= last_idx or not self.kwargs["success"]
         )
 
-    def event(self, agr_id: str, script_id: str, cmds: List) -> CommandEvent:
-        kwargs = dict(agr_id=agr_id, script_id=script_id, **self.kwargs)
+    def event(self, job_id: str, agr_id: str, script_id: str, cmds: List) -> CommandEvent:
+        kwargs = dict(job_id=job_id, agr_id=agr_id, script_id=script_id, **self.kwargs)
         if self.evt_cls is CommandExecuted:
             kwargs["command"] = cmds[self.kwargs["cmd_idx"]]
         return self.evt_cls(**kwargs)

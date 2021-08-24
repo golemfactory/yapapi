@@ -1,5 +1,7 @@
 """Utility functions and classes used within the `yapapi.executor` package."""
 import asyncio
+from datetime import datetime, timezone, tzinfo
+import functools
 import logging
 from typing import AsyncContextManager, Callable, Optional
 import warnings
@@ -87,3 +89,35 @@ def show_module_deprecation_warning(old_module: str, new_module: str, since_vers
         category=DeprecationWarning,
         stacklevel=2,
     )
+
+
+def get_local_timezone() -> Optional[tzinfo]:
+    return datetime.now(timezone.utc).astimezone().tzinfo
+
+
+class _AddJobId(logging.LoggerAdapter):
+    """A LoggerAdapter that adds the value of the `job_id` keyword param to logged messages."""
+
+    def __init__(self, logger, fmt):
+        super().__init__(logger, extra={})
+        self.format = fmt
+
+    def process(self, msg, kwargs):
+        job_id = kwargs.get("job_id")
+        if job_id is not None:
+            msg = self.format.format(job_id=job_id, msg=msg)
+            del kwargs["job_id"]
+        return msg, kwargs
+
+
+@functools.lru_cache(None)
+def get_logger(name: str, fmt="[Job {job_id}] {msg}"):
+    """Get named logger instance.
+
+    May be used as replacement for `logging.getLogger()`. The difference is, that
+    the returned loggers accept `job_id` keyword argument and include it in the
+    formated message. The optional `fmt` parameter specifies how the log message
+    and the job_id should be formatted together.
+    """
+    logger = logging.getLogger(name)
+    return _AddJobId(logger, fmt=fmt)

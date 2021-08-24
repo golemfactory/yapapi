@@ -4,13 +4,17 @@ from asyncio import TimeoutError
 from datetime import datetime, timezone
 import json
 import sys
+import pathlib
+
 
 from yapapi import props as yp
 from yapapi.log import enable_default_logger
 from yapapi.props.builder import DemandBuilder
 from yapapi.rest import Configuration, Market, Activity, Payment  # noqa
 
-from examples import utils
+examples_dir = pathlib.Path(__file__).resolve().parent.parent
+sys.path.append(str(examples_dir))
+import utils
 
 
 async def list_offers(conf: Configuration, subnet_tag: str):

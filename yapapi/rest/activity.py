@@ -69,6 +69,11 @@ class Activity(AsyncContextManager["Activity"]):
         state: yaa.ActivityState = await self._state.get_activity_state(self._id)
         return state
 
+    async def usage(self) -> yaa.ActivityUsage:
+        """Retrieve the current usage of the activity."""
+        usage: yaa.ActivityUsage = await self._state.get_activity_usage(self._id)
+        return usage
+
     async def send(self, script: List[dict], deadline: Optional[datetime] = None) -> "Batch":
         """Send the execution script to the provider's execution unit."""
         script_txt = json.dumps(script)
@@ -215,7 +220,10 @@ class PollingBatch(Batch):
         for n in range(self.GET_EXEC_BATCH_RESULTS_MAX_TRIES, 0, -1):
             try:
                 results = await self._activity._api.get_exec_batch_results(
-                    self._activity._id, self._batch_id, _request_timeout=min(timeout, 5)
+                    self._activity._id,
+                    self._batch_id,
+                    timeout=min(timeout, 5),
+                    _request_timeout=min(timeout, 5) + 0.5,
                 )
                 return results
             except ApiException as err:

@@ -7,8 +7,6 @@ from unittest import mock
 
 from yapapi.ctx import CommandContainer, WorkContext
 
-from tests.factories.props import NodeInfoFactory
-
 
 def test_command_container():
 
@@ -46,7 +44,7 @@ class TestWorkContext:
 
     @staticmethod
     def _get_work_context(storage=None):
-        return WorkContext(factory.Faker("pystr"), node_info=NodeInfoFactory(), storage=storage)
+        return WorkContext(mock.Mock(), mock.Mock(), storage=storage)
 
     @staticmethod
     def _assert_dst_path(steps, dst_path):

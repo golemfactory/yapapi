@@ -1,16 +1,27 @@
 import abc
+from dataclasses import dataclass, field
+from datetime import timedelta, datetime
 import enum
 import json
-from dataclasses import dataclass
-from datetime import timedelta
+import logging
 from os import PathLike
 from functools import partial
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union, Any, Awaitable
 
+from ya_activity.models import (
+    ActivityUsage as yaa_ActivityUsage,
+    ActivityState as yaa_ActivityState,
+)
+
 from yapapi.events import DownloadStarted, DownloadFinished
-from yapapi.props import NodeInfo
+from yapapi.props.com import ComLinear, Counter
 from yapapi.storage import StorageProvider, Source, Destination, DOWNLOAD_BYTES_LIMIT_DEFAULT
+from yapapi.rest.market import AgreementDetails
+from yapapi.rest.activity import Activity
+from yapapi.utils import get_local_timezone
+
+logger = logging.getLogger(__name__)
 
 
 class CommandContainer:
@@ -291,31 +302,54 @@ class ExecOptions:
 
 
 class WorkContext:
-    """An object used to schedule commands to be sent to provider."""
+    """Provider node's work context.
 
-    id: str
-    """Unique identifier for this work context."""
+    Used to schedule commands to be sent to the provider and enable other interactions between the
+    requestor agent's client code and the activity on provider's end.
+    """
 
     def __init__(
         self,
-        ctx_id: str,
-        node_info: NodeInfo,
+        activity: Activity,
+        agreement_details: AgreementDetails,
         storage: StorageProvider,
         emitter: Optional[Callable[[StorageEvent], None]] = None,
         implicit_init: bool = True,
     ):
-        self.id = ctx_id
-        self._node_info = node_info
+        self._activity = activity
+        self._agreement_details = agreement_details
         self._storage: StorageProvider = storage
-        self._pending_steps: List[Work] = []
-        self._started: bool = False
         self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
         self._implicit_init = implicit_init
+
+        self._pending_steps: List[Work] = []
+        self._started: bool = False
+
+        self.__payment_model: Optional[ComLinear] = None
+
+    @property
+    def id(self) -> str:
+        """Unique identifier for this work context."""
+        return self._activity.id
 
     @property
     def provider_name(self) -> Optional[str]:
         """Return the name of the provider associated with this work context."""
-        return self._node_info.name
+        return self._agreement_details.provider_node_info.name
+
+    @property
+    def _payment_model(self) -> ComLinear:
+        """Return the characteristics of the payment model associated with this work context."""
+
+        # @TODO ideally, this should return `Com` rather than `ComLinear` and the WorkContext itself
+        # should be agnostic of the nature of the given payment model - but that also requires
+        # automatic casting of the payment model-related properties to an appropriate model
+        # inheriting from `Com`
+
+        if not self.__payment_model:
+            self.__payment_model = self._agreement_details.provider_view.extract(ComLinear)
+
+        return self.__payment_model
 
     def __prepare(self):
         if not self._started and self._implicit_init:
@@ -443,6 +477,43 @@ class WorkContext:
         self._pending_steps = []
         return Steps(*steps, timeout=timeout)
 
+    async def get_raw_usage(self) -> yaa_ActivityUsage:
+        """Get the raw usage vector for the activity bound to this work context.
+
+        The value comes directly from the low level API and is not interpreted in any way.
+        """
+
+        usage = await self._activity.usage()
+        logger.debug(f"WorkContext raw usage: id={self.id}, usage={usage}")
+        return usage
+
+    async def get_usage(self) -> "ActivityUsage":
+        """Get the current usage for the activity bound to this work context."""
+
+        raw_usage = await self.get_raw_usage()
+        usage = ActivityUsage()
+        if raw_usage.current_usage:
+            usage.current_usage = self._payment_model.usage_as_dict(raw_usage.current_usage)
+        if raw_usage.timestamp:
+            usage.timestamp = datetime.fromtimestamp(raw_usage.timestamp, tz=get_local_timezone())
+        return usage
+
+    async def get_raw_state(self) -> yaa_ActivityState:
+        """Get the state activity bound to this work context.
+
+        The value comes directly from the low level API and is not interpreted in any way.
+        """
+
+        return await self._activity.state()
+
+    async def get_cost(self) -> Optional[float]:
+        """Get the accumulated cost of the activity based on the reported usage."""
+
+        usage = await self.get_raw_usage()
+        if usage.current_usage:
+            return self._payment_model.calculate_cost(usage.current_usage)
+        return None
+
 
 class CaptureMode(enum.Enum):
     HEAD = "head"
@@ -498,3 +569,11 @@ class CaptureContext:
 
     def is_streaming(self) -> bool:
         return self.mode == CaptureMode.STREAM
+
+
+@dataclass
+class ActivityUsage:
+    """A high-level representation of activity usage record."""
+
+    current_usage: Dict[Counter, float] = field(default_factory=dict)
+    timestamp: Optional[datetime] = None

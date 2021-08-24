@@ -61,9 +61,10 @@ else:
 from yapapi import events, __version__ as yapapi_version
 from yapapi.services import MAX_AGREEMENT_EXPIRATION, MIN_AGREEMENT_EXPIRATION
 from yapapi.rest.activity import CommandExecutionError
+from yapapi.utils import get_local_timezone, get_logger
+
 
 event_logger = logging.getLogger("yapapi.events")
-executor_logger = logging.getLogger("yapapi.executor")
 
 # Initializing loggers, so that logger.setLevel() in enable_default_logger will work.
 _agreements_pool_logger = logging.getLogger("yapapi.agreements_pool")
@@ -74,7 +75,7 @@ REPORT_CONFIRMED_PROVIDERS_INTERVAL: Final[float] = 3.0
 class _YagnaDatetimeFormatter(logging.Formatter):
     """Custom log Formatter that formats datetime using the same convention yagna uses."""
 
-    LOCAL_TZ = datetime.now(timezone.utc).astimezone().tzinfo
+    LOCAL_TZ = get_local_timezone()
 
     def formatTime(self, record: logging.LogRecord, datefmt=None):
         """Format datetime; example: `2021-06-11T14:55:43.156.123+0200`."""
@@ -231,6 +232,14 @@ MAX_AGREEMENT_EXPIRATION_MINUTES = round(MAX_AGREEMENT_EXPIRATION.seconds / 60)
 MIN_AGREEMENT_EXPIRATION_MINUTES = round(MIN_AGREEMENT_EXPIRATION.seconds / 60)
 
 
+# Some type aliases to make types more meaningful
+AgreementId = str
+JobId = str
+TaskId = str
+ProposalId = str
+ProviderId = str
+
+
 class SummaryLogger:
     """Aggregates information from computation events to provide a high-level summary.
 
@@ -252,40 +261,45 @@ class SummaryLogger:
     ```
     """
 
-    logger = logging.getLogger("yapapi.summary")
+    # Define some messages a string constants here, so they can be used e.g. in
+    # integration tests, in assertions that expect certain messages to be logged
+    GOLEM_SHUTDOWN_SUCCESSFUL_MESSAGE = "Golem engine has shut down"
+
+    logger = get_logger("yapapi.summary")
 
     # Generates subsequent numbers, for use in generated provider names
     numbers: Iterator[int]
 
-    # Start time of the computation (indexed by job_id)
-    start_time: Dict[str, float]
+    # Start time of the computation, indexed by job id
+    start_time: Dict[JobId, float]
 
     # Maps received proposal ids to provider ids
-    received_proposals: Dict[str, str]
+    received_proposals: Dict[ProposalId, ProviderId]
 
     # Set of confirmed proposal ids
-    confirmed_proposals: Set[str]
+    confirmed_proposals: Set[ProposalId]
 
     # Last number of confirmed providers
     prev_confirmed_providers: int
 
     # Maps agreement ids to provider infos
-    agreement_provider_info: Dict[str, ProviderInfo]
+    agreement_provider_info: Dict[AgreementId, ProviderInfo]
 
-    # Set of agreements confirmed by providers
-    confirmed_agreements: Set[str]
+    # Set of agreements confirmed by providers, indexed by job id
+    confirmed_agreements: Dict[JobId, Set[AgreementId]]
 
     # Maps task id to task data
-    task_data: Dict[str, Any]
+    task_data: Dict[TaskId, Any]
 
-    # Maps a provider info to the list of task ids computed by the provider
-    provider_tasks: Dict[ProviderInfo, List[str]]
+    # Maps a job id and provider info to the list of task ids computed
+    # by the provider for the given job
+    provider_tasks: Dict[JobId, Dict[ProviderInfo, List[TaskId]]]
 
     # Map a provider info to the sum of amounts in this provider's invoices
     provider_cost: Dict[ProviderInfo, Decimal]
 
     # Count how many times a worker failed on a provider
-    provider_failures: Dict[ProviderInfo, int]
+    provider_failures: Dict[JobId, Dict[ProviderInfo, int]]
 
     # Has computation been cancelled?
     cancelled: bool
@@ -315,12 +329,12 @@ class SummaryLogger:
         self.received_proposals = {}
         self.confirmed_proposals = set()
         self.agreement_provider_info = {}
-        self.confirmed_agreements = set()
+        self.confirmed_agreements = defaultdict(set)
         self.task_data = {}
         self.script_cmds = {}
         self.provider_cost = {}
-        self.provider_tasks = defaultdict(list)
-        self.provider_failures = Counter()
+        self.provider_tasks = defaultdict(lambda: defaultdict(list))
+        self.provider_failures = defaultdict(Counter)
         self.cancelled = False
         self.finished = False
         self.error_occurred = False
@@ -331,25 +345,37 @@ class SummaryLogger:
         """Initialize counters for a new job."""
         self.start_time[job_id] = time.time()
 
-    def _print_summary(self) -> None:
+    def _print_summary(self, job_id: str) -> None:
         """Print a summary at the end of computation."""
 
         num_providers = len(
-            {self.agreement_provider_info[agr_id] for agr_id in self.confirmed_agreements}
+            {self.agreement_provider_info[agr_id] for agr_id in self.confirmed_agreements[job_id]}
         )
         self.logger.info(
-            "Negotiated %d agreements with %d providers",
-            len(self.confirmed_agreements),
-            num_providers,
+            "Negotiated %d agreements with %s",
+            len(self.confirmed_agreements[job_id]),
+            pluralize(num_providers, "provider"),
+            job_id=job_id,
         )
-        for info, tasks in self.provider_tasks.items():
-            self.logger.info("Provider '%s' computed %s", info.name, pluralize(len(tasks), "task"))
-        for info in set(self.agreement_provider_info.values()):
-            if info not in self.provider_tasks:
-                self.logger.info("Provider '%s' did not compute any tasks", info.name)
-        for info, num in self.provider_failures.items():
+        for info, tasks in self.provider_tasks[job_id].items():
             self.logger.info(
-                "Activity failed %s on provider '%s'", pluralize(num, "time"), info.name
+                "Provider '%s' computed %s",
+                info.name,
+                pluralize(len(tasks), "task"),
+                job_id=job_id,
+            )
+        for agr_id in self.confirmed_agreements[job_id]:
+            info = self.agreement_provider_info[agr_id]
+            if info not in self.provider_tasks[job_id]:
+                self.logger.info(
+                    "Provider '%s' did not compute any tasks", info.name, job_id=job_id
+                )
+        for info, num in self.provider_failures[job_id].items():
+            self.logger.info(
+                "Activity failed %s on provider '%s'",
+                pluralize(num, "time"),
+                info.name,
+                job_id=job_id,
             )
 
     def _print_total_cost(self, partial: bool = False) -> None:
@@ -440,17 +466,21 @@ class SummaryLogger:
 
         elif isinstance(event, events.AgreementCreated):
             provider_name = event.provider_info.name or event.provider_id
-            self.logger.info("Agreement proposed to provider '%s'", provider_name)
+            self.logger.info(
+                "Agreement proposed to provider '%s'", provider_name, job_id=event.job_id
+            )
             self.agreement_provider_info[event.agr_id] = ProviderInfo(
                 event.provider_id, provider_name, event.provider_info.subnet_tag
             )
 
         elif isinstance(event, events.AgreementConfirmed):
+
             self.logger.info(
                 "Agreement confirmed by provider '%s'",
                 self.agreement_provider_info[event.agr_id].name,
+                job_id=event.job_id,
             )
-            self.confirmed_agreements.add(event.agr_id)
+            self.confirmed_agreements[event.job_id].add(event.agr_id)
 
         elif isinstance(event, events.TaskStarted):
             provider_info = self.agreement_provider_info[event.agr_id]
@@ -459,6 +489,7 @@ class SummaryLogger:
                 "Task started on provider '%s', task data: %s",
                 provider_info.name,
                 str_capped(event.task_data, 200),
+                job_id=event.job_id,
             )
 
         elif isinstance(event, events.TaskFinished):
@@ -468,9 +499,10 @@ class SummaryLogger:
                 "Task finished by provider '%s', task data: %s",
                 provider_info.name,
                 str_capped(data, 200),
+                job_id=event.job_id,
             )
             if event.task_id:
-                self.provider_tasks[provider_info].append(event.task_id)
+                self.provider_tasks[event.job_id][provider_info].append(event.task_id)
 
         elif isinstance(event, events.ScriptSent):
             provider_info = self.agreement_provider_info[event.agr_id]
@@ -481,6 +513,7 @@ class SummaryLogger:
                 event.script_id,
                 provider_info.name,
                 str_capped(cmds, 200),
+                job_id=event.job_id,
             )
 
         elif isinstance(event, events.ScriptFinished):
@@ -489,6 +522,7 @@ class SummaryLogger:
                 "Script '%s' finished on provider '%s'",
                 event.script_id,
                 provider_info.name,
+                job_id=event.job_id,
             )
 
         elif isinstance(event, events.PaymentAccepted):
@@ -497,7 +531,10 @@ class SummaryLogger:
             cost += Decimal(event.amount)
             self.provider_cost[provider_info] = cost
             self.logger.info(
-                "Accepted invoice from '%s', amount: %s", provider_info.name, cost.normalize()
+                "Accepted invoice from '%s', amount: %s",
+                provider_info.name,
+                cost.normalize(),
+                job_id=event.job_id,
             )
 
         elif isinstance(event, events.PaymentFailed):
@@ -509,6 +546,7 @@ class SummaryLogger:
                 "Failed to accept an invoice or a debit note from '%s', reason: %s",
                 provider_info,
                 reason,
+                job_id=event.job_id,
             )
 
         elif isinstance(event, events.WorkerFinished):
@@ -516,41 +554,48 @@ class SummaryLogger:
                 return
             _exc_type, exc, _tb = event.exc_info
             provider_info = self.agreement_provider_info[event.agr_id]
-            self.provider_failures[provider_info] += 1
+            self.provider_failures[event.job_id][provider_info] += 1
             reason = str(exc) or repr(exc) or "unexpected error"
             if isinstance(exc, CommandExecutionError):
                 self.logger.warning(
-                    "Activity failed on provider '%s'; reason: %s", provider_info.name, reason
+                    "Activity failed on provider '%s'; reason: %s",
+                    provider_info.name,
+                    reason,
+                    job_id=event.job_id,
                 )
             else:
                 self.logger.warning(
-                    "Worker for provider '%s' failed; reason: %s", provider_info.name, reason
+                    "Worker for provider '%s' failed; reason: %s",
+                    provider_info.name,
+                    reason,
+                    job_id=event.job_id,
                 )
 
         elif isinstance(event, events.ComputationFinished):
+            job_id = event.job_id
             if not event.exc_info:
-                total_time = time.time() - self.start_time[event.job_id]
-                self.logger.info(f"Computation finished in {total_time:.1f}s")
+                total_time = time.time() - self.start_time[job_id]
+                self.logger.info(f"Computation finished in {total_time:.1f}s", job_id=job_id)
                 self.finished = True
             else:
                 _exc_type, exc, _tb = event.exc_info
                 if isinstance(exc, CancelledError):
                     self.cancelled = True
-                    self.logger.warning("Computation cancelled")
+                    self.logger.warning("Computation cancelled", job_id=job_id)
                 else:
                     reason = str(exc) or repr(exc) or "unexpected error"
-                    self.logger.error("Computation failed, reason: %s", reason)
-            self._print_summary()
+                    self.logger.error("Computation failed, reason: %s", reason, job_id=job_id)
+            self._print_summary(job_id)
 
         elif isinstance(event, events.ShutdownFinished):
             self._print_total_cost()
             self.provider_cost = {}
             if not event.exc_info:
-                self.logger.info("Executor has shut down")
+                self.logger.info(SummaryLogger.GOLEM_SHUTDOWN_SUCCESSFUL_MESSAGE)
             else:
                 _exc_type, exc, _tb = event.exc_info
                 reason = str(exc) or repr(exc) or "unexpected error"
-                self.logger.error("Error when shutting down Executor: %s", reason)
+                self.logger.error("Error when shutting down Golem engine: %s", reason)
             self.shutdown_complete = True
 
         elif isinstance(event, events.AgreementTerminated):
@@ -558,7 +603,7 @@ class SummaryLogger:
                 pass
             else:
                 prov_info = self.agreement_provider_info[event.agr_id]
-                self.logger.info(f"Terminated agreement with {prov_info.name}")
+                self.logger.info(f"Terminated agreement with {prov_info.name}", job_id=event.job_id)
 
 
 def log_summary(wrapped_emitter: Optional[Callable[[events.Event], None]] = None):
