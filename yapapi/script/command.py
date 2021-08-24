@@ -1,7 +1,6 @@
 """Stuff."""
 
 import abc
-from datetime import timedelta
 from functools import partial
 import json
 from os import PathLike
@@ -19,30 +18,34 @@ from yapapi.storage import StorageProvider, Source, Destination, DOWNLOAD_BYTES_
 BatchCommand = Dict[str, Dict[str, Union[str, List[str]]]]
 
 
-class Work(abc.ABC):
+class Command(abc.ABC):
     async def evaluate(self, ctx: WorkContext) -> BatchCommand:
         """Stuff."""
 
-    async def prepare(self, ctx: WorkContext) -> None:
-        """A hook to be executed on requestor's end before the script is sent to the provider."""
-        pass
-
-    async def post(self, ctx: WorkContext) -> None:
+    async def after(self, ctx: WorkContext) -> None:
         """A hook to be executed on requestor's end after the script has finished."""
         pass
 
+    async def before(self, ctx: WorkContext) -> None:
+        """A hook to be executed on requestor's end before the script is sent to the provider."""
+        pass
+
     @staticmethod
-    def _make_command(cmd_name: str, **kwargs) -> BatchCommand:
+    def _make_batch_command(cmd_name: str, **kwargs) -> BatchCommand:
         kwargs = dict((key[1:] if key[0] == "_" else key, value) for key, value in kwargs.items())
         return {cmd_name: kwargs}
 
 
-class _Deploy(Work):
+class Deploy(Command):
+    """Command which deploys a given runtime on the provider."""
+
     async def evaluate(self, ctx: WorkContext):
-        return self._make_command("deploy")
+        return self._make_batch_command("deploy")
 
 
-class _Start(Work):
+class Start(Command):
+    """Command which starts a given runtime on the provider."""
+
     def __init__(self, *args: str):
         self.args = args
 
@@ -50,80 +53,111 @@ class _Start(Work):
         return f"start{self.args}"
 
     async def evaluate(self, ctx: WorkContext):
-        return self._make_command("start", args=self.args)
+        return self._make_batch_command("start", args=self.args)
 
 
-class _Terminate(Work):
+class Terminate(Command):
+    """Command which terminates a given runtime on the provider."""
+
     async def evaluate(self, ctx: WorkContext):
-        return self._make_command("terminate")
+        return self._make_batch_command("terminate")
 
 
-class _SendWork(Work, abc.ABC):
+class _SendContent(Command, abc.ABC):
     def __init__(self, dst_path: str):
         self._dst_path = dst_path
         self._src: Optional[Source] = None
-        self._idx: Optional[int] = None
 
     @abc.abstractmethod
-    async def do_upload(self, storage: StorageProvider) -> Source:
+    async def _do_upload(self, storage: StorageProvider) -> Source:
         pass
 
     async def evaluate(self, ctx: WorkContext):
-        self._src = await self.do_upload(ctx._storage)
+        self._src = await self._do_upload(ctx._storage)
         assert self._src is not None, "cmd prepared"
-        return self._make_command(
+        return self._make_batch_command(
             "transfer", _from=self._src.download_url, _to=f"container:{self._dst_path}"
         )
 
-    async def prepare(self, ctx: WorkContext):
-        self._src = await self.do_upload(ctx._storage)
+    async def before(self, ctx: WorkContext):
+        self._src = await self._do_upload(ctx._storage)
 
-    async def post(self, ctx: WorkContext) -> None:
+    async def after(self, ctx: WorkContext) -> None:
         assert self._src is not None
         await ctx._storage.release_source(self._src)
 
 
-class _SendBytes(_SendWork):
+class SendBytes(_SendContent):
+    """Command which schedules sending bytes data to a provider."""
+
     def __init__(self, data: bytes, dst_path: str):
+        """Create a new SendBytes command.
+
+        :param data: bytes to send
+        :param dst_path: remote (provider) destination path
+        """
         super().__init__(dst_path)
         self._data: Optional[bytes] = data
 
-    async def do_upload(self, storage: StorageProvider) -> Source:
+    async def _do_upload(self, storage: StorageProvider) -> Source:
         assert self._data is not None, "buffer unintialized"
         src = await storage.upload_bytes(self._data)
         self._data = None
         return src
 
 
-class _SendJson(_SendBytes):
+class SendJson(SendBytes):
+    """Command which schedules sending JSON data to a provider."""
+
     def __init__(self, data: dict, dst_path: str):
+        """Create a new SendJson command.
+
+        :param data: dictionary representing JSON data to send
+        :param dst_path: remote (provider) destination path
+        """
         super().__init__(json.dumps(data).encode(encoding="utf-8"), dst_path)
 
 
-class _SendFile(_SendWork):
+class SendFile(_SendContent):
+    """Command which schedules sending a file to a provider."""
+
     def __init__(self, src_path: str, dst_path: str):
-        super(_SendFile, self).__init__(dst_path)
+        """Create a new SendFile command.
+
+        :param src_path: local (requestor) source path
+        :param dst_path: remote (provider) destination path
+        """
+        super(SendFile, self).__init__(dst_path)
         self._src_path = Path(src_path)
 
-    async def do_upload(self, storage: StorageProvider) -> Source:
+    async def _do_upload(self, storage: StorageProvider) -> Source:
         return await storage.upload_file(self._src_path)
 
 
-class _Run(Work):
+class Run(Command):
+    """Command which schedules running a shell command on a provider."""
+
     def __init__(
         self,
         cmd: str,
         *args: Iterable[str],
         env: Optional[Dict[str, str]] = None,
-        stdout: Optional["CaptureContext"] = None,
-        stderr: Optional["CaptureContext"] = None,
+        stderr: CaptureContext = CaptureContext.build(mode="stream"),
+        stdout: CaptureContext = CaptureContext.build(mode="stream"),
     ):
+        """Create a new Run command.
+
+        :param cmd: command to run on the provider, e.g. /my/dir/run.sh
+        :param args: command arguments, e.g. "input1.txt", "output1.txt"
+        :param env: optional dictionary with environment variables
+        :param stderr: capture context to use for stderr
+        :param stdout: capture context to use for stdout
+        """
         self.cmd = cmd
         self.args = args
         self.env = env
         self.stdout = stdout
         self.stderr = stderr
-        self._idx = None
 
     def evaluate(self, ctx: WorkContext):
         capture = dict()
@@ -131,33 +165,34 @@ class _Run(Work):
             capture["stdout"] = self.stdout.to_dict()
         if self.stderr:
             capture["stderr"] = self.stderr.to_dict()
-        return self._make_command("run", entry_point=self.cmd, args=self.args, capture=capture)
+        return self._make_batch_command(
+            "run", entry_point=self.cmd, args=self.args, capture=capture
+        )
 
 
 StorageEvent = Union[DownloadStarted, DownloadFinished]
 
 
-class _ReceiveContent(Work):
+class _ReceiveContent(Command, abc.ABC):
     def __init__(
         self,
         src_path: str,
     ):
         self._src_path: str = src_path
-        self._idx: Optional[int] = None
         self._dst_slot: Optional[Destination] = None
         self._dst_path: Optional[PathLike] = None
 
     async def evaluate(self, ctx: WorkContext):
         dst_slot = await ctx._storage.new_destination(destination_file=self._dst_path)
-        return self._make_command(
+        return self._make_batch_command(
             "transfer", _from=f"container:{self._src_path}", to=dst_slot.upload_url
         )
 
-    async def prepare(self, ctx: WorkContext):
+    async def before(self, ctx: WorkContext):
         self._dst_slot = await self._storage.new_destination(destination_file=self._dst_path)
 
     def _emit_download_start(self):
-        assert self._dst_slot, f"{self.__class__} post without prepare"
+        assert self._dst_slot, f"{self.__class__} after without before"
         if self._emitter:
             self._emitter(DownloadStarted(path=self._src_path))
 
@@ -166,16 +201,23 @@ class _ReceiveContent(Work):
             self._emitter(DownloadFinished(path=str(self._dst_path)))
 
 
-class _ReceiveFile(_ReceiveContent):
+class ReceiveFile(_ReceiveContent):
+    """Command which schedules downloading a file from a provider."""
+
     def __init__(
         self,
         src_path: str,
         dst_path: str,
     ):
+        """Create a new ReceiveFile command.
+
+        :param src_path: remote (provider) source path
+        :param dst_path: local (requestor) destination path
+        """
         super().__init__(src_path)
         self._dst_path = Path(dst_path)
 
-    async def post(self, ctx: WorkContext) -> None:
+    async def after(self, ctx: WorkContext) -> None:
         self._emit_download_start()
         assert self._dst_path
         assert self._dst_slot
@@ -184,18 +226,26 @@ class _ReceiveFile(_ReceiveContent):
         self._emit_download_end()
 
 
-class _ReceiveBytes(_ReceiveContent):
+class ReceiveBytes(_ReceiveContent):
+    """Command which schedules downloading a file from a provider as bytes."""
+
     def __init__(
         self,
         src_path: str,
         on_download: Callable[[bytes], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
     ):
+        """Create a new ReceiveBytes command.
+
+        :param src_path: remote (provider) source path
+        :param on_download: the callable to run on the received data
+        :param limit: limit of bytes to be downloaded (expected size)
+        """
         super().__init__(src_path)
         self._on_download = on_download
         self._limit = limit
 
-    async def post(self, ctx: WorkContext) -> None:
+    async def after(self, ctx: WorkContext) -> None:
         self._emit_download_start()
         assert self._dst_slot
 
@@ -204,13 +254,21 @@ class _ReceiveBytes(_ReceiveContent):
         await self._on_download(output)
 
 
-class _ReceiveJson(_ReceiveBytes):
+class ReceiveJson(ReceiveBytes):
+    """Command which schedules downloading a file from a provider as JSON data."""
+
     def __init__(
         self,
         src_path: str,
         on_download: Callable[[Any], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
     ):
+        """Create a new ReceiveJson command.
+
+        :param src_path: remote (provider) source path
+        :param on_download: the callable to run on the received data
+        :param limit: limit of bytes to be downloaded (expected size)
+        """
         super().__init__(src_path, partial(self.__on_json_download, on_download), limit)
 
     @staticmethod

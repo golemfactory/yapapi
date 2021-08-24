@@ -588,21 +588,19 @@ class _Engine(AsyncContextManager):
             # `task_id` field of several events (e.g. `ScriptSent`)
             script_id = str(next(exescript_ids))
 
-            batch_deadline = (
-                datetime.now(timezone.utc) + script._timeout if script._timeout else None
-            )
+            batch_deadline = datetime.now(timezone.utc) + script.timeout if script.timeout else None
 
             try:
-                await script._prepare()
-                commands = script._evaluate()
-                remote = await activity.send(commands, deadline=batch_deadline)
+                await script._before()
+                batch = await script._evaluate()
+                remote = await activity.send(batch, deadline=batch_deadline)
             except Exception:
                 item = await command_generator.athrow(*sys.exc_info())
                 continue
 
             self.emit(
                 events.ScriptSent(
-                    job_id=job_id, agr_id=agreement_id, script_id=script_id, cmds=commands
+                    job_id=job_id, agr_id=agreement_id, script_id=script_id, cmds=batch
                 )
             )
 
@@ -610,7 +608,7 @@ class _Engine(AsyncContextManager):
                 results = []
                 async for evt_ctx in remote:
                     evt = evt_ctx.event(
-                        job_id=job_id, agr_id=agreement_id, script_id=script_id, cmds=cmds
+                        job_id=job_id, agr_id=agreement_id, script_id=script_id, cmds=batch
                     )
                     self.emit(evt)
                     results.append(evt)
@@ -620,7 +618,7 @@ class _Engine(AsyncContextManager):
                 self.emit(
                     events.GettingResults(job_id=job_id, agr_id=agreement_id, script_id=script_id)
                 )
-                await script._post()
+                await script._after()
                 self.emit(
                     events.ScriptFinished(job_id=job_id, agr_id=agreement_id, script_id=script_id)
                 )
