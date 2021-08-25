@@ -37,6 +37,9 @@ toml = "^0.10.1"
 srvresolver = "^0.3.5"
 colorama = "^0.4.4"
 
+sphinx = "^4.0.1"
+sphinx-autodoc-typehints = "^1.12.0"
+
 # Adding `goth` to dependencies causes > 40 additional packages to be installed. Given
 # that dependency resolution in `poetry` is rather slow, we'd like to avoid installing
 # `goth` for example in a CI pipeline that only runs linters/unit tests, not integration
