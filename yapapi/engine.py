@@ -592,8 +592,7 @@ class _Engine(AsyncContextManager):
 
             try:
                 await script._before()
-                batch = await script._evaluate()
-                remote = await activity.send(batch, deadline=batch_deadline)
+                remote = await activity.send(script._evaluate(), deadline=batch_deadline)
             except Exception:
                 item = await command_generator.athrow(*sys.exc_info())
                 continue

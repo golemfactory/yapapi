@@ -5,13 +5,16 @@ from functools import partial
 import json
 from os import PathLike
 from pathlib import Path
-from typing import Callable, Iterable, List, Optional, Dict, Union, Any, Awaitable
+from typing import Callable, Iterable, List, Optional, Dict, Union, Any, Awaitable, TYPE_CHECKING
 
 
-from yapapi.ctx import WorkContext
 from yapapi.events import DownloadStarted, DownloadFinished
 from yapapi.script.capture import CaptureContext
 from yapapi.storage import StorageProvider, Source, Destination, DOWNLOAD_BYTES_LIMIT_DEFAULT
+
+
+if TYPE_CHECKING:
+    from yapapi.ctx import WorkContext
 
 
 # For example: { "start": { "args": [] } }
@@ -19,19 +22,19 @@ BatchCommand = Dict[str, Dict[str, Union[str, List[str]]]]
 
 
 class Command(abc.ABC):
-    async def evaluate(self, ctx: WorkContext) -> BatchCommand:
-        """Stuff."""
+    def evaluate(self, ctx: "WorkContext") -> BatchCommand:
+        """Evaluate and serialize this command."""
 
-    async def after(self, ctx: WorkContext) -> None:
+    async def after(self, ctx: "WorkContext") -> None:
         """A hook to be executed on requestor's end after the script has finished."""
         pass
 
-    async def before(self, ctx: WorkContext) -> None:
+    async def before(self, ctx: "WorkContext") -> None:
         """A hook to be executed on requestor's end before the script is sent to the provider."""
         pass
 
     @staticmethod
-    def _make_batch_command(cmd_name: str, **kwargs) -> BatchCommand:
+    def _make_batch_command(cmd_name: str, **kwargs) -> Awaitable[BatchCommand]:
         kwargs = dict((key[1:] if key[0] == "_" else key, value) for key, value in kwargs.items())
         return {cmd_name: kwargs}
 
@@ -39,7 +42,7 @@ class Command(abc.ABC):
 class Deploy(Command):
     """Command which deploys a given runtime on the provider."""
 
-    async def evaluate(self, ctx: WorkContext):
+    def evaluate(self, ctx: "WorkContext"):
         return self._make_batch_command("deploy")
 
 
@@ -52,14 +55,14 @@ class Start(Command):
     def __repr__(self):
         return f"start{self.args}"
 
-    async def evaluate(self, ctx: WorkContext):
+    def evaluate(self, ctx: "WorkContext"):
         return self._make_batch_command("start", args=self.args)
 
 
 class Terminate(Command):
     """Command which terminates a given runtime on the provider."""
 
-    async def evaluate(self, ctx: WorkContext):
+    def evaluate(self, ctx: "WorkContext"):
         return self._make_batch_command("terminate")
 
 
@@ -72,17 +75,15 @@ class _SendContent(Command, abc.ABC):
     async def _do_upload(self, storage: StorageProvider) -> Source:
         pass
 
-    async def evaluate(self, ctx: WorkContext):
-        self._src = await self._do_upload(ctx._storage)
-        assert self._src is not None, "cmd prepared"
+    def evaluate(self, ctx: "WorkContext"):
         return self._make_batch_command(
             "transfer", _from=self._src.download_url, _to=f"container:{self._dst_path}"
         )
 
-    async def before(self, ctx: WorkContext):
+    async def before(self, ctx: "WorkContext"):
         self._src = await self._do_upload(ctx._storage)
 
-    async def after(self, ctx: WorkContext) -> None:
+    async def after(self, ctx: "WorkContext") -> None:
         assert self._src is not None
         await ctx._storage.release_source(self._src)
 
@@ -159,7 +160,7 @@ class Run(Command):
         self.stdout = stdout
         self.stderr = stderr
 
-    def evaluate(self, ctx: WorkContext):
+    def evaluate(self, ctx: "WorkContext"):
         capture = dict()
         if self.stdout:
             capture["stdout"] = self.stdout.to_dict()
@@ -182,13 +183,12 @@ class _ReceiveContent(Command, abc.ABC):
         self._dst_slot: Optional[Destination] = None
         self._dst_path: Optional[PathLike] = None
 
-    async def evaluate(self, ctx: WorkContext):
-        dst_slot = await ctx._storage.new_destination(destination_file=self._dst_path)
+    def evaluate(self, ctx: "WorkContext"):
         return self._make_batch_command(
             "transfer", _from=f"container:{self._src_path}", to=dst_slot.upload_url
         )
 
-    async def before(self, ctx: WorkContext):
+    async def before(self, ctx: "WorkContext"):
         self._dst_slot = await self._storage.new_destination(destination_file=self._dst_path)
 
     def _emit_download_start(self):
@@ -217,7 +217,7 @@ class ReceiveFile(_ReceiveContent):
         super().__init__(src_path)
         self._dst_path = Path(dst_path)
 
-    async def after(self, ctx: WorkContext) -> None:
+    async def after(self, ctx: "WorkContext") -> None:
         self._emit_download_start()
         assert self._dst_path
         assert self._dst_slot
@@ -245,7 +245,7 @@ class ReceiveBytes(_ReceiveContent):
         self._on_download = on_download
         self._limit = limit
 
-    async def after(self, ctx: WorkContext) -> None:
+    async def after(self, ctx: "WorkContext") -> None:
         self._emit_download_start()
         assert self._dst_slot
 

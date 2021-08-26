@@ -358,9 +358,9 @@ class WorkContext:
             self.start()
             self._started = True
 
-    def new_script(self, timeout: Optional[timedelta] = None, wait_for_results: bool = True):
+    def new_script(self):
         """Stuff."""
-        return Script(self, timeout, wait_for_results)
+        return Script(self)
 
     def deploy(self):
         """Schedule a Deploy command."""

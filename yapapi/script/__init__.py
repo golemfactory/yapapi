@@ -2,12 +2,13 @@
 
 import asyncio
 from datetime import timedelta
-from typing import Awaitable, Optional, List, Tuple
+from typing import Awaitable, Optional, List, Tuple, TYPE_CHECKING
 
-from yapapi.ctx import WorkContext
 from yapapi.events import CommandExecuted
-from yapapi.script.command import Command, Deploy, Start
-from yapapi.script.work import BatchCommand
+from yapapi.script.command import BatchCommand, Command, Deploy, Start
+
+if TYPE_CHECKING:
+    from yapapi.ctx import WorkContext
 
 
 class Script:
@@ -19,16 +20,15 @@ class Script:
     wait_for_results: bool = True
     """Stuff."""
 
-    def __init__(self, context: WorkContext):
-        self._ctx: WorkContext = context
+    def __init__(self, context: "WorkContext"):
+        self._ctx: "WorkContext" = context
         self._commands: List[Tuple[Command, asyncio.Future]] = []
 
-    async def _evaluate(self) -> List[BatchCommand]:
+    def _evaluate(self) -> List[BatchCommand]:
         """Evaluate and serialize this script to a list of batch commands."""
         batch: List[BatchCommand] = []
         for cmd, _future in self._commands:
-            batch_cmd = await cmd.evaluate(self._ctx)
-            batch.append(batch_cmd)
+            batch.append(cmd.evaluate(self._ctx))
         return batch
 
     async def _after(self):
