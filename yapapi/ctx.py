@@ -1,6 +1,8 @@
 import abc
+from copy import copy
 from dataclasses import dataclass, field
 from datetime import timedelta, datetime
+from deprecated import deprecated  # type: ignore
 import enum
 import json
 import logging
@@ -327,6 +329,7 @@ class WorkContext:
         self._started: bool = False
 
         self.__payment_model: Optional[ComLinear] = None
+        self.__script: Optional[Script] = None
 
     @property
     def id(self) -> str:
@@ -353,29 +356,32 @@ class WorkContext:
         return self.__payment_model
 
     def __prepare(self):
-        if not self._started and self._implicit_init:
-            self.deploy()
-            self.start()
-            self._started = True
+        if not self.__script:
+            self.__script = Script(self)
 
     def new_script(self):
         """Stuff."""
         return Script(self)
 
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def deploy(self):
         """Schedule a Deploy command."""
-        self._implicit_init = False
-        self._pending_steps.append(_Deploy())
+        self.__prepare()
+        self.__script.deploy()
 
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def start(self, *args: str):
         """Schedule a Start command."""
-        self._implicit_init = False
-        self._pending_steps.append(_Start(*args))
+        self.__prepare()
+        self.__script.start(*args)
 
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def terminate(self):
         """Schedule a Terminate command."""
-        self._pending_steps.append(_Terminate())
+        self.__prepare()
+        self.__script.terminate()
 
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def send_json(self, json_path: str, data: dict):
         """Schedule sending JSON data to the provider.
 
@@ -384,8 +390,9 @@ class WorkContext:
         :return: None
         """
         self.__prepare()
-        self._pending_steps.append(_SendJson(self._storage, data, json_path))
+        self.__script.send_json(data, json_path)
 
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def send_bytes(self, dst_path: str, data: bytes):
         """Schedule sending bytes data to the provider.
 
@@ -394,8 +401,9 @@ class WorkContext:
         :return: None
         """
         self.__prepare()
-        self._pending_steps.append(_SendBytes(self._storage, data, dst_path))
+        self.__script.send_bytes(data, dst_path)
 
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def send_file(self, src_path: str, dst_path: str):
         """Schedule sending file to the provider.
 
@@ -404,8 +412,9 @@ class WorkContext:
         :return: None
         """
         self.__prepare()
-        self._pending_steps.append(_SendFile(self._storage, src_path, dst_path))
+        self.__script.send_file(src_path, dst_path)
 
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def run(
         self,
         cmd: str,
@@ -419,12 +428,10 @@ class WorkContext:
         :param env: optional dictionary with environmental variables
         :return: None
         """
-        stdout = CaptureContext.build(mode="stream")
-        stderr = CaptureContext.build(mode="stream")
-
         self.__prepare()
-        self._pending_steps.append(_Run(cmd, *args, env=env, stdout=stdout, stderr=stderr))
+        self.__script.run(cmd, *args, env=env)
 
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def download_file(self, src_path: str, dst_path: str):
         """Schedule downloading remote file from the provider.
 
@@ -433,8 +440,9 @@ class WorkContext:
         :return: None
         """
         self.__prepare()
-        self._pending_steps.append(_ReceiveFile(self._storage, src_path, dst_path, self._emitter))
+        self.__script.download_file(src_path, dst_path)
 
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def download_bytes(
         self,
         src_path: str,
@@ -442,16 +450,16 @@ class WorkContext:
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
     ):
         """Schedule downloading a remote file as bytes
+
         :param src_path: remote (provider) path
         :param on_download: the callable to run on the received data
         :param limit: the maximum length of the expected byte string
         :return None
         """
         self.__prepare()
-        self._pending_steps.append(
-            _ReceiveBytes(self._storage, src_path, on_download, limit, self._emitter)
-        )
+        self.__script.download_bytes(src_path, on_download, limit)
 
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def download_json(
         self,
         src_path: str,
@@ -459,25 +467,27 @@ class WorkContext:
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
     ):
         """Schedule downloading a remote file as JSON
+
         :param src_path: remote (provider) path
         :param on_download: the callable to run on the received JSON data
         :param limit: the maximum length of the expected remote file
         :return None
         """
         self.__prepare()
-        self._pending_steps.append(
-            _ReceiveJson(self._storage, src_path, on_download, limit, self._emitter)
-        )
+        self.__script.download_json(src_path, on_download, limit)
 
-    def commit(self, timeout: Optional[timedelta] = None) -> Work:
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
+    def commit(self, timeout: Optional[timedelta] = None) -> Script:
         """Creates a sequence of commands to be sent to provider.
 
-        :return: Work object containing the sequence of commands
-                 scheduled within this work context before calling this method)
+        :return: Script object containing the sequence of commands
+                 scheduled within this work context before calling this method
         """
-        steps = self._pending_steps
-        self._pending_steps = []
-        return Steps(*steps, timeout=timeout)
+        if timeout:
+            self.__script.timeout = timeout
+        script_to_commit = copy(self.__script)
+        self.__script = None
+        return script_to_commit
 
     async def get_raw_usage(self) -> yaa_ActivityUsage:
         """Get the raw usage vector for the activity bound to this work context.

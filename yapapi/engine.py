@@ -39,6 +39,7 @@ from yapapi.props.builder import DemandBuilder, DemandDecorator
 from yapapi.rest.activity import CommandExecutionError, Activity
 from yapapi.rest.market import Agreement, AgreementDetails, OfferProposal, Subscription
 from yapapi.script import Script
+from yapapi.script.command import BatchCommand
 from yapapi.storage import gftp
 from yapapi.strategy import (
     DecreaseScoreForUnconfirmedAgreement,
@@ -592,7 +593,8 @@ class _Engine(AsyncContextManager):
 
             try:
                 await script._before()
-                remote = await activity.send(script._evaluate(), deadline=batch_deadline)
+                batch: List[BatchCommand] = script._evaluate()
+                remote = await activity.send(batch, deadline=batch_deadline)
             except Exception:
                 item = await command_generator.athrow(*sys.exc_info())
                 continue

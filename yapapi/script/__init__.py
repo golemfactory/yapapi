@@ -39,7 +39,6 @@ class Script:
     async def _before(self):
         """Hook which is executed before the script is evaluated and sent to the provider."""
         if not self._ctx._started and self._ctx._implicit_init:
-            # TODO: maybe check if first two steps already cover this?
             loop = asyncio.get_event_loop()
             self._commands.insert(0, (Deploy(), loop.create_future()))
             self._commands.insert(1, (Start(), loop.create_future()))
@@ -48,7 +47,10 @@ class Script:
             await cmd.before(self._ctx)
 
     def _set_cmd_result(self, result: CommandExecuted) -> None:
-        self._commands[result.cmd_idx][1].set_result(result)
+        cmd = self._commands[result.cmd_idx]
+        cmd[1].set_result(result)
+        if isinstance(cmd, Start):
+            self._ctx._started = True
 
     def add(self, cmd: Command) -> Awaitable[CommandExecuted]:
         loop = asyncio.get_event_loop()
@@ -82,7 +84,7 @@ class Script:
         :param data: bytes to send
         :param dst_path: remote (provider) destination path
         """
-        return self.add(SendBytes(data, dst_path)
+        return self.add(SendBytes(data, dst_path))
 
     def send_file(self, src_path: str, dst_path: str) -> Awaitable[CommandExecuted]:
         """Schedule sending a file to the provider.
@@ -90,7 +92,7 @@ class Script:
         :param src_path: local (requestor) source path
         :param dst_path: remote (provider) destination path
         """
-        return self.add(SendFile(src_path, dst_path)
+        return self.add(SendFile(src_path, dst_path))
 
     def run(
         self,
@@ -123,7 +125,7 @@ class Script:
         src_path: str,
         on_download: Callable[[bytes], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
-   ) -> Awaitable[CommandExecuted]:
+    ) -> Awaitable[CommandExecuted]:
         """Schedule downloading a remote file from the provider as bytes.
 
         :param src_path: remote (provider) source path
@@ -137,7 +139,7 @@ class Script:
         src_path: str,
         on_download: Callable[[Any], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
-   ) -> Awaitable[CommandExecuted]:
+    ) -> Awaitable[CommandExecuted]:
         """Schedule downloading a remote file from the provider as JSON.
 
         :param src_path: remote (provider) source path
