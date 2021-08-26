@@ -540,11 +540,17 @@ class _Engine(AsyncContextManager):
         )
 
     async def start_worker(
-        self, job: "Job", worker: Callable[[Agreement, Activity, WorkContext], Awaitable]
+        self, job: "Job", run_worker: Callable[[Agreement, Activity, WorkContext], Awaitable]
     ) -> Optional[asyncio.Task]:
         loop = asyncio.get_event_loop()
 
-        async def _worker(agreement: Agreement, agreement_details: AgreementDetails):
+        async def worker_task(agreement: Agreement, agreement_details: AgreementDetails):
+            """A coroutine run by every worker task.
+
+            It creates an Activity and WorkContext for given Agreement
+            and then passes them to `run_worker`.
+            """
+
             self.emit(events.WorkerStarted(job_id=job.id, agr_id=agreement.id))
 
             try:
@@ -565,10 +571,10 @@ class _Engine(AsyncContextManager):
                 work_context = WorkContext(
                     activity, agreement_details, self.storage_manager, emitter=self.emit
                 )
-                await worker(agreement, activity, work_context)
+                await run_worker(agreement, activity, work_context)
 
         return await job.agreements_pool.use_agreement(
-            lambda agreement, details: loop.create_task(_worker(agreement, details))
+            lambda agreement, details: loop.create_task(worker_task(agreement, details))
         )
 
     async def process_batches(
