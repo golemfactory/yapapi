@@ -1,99 +1,86 @@
 @startuml
-participant "Client code" #Gold
-participant "executor:Executor" as executor #Violet
-participant "golem:[[../../yapapi/golem.py Golem]]" as engine #Turquoise
-participant worker_task <<asyncio.Task>>
-participant "batch_generator:worker" as batch_generator <<AsyncGenerator>> #Gold
-participant "ctx:WorkContext" as ctx #SkyBlue
-participant "act:Activity" as act #SkyBlue
+title Golem.execute_tasks()
 
-' collections "worker_wrapper" as start_worker <<asyncio.Task>> #Violet
-' participant ":golem.process_batches" as process_batches <<coroutine>> #Turquoise
+' Define colors for activation rectangles of
+!$task_1 = "#White"
+!$task_2 = "#White"
+!$task_3 = "#White"
+
+hide footbox
+skinparam BoxPadding 10
+
+box "main task" #ffffee
+participant "Client code"
+participant "golem:Golem" as engine #Turquoise
+participant "executor:Executor" as executor #Violet
+end box
+
+box "worker_starter() task" #ffeeff
+participant "executor:Executor" as executor2 #Violet
+participant "golem:Golem" as engine2 #Turquoise
+participant ":AgreementPool" as pool
+end box
+
+box "worker_task() task" #eeffff
+collections "golem:Golem" as engine3 #Turquoise
+collections "executor:Executor" as executor3 #Violet
+
+participant "batch_generator:AsyncGenerator" as batch_generator
+end box
 
 create engine
 "Client code" -> engine : <<create>>
-"Client code" -> engine ++ #LightGray : execute_tasks(worker)
-' ++ is a shorthand for activating the receiver
+"Client code" -> engine ++ $task_1 : execute_tasks(worker)
 
 create executor
 engine -> executor : <<create>>
-engine -> executor ++ #LightGray: submit(worker)
+engine -> executor ++ $task_1 : submit(worker)
 
-executor -> engine ++ #LightGray: start_worker(worker)
+create pool
+executor -> pool : <<create>>
 
-create worker_task
-engine -> worker_task --++ : <<create_task>>
-note right
-  simplified, task creation
-  involves also agreement_pool
-end note
+executor -> executor2 ++ $task_2 : <<create_task>>
+note right: worker_starter()
 
-create act
-worker_task -> act : <<create>>
-create ctx
-worker_task -> ctx : <<create>>(act)
+loop executed every 2 seconds if there is unassigned work, each iteration can create new worker_task
+  executor2 -> engine2 ++ $task_2 : start_worker(run_worker)
 
-'engine -> executor --++ : worker_wrapper(act, ctx)
-worker_task -> executor ++ : worker_wrapper(act, ctx)
-' deactivate engine
-note left: callback
+  engine2 -> pool ++ $task_2: use_agreement(worker_task)
+  deactivate engine2
+  ?<- pool : agr = create_agreement()
+
+  pool -> engine3 ++ $task_3: <<create_task>> \n <<callback>>
+  note right: worker_task(agr)
+  deactivate pool
+end
+
+engine3 ->? : act = new_activity()
+engine3 ->? : ctx = WorkContext()
+
+engine3 -> executor3 ++ $task_3: <<callback>>
+note right: run_worker(act, ctx)
 
 create batch_generator
-executor -> batch_generator : <<create>>(ctx)
+executor3 -> batch_generator : <<callback>>
+note over batch_generator: worker(ctx)
+executor3 -> engine3++ : process_batches(batch_generator)
 
-executor -> engine ++ : process_batches
+|||
 
-' batch 1
-engine -> batch_generator : anext()
-activate batch_generator
-batch_generator -> ctx : send_file()
-activate ctx
-deactivate ctx
-batch_generator -> ctx : run()
-activate ctx
-deactivate ctx
-batch_generator -> ctx : commit()
-activate ctx
-return batch_1
-return yield batch_1
+ref over engine3, executor3, batch_generator
+  See the diagram for process_batches()
+end ref
 
-engine -> act : send(batch_1)
-activate act
-return batch_results_1
-
-' batch 2
-engine -> batch_generator : asend(batch_results_1)
-
-activate batch_generator
-batch_generator -> ctx : run()
-activate ctx
-deactivate ctx
-batch_generator -> ctx : download_file()
-activate ctx
-deactivate ctx
-batch_generator -> ctx: commit()
-activate ctx
-return batch_2
-return yield batch_2
-
-engine -> act : send(batch_2)
-activate act
-return batch_results_2
-
-' ... more batches processed ...
-
-' last batch processed
-engine -> batch_generator : asend(batch_results_2)
-activate batch_generator
-return StopIteration
+|||
 
 return
+return
+deactivate engine3
 
-deactivate executor
-engine <-- executor : task generator
-deactivate executor
-
-"Client code" <-- engine: task generator
-deactivate engine
+legend left
+* Three background boxes represent different asyncio tasks.
+* Participants with the same name represent the same object activated by different asyncio tasks
+* <<create_task>> message represents loop.create_task() call
+endlegend
 
 @enduml

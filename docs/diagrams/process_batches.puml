@@ -1,11 +1,7 @@
 @startuml
-!$task_1 = "#DarkGray"
-!$task_2 = "#LightGray"
-!$task_3 = "#White"
-
+title Creating and executing command batches
 hide footbox
 
-'participant "Client code"
 participant "executor:Executor" as executor #Violet
 participant ":Activity" as act
 participant "golem:[[../../yapapi/golem.py Golem]]" as engine #Turquoise
@@ -34,8 +30,6 @@ return batch_results_1
 
 ' batch 2
 engine -> batch_generator : asend(batch_results_1)
-
-' activate batch_generator
 batch_generator -> ctx : run()
 activate ctx
 deactivate ctx
@@ -51,17 +45,12 @@ engine -> act : send(batch_2)
 activate act
 return batch_results_2
 
-' ... more batches processed ...
-
-' last batch processed
 engine -> batch_generator : asend(batch_results_2)
-' activate batch_generator
 return StopIteration
 
 return
 
 deactivate executor
-' engine <-- executor : task generator
 deactivate executor
 
 deactivate engine
