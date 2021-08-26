@@ -5,7 +5,7 @@ from datetime import timedelta
 from typing import Awaitable, Optional, List, Tuple, TYPE_CHECKING
 
 from yapapi.events import CommandExecuted
-from yapapi.script.command import BatchCommand, Command, Deploy, Start
+from yapapi.script.command import *
 
 if TYPE_CHECKING:
     from yapapi.ctx import WorkContext
@@ -55,3 +55,93 @@ class Script:
         future_result = loop.create_future()
         self._commands.append((cmd, future_result))
         return future_result
+
+    def deploy(self) -> Awaitable[CommandExecuted]:
+        """Schedule a Deploy command on the provider."""
+        return self.add(Deploy())
+
+    def start(self, *args: str) -> Awaitable[CommandExecuted]:
+        """Schedule a Start command on the provider."""
+        return self.add(Start(*args))
+
+    def terminate(self) -> Awaitable[CommandExecuted]:
+        """Schedule a Terminate command on the provider."""
+        return self.add(Terminate())
+
+    def send_json(self, data: dict, dst_path: str) -> Awaitable[CommandExecuted]:
+        """Schedule sending JSON data to the provider.
+
+        :param data: dictionary representing JSON data to send
+        :param dst_path: remote (provider) destination path
+        """
+        return self.add(SendJson(data, dst_path))
+
+    def send_bytes(self, data: bytes, dst_path: str) -> Awaitable[CommandExecuted]:
+        """Schedule sending bytes data to the provider.
+
+        :param data: bytes to send
+        :param dst_path: remote (provider) destination path
+        """
+        return self.add(SendBytes(data, dst_path)
+
+    def send_file(self, src_path: str, dst_path: str) -> Awaitable[CommandExecuted]:
+        """Schedule sending a file to the provider.
+
+        :param src_path: local (requestor) source path
+        :param dst_path: remote (provider) destination path
+        """
+        return self.add(SendFile(src_path, dst_path)
+
+    def run(
+        self,
+        cmd: str,
+        *args: Iterable[str],
+        env: Optional[Dict[str, str]] = None,
+        stderr: CaptureContext = CaptureContext.build(mode="stream"),
+        stdout: CaptureContext = CaptureContext.build(mode="stream"),
+    ) -> Awaitable[CommandExecuted]:
+        """Schedule running a shell command on the provider.
+
+        :param cmd: command to run on the provider, e.g. /my/dir/run.sh
+        :param args: command arguments, e.g. "input1.txt", "output1.txt"
+        :param env: optional dictionary with environment variables
+        :param stderr: capture context to use for stderr
+        :param stdout: capture context to use for stdout
+        """
+        return self.add(Run(cmd, *args, env=env, stdout=stdout, stderr=stderr))
+
+    def download_file(self, src_path: str, dst_path: str) -> Awaitable[CommandExecuted]:
+        """Schedule downloading a remote file from the provider.
+
+        :param src_path: remote (provider) source path
+        :param dst_path: local (requestor) destination path
+        """
+        return self.add(DownloadFile(src_path, dst_path))
+
+    def download_bytes(
+        self,
+        src_path: str,
+        on_download: Callable[[bytes], Awaitable],
+        limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
+   ) -> Awaitable[CommandExecuted]:
+        """Schedule downloading a remote file from the provider as bytes.
+
+        :param src_path: remote (provider) source path
+        :param on_download: the callable to run on the received data
+        :param limit: limit of bytes to be downloaded (expected size)
+        """
+        return self.add(DownloadBytes(src_path, on_download, limit))
+
+    def download_json(
+        self,
+        src_path: str,
+        on_download: Callable[[Any], Awaitable],
+        limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
+   ) -> Awaitable[CommandExecuted]:
+        """Schedule downloading a remote file from the provider as JSON.
+
+        :param src_path: remote (provider) source path
+        :param on_download: the callable to run on the received data
+        :param limit: limit of bytes to be downloaded (expected size)
+        """
+        return self.add(DownloadJson(src_path, on_download, limit))

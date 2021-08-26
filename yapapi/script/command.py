@@ -201,7 +201,7 @@ class _ReceiveContent(Command, abc.ABC):
             self._emitter(DownloadFinished(path=str(self._dst_path)))
 
 
-class ReceiveFile(_ReceiveContent):
+class DownloadFile(_ReceiveContent):
     """Command which schedules downloading a file from a provider."""
 
     def __init__(
@@ -209,7 +209,7 @@ class ReceiveFile(_ReceiveContent):
         src_path: str,
         dst_path: str,
     ):
-        """Create a new ReceiveFile command.
+        """Create a new DownloadFile command.
 
         :param src_path: remote (provider) source path
         :param dst_path: local (requestor) destination path
@@ -226,7 +226,7 @@ class ReceiveFile(_ReceiveContent):
         self._emit_download_end()
 
 
-class ReceiveBytes(_ReceiveContent):
+class DownloadBytes(_ReceiveContent):
     """Command which schedules downloading a file from a provider as bytes."""
 
     def __init__(
@@ -235,7 +235,7 @@ class ReceiveBytes(_ReceiveContent):
         on_download: Callable[[bytes], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
     ):
-        """Create a new ReceiveBytes command.
+        """Create a new DownloadBytes command.
 
         :param src_path: remote (provider) source path
         :param on_download: the callable to run on the received data
@@ -254,7 +254,7 @@ class ReceiveBytes(_ReceiveContent):
         await self._on_download(output)
 
 
-class ReceiveJson(ReceiveBytes):
+class DownloadJson(DownloadBytes):
     """Command which schedules downloading a file from a provider as JSON data."""
 
     def __init__(
@@ -263,7 +263,7 @@ class ReceiveJson(ReceiveBytes):
         on_download: Callable[[Any], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
     ):
-        """Create a new ReceiveJson command.
+        """Create a new DownloadJson command.
 
         :param src_path: remote (provider) source path
         :param on_download: the callable to run on the received data
