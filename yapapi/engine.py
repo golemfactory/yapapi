@@ -612,8 +612,11 @@ class _Engine(AsyncContextManager):
                     )
                     self.emit(evt)
                     results.append(evt)
-                    if isinstance(evt, events.CommandExecuted) and not evt.success:
-                        raise CommandExecutionError(evt.command, evt.message, evt.stderr)
+                    if isinstance(evt, events.CommandExecuted):
+                        if evt.success:
+                            script._set_cmd_result(evt)
+                        else:
+                            raise CommandExecutionError(evt.command, evt.message, evt.stderr)
 
                 self.emit(
                     events.GettingResults(job_id=job_id, agr_id=agreement_id, script_id=script_id)
@@ -627,7 +630,7 @@ class _Engine(AsyncContextManager):
 
             loop = asyncio.get_event_loop()
 
-            if script._wait_for_results:
+            if script.wait_for_results:
                 # Block until the results are available
                 try:
                     future_results = loop.create_future()
