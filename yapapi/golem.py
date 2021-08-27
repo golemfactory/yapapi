@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import (
@@ -58,6 +59,17 @@ class Golem(_Engine):
     either mode of operation, it's usually good to have just one instance of `Golem` active
     at any given time.
     """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._start_future: Optional[asyncio.Future] = None
+        self._stop_future: Optional[asyncio.Future] = None
+
+    @property
+    def operative(self) -> bool:
+        started = self._start_future is not None and self._start_future.done()
+        stopped = self._stop_future is not None and self._stop_future.done()
+        return started and not stopped
 
     async def start(self) -> None:
         """Initialize resources and start background services used by this engine.
@@ -65,17 +77,29 @@ class Golem(_Engine):
         Calling this method is not necessary, it will be called either way internally
         when the engine is used for the first time.
         """
-        if not self.operative:
+        if self._start_future is None:
+            self._start_future = asyncio.get_running_loop().create_future()
             await self._start()
+            self._start_future.set_result({'result': 'AA'})
+        else:
+            if self._stop_future is not None:
+                #   Currently restarting a Golem that was stopped is not allowed.
+                #   This will be fixed in https://github.com/golemfactory/yapapi/issues/606
+                raise RuntimeError("Don't start a Golem that was stopped")
+            await self._start_future
 
     async def stop(self) -> Optional[bool]:
         """Stop the engine in a graceful way.
 
         This **must** be called when using Golem in a non-contextmanager way.
         """
-        if self.operative:
-            return await self._stop(None, None, None)
-        return None
+        if self._stop_future is None:
+            self._stop_future = asyncio.get_running_loop().create_future()
+            result = await self._stop(None, None, None)
+            self._stop_future.set_result(result)
+        else:
+            await self._stop_future
+        return self._stop_future.result()
 
     async def execute_tasks(
         self,

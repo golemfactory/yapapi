@@ -192,9 +192,6 @@ class _Engine(AsyncContextManager):
         self._services: Set[asyncio.Task] = set()
         self._stack = AsyncExitStack()
 
-        # changed in _start/_stop methods
-        self._operative: bool = False
-
     async def create_demand_builder(
         self, expiration_time: datetime, payload: Payload
     ) -> DemandBuilder:
@@ -232,10 +229,6 @@ class _Engine(AsyncContextManager):
         """Return the name of the subnet used by this engine, or `None` if it is not set."""
         return self._subnet
 
-    @property
-    def operative(self) -> bool:
-        return self._operative
-
     def emit(self, event: events.Event) -> None:
         """Emit an event to be consumed by this engine's event consumer."""
         if self._wrapped_consumer:
@@ -253,11 +246,9 @@ class _Engine(AsyncContextManager):
         return await self._stop(*exc_info)
 
     async def _stop(self, *exc_info) -> Optional[bool]:
-        self._operative = False
         return await self._stack.__aexit__(*exc_info)
 
     async def _start(self) -> None:
-        self._operative = True
         stack = self._stack
 
         await stack.enter_async_context(self._wrapped_consumer)
