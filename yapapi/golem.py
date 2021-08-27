@@ -59,6 +59,7 @@ class Golem(_Engine):
     either mode of operation, it's usually good to have just one instance of `Golem` active
     at any given time.
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
