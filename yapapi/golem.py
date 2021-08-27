@@ -95,7 +95,7 @@ class Golem(_Engine):
         This **must** be called when using Golem in a non-contextmanager way.
         """
         if self._stop_future is None:
-            self._stop_future = asyncio.get_running_loop().create_future()
+            self._stop_future = asyncio.get_event_loop().create_future()
             result = await self._stop(None, None, None)
             self._stop_future.set_result(result)
         else:
