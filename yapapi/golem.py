@@ -80,7 +80,7 @@ class Golem(_Engine):
         if self._start_future is None:
             self._start_future = asyncio.get_running_loop().create_future()
             await self._start()
-            self._start_future.set_result({'result': 'AA'})
+            self._start_future.set_result(None)
         else:
             if self._stop_future is not None:
                 #   Currently restarting a Golem that was stopped is not allowed.
