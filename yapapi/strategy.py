@@ -5,13 +5,14 @@ from collections import defaultdict
 from decimal import Decimal
 import logging
 from types import MappingProxyType
-from typing import Dict, Mapping, Optional
+from typing import Dict, Mapping, Optional, Union
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing_extensions import Final, Protocol
 
 from yapapi.props import com, Activity
 from yapapi.props.builder import DemandBuilder, DemandDecorator
+from yapapi.props.com import Counter
 from yapapi import rest
 
 
@@ -50,11 +51,21 @@ class DummyMS(MarketStrategy, object):
     For other offers, returns `SCORE_REJECTED`.
     """
 
-    max_for_counter: Mapping[com.Counter, Decimal] = MappingProxyType(
-        {com.Counter.TIME: Decimal("0.002"), com.Counter.CPU: Decimal("0.002") * 10}
-    )
-    max_fixed: Decimal = Decimal("0.05")
-    _activity: Optional[Activity] = field(init=False, repr=False, default=None)
+    def __init__(
+        self,
+        max_fixed_price: Decimal = Decimal("0.05"),
+        max_price_for: Mapping[Union[Counter, str], Decimal] = MappingProxyType({}),
+        activity: Optional[Activity] = None,
+    ):
+        self._max_fixed_price = max_fixed_price
+        self._max_price_for: Dict[str, Decimal] = defaultdict(lambda: Decimal("inf"))
+        self._max_price_for.update(
+            {com.Counter.TIME.value: Decimal("0.002"), com.Counter.CPU.value: Decimal("0.002") * 10}
+        )
+        self._max_price_for.update(
+            {(c.value if isinstance(c, Counter) else c): v for (c, v) in max_price_for.items()}
+        )
+        self._activity = activity
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
         """Ensure that the offer uses `PriceModel.LINEAR` price model."""
@@ -71,12 +82,12 @@ class DummyMS(MarketStrategy, object):
         if linear.scheme != com.BillingScheme.PAYU:
             return SCORE_REJECTED
 
-        if linear.fixed_price > self.max_fixed:
+        if linear.fixed_price > self._max_fixed_price:
             return SCORE_REJECTED
         for counter, price in linear.price_for.items():
-            if counter not in self.max_for_counter:
+            if counter not in self._max_price_for:
                 return SCORE_REJECTED
-            if price > self.max_for_counter[counter]:
+            if price > self._max_price_for[counter]:
                 return SCORE_REJECTED
 
         return SCORE_NEUTRAL
@@ -90,13 +101,15 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
         self,
         expected_time_secs: int = 60,
         max_fixed_price: Decimal = Decimal("inf"),
-        max_price_for: Mapping[com.Counter, Decimal] = MappingProxyType({}),
+        max_price_for: Mapping[Union[Counter, str], Decimal] = MappingProxyType({}),
     ):
         self._expected_time_secs = expected_time_secs
         self._logger = logging.getLogger(f"{__name__}.{type(self).__name__}")
-        self._max_fixed_price = max_fixed_price if max_fixed_price is not None else Decimal("inf")
-        self._max_price_for: Dict[com.Counter, Decimal] = defaultdict(lambda: Decimal("inf"))
-        self._max_price_for.update(max_price_for)
+        self._max_fixed_price = max_fixed_price
+        self._max_price_for: Dict[str, Decimal] = defaultdict(lambda: Decimal("inf"))
+        self._max_price_for.update(
+            {(c.value if isinstance(c, Counter) else c): v for (c, v) in max_price_for.items()}
+        )
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
         """Ensure that the offer uses `PriceModel.LINEAR` price model."""
@@ -115,13 +128,6 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
             )
             return SCORE_REJECTED
 
-        known_time_prices = {com.Counter.TIME, com.Counter.CPU}
-
-        for counter in linear.price_for.keys():
-            if counter not in known_time_prices:
-                self._logger.debug("Rejected offer %s: unsupported counter '%s'", offer.id, counter)
-                return SCORE_REJECTED
-
         if linear.fixed_price > self._max_fixed_price:
             self._logger.debug(
                 "Rejected offer %s: fixed price higher than fixed price cap %f.",
@@ -136,7 +142,7 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
 
         expected_usage = []
 
-        for resource in [com.Counter(u) for u in linear.usage_vector]:
+        for resource in linear.usage_vector:
 
             if linear.price_for[resource] > self._max_price_for[resource]:
                 self._logger.debug(
