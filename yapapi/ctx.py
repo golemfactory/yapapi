@@ -575,5 +575,5 @@ class CaptureContext:
 class ActivityUsage:
     """A high-level representation of activity usage record."""
 
-    current_usage: Dict[Counter, float] = field(default_factory=dict)
+    current_usage: Dict[str, float] = field(default_factory=dict)
     timestamp: Optional[datetime] = None
