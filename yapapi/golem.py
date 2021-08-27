@@ -79,7 +79,7 @@ class Golem(_Engine):
         when the engine is used for the first time.
         """
         if self._start_future is None:
-            self._start_future = asyncio.get_running_loop().create_future()
+            self._start_future = asyncio.get_event_loop().create_future()
             await self._start()
             self._start_future.set_result(None)
         else:
