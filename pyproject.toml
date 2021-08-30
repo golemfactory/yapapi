@@ -19,7 +19,7 @@ documentation = "https://handbook.golem.network/yapapi/"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.6.1"
+python = "^3.6.2"
 aiohttp = "^3.6"
 aiohttp-sse-client = "^0.1.7"
 dataclasses = { version = "^0.8", python = ">=3.6, <3.7"}
@@ -36,6 +36,7 @@ ya-aioclient = "^0.6.3"
 toml = "^0.10.1"
 srvresolver = "^0.3.5"
 colorama = "^0.4.4"
+semantic-version="^2.8"
 
 # Adding `goth` to dependencies causes > 40 additional packages to be installed. Given
 # that dependency resolution in `poetry` is rather slow, we'd like to avoid installing
@@ -54,7 +55,7 @@ cli = ['fire', 'rich']
 integration-tests = ['goth', 'pytest', 'pytest-asyncio']
 
 [tool.poetry.dev-dependencies]
-black = "^20.8b1"
+black = "^21.7b0"
 pytest = "^6.2"
 portray = "^1"
 pytest-asyncio = "^0.14"
