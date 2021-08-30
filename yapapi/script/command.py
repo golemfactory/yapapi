@@ -34,7 +34,7 @@ class Command(abc.ABC):
         pass
 
     @staticmethod
-    def _make_batch_command(cmd_name: str, **kwargs) -> Awaitable[BatchCommand]:
+    def _make_batch_command(cmd_name: str, **kwargs) -> BatchCommand:
         kwargs = dict((key[1:] if key[0] == "_" else key, value) for key, value in kwargs.items())
         return {cmd_name: kwargs}
 
@@ -76,6 +76,7 @@ class _SendContent(Command, abc.ABC):
         pass
 
     def evaluate(self, ctx: "WorkContext"):
+        assert self._src
         return self._make_batch_command(
             "transfer", _from=self._src.download_url, _to=f"container:{self._dst_path}"
         )
@@ -184,21 +185,22 @@ class _ReceiveContent(Command, abc.ABC):
         self._dst_path: Optional[PathLike] = None
 
     def evaluate(self, ctx: "WorkContext"):
+        assert self._dst_slot
         return self._make_batch_command(
-            "transfer", _from=f"container:{self._src_path}", to=dst_slot.upload_url
+            "transfer", _from=f"container:{self._src_path}", to=self._dst_slot.upload_url
         )
 
     async def before(self, ctx: "WorkContext"):
-        self._dst_slot = await self._storage.new_destination(destination_file=self._dst_path)
+        self._dst_slot = await ctx._storage.new_destination(destination_file=self._dst_path)
 
-    def _emit_download_start(self):
+    def _emit_download_start(self, ctx: "WorkContext"):
         assert self._dst_slot, f"{self.__class__} after without before"
-        if self._emitter:
-            self._emitter(DownloadStarted(path=self._src_path))
+        if ctx._emitter:
+            ctx._emitter(DownloadStarted(path=self._src_path))
 
-    def _emit_download_end(self):
-        if self._emitter:
-            self._emitter(DownloadFinished(path=str(self._dst_path)))
+    def _emit_download_end(self, ctx: "WorkContext"):
+        if ctx._emitter:
+            ctx._emitter(DownloadFinished(path=str(self._dst_path)))
 
 
 class DownloadFile(_ReceiveContent):
@@ -218,12 +220,12 @@ class DownloadFile(_ReceiveContent):
         self._dst_path = Path(dst_path)
 
     async def after(self, ctx: "WorkContext") -> None:
-        self._emit_download_start()
+        self._emit_download_start(ctx)
         assert self._dst_path
         assert self._dst_slot
 
         await self._dst_slot.download_file(self._dst_path)
-        self._emit_download_end()
+        self._emit_download_end(ctx)
 
 
 class DownloadBytes(_ReceiveContent):
@@ -246,11 +248,11 @@ class DownloadBytes(_ReceiveContent):
         self._limit = limit
 
     async def after(self, ctx: "WorkContext") -> None:
-        self._emit_download_start()
+        self._emit_download_start(ctx)
         assert self._dst_slot
 
         output = await self._dst_slot.download_bytes(limit=self._limit)
-        self._emit_download_end()
+        self._emit_download_end(ctx)
         await self._on_download(output)
 
 
