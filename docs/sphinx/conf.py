@@ -55,3 +55,15 @@ html_theme = "alabaster"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+
+#   This removes the `yapapi.log` docstrings.
+#   There are two reasons:
+#   *   there are some sections/subsections declared there and it messes up the docs
+#   *   it's obsolete, because encourages usage of Executor
+#   Solution from https://stackoverflow.com/a/18031024/15851655
+def remove_module_docstring(app, what, name, obj, options, lines):
+    if what == "module" and name == "yapapi.log":
+        del lines[:]
+
+def setup(app):
+    app.connect("autodoc-process-docstring", remove_module_docstring)

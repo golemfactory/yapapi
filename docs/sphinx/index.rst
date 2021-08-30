@@ -55,17 +55,42 @@ Service
 ^^^^^^^
 
 .. autoclass:: yapapi.services.Service
-    :members: provider_name, state
-..     :members: id, provider_name, state, is_available, start, run, shutdown, send_message, send_message_nowait, receive_message, receive_message_nowait, get_payload
+    :members: id, provider_name, state, is_available, start, run, shutdown, send_message, send_message_nowait, receive_message, receive_message_nowait, get_payload
+
+Cluster
+^^^^^^^
+
+.. autoclass:: yapapi.services.Cluster
+    :members:
 
 ServiceState
 ^^^^^^^^^^^^
 
 .. autoclass:: yapapi.services.ServiceState
 
+Offer selection strategies
+==========================
+
+.. automodule:: yapapi.strategy
+    :members:
+
 Exceptions
 ==========
 
-.. autoclass:: yapapi.NoPaymentAccountError
+.. autoexception:: yapapi.NoPaymentAccountError
 
-.. autoclass:: yapapi.rest.activity.BatchTimeoutError
+.. autoexception:: yapapi.rest.activity.BatchTimeoutError
+
+Logging
+=======
+
+.. automodule:: yapapi.log
+    :members: enable_default_logger, log_summary, SummaryLogger
+
+
+Other
+=====
+
+.. autofunction:: yapapi.windows_event_loop_fix
+
+.. autofunction:: yapapi.get_version
