@@ -134,7 +134,8 @@ class Payment(object):
         - `make_deposit`: (unimplemented).
 
         """
-        allocation_timeout: datetime = expires or datetime.now(timezone.utc) + timedelta(minutes=30)
+        now = datetime.now(timezone.utc)
+        allocation_timeout: datetime = expires or now + timedelta(minutes=30)
         return _AllocationTask(
             _api=self._api,
             model=yap.Allocation(
@@ -144,8 +145,8 @@ class Payment(object):
                 address=payment_address,
                 total_amount=str(amount),
                 timeout=allocation_timeout,
+                timestamp=now,
                 make_deposit=make_deposit,
-                timestamp=datetime.now(timezone.utc),
                 # TODO: fix this
                 spent_amount="",
                 remaining_amount="",

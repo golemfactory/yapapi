@@ -66,8 +66,14 @@ class Work(abc.ABC):
 
 
 class _Deploy(Work):
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+
+    def __repr__(self):
+        return f"deploy {self.kwargs}"
+
     def register(self, commands: CommandContainer):
-        commands.deploy()
+        commands.deploy(**self.kwargs)
 
 
 class _Start(Work):
@@ -75,7 +81,7 @@ class _Start(Work):
         self.args = args
 
     def __repr__(self):
-        return f"start{self.args}"
+        return f"start {self.args}"
 
     def register(self, commands: CommandContainer):
         commands.start(args=self.args)
@@ -338,6 +344,11 @@ class WorkContext:
         return self._agreement_details.provider_node_info.name
 
     @property
+    def provider_id(self) -> Optional[str]:
+        """Return the id of the provider associated with this work context."""
+        return self._agreement_details.raw_details.offer.provider_id
+
+    @property
     def _payment_model(self) -> ComLinear:
         """Return the characteristics of the payment model associated with this work context."""
 
@@ -360,10 +371,10 @@ class WorkContext:
     def begin(self):
         pass
 
-    def deploy(self):
+    def deploy(self, **kwargs):
         """Schedule a Deploy command."""
         self._implicit_init = False
-        self._pending_steps.append(_Deploy())
+        self._pending_steps.append(_Deploy(**kwargs))
 
     def start(self, *args: str):
         """Schedule a Start command."""

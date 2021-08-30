@@ -150,6 +150,11 @@ class Service:
         """Return the name of the provider that runs this service instance."""
         return self._ctx.provider_name
 
+    @property
+    def provider_id(self):
+        """Return the id of the provider that runs this service instance."""
+        return self._ctx.provider_id
+
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.id}>"
 
