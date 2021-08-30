@@ -95,6 +95,7 @@ class Network:
     def gateway(self) -> Optional[str]:
         if self._gateway:
             return str(self._gateway)
+        return None
 
     @property
     def nodes_dict(self) -> Dict[str, str]:
@@ -148,7 +149,7 @@ class Network:
 
     def _next_address(self) -> IpAddress:
         try:
-            return next(self._hosts)
+            return next(self._hosts)  # type: ignore
         except StopIteration:
             raise NetworkError(f"No more addresses available in '{self._ip_network.with_netmask}'.")
 
