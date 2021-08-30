@@ -39,10 +39,10 @@ class SshService(Service):
     @staticmethod
     async def get_payload():
         return await vm.repo(
-        image_hash="23145d371090cfdac5715240141ad0735e1ce507b11ae2beef6d597f",
-        min_mem_gib=0.5,
-        min_storage_gib=2.0,
-    )
+            image_hash="23145d371090cfdac5715240141ad0735e1ce507b11ae2beef6d597f",
+            min_mem_gib=0.5,
+            min_storage_gib=2.0,
+        )
 
     async def start(self):
         self._node = await self._network.add_node(self.provider_id)
@@ -59,7 +59,8 @@ class SshService(Service):
             f"""Connect with:
 {TEXT_COLOR_CYAN}
 ssh -o ProxyCommand='websocat asyncstdio: ws://127.0.0.1:7465/net-api/v1/net/{net}/tcp/{ip}/22 --binary -H=Authorization:"Bearer {app_key}"' root@{ip}
-{TEXT_COLOR_DEFAULT}""")
+{TEXT_COLOR_DEFAULT}"""
+        )
 
         self._ctx.run("/bin/bash", "-c", "syslogd")
         self._ctx.run("/bin/bash", "-c", "ssh-keygen -A")
@@ -89,7 +90,7 @@ async def main(subnet_tag, driver=None, network=None):
         network = await golem.create_network("192.168.0.1/24")
 
         cluster = await golem.run_service(
-            SshService, instance_params=[{'network': network} for _ in range(2)]
+            SshService, instance_params=[{"network": network} for _ in range(2)]
         )
 
         def instances():
