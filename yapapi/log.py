@@ -254,11 +254,11 @@ class SummaryLogger:
     For example, with the following setup, each event emitted by `executor`
     will be logged by `log_event_repr`, and additionally, certain events
     will cause summary messages to be logged.
-    ```python
+    ::
+
         detailed_logger = log_event_repr
         summary_logger = SummaryLogger(wrapped_emitter=detailed_logger).log
         executor = Executor(..., event_consumer=summary_logger)
-    ```
     """
 
     # Define some messages a string constants here, so they can be used e.g. in

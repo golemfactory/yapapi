@@ -237,19 +237,17 @@ class Service:
         `True`, which is also the default behavior, or altogether terminated, if
         `respawn_unstarted_instances` is set to `False`.
 
-        ### Example
-
-        ```
-        async def start(self):
-            # deploy the exe-unit
-            self._ctx.deploy()
-            # start the exe-unit's container
-            self._ctx.start()
-            # start some service process within the container
-            self._ctx.run("/golem/run/service_ctl", "--start")
-            # send the batch to the provider
-            yield self._ctx.commit()
-        ```
+        **Example**::
+        
+            async def start(self):
+                # deploy the exe-unit
+                self._ctx.deploy()
+                # start the exe-unit's container
+                self._ctx.start()
+                # start some service process within the container
+                self._ctx.run("/golem/run/service_ctl", "--start")
+                # send the batch to the provider
+                yield self._ctx.commit()
 
         ### Default implementation
 
@@ -297,19 +295,17 @@ class Service:
 
         Any unhandled exception will cause the instance to be terminated.
 
-        ### Example
+        **Example**::
 
-        ```
-        async def run(self):
-            while True:
-                self._ctx.run("/golem/run/report", "--stats")  # index 0
-                future_results = yield self._ctx.commit()
-                results = await future_results
-                stats = results[0].stdout.strip()  # retrieve from index 0
-                print(f"stats: {stats}")
-        ```
+            async def run(self):
+                while True:
+                    self._ctx.run("/golem/run/report", "--stats")  # index 0
+                    future_results = yield self._ctx.commit()
+                    results = await future_results
+                    stats = results[0].stdout.strip()  # retrieve from index 0
+                    print(f"stats: {stats}")
 
-        ### Default implementation
+        **Default implementation**
 
         Because the nature of the operations required during the "running" state depends directly
         on the specifics of a given Service and because it's entirely plausible for a service
@@ -344,17 +340,15 @@ class Service:
         has been lost, the service will transition to the `terminated` state and the shutdown
         handler won't be run.
 
-        ### Example
+        **Example**::
 
-        ```
-        async def shutdown(self):
-            self._ctx.run("/golem/run/dump_state")
-            self._ctx.download_file("/golem/output/state", "/some/local/path/state")
-            self._ctx.terminate()
-            yield self._ctx.commit()
-        ```
+            async def shutdown(self):
+                self._ctx.run("/golem/run/dump_state")
+                self._ctx.download_file("/golem/output/state", "/some/local/path/state")
+                self._ctx.terminate()
+                yield self._ctx.commit()
 
-        ### Default implementation
+        **Default implementation**
 
         By default, the activity is just sent a `terminate` command. Whether it's absolutely
         required or not, again, depends on the implementation of the given runtime.
