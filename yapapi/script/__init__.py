@@ -47,8 +47,8 @@ class Script:
             await cmd.before(self._ctx)
 
     def _set_cmd_result(self, result: CommandExecuted) -> None:
-        cmd = self._commands[result.cmd_idx]
-        cmd[1].set_result(result)
+        cmd, future = self._commands[result.cmd_idx]
+        future.set_result(result)
         if isinstance(cmd, Start):
             self._ctx._started = True
 
