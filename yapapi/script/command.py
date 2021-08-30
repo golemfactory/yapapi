@@ -141,7 +141,7 @@ class Run(Command):
     def __init__(
         self,
         cmd: str,
-        *args: Iterable[str],
+        *args: str,
         env: Optional[Dict[str, str]] = None,
         stderr: CaptureContext = CaptureContext.build(mode="stream"),
         stdout: CaptureContext = CaptureContext.build(mode="stream"),
