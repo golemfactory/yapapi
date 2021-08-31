@@ -104,6 +104,8 @@ async def main(subnet_tag, driver=None, network=None):
 
 
 parser = argparse.ArgumentParser(description="Custom Usage Counter Example")
+parser.add_argument("--driver", help="Payment driver name, for example `zksync`")
+parser.add_argument("--network", help="Network name, for example `rinkeby`")
 parser.add_argument("--subnet-tag", help="Subnet name, for example `devnet-beta.2`")
 args = parser.parse_args()
 asyncio.run(main(args.subnet_tag, args.driver, args.network))
