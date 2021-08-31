@@ -24,10 +24,6 @@ class CustomCounterServicePayload(Payload):
 
 
 class CustomCounterService(Service):
-    credentials = None
-
-    def post_init(self):
-        self.credentials = {}
 
     @staticmethod
     async def get_payload():
