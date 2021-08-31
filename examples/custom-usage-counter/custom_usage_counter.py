@@ -26,7 +26,6 @@ class CustomCounterServicePayload(Payload):
 
 
 class CustomCounterService(Service):
-
     @staticmethod
     async def get_payload():
         return CustomCounterServicePayload()
