@@ -15,7 +15,7 @@ from yapapi import (
 )
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.payload import vm
-from yapapi.rest.net import Network, Node
+from yapapi.net import Network, Node
 from yapapi.services import Service, Cluster
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent

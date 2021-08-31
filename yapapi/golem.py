@@ -16,15 +16,14 @@ from typing import (
 )
 from typing_extensions import AsyncGenerator
 
-from ya_net.exceptions import ApiException as NetApiException
 from yapapi import events
 from yapapi.ctx import WorkContext
 from yapapi.engine import _Engine, WorkItem
 from yapapi.executor import Executor
 from yapapi.executor.task import Task
+from yapapi.net import Network
 from yapapi.payload import Payload
 from yapapi.services import Cluster, Service
-from yapapi.rest.net import Network
 
 D = TypeVar("D")  # Type var for task data
 R = TypeVar("R")  # Type var for task result
@@ -226,7 +225,7 @@ class Golem(_Engine):
         return cluster
 
     async def create_network(
-        self, ip: str, mask: Optional[str] = None, gateway: Optional[str] = None
+        self, ip: str, owner_ip: Optional[str] = None, mask: Optional[str] = None, gateway: Optional[str] = None
     ) -> Network:
         """
         Create a VPN inside Golem network.
@@ -234,6 +233,7 @@ class Golem(_Engine):
         Requires yagna >= 0.8
 
         :param ip: the IP address of the network. May contain netmask, e.g. "192.168.0.0/24"
+        :param owner_ip: the desired IP address of the requestor node within the newly-created Network
         :param mask: Optional netmask (only if not provided within the `ip` argument)
         :param gateway: Optional gateway address for the network
         :return: a Network object allowing further manipulation of the created VPN
@@ -241,4 +241,4 @@ class Golem(_Engine):
         async with self._root_api_session.get(f"{self._api_config.root_url}/me") as resp:
             identity = json.loads(await resp.text()).get("identity")
 
-        return await self._net_api.create_network(identity, ip, mask=mask, gateway=gateway)
+        return await Network.create(self._net_api, ip, identity, owner_ip, mask=mask, gateway=gateway)
