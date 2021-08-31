@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 
 from dataclasses import dataclass
@@ -103,4 +104,7 @@ async def main(subnet_tag, driver=None, network=None):
     print_instances()
 
 
-asyncio.run(main("mf"))
+parser = argparse.ArgumentParser(description="Custom Usage Counter Example")
+parser.add_argument("--subnet-tag", help="Subnet name, for example `devnet-beta.2`")
+args = parser.parse_args()
+asyncio.run(main(args.subnet_tag, args.driver, args.network))
