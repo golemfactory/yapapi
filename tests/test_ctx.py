@@ -38,6 +38,7 @@ def test_command_container():
     assert json.loads(expected_commands) == c.commands()
 
 
+@pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
 class TestWorkContext:
     @pytest.fixture(autouse=True)
     def setUp(self):
@@ -66,7 +67,6 @@ class TestWorkContext:
         self._on_download_executed = True
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
     async def test_send_json(self):
         storage = mock.AsyncMock()
         dst_path = "/test/path"
@@ -83,7 +83,6 @@ class TestWorkContext:
         self._assert_dst_path(script, dst_path)
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
     async def test_send_bytes(self):
         storage = mock.AsyncMock()
         dst_path = "/test/path"
@@ -98,7 +97,6 @@ class TestWorkContext:
         self._assert_dst_path(script, dst_path)
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
     async def test_download_bytes(self):
         expected = b"some byte string"
         storage = mock.AsyncMock()
@@ -115,7 +113,6 @@ class TestWorkContext:
         assert self._on_download_executed
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
     async def test_download_json(self):
         expected = {"key": "val"}
         storage = mock.AsyncMock()
