@@ -12,6 +12,7 @@ from yapapi.props.base import prop, constraint
 from yapapi.props import inf, com
 
 from yapapi import Golem
+from yapapi.ctx import ActivityUsage
 from yapapi.payload import Payload
 from yapapi.services import Service
 
@@ -30,10 +31,15 @@ class CustomCounterService(Service):
         return CustomCounterServicePayload()
 
     async def run(self):
-        print(f"service {self.id} running on {self.provider_name} ... ")
+        print(f"service {self.id} running on {self.provider_name}...")
         while True:
             self._ctx.run("go!")
             yield self._ctx.commit()
+            usage: ActivityUsage = await self._ctx.get_usage()
+            cost = await self._ctx.get_cost()
+            print(
+                f"Total cost so far: {cost}. Activity usage: {usage.current_usage} at ts={usage.timestamp}"
+            )
             await asyncio.sleep(3)
 
     async def shutdown(self):
