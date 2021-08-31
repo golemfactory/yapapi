@@ -38,7 +38,7 @@ class CustomCounterService(Service):
             usage: ActivityUsage = await self._ctx.get_usage()
             cost = await self._ctx.get_cost()
             print(
-                f"Total cost so far: {cost}. Activity usage: {usage.current_usage} at ts={usage.timestamp}"
+                f"total cost so far: {cost}; activity usage: {usage.current_usage} at ts={usage.timestamp}"
             )
             await asyncio.sleep(3)
 
