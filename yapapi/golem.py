@@ -17,10 +17,11 @@ from typing_extensions import AsyncGenerator
 
 from yapapi import events
 from yapapi.ctx import WorkContext
-from yapapi.engine import _Engine, WorkItem
+from yapapi.engine import _Engine
 from yapapi.executor import Executor
 from yapapi.executor.task import Task
 from yapapi.payload import Payload
+from yapapi.script import Script
 from yapapi.services import Cluster, Service
 
 D = TypeVar("D")  # Type var for task data
@@ -63,7 +64,7 @@ class Golem(_Engine):
         self,
         worker: Callable[
             [WorkContext, AsyncIterator[Task[D, R]]],
-            AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
+            AsyncGenerator[Script, Awaitable[List[events.CommandEvent]]],
         ],
         data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
         payload: Payload,

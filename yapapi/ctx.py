@@ -408,7 +408,7 @@ class WorkContext:
     def run(
         self,
         cmd: str,
-        *args: Iterable[str],
+        *args: str,
         env: Optional[Dict[str, str]] = None,
     ):
         """Schedule running a command.
