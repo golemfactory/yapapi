@@ -33,7 +33,7 @@ class Script:
     """Time after which this script's execution should be forcefully interrupted."""
 
     wait_for_results: bool = True
-    """Stuff."""
+    """Whether this script's execution should block until its results are available."""
 
     def __init__(self, context: "WorkContext"):
         self._ctx: "WorkContext" = context
