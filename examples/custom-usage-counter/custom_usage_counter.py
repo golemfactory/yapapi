@@ -20,7 +20,7 @@ from yapapi.services import Service
 
 @dataclass
 class CustomCounterServicePayload(Payload):
-    runtime: str = constraint(inf.INF_RUNTIME_NAME, default="custom-counters")
+    runtime: str = constraint(inf.INF_RUNTIME_NAME, default="test-counters")
     min_mem_gib: float = constraint(inf.INF_MEM, operator=">=", default=0.5)
     min_storage_gib: float = constraint(inf.INF_STORAGE, operator=">=", default=0.1)
 
@@ -33,12 +33,12 @@ class CustomCounterService(Service):
     async def run(self):
         print(f"service {self.id} running on {self.provider_name}...")
         while True:
-            self._ctx.run("go!")
+            self._ctx.run("sleep", "1000")
             yield self._ctx.commit()
             usage: ActivityUsage = await self._ctx.get_usage()
             cost = await self._ctx.get_cost()
             print(
-                f"total cost so far: {cost}; activity usage: {usage.current_usage} at ts={usage.timestamp}"
+                f"total cost so far: {cost}; activity usage: {usage.current_usage} at {usage.timestamp}"
             )
             await asyncio.sleep(3)
 
