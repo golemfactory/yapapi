@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 from yapapi import WorkContext
 from yapapi.events import CommandExecuted
 from yapapi.script import Script
+from yapapi.script.command import Deploy, Start
 
 
 @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
@@ -104,14 +105,18 @@ class TestScript:
         # first script, should include implicit deploy and start cmds
         await script._before()
         assert len(script._commands) == 2
-        deploy_cmd = script._commands[0]
-        start_cmd = script._commands[1]
+        deploy_cmd, _ = script._commands[0]
+        start_cmd, _ = script._commands[1]
         # report cmds as executed to flip work_context._started
         script._set_cmd_result(
-            CommandExecuted("job_id", "agr_id", "script_id", 0, command=deploy_cmd)
+            CommandExecuted(
+                "job_id", "agr_id", "script_id", 0, command=deploy_cmd.evaluate(work_context)
+            )
         )
         script._set_cmd_result(
-            CommandExecuted("job_id", "agr_id", "script_id", 1, command=start_cmd)
+            CommandExecuted(
+                "job_id", "agr_id", "script_id", 1, command=start_cmd.evaluate(work_context)
+            )
         )
 
         assert work_context._started

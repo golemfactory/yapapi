@@ -329,7 +329,8 @@ class WorkContext:
         self._started: bool = False
 
         self.__payment_model: Optional[ComLinear] = None
-        self.__script: Optional[Script] = None
+
+        self.__script: Script = self.new_script()
 
     @property
     def id(self) -> str:
@@ -355,10 +356,6 @@ class WorkContext:
 
         return self.__payment_model
 
-    def __prepare(self):
-        if not self.__script:
-            self.__script = Script(self)
-
     def new_script(self):
         """Stuff."""
         return Script(self)
@@ -366,19 +363,16 @@ class WorkContext:
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def deploy(self):
         """Schedule a Deploy command."""
-        self.__prepare()
         self.__script.deploy()
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def start(self, *args: str):
         """Schedule a Start command."""
-        self.__prepare()
         self.__script.start(*args)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def terminate(self):
         """Schedule a Terminate command."""
-        self.__prepare()
         self.__script.terminate()
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
@@ -389,7 +383,6 @@ class WorkContext:
         :param data: dictionary representing JSON data
         :return: None
         """
-        self.__prepare()
         self.__script.send_json(data, json_path)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
@@ -400,7 +393,6 @@ class WorkContext:
         :param data: bytes to send
         :return: None
         """
-        self.__prepare()
         self.__script.send_bytes(data, dst_path)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
@@ -411,7 +403,6 @@ class WorkContext:
         :param dst_path: remote (provider) path
         :return: None
         """
-        self.__prepare()
         self.__script.send_file(src_path, dst_path)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
@@ -428,7 +419,6 @@ class WorkContext:
         :param env: optional dictionary with environmental variables
         :return: None
         """
-        self.__prepare()
         self.__script.run(cmd, *args, env=env)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
@@ -439,7 +429,6 @@ class WorkContext:
         :param dst_path: local (requestor) path
         :return: None
         """
-        self.__prepare()
         self.__script.download_file(src_path, dst_path)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
@@ -456,7 +445,6 @@ class WorkContext:
         :param limit: the maximum length of the expected byte string
         :return None
         """
-        self.__prepare()
         self.__script.download_bytes(src_path, on_download, limit)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
@@ -473,7 +461,6 @@ class WorkContext:
         :param limit: the maximum length of the expected remote file
         :return None
         """
-        self.__prepare()
         self.__script.download_json(src_path, on_download, limit)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
@@ -483,10 +470,16 @@ class WorkContext:
         :return: Script object containing the sequence of commands
                  scheduled within this work context before calling this method
         """
+        assert self.__script._commands, "commit called with no commands scheduled"
         if timeout:
             self.__script.timeout = timeout
-        script_to_commit = copy(self.__script)
-        self.__script = None
+        script_to_commit = self.__script
+        self.__script = self.new_script()
+        logger.info(
+            "^^^^^^^^^^^^^^^^^^^^^^^ script_to_commit: %s, act_id: %s",
+            script_to_commit._evaluate(),
+            self.id,
+        )
         return script_to_commit
 
     async def get_raw_usage(self) -> yaa_ActivityUsage:

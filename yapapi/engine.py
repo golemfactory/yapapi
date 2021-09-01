@@ -594,6 +594,11 @@ class _Engine(AsyncContextManager):
             try:
                 await script._before()
                 batch: List[BatchCommand] = script._evaluate()
+                logger.info(
+                    "&&&&&&&&&&&&&&&&&&&&&&& process_batches, batch: %s, act_id: %s",
+                    batch,
+                    activity.id,
+                )
                 remote = await activity.send(batch, deadline=batch_deadline)
             except Exception:
                 item = await command_generator.athrow(*sys.exc_info())
