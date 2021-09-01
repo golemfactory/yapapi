@@ -1,5 +1,3 @@
-from typing import Optional
-
 from ya_net import (
     ApiClient,
     RequestorApi,
