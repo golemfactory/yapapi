@@ -4,7 +4,8 @@ from unittest import mock
 
 from yapapi.net import Network, NetworkError
 
-from tests.factories.net import NetworkFactory
+if sys.version_info >= (3, 8):
+    from tests.factories.net import NetworkFactory
 
 
 def test_init():
