@@ -5,7 +5,7 @@ from functools import partial
 import json
 from os import PathLike
 from pathlib import Path
-from typing import Callable, Iterable, List, Optional, Dict, Union, Any, Awaitable, TYPE_CHECKING
+from typing import Callable, List, Optional, Dict, Union, Any, Awaitable, TYPE_CHECKING
 
 
 from yapapi.events import DownloadStarted, DownloadFinished
