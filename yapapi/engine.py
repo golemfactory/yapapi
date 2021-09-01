@@ -594,14 +594,9 @@ class _Engine(AsyncContextManager):
             try:
                 await script._before()
                 batch: List[BatchCommand] = script._evaluate()
-                logger.info(
-                    "&&&&&&&&&&&&&&&&&&&&&&& process_batches, batch: %s, act_id: %s",
-                    batch,
-                    activity.id,
-                )
                 remote = await activity.send(batch, deadline=batch_deadline)
             except Exception:
-                item = await command_generator.athrow(*sys.exc_info())
+                script = await command_generator.athrow(*sys.exc_info())
                 continue
 
             self.emit(
@@ -646,14 +641,14 @@ class _Engine(AsyncContextManager):
                     # Raise the exception in `command_generator` (the `worker` coroutine).
                     # If the client code is able to handle it then we'll proceed with
                     # subsequent batches. Otherwise the worker finishes with error.
-                    item = await command_generator.athrow(*sys.exc_info())
+                    script = await command_generator.athrow(*sys.exc_info())
                 else:
-                    item = await command_generator.asend(future_results)
+                    script = await command_generator.asend(future_results)
 
             else:
                 # Schedule the coroutine in a separate asyncio task
                 future_results = loop.create_task(get_batch_results())
-                item = await command_generator.asend(future_results)
+                script = await command_generator.asend(future_results)
 
 
 class Job:

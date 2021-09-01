@@ -329,7 +329,6 @@ class WorkContext:
         self._started: bool = False
 
         self.__payment_model: Optional[ComLinear] = None
-
         self.__script: Script = self.new_script()
 
     @property
@@ -475,11 +474,6 @@ class WorkContext:
             self.__script.timeout = timeout
         script_to_commit = self.__script
         self.__script = self.new_script()
-        logger.info(
-            "^^^^^^^^^^^^^^^^^^^^^^^ script_to_commit: %s, act_id: %s",
-            script_to_commit._evaluate(),
-            self.id,
-        )
         return script_to_commit
 
     async def get_raw_usage(self) -> yaa_ActivityUsage:
@@ -487,14 +481,12 @@ class WorkContext:
 
         The value comes directly from the low level API and is not interpreted in any way.
         """
-
         usage = await self._activity.usage()
         logger.debug(f"WorkContext raw usage: id={self.id}, usage={usage}")
         return usage
 
     async def get_usage(self) -> "ActivityUsage":
         """Get the current usage for the activity bound to this work context."""
-
         raw_usage = await self.get_raw_usage()
         usage = ActivityUsage()
         if raw_usage.current_usage:
@@ -513,7 +505,6 @@ class WorkContext:
 
     async def get_cost(self) -> Optional[float]:
         """Get the accumulated cost of the activity based on the reported usage."""
-
         usage = await self.get_raw_usage()
         if usage.current_usage:
             return self._payment_model.calculate_cost(usage.current_usage)

@@ -1,7 +1,5 @@
 """Stuff."""
 
-import logging
-
 import asyncio
 from datetime import timedelta
 from typing import Awaitable, Optional, List, Tuple, TYPE_CHECKING
@@ -11,9 +9,6 @@ from yapapi.script.command import *
 
 if TYPE_CHECKING:
     from yapapi.ctx import WorkContext
-
-
-logger = logging.getLogger("yapapi.script")
 
 
 class Script:
@@ -43,20 +38,14 @@ class Script:
 
     async def _before(self):
         """Hook which is executed before the script is evaluated and sent to the provider."""
-        logger.info("@@@@@@@@@@@@@@@@@@@@@@@ start of _before: %s", self._commands)
-        activity_state = await self._ctx._activity.state()
-        logger.info("+++++++++++++++++++++++++++++++++ activity_state: %s", activity_state)
-        ready = activity_state.state[0] == "Ready"
-        if not ready and self._ctx._implicit_init:
-            logger.info("------------------------------- adding deploy/start")
+        if not self._ctx._started and self._ctx._implicit_init:
             loop = asyncio.get_event_loop()
             self._commands.insert(0, (Deploy(), loop.create_future()))
             self._commands.insert(1, (Start(), loop.create_future()))
+            self._ctx._started = True
 
         for cmd, _future in self._commands:
             await cmd.before(self._ctx)
-
-        logger.info("####################### end of _before: %s", self._commands)
 
     def _set_cmd_result(self, result: CommandExecuted) -> None:
         cmd, future = self._commands[result.cmd_idx]
