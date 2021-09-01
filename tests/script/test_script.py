@@ -2,7 +2,7 @@ from functools import partial
 import json
 import pytest
 import sys
-from unittest.mock import AsyncMock, MagicMock
+from unittest import mock
 
 from yapapi import WorkContext
 from yapapi.events import CommandExecuted
@@ -18,7 +18,7 @@ class TestScript:
 
     @pytest.fixture
     def work_context(self):
-        return WorkContext(MagicMock(), MagicMock(), storage=AsyncMock())
+        return WorkContext(mock.MagicMock(), mock.MagicMock(), storage=mock.AsyncMock())
 
     @staticmethod
     def _assert_dst_path(script: Script, dst_path):
@@ -40,7 +40,7 @@ class TestScript:
 
     @pytest.mark.asyncio
     async def test_send_json(self, work_context: WorkContext):
-        storage: AsyncMock = work_context._storage
+        storage: mock.AsyncMock = work_context._storage
         dst_path = "/test/path"
         data = {
             "param": "value",
@@ -55,7 +55,7 @@ class TestScript:
 
     @pytest.mark.asyncio
     async def test_send_bytes(self, work_context: WorkContext):
-        storage: AsyncMock = work_context._storage
+        storage: mock.AsyncMock = work_context._storage
         dst_path = "/test/path"
         data = b"some byte string"
 
@@ -69,7 +69,7 @@ class TestScript:
     @pytest.mark.asyncio
     async def test_download_bytes(self, work_context: WorkContext):
         expected = b"some byte string"
-        storage: AsyncMock = work_context._storage
+        storage: mock.AsyncMock = work_context._storage
         storage.new_destination.return_value.download_bytes.return_value = expected
         src_path = "/test/path"
 
@@ -84,7 +84,7 @@ class TestScript:
     @pytest.mark.asyncio
     async def test_download_json(self, work_context: WorkContext):
         expected = {"key": "val"}
-        storage: AsyncMock = work_context._storage
+        storage: mock.AsyncMock = work_context._storage
         storage.new_destination.return_value.download_bytes.return_value = json.dumps(
             expected
         ).encode("utf-8")
