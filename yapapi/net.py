@@ -33,9 +33,9 @@ class Node:
 
 
 class Network:
-
     @classmethod
-    async def create(cls,
+    async def create(
+        cls,
         net_api: "Net",
         ip: str,
         owner_id: str,
@@ -76,7 +76,7 @@ class Network:
         self._nodes: Dict[str, Node] = dict()
 
     def __str__(self) -> str:
-            return f"""Network {{
+        return f"""Network {{
         id: {self._network_id}
         ip: {self.network_address}
         mask: {self.netmask}

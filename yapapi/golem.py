@@ -225,7 +225,11 @@ class Golem(_Engine):
         return cluster
 
     async def create_network(
-        self, ip: str, owner_ip: Optional[str] = None, mask: Optional[str] = None, gateway: Optional[str] = None
+        self,
+        ip: str,
+        owner_ip: Optional[str] = None,
+        mask: Optional[str] = None,
+        gateway: Optional[str] = None,
     ) -> Network:
         """
         Create a VPN inside Golem network.
@@ -241,4 +245,6 @@ class Golem(_Engine):
         async with self._root_api_session.get(f"{self._api_config.root_url}/me") as resp:
             identity = json.loads(await resp.text()).get("identity")
 
-        return await Network.create(self._net_api, ip, identity, owner_ip, mask=mask, gateway=gateway)
+        return await Network.create(
+            self._net_api, ip, identity, owner_ip, mask=mask, gateway=gateway
+        )

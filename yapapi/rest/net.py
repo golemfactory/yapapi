@@ -16,7 +16,10 @@ class Net(object):
     async def create_network(self, network):
         await self._api.create_network(
             yan.Network(
-                network.network_id, network.network_address, mask=network.netmask, gateway=network.gateway
+                network.network_id,
+                network.network_address,
+                mask=network.netmask,
+                gateway=network.gateway,
             )
         )
 
@@ -26,4 +29,3 @@ class Net(object):
 
     async def add_node(self, network, node_id: str, ip: str):
         await self._api.add_node(network.network_id, yan.Node(node_id, ip))
-
