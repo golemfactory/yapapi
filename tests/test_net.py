@@ -30,6 +30,8 @@ def test_init_duplicate_mask():
         Network(mock.Mock(), "10.0.0.0/16", "0x0d15ea5e", mask="255.255.0.0")
 
 
+@pytest.mark.asyncio
+@pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
 def test_create():
     ip = "192.168.0.0"
     owner_id = "0xcafebabe"
@@ -41,11 +43,15 @@ def test_create():
     assert network.nodes_dict == {"192.168.0.1": owner_id}
 
 
+@pytest.mark.asyncio
+@pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
 def test_create_with_owner_ip():
     network = NetworkFactory(ip="192.168.0.0/24", owner_ip="192.168.0.2")
     assert list(network.nodes_dict.keys()) == ["192.168.0.2"]
 
 
+@pytest.mark.asyncio
+@pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
 def test_create_with_owner_ip_outside_network():
     with pytest.raises(NetworkError) as e:
         NetworkFactory(ip="192.168.0.0/24", owner_ip="192.168.1.1")
