@@ -19,7 +19,7 @@ documentation = "https://handbook.golem.network/yapapi/"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.6.1"
+python = "^3.6.2"
 aiohttp = "^3.6"
 aiohttp-sse-client = "^0.1.7"
 dataclasses = { version = "^0.8", python = ">=3.6, <3.7"}
@@ -55,7 +55,7 @@ cli = ['fire', 'rich']
 integration-tests = ['goth', 'pytest', 'pytest-asyncio']
 
 [tool.poetry.dev-dependencies]
-black = "^20.8b1"
+black = "^21.7b0"
 pytest = "^6.2"
 portray = "^1"
 pytest-asyncio = "^0.14"
