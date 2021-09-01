@@ -1,27 +1,22 @@
 import abc
-from copy import copy
 from dataclasses import dataclass, field
 from datetime import timedelta, datetime
 from deprecated import deprecated  # type: ignore
 import enum
-import json
 import logging
-from os import PathLike
-from functools import partial
-from pathlib import Path
-from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union, Any, Awaitable
+from typing import Callable, Optional, Dict, List, Any, Awaitable
 
 from ya_activity.models import (
     ActivityUsage as yaa_ActivityUsage,
     ActivityState as yaa_ActivityState,
 )
 
-from yapapi.events import DownloadStarted, DownloadFinished
-from yapapi.props.com import ComLinear, Counter
+from yapapi.props.com import ComLinear
 from yapapi.script import Script
-from yapapi.storage import StorageProvider, Source, Destination, DOWNLOAD_BYTES_LIMIT_DEFAULT
+from yapapi.storage import StorageProvider, DOWNLOAD_BYTES_LIMIT_DEFAULT
 from yapapi.rest.market import AgreementDetails
 from yapapi.rest.activity import Activity
+from yapapi.script.command import StorageEvent
 from yapapi.utils import get_local_timezone
 
 logger = logging.getLogger(__name__)
@@ -66,234 +61,6 @@ class Work(abc.ABC):
     def timeout(self) -> Optional[timedelta]:
         """Return the optional timeout set for execution of this work."""
         return None
-
-
-class _Deploy(Work):
-    def register(self, commands: CommandContainer):
-        commands.deploy()
-
-
-class _Start(Work):
-    def __init__(self, *args: str):
-        self.args = args
-
-    def __repr__(self):
-        return f"start{self.args}"
-
-    def register(self, commands: CommandContainer):
-        commands.start(args=self.args)
-
-
-class _Terminate(Work):
-    def register(self, commands: CommandContainer):
-        commands.terminate()
-
-
-class _SendWork(Work, abc.ABC):
-    def __init__(self, storage: StorageProvider, dst_path: str):
-        self._storage = storage
-        self._dst_path = dst_path
-        self._src: Optional[Source] = None
-        self._idx: Optional[int] = None
-
-    @abc.abstractmethod
-    async def do_upload(self, storage: StorageProvider) -> Source:
-        pass
-
-    async def prepare(self):
-        self._src = await self.do_upload(self._storage)
-
-    def register(self, commands: CommandContainer):
-        assert self._src is not None, "cmd prepared"
-        self._idx = commands.transfer(
-            _from=self._src.download_url, _to=f"container:{self._dst_path}"
-        )
-
-    async def post(self) -> None:
-        assert self._src is not None
-        await self._storage.release_source(self._src)
-
-
-class _SendBytes(_SendWork):
-    def __init__(self, storage: StorageProvider, data: bytes, dst_path: str):
-        super().__init__(storage, dst_path)
-        self._data: Optional[bytes] = data
-
-    async def do_upload(self, storage: StorageProvider) -> Source:
-        assert self._data is not None, "buffer unintialized"
-        src = await storage.upload_bytes(self._data)
-        self._data = None
-        return src
-
-
-class _SendJson(_SendBytes):
-    def __init__(self, storage: StorageProvider, data: dict, dst_path: str):
-        super().__init__(storage, json.dumps(data).encode(encoding="utf-8"), dst_path)
-
-
-class _SendFile(_SendWork):
-    def __init__(self, storage: StorageProvider, src_path: str, dst_path: str):
-        super(_SendFile, self).__init__(storage, dst_path)
-        self._src_path = Path(src_path)
-
-    async def do_upload(self, storage: StorageProvider) -> Source:
-        return await storage.upload_file(self._src_path)
-
-
-class _Run(Work):
-    def __init__(
-        self,
-        cmd: str,
-        *args: Iterable[str],
-        env: Optional[Dict[str, str]] = None,
-        stdout: Optional["CaptureContext"] = None,
-        stderr: Optional["CaptureContext"] = None,
-    ):
-        self.cmd = cmd
-        self.args = args
-        self.env = env
-        self.stdout = stdout
-        self.stderr = stderr
-        self._idx = None
-
-    def register(self, commands: CommandContainer):
-        capture = dict()
-        if self.stdout:
-            capture["stdout"] = self.stdout.to_dict()
-        if self.stderr:
-            capture["stderr"] = self.stderr.to_dict()
-        self._idx = commands.run(entry_point=self.cmd, args=self.args, capture=capture)
-
-
-StorageEvent = Union[DownloadStarted, DownloadFinished]
-
-
-class _ReceiveContent(Work):
-    def __init__(
-        self,
-        storage: StorageProvider,
-        src_path: str,
-        emitter: Optional[Callable[[StorageEvent], None]] = None,
-    ):
-        self._storage = storage
-        self._src_path: str = src_path
-        self._idx: Optional[int] = None
-        self._dst_slot: Optional[Destination] = None
-        self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
-        self._dst_path: Optional[PathLike] = None
-
-    async def prepare(self):
-        self._dst_slot = await self._storage.new_destination(destination_file=self._dst_path)
-
-    def register(self, commands: CommandContainer):
-        assert self._dst_slot, f"{self.__class__} command creation without prepare"
-
-        self._idx = commands.transfer(
-            _from=f"container:{self._src_path}", to=self._dst_slot.upload_url
-        )
-
-    def _emit_download_start(self):
-        assert self._dst_slot, f"{self.__class__} post without prepare"
-        if self._emitter:
-            self._emitter(DownloadStarted(path=self._src_path))
-
-    def _emit_download_end(self):
-        if self._emitter:
-            self._emitter(DownloadFinished(path=str(self._dst_path)))
-
-
-class _ReceiveFile(_ReceiveContent):
-    def __init__(
-        self,
-        storage: StorageProvider,
-        src_path: str,
-        dst_path: str,
-        emitter: Optional[Callable[[StorageEvent], None]] = None,
-    ):
-        super().__init__(storage, src_path, emitter)
-        self._dst_path = Path(dst_path)
-
-    async def post(self) -> None:
-        self._emit_download_start()
-        assert self._dst_path
-        assert self._dst_slot
-
-        await self._dst_slot.download_file(self._dst_path)
-        self._emit_download_end()
-
-
-class _ReceiveBytes(_ReceiveContent):
-    def __init__(
-        self,
-        storage: StorageProvider,
-        src_path: str,
-        on_download: Callable[[bytes], Awaitable],
-        limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
-        emitter: Optional[Callable[[StorageEvent], None]] = None,
-    ):
-        super().__init__(storage, src_path, emitter)
-        self._on_download = on_download
-        self._limit = limit
-
-    async def post(self) -> None:
-        self._emit_download_start()
-        assert self._dst_slot
-
-        output = await self._dst_slot.download_bytes(limit=self._limit)
-        self._emit_download_end()
-        await self._on_download(output)
-
-
-class _ReceiveJson(_ReceiveBytes):
-    def __init__(
-        self,
-        storage: StorageProvider,
-        src_path: str,
-        on_download: Callable[[Any], Awaitable],
-        limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
-        emitter: Optional[Callable[[StorageEvent], None]] = None,
-    ):
-        super().__init__(
-            storage, src_path, partial(self.__on_json_download, on_download), limit, emitter
-        )
-
-    @staticmethod
-    async def __on_json_download(on_download: Callable[[bytes], Awaitable], content: bytes):
-        await on_download(json.loads(content))
-
-
-class Steps(Work):
-    def __init__(self, *steps: Work, timeout: Optional[timedelta] = None):
-        """Create a `Work` item consisting of a sequence of steps (subitems).
-
-        :param steps: sequence of steps to be executed
-        :param timeout: timeout for waiting for the steps' results
-        """
-        self._steps: Tuple[Work, ...] = steps
-        self._timeout: Optional[timedelta] = timeout
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}: {self._steps}"
-
-    @property
-    def timeout(self) -> Optional[timedelta]:
-        """Return the optional timeout set for execution of all steps."""
-        return self._timeout
-
-    async def prepare(self):
-        """Execute the `prepare` hook for all the defined steps."""
-        for step in self._steps:
-            await step.prepare()
-
-    def register(self, commands: CommandContainer):
-        """Execute the `register` hook for all the defined steps."""
-        for step in self._steps:
-            step.register(commands)
-
-    async def post(self):
-        """Execute the `post` step for all the defined steps."""
-        for step in self._steps:
-            await step.post()
 
 
 @dataclass

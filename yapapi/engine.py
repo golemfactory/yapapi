@@ -31,7 +31,7 @@ else:
 
 from yapapi import rest, events
 from yapapi.agreements_pool import AgreementsPool
-from yapapi.ctx import CommandContainer, ExecOptions, Work, WorkContext
+from yapapi.ctx import WorkContext
 from yapapi.payload import Payload
 from yapapi import props
 from yapapi.props import com
@@ -86,21 +86,6 @@ class NoPaymentAccountError(Exception):
             f"No payment account available for driver `{self.required_driver}`"
             f" and network `{self.required_network}`"
         )
-
-
-WorkItem = Union[Work, Tuple[Work, ExecOptions]]
-"""The type of items yielded by a generator created by the `worker` function supplied by user."""
-
-
-def _unpack_work_item(item: WorkItem) -> Tuple[Work, ExecOptions]:
-    """Extract `Work` object and options from a work item.
-
-    If the item does not specify options, default ones are provided.
-    """
-    if isinstance(item, tuple):
-        return item
-    else:
-        return item, ExecOptions()
 
 
 exescript_ids: Iterator[int] = itertools.count(1)
