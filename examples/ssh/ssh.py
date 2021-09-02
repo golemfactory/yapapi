@@ -77,7 +77,7 @@ async def main(subnet_tag, driver=None, network=None):
         )
 
         network = await golem.create_network("192.168.0.1/24")
-        cluster = await golem.run_service(SshService, network=network)
+        cluster = await golem.run_service(SshService, network=network, num_instances=2)
 
         def instances():
             return [f"{s.provider_name}: {s.state.value}" for s in cluster.instances]

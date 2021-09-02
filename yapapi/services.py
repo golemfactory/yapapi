@@ -740,7 +740,7 @@ class Cluster(AsyncContextManager):
             )
             # prepare the Node entry for this instance, if the cluster is attached to a VPN
             if self.network:
-                node = self.network.add_node(work_context.provider_id, network_address)
+                node = await self.network.add_node(work_context.provider_id, network_address)
             else:
                 node = None
 
@@ -845,7 +845,7 @@ class Cluster(AsyncContextManager):
         # supply network_addresses as long as there are any still left
         if network_addresses is None:
             network_addresses = []
-        network_addresses = (
+        network_addresses_generator = (
             network_addresses[i] if i < len(network_addresses) else None for i in range(num_instances)
         )
 
@@ -854,7 +854,7 @@ class Cluster(AsyncContextManager):
         while not num_instances or spawned_instances < num_instances:
             try:
                 params = next(instance_params)
-                network_address = next(network_addresses)
+                network_address = next(network_addresses_generator)
                 task = loop.create_task(self.spawn_instance(params, network_address))
                 self._instance_tasks.add(task)
                 spawned_instances += 1
