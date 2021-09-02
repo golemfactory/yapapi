@@ -148,7 +148,7 @@ class Service:
         return self._ctx.id
 
     @property
-    def provider_name(self) -> str:
+    def provider_name(self) -> Optional[str]:
         """Return the name of the provider that runs this service instance."""
         return self._ctx.provider_name
 
@@ -160,7 +160,7 @@ class Service:
     @property
     def network(self) -> Optional[Network]:
         """Return the Network to which this instance belongs (if any)"""
-        return self._network_node.network if self.network_node else None
+        return self.network_node.network if self.network_node else None
 
     @property
     def network_node(self) -> Optional[Node]:
@@ -493,7 +493,8 @@ class Cluster(AsyncContextManager):
         return self._service_class
 
     @property
-    def network(self) -> Network:
+    def network(self) -> Optional[Network]:
+        """Return the Network record associated with the VPN used by this Cluster."""
         return self._network
 
     def __repr__(self):
@@ -739,10 +740,9 @@ class Cluster(AsyncContextManager):
                 )
             )
             # prepare the Node entry for this instance, if the cluster is attached to a VPN
+            node: Optional[Node] = None
             if self.network:
                 node = await self.network.add_node(work_context.provider_id, network_address)
-            else:
-                node = None
 
             instance = ServiceInstance(
                 service=self._service_class(self, work_context, network_node=node, **params)  # type: ignore
@@ -806,7 +806,7 @@ class Cluster(AsyncContextManager):
         self,
         num_instances: Optional[int] = None,
         instance_params: Optional[Iterable[Dict]] = None,
-        network_addresses: Optional[Iterable[str]] = None,
+        network_addresses: Optional[List[str]] = None,
     ) -> None:
         """Spawn new instances within this Cluster.
 
@@ -846,7 +846,7 @@ class Cluster(AsyncContextManager):
         if network_addresses is None:
             network_addresses = []
         network_addresses_generator = (
-            network_addresses[i] if i < len(network_addresses) else None for i in range(num_instances)
+            network_addresses[i] if i < len(network_addresses) else None for i in itertools.count()
         )
 
         loop = asyncio.get_event_loop()

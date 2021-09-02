@@ -344,9 +344,9 @@ class WorkContext:
         return self._agreement_details.provider_node_info.name
 
     @property
-    def provider_id(self) -> Optional[str]:
+    def provider_id(self) -> str:
         """Return the id of the provider associated with this work context."""
-        return self._agreement_details.raw_details.offer.provider_id
+        return self._agreement_details.raw_details.offer.provider_id  # type: ignore
 
     @property
     def _payment_model(self) -> ComLinear:

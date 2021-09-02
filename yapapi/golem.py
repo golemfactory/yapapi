@@ -134,7 +134,7 @@ class Golem(_Engine):
         expiration: Optional[datetime] = None,
         respawn_unstarted_instances=True,
         network: Optional[Network] = None,
-        network_addresses: Optional[Iterable[str]] = None,
+        network_addresses: Optional[List[str]] = None,
     ) -> Cluster:
         """Run a number of instances of a service represented by a given `Service` subclass.
 
@@ -224,9 +224,7 @@ class Golem(_Engine):
             )
 
         if network_addresses and not network:
-            raise ValueError(
-                "`network_addresses` provided without a `network`."
-            )
+            raise ValueError("`network_addresses` provided without a `network`.")
 
         cluster = Cluster(
             engine=self,
