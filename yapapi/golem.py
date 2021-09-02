@@ -133,6 +133,8 @@ class Golem(_Engine):
         payload: Optional[Payload] = None,
         expiration: Optional[datetime] = None,
         respawn_unstarted_instances=True,
+        network: Optional[Network] = None,
+        network_addresses: Optional[Iterable[str]] = None,
     ) -> Cluster:
         """Run a number of instances of a service represented by a given `Service` subclass.
 
@@ -155,6 +157,14 @@ class Golem(_Engine):
         :param expiration: optional expiration datetime for the service
         :param respawn_unstarted_instances: if an instance fails in the `starting` state, should
             the returned Cluster try to spawn another instance
+        :param network: optional Network, representing a VPN to attach this Cluster's instances to
+        :param network_addresses: optional list of addresses to assign to consecutive spawned instances.
+            If not provided, the addresses will be assigned automaticaly.
+            Otherwise, the number of addresses should correspond with the number of instances determined
+            based on the `num_instances` and/or `instance_params` arguments. If there are too few
+            addresses given in the `network_addresses` iterable to satisfy all spawned instances, the
+            rest of the addresses will be assigned automatically.
+            Requires the `network` argument to be provided at the same time.
         :return: a `Cluster` of service instances
 
         example usage:
@@ -213,15 +223,21 @@ class Golem(_Engine):
                 " nor given in the `payload` argument."
             )
 
+        if network_addresses and not network:
+            raise ValueError(
+                "`network_addresses` provided without a `network`."
+            )
+
         cluster = Cluster(
             engine=self,
             service_class=service_class,
             payload=payload,
             expiration=expiration,
             respawn_unstarted_instances=respawn_unstarted_instances,
+            network=network,
         )
         await self._stack.enter_async_context(cluster)
-        cluster.spawn_instances(num_instances=num_instances, instance_params=instance_params)
+        cluster.spawn_instances(num_instances, instance_params, network_addresses)
         return cluster
 
     async def create_network(

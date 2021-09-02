@@ -31,11 +31,6 @@ from utils import (
 
 
 class SshService(Service):
-    def __init__(self, cluster: "Cluster", ctx: WorkContext, network: Network):
-        super().__init__(cluster, ctx)
-        self._network: Network = network
-        self._node: Optional[Node] = None
-
     @staticmethod
     async def get_payload():
         return await vm.repo(
@@ -44,15 +39,9 @@ class SshService(Service):
             min_storage_gib=2.0,
         )
 
-    async def start(self):
-        self._node = await self._network.add_node(self.provider_id)
-        self._ctx.deploy(**self._node.get_deploy_args())
-        self._ctx.start()
-        yield self._ctx.commit()
-
     async def run(self):
-        ip = self._node.ip
-        net = self._network.network_id
+        ip = self.network_node.ip
+        net = self.network.network_id
         app_key = self.cluster._engine._api_config.app_key
 
         print(
@@ -88,10 +77,7 @@ async def main(subnet_tag, driver=None, network=None):
         )
 
         network = await golem.create_network("192.168.0.1/24")
-
-        cluster = await golem.run_service(
-            SshService, instance_params=[{"network": network} for _ in range(2)]
-        )
+        cluster = await golem.run_service(SshService, network=network)
 
         def instances():
             return [f"{s.provider_name}: {s.state.value}" for s in cluster.instances]
