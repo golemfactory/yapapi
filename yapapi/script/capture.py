@@ -1,5 +1,3 @@
-"""Stuff."""
-
 from dataclasses import dataclass
 import enum
 from typing import Dict, Optional

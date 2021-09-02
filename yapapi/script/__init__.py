@@ -1,5 +1,3 @@
-"""Stuff."""
-
 import asyncio
 from datetime import timedelta
 from typing import Any, Awaitable, Callable, Dict, Optional, List, Tuple, TYPE_CHECKING
@@ -27,7 +25,18 @@ if TYPE_CHECKING:
 
 
 class Script:
-    """Stuff."""
+    """Represents a series of commands to be executed on a provider node.
+
+    New commands are added to the script either through its `add` method or by calling one of the
+    convenience methods provided (for example: `run` or `send_json`).
+    Adding a new command *does not* result in it being immediately executed. Once ready, a `Script`
+    instance is meant to be yielded from a worker function (work generator pattern).
+    Commands will be run in the order in which they were added to the script.
+
+    If the `WorkContext` instance this `Script` uses has the field `_implicit_init` set to `True`,
+    the first script to be yielded is going to prepend the user's commands with `Deploy` and
+    `Start` commands.
+    """
 
     timeout: Optional[timedelta] = None
     """Time after which this script's execution should be forcefully interrupted."""

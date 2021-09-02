@@ -1,5 +1,3 @@
-"""Stuff."""
-
 import abc
 from functools import partial
 import json
