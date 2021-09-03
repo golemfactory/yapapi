@@ -11,7 +11,6 @@ import logging
 import os
 import sys
 from typing import (
-    AsyncContextManager,
     Awaitable,
     Callable,
     cast,
@@ -111,7 +110,7 @@ JobId = str
 AgreementId = str
 
 
-class _Engine(AsyncContextManager):
+class _Engine:
     """Base execution engine containing functions common to all modes of operation."""
 
     def __init__(

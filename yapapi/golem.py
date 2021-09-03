@@ -1,6 +1,7 @@
 import sys
 from datetime import datetime, timedelta
 import json
+from decimal import Decimal
 from typing import (
     Any,
     AsyncIterator,
@@ -13,6 +14,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    TYPE_CHECKING
 )
 from typing_extensions import AsyncGenerator
 
@@ -25,11 +27,16 @@ from yapapi.network import Network
 from yapapi.payload import Payload
 from yapapi.services import Cluster, Service
 
+if TYPE_CHECKING:
+    from yapapi.strategy import MarketStrategy
+
+
 D = TypeVar("D")  # Type var for task data
 R = TypeVar("R")  # Type var for task result
 
 
-class Golem(_Engine):
+#   TODO: do we want to inherit from AsyncContextManager here?
+class Golem:
     """The main entrypoint of Golem's high-level API.
 
     Provides two methods that reflect the two modes of operation, or two types of jobs
@@ -61,16 +68,55 @@ class Golem(_Engine):
     at any given time.
     """
 
+    def __init__(
+        self,
+        *,
+        budget: Union[float, Decimal],
+        strategy: Optional['MarketStrategy'] = None,
+        subnet_tag: Optional[str] = None,
+        driver: Optional[str] = None,
+        network: Optional[str] = None,
+        event_consumer: Optional[Callable[[events.Event], None]] = None,
+        stream_output: bool = False,
+        app_key: Optional[str] = None,
+    ):
+        self.budget = budget
+        self.strategy = strategy
+        self.subnet_tag = subnet_tag
+        self.driver = driver
+        self.network = network
+        self.event_consumer = event_consumer
+        self.stream_output = stream_output
+        self.app_key = app_key
+
+        self._engine: Optional[_Engine] = None
+
+        #   TODO: this is duplicated in _Engine, fix this
+        self._budget_amount = Decimal(budget)
+
     async def __aenter__(self) -> 'Golem':
         try:
-            await self.start()
+            self._engine = self._create_engine()
+            await self._engine.start()
             return self
         except:
             await self.__aexit__(*sys.exc_info())
             raise
 
     async def __aexit__(self, *exc_info) -> Optional[bool]:
-        return await self.stop(*exc_info)
+        return await self._engine.stop(*exc_info)
+
+    def _create_engine(self):
+        return _Engine(
+            budget=self.budget,
+            strategy=self.strategy,
+            subnet_tag=self.subnet_tag,
+            driver=self.driver,
+            network=self.network,
+            event_consumer=self.event_consumer,
+            stream_output=self.stream_output,
+            app_key=self.app_key,
+        )
 
     async def execute_tasks(
         self,
@@ -129,7 +175,7 @@ class Golem(_Engine):
         if timeout:
             kwargs["timeout"] = timeout
 
-        executor = Executor(_engine=self, **kwargs)
+        executor = Executor(_engine=self._engine, **kwargs)
         async for t in executor.submit(worker, data, job_id=job_id):
             yield t
 
@@ -233,15 +279,18 @@ class Golem(_Engine):
             raise ValueError("`network_addresses` provided without a `network`.")
 
         cluster = Cluster(
-            engine=self,
+            engine=self._engine,
             service_class=service_class,
             payload=payload,
             expiration=expiration,
             respawn_unstarted_instances=respawn_unstarted_instances,
             network=network,
         )
-        await self._stack.enter_async_context(cluster)
+        #   TODO this is super ugly. How to fix this?
+        #   Maybe Engine.add_async_context(cluster)?
+        await self._engine._stack.enter_async_context(cluster)
         cluster.spawn_instances(num_instances, instance_params, network_addresses)
+
         return cluster
 
     async def create_network(
