@@ -156,8 +156,8 @@ class Run(Command):
         self.cmd = cmd
         self.args = args
         self.env = env
-        self.stdout = stdout
         self.stderr = stderr
+        self.stdout = stdout
 
     def evaluate(self, ctx: "WorkContext"):
         capture = dict()
