@@ -574,7 +574,9 @@ class _Engine(AsyncContextManager):
             # `task_id` field of several events (e.g. `ScriptSent`)
             script_id = str(next(exescript_ids))
 
-            batch_deadline = datetime.now(timezone.utc) + script.timeout if script.timeout else None
+            batch_deadline = (
+                datetime.now(timezone.utc) + script.timeout if script.timeout is not None else None
+            )
 
             try:
                 await script._before()

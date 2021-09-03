@@ -38,13 +38,26 @@ class Script:
     `Start` commands.
     """
 
-    timeout: Optional[timedelta] = None
-    """Time after which this script's execution should be forcefully interrupted."""
+    timeout: Optional[timedelta]
+    """Time after which this script's execution should be forcefully interrupted.
+    
+    The default value is `None` which means there's no timeout set.
+    """
 
-    wait_for_results: bool = True
-    """Whether this script's execution should block until its results are available."""
+    wait_for_results: bool
+    """Whether this script's execution should block until its results are available.
+    
+    The default value is `True`.
+    """
 
-    def __init__(self, context: "WorkContext"):
+    def __init__(
+        self,
+        context: "WorkContext",
+        timeout: Optional[timedelta] = None,
+        wait_for_results: bool = True,
+    ):
+        self.timeout = timeout
+        self.wait_for_results = wait_for_results
         self._ctx: "WorkContext" = context
         self._commands: List[Tuple[Command, asyncio.Future]] = []
 
