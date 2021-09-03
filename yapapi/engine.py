@@ -19,7 +19,6 @@ from typing import (
     List,
     Optional,
     Set,
-    Tuple,
     Union,
 )
 from typing_extensions import Final, AsyncGenerator
@@ -86,10 +85,6 @@ class NoPaymentAccountError(Exception):
             f"No payment account available for driver `{self.required_driver}`"
             f" and network `{self.required_network}`"
         )
-
-
-exescript_ids: Iterator[int] = itertools.count(1)
-"""An iterator providing unique ids used to correlate events related to a single exe script."""
 
 
 # Type aliases to make some type annotations more meaningful
@@ -570,9 +565,7 @@ class _Engine(AsyncContextManager):
         script: Script = await command_generator.__anext__()
 
         while True:
-            # TODO: `task_id` should really be `batch_id`, but then we should also rename
-            # `task_id` field of several events (e.g. `ScriptSent`)
-            script_id = str(next(exescript_ids))
+            script_id = str(script.id)
 
             batch_deadline = (
                 datetime.now(timezone.utc) + script.timeout if script.timeout is not None else None

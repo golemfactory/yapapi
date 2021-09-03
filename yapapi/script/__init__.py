@@ -1,6 +1,7 @@
 import asyncio
 from datetime import timedelta
-from typing import Any, Awaitable, Callable, Dict, Optional, List, Tuple, TYPE_CHECKING
+import itertools
+from typing import Any, Awaitable, Callable, Dict, Iterator, Optional, List, Tuple, TYPE_CHECKING
 
 from yapapi.events import CommandExecuted
 from yapapi.script.capture import CaptureContext
@@ -23,6 +24,9 @@ from yapapi.storage import DOWNLOAD_BYTES_LIMIT_DEFAULT
 if TYPE_CHECKING:
     from yapapi.ctx import WorkContext
 
+script_ids: Iterator[int] = itertools.count(1)
+"""An iterator providing incremental integer IDs to scripts."""
+
 
 class Script:
     """Represents a series of commands to be executed on a provider node.
@@ -40,13 +44,13 @@ class Script:
 
     timeout: Optional[timedelta]
     """Time after which this script's execution should be forcefully interrupted.
-    
+
     The default value is `None` which means there's no timeout set.
     """
 
     wait_for_results: bool
     """Whether this script's execution should block until its results are available.
-    
+
     The default value is `True`.
     """
 
@@ -60,6 +64,16 @@ class Script:
         self.wait_for_results = wait_for_results
         self._ctx: "WorkContext" = context
         self._commands: List[Tuple[Command, asyncio.Future]] = []
+        self._id: int = next(script_ids)
+
+    @property
+    def id(self) -> int:
+        """Return the ID of this script instance.
+
+        IDs are provided by a global iterator and therefore are guaranteed to be unique during
+        the program's execution.
+        """
+        return self._id
 
     def _evaluate(self) -> List[BatchCommand]:
         """Evaluate and serialize this script to a list of batch commands."""
