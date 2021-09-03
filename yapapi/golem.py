@@ -1,3 +1,4 @@
+import sys
 from datetime import datetime, timedelta
 import json
 from typing import (
@@ -59,6 +60,17 @@ class Golem(_Engine):
     either mode of operation, it's usually good to have just one instance of `Golem` active
     at any given time.
     """
+
+    async def __aenter__(self) -> 'Golem':
+        try:
+            await self.start()
+            return self
+        except:
+            await self.__aexit__(*sys.exc_info())
+            raise
+
+    async def __aexit__(self, *exc_info) -> Optional[bool]:
+        return await self.stop(*exc_info)
 
     async def execute_tasks(
         self,

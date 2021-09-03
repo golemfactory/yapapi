@@ -235,59 +235,64 @@ class _Engine(AsyncContextManager):
         if self._wrapped_consumer:
             self._wrapped_consumer.async_call(event)
 
-    async def __aenter__(self) -> "_Engine":
-        """Initialize resources and start background services used by this engine."""
+    async def stop(self, *exc_info) -> Optional[bool]:
+        '''Stop the engine.
 
-        try:
-            stack = self._stack
+        This *must* be called at the end of the work, by the Engine user.
+        '''
+        return await self._stack.__aexit__(*exc_info)
 
-            await stack.enter_async_context(self._wrapped_consumer)
+    async def start(self):
+        '''Start the engine.
 
-            def report_shutdown(*exc_info):
-                if any(item for item in exc_info):
-                    self.emit(events.ShutdownFinished(exc_info=exc_info))  # noqa
-                else:
-                    self.emit(events.ShutdownFinished())
+        This is supposed to be called exactly once. Repeated or interrupted call
+        will leave the engine in an unrecoverable state.
+        '''
 
-            stack.push(report_shutdown)
+        stack = self._stack
 
-            market_client = await stack.enter_async_context(self._api_config.market())
-            self._market_api = rest.Market(market_client)
+        await stack.enter_async_context(self._wrapped_consumer)
 
-            activity_client = await stack.enter_async_context(self._api_config.activity())
-            self._activity_api = rest.Activity(activity_client)
+        def report_shutdown(*exc_info):
+            if any(item for item in exc_info):
+                self.emit(events.ShutdownFinished(exc_info=exc_info))  # noqa
+            else:
+                self.emit(events.ShutdownFinished())
 
-            payment_client = await stack.enter_async_context(self._api_config.payment())
-            self._payment_api = rest.Payment(payment_client)
+        stack.push(report_shutdown)
 
-            net_client = await stack.enter_async_context(self._api_config.net())
-            self._net_api = rest.Net(net_client)
+        market_client = await stack.enter_async_context(self._api_config.market())
+        self._market_api = rest.Market(market_client)
 
-            # TODO replace with a proper REST API client once ya-client and ya-aioclient are updated
-            # https://github.com/golemfactory/yapapi/issues/636
-            self._root_api_session = await stack.enter_async_context(
-                aiohttp.ClientSession(
-                    headers=net_client.default_headers,
-                )
+        activity_client = await stack.enter_async_context(self._api_config.activity())
+        self._activity_api = rest.Activity(activity_client)
+
+        payment_client = await stack.enter_async_context(self._api_config.payment())
+        self._payment_api = rest.Payment(payment_client)
+
+        net_client = await stack.enter_async_context(self._api_config.net())
+        self._net_api = rest.Net(net_client)
+
+        # TODO replace with a proper REST API client once ya-client and ya-aioclient are updated
+        # https://github.com/golemfactory/yapapi/issues/636
+        self._root_api_session = await stack.enter_async_context(
+            aiohttp.ClientSession(
+                headers=net_client.default_headers,
             )
+        )
 
-            self.payment_decorator = _Engine.PaymentDecorator(await self._create_allocations())
+        self.payment_decorator = _Engine.PaymentDecorator(await self._create_allocations())
 
-            # TODO: make the method starting the process_invoices() task an async context manager
-            # to simplify code in __aexit__()
-            loop = asyncio.get_event_loop()
-            self._process_invoices_job = loop.create_task(self._process_invoices())
-            self._services.add(self._process_invoices_job)
-            self._services.add(loop.create_task(self._process_debit_notes()))
+        # TODO: make the method starting the process_invoices() task an async context manager
+        # to simplify code in __aexit__()
+        loop = asyncio.get_event_loop()
+        self._process_invoices_job = loop.create_task(self._process_invoices())
+        self._services.add(self._process_invoices_job)
+        self._services.add(loop.create_task(self._process_debit_notes()))
 
-            self._storage_manager = await stack.enter_async_context(gftp.provider())
+        self._storage_manager = await stack.enter_async_context(gftp.provider())
 
-            stack.push_async_exit(self._shutdown)
-
-            return self
-        except:
-            await self.__aexit__(*sys.exc_info())
-            raise
+        stack.push_async_exit(self._shutdown)
 
     def _unpaid_agreement_ids(self) -> Set[AgreementId]:
         """Return the set of all yet unpaid agreement ids."""
@@ -351,9 +356,6 @@ class _Engine(AsyncContextManager):
                 logger.debug("%s still running: %s", pluralize(len(pending), "service"), pending)
         except Exception:
             logger.debug("Got error when waiting for services to finish", exc_info=True)
-
-    async def __aexit__(self, *exc_info) -> Optional[bool]:
-        return await self._stack.__aexit__(*exc_info)
 
     async def _create_allocations(self) -> rest.payment.MarketDecoration:
 
