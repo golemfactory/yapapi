@@ -2,6 +2,7 @@ import argparse
 import asyncio
 
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -47,7 +48,7 @@ class CustomCounterService(Service):
         print(f"service {self.id} stopped on {self.provider_name}")
 
 
-async def main(subnet_tag, driver=None, network=None):
+async def main(running_time, subnet_tag, driver=None, network=None):
 
     enable_default_logger(
         log_file=str(Path(__file__).parent / "custom-counters.log"),
@@ -81,7 +82,9 @@ async def main(subnet_tag, driver=None, network=None):
 
         was_running = False
 
-        while True:
+        start_time = datetime.now()
+
+        while datetime.now() < start_time + timedelta(seconds=running_time):
             await asyncio.sleep(3)
 
             n = len(cluster.instances)
@@ -107,5 +110,14 @@ parser = argparse.ArgumentParser(description="Custom Usage Counter Example")
 parser.add_argument("--driver", help="Payment driver name, for example `zksync`")
 parser.add_argument("--network", help="Network name, for example `rinkeby`")
 parser.add_argument("--subnet-tag", help="Subnet name, for example `devnet-beta.2`")
+parser.add_argument(
+    "--running-time",
+    default=120,
+    type=int,
+    help=(
+        "How long should the instance run before the cluster is stopped "
+        "(in seconds, default: %(default)s)"
+    ),
+)
 args = parser.parse_args()
-asyncio.run(main(args.subnet_tag, args.driver, args.network))
+asyncio.run(main(args.running_time, args.subnet_tag, args.driver, args.network))
