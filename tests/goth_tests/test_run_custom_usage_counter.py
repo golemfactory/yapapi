@@ -55,9 +55,6 @@ async def test_run_custom_usage_counter(
             cmd_monitor.add_assertion(assert_no_errors)
             cmd_monitor.add_assertion(assert_all_invoices_accepted)
 
-            await cmd_monitor.wait_for_pattern("Starting new Cluster", timeout=20)
-            # A longer timeout to account for downloading a VM image
-            await cmd_monitor.wait_for_pattern("spawning instance within Cluster", timeout=120)
-
+            await cmd_monitor.wait_for_pattern(".*CustomCounterService.*commissioned", timeout=120)
             await cmd_monitor.wait_for_pattern(".*All jobs have finished", timeout=20)
             logger.info(f"Requestor script finished")
