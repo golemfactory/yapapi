@@ -32,7 +32,7 @@ class CustomCounterService(Service):
 
     async def run(self):
         print(f"service {self.id} running on {self.provider_name}...")
-        while True:
+        for _ in range(0, 10):
             self._ctx.run("sleep", "1000")
             yield self._ctx.commit()
             usage: ActivityUsage = await self._ctx.get_usage()
