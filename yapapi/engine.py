@@ -264,6 +264,7 @@ class _Engine(AsyncContextManager):
             self._net_api = rest.Net(net_client)
 
             # TODO replace with a proper REST API client once ya-client and ya-aioclient are updated
+            # https://github.com/golemfactory/yapapi/issues/636
             self._root_api_session = await stack.enter_async_context(
                 aiohttp.ClientSession(
                     headers=net_client.default_headers,
