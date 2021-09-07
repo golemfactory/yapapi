@@ -38,7 +38,7 @@ class Command(abc.ABC):
         return {cmd_name: kwargs}
 
     def __init__(self):
-        self._result: Awaitable[CommandExecuted] = asyncio.get_event_loop().create_future()
+        self._result: asyncio.Future = asyncio.get_event_loop().create_future()
 
 
 class Deploy(Command):
