@@ -11,7 +11,7 @@ if sys.version_info >= (3, 8):
 def test_init():
     ip = "192.168.0.0"
     network = Network(mock.Mock(), f"{ip}/24", "0xdeadbeef")
-    assert network.network_id
+    assert network.network_id is None
     assert network.owner_ip == "192.168.0.1"
     assert network.network_address == ip
     assert network.netmask == "255.255.255.0"

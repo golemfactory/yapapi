@@ -11,11 +11,15 @@ class NetworkFactory(factory.Factory):
     class Meta:
         model = Network
 
-    net_api = mock.AsyncMock()
     ip = factory.Faker("ipv4", network=True)
     owner_id = factory.LazyFunction(lambda: "0x" + faker.Faker().binary(length=20).hex())
 
     @classmethod
     def _create(cls, model_class, *args, **kwargs):
+        if "net_api" not in kwargs:
+            net_api = mock.AsyncMock()
+            net_api.create_network = mock.AsyncMock(return_value=faker.Faker().binary(length=16).hex())
+            kwargs["net_api"] = net_api
+
         pool = futures.ThreadPoolExecutor()
         return pool.submit(asyncio.run, model_class.create(*args, **kwargs)).result()
