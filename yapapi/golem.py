@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from decimal import Decimal
 from typing import (
     Any,
     AsyncIterator,
@@ -69,7 +68,6 @@ class Golem(_Engine):
         payload: Payload,
         max_workers: Optional[int] = None,
         timeout: Optional[timedelta] = None,
-        budget: Optional[Union[float, Decimal]] = None,
         job_id: Optional[str] = None,
     ) -> AsyncIterator[Task[D, R]]:
         """Submit a sequence of tasks to be executed on providers.
@@ -86,7 +84,6 @@ class Golem(_Engine):
             the created `Executor` instance
         :param max_workers: maximum number of concurrent workers, passed to the `Executor` instance
         :param timeout: timeout for computing all tasks, passed to the `Executor` instance
-        :param budget: budget for computing all tasks, passed to the `Executor` instance
         :param job_id: an optional string to identify the job created by this method.
             Passed as the value of the `id` parameter to `Job()`.
         :return: an iterator that yields completed `Task` objects
