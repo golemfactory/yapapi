@@ -33,8 +33,7 @@ async def test_run_custom_usage_counter(
 
     # This is the default configuration with 2 wasm/VM providers
     goth_config = load_yaml(goth_config_path, config_overrides)
-
-    requestor_path = project_dir / "examples" / "custom_usage_counter" / "custom_usage_counter.py"
+    requestor_path = project_dir / "examples" / "custom-usage-counter" / "custom_usage_counter.py"
 
     runner = Runner(
         base_log_dir=log_dir,
