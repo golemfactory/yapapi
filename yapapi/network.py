@@ -76,7 +76,9 @@ class Network:
         network = cls(net_api, ip, owner_id, owner_ip, mask, gateway)
 
         # create the network in yagna and set the id
-        network._network_id = await net_api.create_network(network)
+        network._network_id = await net_api.create_network(
+            network.network_address, network.netmask, network.gateway
+        )
 
         # add requestor's own address to the network
         await network.add_owner_address(network.owner_ip)
@@ -178,13 +180,15 @@ class Network:
 
         :param ip: the IP address to assign to the requestor node.
         """
+        assert self.network_id, "Network not initialized correctly"
+
         self._ensure_ip_in_network(ip)
 
         async with self._nodes_lock:
             self._ensure_ip_unique(ip)
             self._nodes[self._owner_id] = Node(network=self, node_id=self._owner_id, ip=ip)
 
-        await self._net_api.add_address(self, ip)
+        await self._net_api.add_address(self.network_id, ip)
 
     async def add_node(self, node_id: str, ip: Optional[str] = None) -> Node:
         """Add a new node to the network.
@@ -192,10 +196,12 @@ class Network:
         :param node_id: Node ID within the Golem network of this VPN node.
         :param ip: IP address to assign to this node.
         """
+        assert self.network_id, "Network not initialized correctly"
+
         async with self._nodes_lock:
             if ip:
                 self._ensure_ip_in_network(ip)
-                self._ensure_ip_unique()
+                self._ensure_ip_unique(ip)
             else:
                 while True:
                     ip = str(self._next_address())
@@ -205,7 +211,7 @@ class Network:
             node = Node(network=self, node_id=node_id, ip=ip)
             self._nodes[node_id] = node
 
-        await self._net_api.add_node(self, node_id, ip)
+        await self._net_api.add_node(self.network_id, node_id, ip)
 
         return node
 
