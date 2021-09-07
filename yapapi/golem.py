@@ -35,7 +35,6 @@ D = TypeVar("D")  # Type var for task data
 R = TypeVar("R")  # Type var for task result
 
 
-#   TODO: do we want to inherit from AsyncContextManager here?
 class Golem:
     """The main entrypoint of Golem's high-level API.
 
@@ -310,9 +309,8 @@ class Golem:
             respawn_unstarted_instances=respawn_unstarted_instances,
             network=network,
         )
-        #   TODO this is super ugly. How to fix this?
-        #   Maybe Engine.add_async_context(cluster)?
-        await self._engine._stack.enter_async_context(cluster)
+
+        await self._engine.add_to_async_context(cluster)
         cluster.spawn_instances(num_instances, instance_params, network_addresses)
 
         return cluster

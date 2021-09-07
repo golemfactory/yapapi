@@ -11,6 +11,7 @@ import logging
 import os
 import sys
 from typing import (
+    AsyncContextManager,
     Awaitable,
     Callable,
     cast,
@@ -292,6 +293,9 @@ class _Engine:
         self._storage_manager = await stack.enter_async_context(gftp.provider())
 
         stack.push_async_exit(self._shutdown)
+
+    async def add_to_async_context(self, async_context_manager: AsyncContextManager) -> None:
+        await self._stack.enter_async_context(async_context_manager)
 
     def _unpaid_agreement_ids(self) -> Set[AgreementId]:
         """Return the set of all yet unpaid agreement ids."""
