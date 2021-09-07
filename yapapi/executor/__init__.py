@@ -2,7 +2,6 @@
 import asyncio
 from asyncio import CancelledError
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal
 import sys
 from typing import (
     AsyncContextManager,
@@ -16,17 +15,14 @@ from typing import (
     TypeVar,
     Union,
     cast,
-    overload,
 )
 from typing_extensions import Final, AsyncGenerator
-import warnings
 
 from yapapi import rest, events
 from yapapi.ctx import WorkContext
-from yapapi.events import Event
 from yapapi.payload import Payload
 from yapapi.rest.activity import Activity
-from yapapi.strategy import MarketStrategy
+from yapapi.engine import _Engine, Job, WorkItem
 import yapapi.utils
 
 from .task import Task, TaskStatus
@@ -51,8 +47,6 @@ logger = yapapi.utils.get_logger(__name__)
 DEFAULT_GET_OFFERS_TIMEOUT = timedelta(seconds=20)
 
 
-from yapapi.engine import _Engine, Job, WorkItem
-
 D = TypeVar("D")  # Type var for task data
 R = TypeVar("R")  # Type var for task result
 
@@ -64,114 +58,25 @@ class Executor(AsyncContextManager):
     execution units.
     """
 
-    @overload
     def __init__(
         self,
         *,
-        payload: Optional[Payload] = None,
-        max_workers: int = 5,
-        timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
         _engine: _Engine,
-    ):
-        """Initialize the `Executor` to use a specific Golem `_engine`."""
-
-    @overload
-    def __init__(
-        self,
-        *,
-        budget: Union[float, Decimal],
-        strategy: Optional[MarketStrategy] = None,
-        subnet_tag: Optional[str] = None,
-        driver: Optional[str] = None,
-        network: Optional[str] = None,
-        event_consumer: Optional[Callable[[Event], None]] = None,
-        stream_output: bool = False,
-        payload: Optional[Payload] = None,
-        max_workers: int = 5,
-        timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
-    ):
-        """Initialize the `Executor` for standalone usage, with `payload` parameter."""
-
-    @overload
-    def __init__(
-        self,
-        *,
-        budget: Union[float, Decimal],
-        strategy: Optional[MarketStrategy] = None,
-        subnet_tag: Optional[str] = None,
-        driver: Optional[str] = None,
-        network: Optional[str] = None,
-        event_consumer: Optional[Callable[[Event], None]] = None,
-        stream_output: bool = False,
-        max_workers: int = 5,
-        timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
-        package: Optional[Payload] = None,
-    ):
-        """Initialize the `Executor` for standalone usage, with `package` parameter."""
-
-    def __init__(
-        self,
-        *,
-        budget: Optional[Union[float, Decimal]] = None,
-        strategy: Optional[MarketStrategy] = None,
-        subnet_tag: Optional[str] = None,
-        driver: Optional[str] = None,
-        network: Optional[str] = None,
-        event_consumer: Optional[Callable[[Event], None]] = None,
-        stream_output: bool = False,
         max_workers: int = 5,
         timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
         package: Optional[Payload] = None,
         payload: Optional[Payload] = None,
-        _engine: Optional[_Engine] = None,
     ):
         """Initialize an `Executor`.
 
-        :param budget: [DEPRECATED use `Golem` instead] maximum budget for payments
-        :param strategy: [DEPRECATED use `Golem` instead] market strategy used to
-            select providers from the market (e.g. LeastExpensiveLinearPayuMS or DummyMS)
-        :param subnet_tag: [DEPRECATED use `Golem` instead] use only providers in the
-            subnet with the subnet_tag name
-        :param driver: [DEPRECATED use `Golem` instead] name of the payment driver
-            to use or `None` to use the default driver;
-            only payment platforms with the specified driver will be used
-        :param network: [DEPRECATED use `Golem` instead] name of the network
-            to use or `None` to use the default network;
-            only payment platforms with the specified network will be used
-        :param event_consumer: [DEPRECATED use `Golem` instead] a callable that
-            processes events related to the computation;
-            by default it is a function that logs all events
-        :param stream_output: [DEPRECATED use `Golem` instead]
-            stream computation output from providers
         :param max_workers: maximum number of concurrent workers performing the computation
         :param payload: specification of payload (for example a VM package) that needs to be
             deployed on providers in order to compute tasks with this Executor
         :param timeout: timeout for the whole computation
         """
         logger.debug("Creating Executor instance; parameters: %s", locals())
-        self.__standalone = False
 
-        if _engine:
-            self._engine = _engine
-        else:
-            warnings.warn(
-                "Stand-alone usage of `Executor` is deprecated, "
-                "please use `Golem.execute_task` instead.",
-                DeprecationWarning,
-            )
-            if not budget:
-                raise ValueError("Missing value for `budget` argument.")
-
-            self._engine = _Engine(
-                budget=budget,
-                strategy=strategy,
-                subnet_tag=subnet_tag,
-                driver=driver,
-                network=network,
-                event_consumer=event_consumer,
-                stream_output=stream_output,
-            )
-            self.__standalone = True
+        self._engine = _engine
 
         if package:
             if payload:
@@ -201,8 +106,6 @@ class Executor(AsyncContextManager):
 
     async def __aenter__(self) -> "Executor":
         """Start computation using this `Executor`."""
-        if self.__standalone:
-            await self._stack.enter_async_context(self._engine)
         self._expires = datetime.now(timezone.utc) + self._timeout
         return self
 
