@@ -13,8 +13,8 @@ class Net(object):
     def __init__(self, api_client: ApiClient):
         self._api = RequestorApi(api_client)
 
-    async def create_network(self, network):
-        await self._api.create_network(
+    async def create_network(self, network) -> str:
+        yan_network = await self._api.create_network(
             yan.Network(
                 network.network_id,
                 network.network_address,
@@ -22,6 +22,7 @@ class Net(object):
                 gateway=network.gateway,
             )
         )
+        return yan_network.id
 
     async def add_address(self, network: Network, ip: str):
         address = yan.Address(ip)

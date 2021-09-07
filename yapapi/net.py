@@ -40,13 +40,12 @@ class Network:
         ip: str,
         owner_id: str,
         owner_ip: Optional[str] = None,
-        network_id: Optional[str] = None,
         mask: Optional[str] = None,
         gateway: Optional[str] = None,
     ):
-        network = cls(net_api, ip, owner_id, owner_ip, network_id, mask, gateway)
-        # create the network in yagna
-        await net_api.create_network(network)
+        network = cls(net_api, ip, owner_id, owner_ip, mask, gateway)
+        # create the network in yagna and set the id
+        network._network_id = await net_api.create_network(network)
         # add requestor's own address to the network
         await network.add_address(network.owner_ip)
         return network
@@ -57,7 +56,6 @@ class Network:
         ip: str,
         owner_id: str,
         owner_ip: Optional[str] = None,
-        network_id: Optional[str] = None,
         mask: Optional[str] = None,
         gateway: Optional[str] = None,
     ):
@@ -69,7 +67,7 @@ class Network:
             raise NetworkError(f"{e}.")
         self._hosts = self._ip_network.hosts()
 
-        self._network_id = network_id or "0x" + uuid4().hex
+        self._network_id = None
         self._gateway = gateway
         self._owner_id = owner_id
         self._owner_ip = owner_ip or self._next_address()
@@ -107,7 +105,7 @@ class Network:
         return {str(v.ip): k for k, v in self._nodes.items()}
 
     @property
-    def network_id(self):
+    def network_id(self) -> Optional[str]:
         return self._network_id
 
     def _ensure_ip_in_network(self, ip: str):
