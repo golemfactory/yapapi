@@ -86,13 +86,23 @@ async def main(subnet_tag, driver=None, network=None):
         def instances():
             return [f"{s.provider_name}: {s.state.value}" for s in cluster.instances]
 
+        def still_running():
+            return any([s for s in cluster.instances if s.is_available])
+
         while True:
             print(instances())
             try:
                 await asyncio.sleep(5)
             except (KeyboardInterrupt, asyncio.CancelledError):
-                print("shutting down")
                 break
+
+        cluster.stop()
+
+        cnt = 0
+        while cnt < 3 and still_running():
+            print(instances())
+            await asyncio.sleep(5)
+            cnt += 1
 
 
 if __name__ == "__main__":
