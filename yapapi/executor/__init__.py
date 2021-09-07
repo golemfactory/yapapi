@@ -28,13 +28,6 @@ import yapapi.utils
 from .task import Task, TaskStatus
 from ._smartq import SmartQueue
 
-
-if sys.version_info >= (3, 7):
-    from contextlib import AsyncExitStack
-else:
-    from async_exit_stack import AsyncExitStack  # type: ignore
-
-
 CFG_INVOICE_TIMEOUT: Final[timedelta] = timedelta(minutes=5)
 "Time to receive invoice from provider after tasks ended."
 
@@ -72,7 +65,6 @@ class Executor(AsyncContextManager):
         self._payload = payload
         self._timeout = timeout
         self._max_workers = max_workers
-        self._stack = AsyncExitStack()
 
     @property
     def driver(self) -> str:
@@ -91,7 +83,7 @@ class Executor(AsyncContextManager):
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Release resources used by this `Executor`."""
-        await self._stack.aclose()
+        pass
 
     def emit(self, event: events.Event) -> None:
         """Emit a computation event using this `Executor`'s engine."""
