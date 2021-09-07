@@ -18,7 +18,9 @@ class NetworkFactory(factory.Factory):
     def _create(cls, model_class, *args, **kwargs):
         if "net_api" not in kwargs:
             net_api = mock.AsyncMock()
-            net_api.create_network = mock.AsyncMock(return_value=faker.Faker().binary(length=16).hex())
+            net_api.create_network = mock.AsyncMock(
+                return_value=faker.Faker().binary(length=16).hex()
+            )
             kwargs["net_api"] = net_api
 
         pool = futures.ThreadPoolExecutor()

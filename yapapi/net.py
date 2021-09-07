@@ -67,7 +67,7 @@ class Network:
             raise NetworkError(f"{e}.")
         self._hosts = self._ip_network.hosts()
 
-        self._network_id = None
+        self._network_id: Optional[str] = None
         self._gateway = gateway
         self._owner_id = owner_id
         self._owner_ip = owner_ip or self._next_address()

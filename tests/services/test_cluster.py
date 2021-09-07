@@ -60,7 +60,13 @@ def _get_cluster():
             None,
         ),
         (
-            {"num_instances": 3, "network_addresses": ["10.0.0.1", "10.0.0.2",]},
+            {
+                "num_instances": 3,
+                "network_addresses": [
+                    "10.0.0.1",
+                    "10.0.0.2",
+                ],
+            },
             [call({}, "10.0.0.1"), call({}, "10.0.0.2"), call({}, None)],
             None,
         ),
