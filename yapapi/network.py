@@ -27,6 +27,11 @@ class Node:
     """IP address of this node in this particular VPN."""
 
     def get_deploy_args(self) -> Dict:
+        """
+        Generate a dictionary of arguments that are required for the appropriate
+        `Deploy` command of an exescript in order to pass the network configuration to the runtime
+        on the provider's end.
+        """
         deploy_args = {
             "net": [
                 {
