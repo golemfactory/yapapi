@@ -23,5 +23,7 @@ class NetworkFactory(factory.Factory):
             )
             kwargs["net_api"] = net_api
 
+        # we're using `futures.ThreadPoolExecutor` here
+        # to run an async awaitable in a synchronous manner
         pool = futures.ThreadPoolExecutor()
         return pool.submit(asyncio.run, model_class.create(*args, **kwargs)).result()
