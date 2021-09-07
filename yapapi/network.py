@@ -168,6 +168,11 @@ class Network:
                 f"The given IP ('{ip}') address must belong to the network ('{self._ip_network.with_netmask}')."
             )
 
+    def _ensure_ip_unique(self, ip: str):
+        """Ensure the given IP address has not already been assigned in this network."""
+        if ip in self.nodes_dict:
+            raise NetworkError(f"'{ip}' has already been assigned in this network.")
+
     async def add_owner_address(self, ip: str):
         """Assign the given IP address to the requestor in the Network.
 
@@ -176,9 +181,7 @@ class Network:
         self._ensure_ip_in_network(ip)
 
         async with self._nodes_lock:
-            if ip in self.nodes_dict.keys():
-                raise NetworkError(f"'{ip}' has already been assigned in this network.")
-
+            self._ensure_ip_unique(ip)
             self._nodes[self._owner_id] = Node(network=self, node_id=self._owner_id, ip=ip)
 
         await self._net_api.add_address(self, ip)
@@ -192,12 +195,11 @@ class Network:
         async with self._nodes_lock:
             if ip:
                 self._ensure_ip_in_network(ip)
-                if ip in self.nodes_dict.keys():
-                    raise NetworkError(f"'{ip}' has already been assigned in this network.")
+                self._ensure_ip_unique()
             else:
                 while True:
                     ip = str(self._next_address())
-                    if ip not in self.nodes_dict.keys():
+                    if ip not in self.nodes_dict:
                         break
 
             node = Node(network=self, node_id=node_id, ip=ip)
