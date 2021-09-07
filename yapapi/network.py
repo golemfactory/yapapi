@@ -112,7 +112,7 @@ class Network:
         self._network_id: Optional[str] = None
         self._gateway = gateway
         self._owner_id = owner_id
-        self._owner_ip = owner_ip or self._next_address()
+        self._owner_ip: IpAddress = ip_address(owner_ip) if owner_ip else self._next_address()
 
         self._nodes: Dict[str, Node] = dict()
         """the mapping between a Golem node id and a Node in this VPN."""
