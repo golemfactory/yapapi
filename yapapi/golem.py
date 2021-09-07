@@ -254,6 +254,7 @@ class Golem(_Engine):
         :param owner_ip: the desired IP address of the requestor node within the newly-created Network
         :param mask: Optional netmask (only if not provided within the `ip` argument)
         :param gateway: Optional gateway address for the network
+
         :return: a Network object allowing further manipulation of the created VPN
         """
         async with self._root_api_session.get(f"{self._api_config.root_url}/me") as resp:
