@@ -80,23 +80,41 @@ class Golem:
         stream_output: bool = False,
         app_key: Optional[str] = None,
     ):
-        self.budget = budget
-        self.strategy = strategy
-        self.subnet_tag = subnet_tag
-        self.driver = driver
-        self.network = network
-        self.event_consumer = event_consumer
-        self.stream_output = stream_output
-        self.app_key = app_key
+        self._init_args = {
+            'budget': budget,
+            'strategy': strategy,
+            'subnet_tag': subnet_tag,
+            'driver': driver,
+            'network': network,
+            'event_consumer': event_consumer,
+            'stream_output': stream_output,
+            'app_key': app_key,
+        }
 
-        self._engine: Optional[_Engine] = None
+        self._engine: _Engine = self._get_new_engine()
 
-        #   TODO: this is duplicated in _Engine, fix this
-        self._budget_amount = Decimal(budget)
+    @property
+    def driver(self) -> str:
+        """Name of the payment driver"""
+        return self._engine.driver
+
+    @property
+    def network(self) -> str:
+        """Name of the payment network"""
+        return self._engine.network
+
+    @property
+    def strategy(self) -> 'MarketStrategy':
+        """Return the instance of `MarketStrategy` used by the engine"""
+        return self._engine.strategy
+
+    @property
+    def subnet_tag(self) -> Optional[str]:
+        """Return the name of the subnet, or `None` if it is not set."""
+        return self._engine.subnet_tag
 
     async def __aenter__(self) -> 'Golem':
         try:
-            self._engine = self._create_engine()
             await self._engine.start()
             return self
         except:
@@ -104,18 +122,24 @@ class Golem:
             raise
 
     async def __aexit__(self, *exc_info) -> Optional[bool]:
-        return await self._engine.stop(*exc_info)
+        res = await self._engine.stop(*exc_info)
 
-    def _create_engine(self):
+        #   Engine that was stopped is not usable anymore, there is no "full" cleanup
+        #   That's why here we replace it with a fresh one
+        self._engine = self._get_new_engine()
+        return res
+
+    def _get_new_engine(self):
+        args = self._init_args
         return _Engine(
-            budget=self.budget,
-            strategy=self.strategy,
-            subnet_tag=self.subnet_tag,
-            driver=self.driver,
-            network=self.network,
-            event_consumer=self.event_consumer,
-            stream_output=self.stream_output,
-            app_key=self.app_key,
+            budget=args['budget'],
+            strategy=args['strategy'],
+            subnet_tag=args['subnet_tag'],
+            driver=args['driver'],
+            network=args['network'],
+            event_consumer=args['event_consumer'],
+            stream_output=args['stream_output'],
+            app_key=args['app_key'],
         )
 
     async def execute_tasks(
