@@ -159,11 +159,9 @@ class Golem(_Engine):
             the returned Cluster try to spawn another instance
         :param network: optional Network, representing a VPN to attach this Cluster's instances to
         :param network_addresses: optional list of addresses to assign to consecutive spawned instances.
-            If not provided, the addresses will be assigned automaticaly.
-            Otherwise, the number of addresses should correspond with the number of instances determined
-            based on the `num_instances` and/or `instance_params` arguments. If there are too few
-            addresses given in the `network_addresses` iterable to satisfy all spawned instances, the
-            rest of the addresses will be assigned automatically.
+            If there are too few addresses given in the `network_addresses` iterable to satisfy
+            all spawned instances, the rest (or all when the list is empty or not provided at all)
+            of the addresses will be assigned automatically.
             Requires the `network` argument to be provided at the same time.
         :return: a `Cluster` of service instances
 
