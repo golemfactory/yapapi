@@ -36,9 +36,9 @@ class Node:
             "net": [
                 {
                     "id": self.network.network_id,
-                    "ip": str(self.network.network_address),
-                    "mask": str(self.network.netmask),
-                    "nodeIp": str(self.ip),
+                    "ip": self.network.network_address,
+                    "mask": self.network.netmask,
+                    "nodeIp": self.ip,
                     "nodes": self.network.nodes_dict,
                 }
             ]
