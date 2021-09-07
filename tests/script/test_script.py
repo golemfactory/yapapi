@@ -105,9 +105,9 @@ class TestScript:
         # first script, should include implicit deploy and start cmds
         await script._before()
         assert len(script._commands) == 2
-        deploy_cmd, _ = script._commands[0]
+        deploy_cmd = script._commands[0]
         assert isinstance(deploy_cmd, Deploy)
-        start_cmd, _ = script._commands[1]
+        start_cmd = script._commands[1]
         assert isinstance(start_cmd, Start)
         assert work_context._started
 
@@ -123,7 +123,7 @@ class TestScript:
         future_result = script.run("/some/cmd", 1)
 
         await script._before()
-        run_cmd, _ = script._commands[2]
+        run_cmd = script._commands[2]
         result = CommandExecuted(
             "job_id", "agr_id", "script_id", 2, command=run_cmd.evaluate(work_context)
         )

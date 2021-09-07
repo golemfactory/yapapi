@@ -1,7 +1,6 @@
-import asyncio
 from datetime import timedelta
 import itertools
-from typing import Any, Awaitable, Callable, Dict, Iterator, Optional, List, Tuple, TYPE_CHECKING
+from typing import Any, Awaitable, Callable, Dict, Iterator, Optional, List, TYPE_CHECKING
 
 from yapapi.events import CommandExecuted
 from yapapi.script.capture import CaptureContext
@@ -63,7 +62,7 @@ class Script:
         self.timeout = timeout
         self.wait_for_results = wait_for_results
         self._ctx: "WorkContext" = context
-        self._commands: List[Tuple[Command, asyncio.Future]] = []
+        self._commands: List[Command] = []
         self._id: int = next(script_ids)
 
     @property
@@ -78,35 +77,32 @@ class Script:
     def _evaluate(self) -> List[BatchCommand]:
         """Evaluate and serialize this script to a list of batch commands."""
         batch: List[BatchCommand] = []
-        for cmd, _future in self._commands:
+        for cmd in self._commands:
             batch.append(cmd.evaluate(self._ctx))
         return batch
 
     async def _after(self):
         """Hook which is executed after the script has been run on the provider."""
-        for cmd, _future in self._commands:
+        for cmd in self._commands:
             await cmd.after(self._ctx)
 
     async def _before(self):
         """Hook which is executed before the script is evaluated and sent to the provider."""
         if not self._ctx._started and self._ctx._implicit_init:
-            loop = asyncio.get_event_loop()
-            self._commands.insert(0, (Deploy(), loop.create_future()))
-            self._commands.insert(1, (Start(), loop.create_future()))
+            self._commands.insert(0, Deploy())
+            self._commands.insert(1, Start())
             self._ctx._started = True
 
-        for cmd, _future in self._commands:
+        for cmd in self._commands:
             await cmd.before(self._ctx)
 
-    def _set_cmd_result(self, result: CommandExecuted) -> None:
-        cmd, future = self._commands[result.cmd_idx]
-        future.set_result(result)
+    def _set_cmd_result(self, cmd_event: CommandExecuted) -> None:
+        cmd = self._commands[cmd_event.cmd_idx]
+        cmd._result.set_result(cmd_event)
 
     def add(self, cmd: Command) -> Awaitable[CommandExecuted]:
-        loop = asyncio.get_event_loop()
-        future_result = loop.create_future()
-        self._commands.append((cmd, future_result))
-        return future_result
+        self._commands.append(cmd)
+        return cmd._result
 
     def deploy(self) -> Awaitable[CommandExecuted]:
         """Schedule a Deploy command on the provider."""

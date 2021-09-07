@@ -1,4 +1,5 @@
 import abc
+import asyncio
 from functools import partial
 import json
 from os import PathLike
@@ -6,7 +7,7 @@ from pathlib import Path
 from typing import Callable, List, Optional, Dict, Union, Any, Awaitable, TYPE_CHECKING
 
 
-from yapapi.events import DownloadStarted, DownloadFinished
+from yapapi.events import CommandExecuted, DownloadStarted, DownloadFinished
 from yapapi.script.capture import CaptureContext
 from yapapi.storage import StorageProvider, Source, Destination, DOWNLOAD_BYTES_LIMIT_DEFAULT
 
@@ -36,6 +37,9 @@ class Command(abc.ABC):
         kwargs = dict((key[1:] if key[0] == "_" else key, value) for key, value in kwargs.items())
         return {cmd_name: kwargs}
 
+    def __init__(self):
+        self._result: Awaitable[CommandExecuted] = asyncio.get_event_loop().create_future()
+
 
 class Deploy(Command):
     """Command which deploys a given runtime on the provider."""
@@ -48,6 +52,7 @@ class Start(Command):
     """Command which starts a given runtime on the provider."""
 
     def __init__(self, *args: str):
+        super().__init__()
         self.args = args
 
     def __repr__(self):
@@ -66,6 +71,7 @@ class Terminate(Command):
 
 class _SendContent(Command, abc.ABC):
     def __init__(self, dst_path: str):
+        super().__init__()
         self._dst_path = dst_path
         self._src: Optional[Source] = None
 
@@ -153,6 +159,7 @@ class Run(Command):
         :param stderr: capture context to use for stderr
         :param stdout: capture context to use for stdout
         """
+        super().__init__()
         self.cmd = cmd
         self.args = args
         self.env = env
@@ -178,6 +185,7 @@ class _ReceiveContent(Command, abc.ABC):
         self,
         src_path: str,
     ):
+        super().__init__()
         self._src_path: str = src_path
         self._dst_slot: Optional[Destination] = None
         self._dst_path: Optional[PathLike] = None
