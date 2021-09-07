@@ -117,7 +117,6 @@ class Golem(_Engine):
             kwargs["max_workers"] = max_workers
         if timeout:
             kwargs["timeout"] = timeout
-        kwargs["budget"] = budget if budget is not None else self._budget_amount
 
         async with Executor(_engine=self, **kwargs) as executor:
             async for t in executor.submit(worker, data, job_id=job_id):
