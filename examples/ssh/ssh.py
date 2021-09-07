@@ -32,7 +32,7 @@ class SshService(Service):
     @staticmethod
     async def get_payload():
         return await vm.repo(
-            image_hash="23145d371090cfdac5715240141ad0735e1ce507b11ae2beef6d597f",
+            image_hash="ea233c6774b1621207a48e10b46e3e1f944d881911f499f5cbac546a",
             min_mem_gib=0.5,
             min_storage_gib=2.0,
         )
@@ -42,18 +42,20 @@ class SshService(Service):
         net = self.network.network_id
         app_key = self.cluster._engine._api_config.app_key
 
-        print(
-            f"""Connect with:
-{TEXT_COLOR_CYAN}
-ssh -o ProxyCommand='websocat asyncstdio: ws://127.0.0.1:7465/net-api/v1/net/{net}/tcp/{ip}/22 --binary -H=Authorization:"Bearer {app_key}"' root@{ip}
-{TEXT_COLOR_DEFAULT}"""
-        )
-
         self._ctx.run("/bin/bash", "-c", "syslogd")
         self._ctx.run("/bin/bash", "-c", "ssh-keygen -A")
         self._ctx.run("/bin/bash", "-c", "/usr/sbin/sshd")
-        self._ctx.run("/bin/bash", "-c", "sleep 3600")
-        yield self._ctx.commit(timeout=timedelta(minutes=30))
+        yield self._ctx.commit()
+
+        print(
+            "Connect with:\n"
+            f"{TEXT_COLOR_CYAN}"
+            f"ssh -o ProxyCommand='websocat asyncstdio: ws://127.0.0.1:7465/net-api/v1/net/{net}/tcp/{ip}/22 --binary -H=Authorization:\"Bearer {app_key}\"' root@{ip}"
+            f"{TEXT_COLOR_DEFAULT}"
+        )
+
+        # await indefinitely...
+        await asyncio.Future()
 
 
 async def main(subnet_tag, driver=None, network=None):

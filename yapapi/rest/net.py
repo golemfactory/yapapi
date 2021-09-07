@@ -18,7 +18,7 @@ class Net(object):
     ) -> str:
         yan_network = await self._api.create_network(
             yan.Network(
-                network_address,
+                ip=network_address,
                 mask=netmask,
                 gateway=gateway,
             )
