@@ -62,35 +62,15 @@ class Executor(AsyncContextManager):
         self,
         *,
         _engine: _Engine,
+        payload: Payload,
         max_workers: int = 5,
         timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
-        package: Optional[Payload] = None,
-        payload: Optional[Payload] = None,
     ):
-        """Initialize an `Executor`.
-
-        :param max_workers: maximum number of concurrent workers performing the computation
-        :param payload: specification of payload (for example a VM package) that needs to be
-            deployed on providers in order to compute tasks with this Executor
-        :param timeout: timeout for the whole computation
-        """
         logger.debug("Creating Executor instance; parameters: %s", locals())
 
         self._engine = _engine
-
-        if package:
-            if payload:
-                raise ValueError("Cannot use `payload` and `package` at the same time")
-            logger.warning(
-                f"`package` argument to `{self.__class__}` is deprecated,"
-                " please use `payload` instead"
-            )
-            payload = package
-        if not payload:
-            raise ValueError("Executor `payload` must be specified")
-
         self._payload = payload
-        self._timeout: timedelta = timeout
+        self._timeout = timeout
         self._max_workers = max_workers
         self._stack = AsyncExitStack()
 
