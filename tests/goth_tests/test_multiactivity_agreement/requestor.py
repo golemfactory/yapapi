@@ -4,7 +4,7 @@ import asyncio
 from datetime import timedelta
 import logging
 
-from yapapi import Executor, Task
+from yapapi import Golem, Task
 from yapapi.log import enable_default_logger, log_event_repr  # noqa
 from yapapi.package import vm
 
@@ -25,17 +25,19 @@ async def main():
             task.accept_result()
             return
 
-    async with Executor(
+    async with Golem(
         budget=10.0,
-        package=vm_package,
-        max_workers=1,
         subnet_tag="goth",
-        timeout=timedelta(minutes=6),
         event_consumer=log_event_repr,
-    ) as executor:
-
+    ) as golem:
         tasks = [Task(data=n) for n in range(3)]
-        async for task in executor.submit(worker, tasks):
+        async for task in golem.execute_tasks(
+            worker,
+            tasks,
+            vm_package,
+            max_workers=1,
+            timeout=timedelta(minutes=6),
+        ):
             print(f"Task computed: {task}")
 
 
