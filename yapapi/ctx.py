@@ -346,6 +346,9 @@ class WorkContext:
     @property
     def provider_id(self) -> str:
         """Return the id of the provider associated with this work context."""
+
+        # we cannot directly make it part of the `NodeInfo` record as the `provider_id` is not
+        # one of the `Offer.properties` but rather a separate attribute on the `Offer` class
         return self._agreement_details.raw_details.offer.provider_id  # type: ignore
 
     @property
