@@ -118,9 +118,9 @@ class Golem(_Engine):
         if timeout:
             kwargs["timeout"] = timeout
 
-        async with Executor(_engine=self, **kwargs) as executor:
-            async for t in executor.submit(worker, data, job_id=job_id):
-                yield t
+        executor = Executor(_engine=self, **kwargs)
+        async for t in executor.submit(worker, data, job_id=job_id):
+            yield t
 
     async def run_service(
         self,

@@ -4,7 +4,6 @@ from asyncio import CancelledError
 from datetime import datetime, timedelta, timezone
 import sys
 from typing import (
-    AsyncContextManager,
     AsyncIterator,
     Awaitable,
     Callable,
@@ -44,7 +43,7 @@ D = TypeVar("D")  # Type var for task data
 R = TypeVar("R")  # Type var for task result
 
 
-class Executor(AsyncContextManager):
+class Executor:
     """Task executor.
 
     Used to run batch tasks using the specified application package within providers'
@@ -75,15 +74,6 @@ class Executor(AsyncContextManager):
     def network(self) -> str:
         """Return the payment network used for this `Executor`'s engine."""
         return self._engine.network
-
-    async def __aenter__(self) -> "Executor":
-        """Start computation using this `Executor`."""
-        self._expires = datetime.now(timezone.utc) + self._timeout
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Release resources used by this `Executor`."""
-        pass
 
     def emit(self, event: events.Event) -> None:
         """Emit a computation event using this `Executor`'s engine."""
@@ -125,7 +115,7 @@ class Executor(AsyncContextManager):
 
         job = Job(
             self._engine,
-            expiration_time=self._expires,
+            expiration_time=datetime.now(timezone.utc) + self._timeout,
             payload=self._payload,
             id=job_id,
         )
@@ -169,7 +159,7 @@ class Executor(AsyncContextManager):
         job: Job,
     ) -> AsyncGenerator[Task[D, R], None]:
 
-        self.emit(events.ComputationStarted(job.id, self._expires))
+        self.emit(events.ComputationStarted(job.id, job.expiration_time))
 
         done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
 
@@ -275,7 +265,7 @@ class Executor(AsyncContextManager):
             while wait_until_done in services or not done_queue.empty():
 
                 now = datetime.now(timezone.utc)
-                if now > self._expires:
+                if now > job.expiration_time:
                     raise TimeoutError(f"Computation timed out after {self._timeout}")
                 if now > get_offers_deadline and job.proposals_confirmed == 0:
                     self.emit(
