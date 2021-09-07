@@ -79,7 +79,7 @@ class Network:
         network._network_id = await net_api.create_network(network)
 
         # add requestor's own address to the network
-        await network.add_address(network.owner_ip)
+        await network.add_owner_address(network.owner_ip)
 
         return network
 
@@ -168,7 +168,7 @@ class Network:
                 f"The given IP ('{ip}') address must belong to the network ('{self._ip_network.with_netmask}')."
             )
 
-    async def add_address(self, ip: str):
+    async def add_owner_address(self, ip: str):
         """Assign the given IP address to the requestor in the Network.
 
         :param ip: the IP address to assign to the requestor node.
