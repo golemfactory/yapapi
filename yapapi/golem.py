@@ -21,7 +21,7 @@ from yapapi.ctx import WorkContext
 from yapapi.engine import _Engine, WorkItem
 from yapapi.executor import Executor
 from yapapi.executor.task import Task
-from yapapi.net import Network
+from yapapi.network import Network
 from yapapi.payload import Payload
 from yapapi.services import Cluster, Service
 

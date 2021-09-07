@@ -36,7 +36,7 @@ else:
 from yapapi import rest, events
 from yapapi.ctx import WorkContext
 from yapapi.engine import _Engine, Job, WorkItem
-from yapapi.net import Network, Node
+from yapapi.network import Network, Node
 from yapapi.payload import Payload
 from yapapi.rest.activity import Activity, BatchError
 

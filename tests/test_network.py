@@ -2,10 +2,10 @@ import pytest
 import sys
 from unittest import mock
 
-from yapapi.net import Network, NetworkError
+from yapapi.network import Network, NetworkError
 
 if sys.version_info >= (3, 8):
-    from tests.factories.net import NetworkFactory
+    from tests.factories.network import NetworkFactory
 
 
 def test_init():

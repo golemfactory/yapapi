@@ -4,7 +4,7 @@ from ya_net import (
     models as yan,
 )
 
-from yapapi.net import Network
+from yapapi.network import Network
 
 
 class Net(object):

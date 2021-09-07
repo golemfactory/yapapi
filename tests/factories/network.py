@@ -4,7 +4,7 @@ import factory
 import faker
 from unittest import mock
 
-from yapapi.net import Network
+from yapapi.network import Network
 
 
 class NetworkFactory(factory.Factory):
