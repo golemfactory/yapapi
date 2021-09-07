@@ -42,7 +42,9 @@ class SshService(Service):
         ip = self.network_node.ip
         net = self.network.network_id
         app_key = self.cluster._engine._api_config.app_key
-        net_api_ws = urlparse(self.cluster._engine._api_config.net_url)._replace(scheme="ws").geturl()
+        net_api_ws = (
+            urlparse(self.cluster._engine._api_config.net_url)._replace(scheme="ws").geturl()
+        )
 
         self._ctx.run("/bin/bash", "-c", "syslogd")
         self._ctx.run("/bin/bash", "-c", "ssh-keygen -A")
