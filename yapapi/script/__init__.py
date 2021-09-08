@@ -37,7 +37,7 @@ class Script:
     Commands will be run in the order in which they were added to the script.
 
     If the `WorkContext` instance this `Script` uses has the field `_implicit_init` set to `True`,
-    the first script to be yielded is going to prepend the user's commands with `Deploy` and
+    the first yielded script is going to be prepended with `Deploy` and
     `Start` commands.
     """
 
