@@ -11,6 +11,7 @@ from ya_activity.models import (
     ActivityState as yaa_ActivityState,
 )
 
+from yapapi.events import CommandExecuted
 from yapapi.props.com import ComLinear
 from yapapi.script import Script
 from yapapi.storage import StorageProvider, DOWNLOAD_BYTES_LIMIT_DEFAULT
@@ -22,6 +23,7 @@ from yapapi.utils import get_local_timezone
 logger = logging.getLogger(__name__)
 
 
+@deprecated(version="0.7.0", reason="replaced by Script._commands")
 class CommandContainer:
     def __init__(self):
         self._commands = []
@@ -131,49 +133,49 @@ class WorkContext:
         return Script(self)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
-    def deploy(self):
+    def deploy(self) -> Awaitable[CommandExecuted]:
         """Schedule a Deploy command."""
-        self.__script.deploy()
+        return self.__script.deploy()
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
-    def start(self, *args: str):
+    def start(self, *args: str) -> Awaitable[CommandExecuted]:
         """Schedule a Start command."""
-        self.__script.start(*args)
+        return self.__script.start(*args)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
-    def terminate(self):
+    def terminate(self) -> Awaitable[CommandExecuted]:
         """Schedule a Terminate command."""
-        self.__script.terminate()
+        return self.__script.terminate()
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
-    def send_json(self, json_path: str, data: dict):
+    def send_json(self, json_path: str, data: dict) -> Awaitable[CommandExecuted]:
         """Schedule sending JSON data to the provider.
 
         :param json_path: remote (provider) path
         :param data: dictionary representing JSON data
         :return: None
         """
-        self.__script.send_json(data, json_path)
+        return self.__script.send_json(data, json_path)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
-    def send_bytes(self, dst_path: str, data: bytes):
+    def send_bytes(self, dst_path: str, data: bytes) -> Awaitable[CommandExecuted]:
         """Schedule sending bytes data to the provider.
 
         :param dst_path: remote (provider) path
         :param data: bytes to send
         :return: None
         """
-        self.__script.send_bytes(data, dst_path)
+        return self.__script.send_bytes(data, dst_path)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
-    def send_file(self, src_path: str, dst_path: str):
+    def send_file(self, src_path: str, dst_path: str) -> Awaitable[CommandExecuted]:
         """Schedule sending file to the provider.
 
         :param src_path: local (requestor) path
         :param dst_path: remote (provider) path
         :return: None
         """
-        self.__script.send_file(src_path, dst_path)
+        return self.__script.send_file(src_path, dst_path)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def run(
@@ -181,7 +183,7 @@ class WorkContext:
         cmd: str,
         *args: str,
         env: Optional[Dict[str, str]] = None,
-    ):
+    ) -> Awaitable[CommandExecuted]:
         """Schedule running a command.
 
         :param cmd: command to run on the provider, e.g. /my/dir/run.sh
@@ -189,17 +191,17 @@ class WorkContext:
         :param env: optional dictionary with environmental variables
         :return: None
         """
-        self.__script.run(cmd, *args, env=env)
+        return self.__script.run(cmd, *args, env=env)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
-    def download_file(self, src_path: str, dst_path: str):
+    def download_file(self, src_path: str, dst_path: str) -> Awaitable[CommandExecuted]:
         """Schedule downloading remote file from the provider.
 
         :param src_path: remote (provider) path
         :param dst_path: local (requestor) path
         :return: None
         """
-        self.__script.download_file(src_path, dst_path)
+        return self.__script.download_file(src_path, dst_path)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def download_bytes(
@@ -207,7 +209,7 @@ class WorkContext:
         src_path: str,
         on_download: Callable[[bytes], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
-    ):
+    ) -> Awaitable[CommandExecuted]:
         """Schedule downloading a remote file as bytes
 
         :param src_path: remote (provider) path
@@ -215,7 +217,7 @@ class WorkContext:
         :param limit: the maximum length of the expected byte string
         :return None
         """
-        self.__script.download_bytes(src_path, on_download, limit)
+        return self.__script.download_bytes(src_path, on_download, limit)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def download_json(
@@ -223,7 +225,7 @@ class WorkContext:
         src_path: str,
         on_download: Callable[[Any], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
-    ):
+    ) -> Awaitable[CommandExecuted]:
         """Schedule downloading a remote file as JSON
 
         :param src_path: remote (provider) path
@@ -231,7 +233,7 @@ class WorkContext:
         :param limit: the maximum length of the expected remote file
         :return None
         """
-        self.__script.download_json(src_path, on_download, limit)
+        return self.__script.download_json(src_path, on_download, limit)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def commit(self, timeout: Optional[timedelta] = None) -> Script:
