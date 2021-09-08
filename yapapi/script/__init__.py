@@ -31,7 +31,7 @@ class Script:
     """Represents a series of commands to be executed on a provider node.
 
     New commands are added to the script either through its `add` method or by calling one of the
-    convenience methods provided (for example: `run` or `send_json`).
+    convenience methods provided (for example: `run` or `upload_json`).
     Adding a new command *does not* result in it being immediately executed. Once ready, a `Script`
     instance is meant to be yielded from a worker function (work generator pattern).
     Commands will be run in the order in which they were added to the script.
@@ -116,30 +116,6 @@ class Script:
         """Schedule a Terminate command on the provider."""
         return self.add(Terminate())
 
-    def send_json(self, data: dict, dst_path: str) -> Awaitable[CommandExecuted]:
-        """Schedule sending JSON data to the provider.
-
-        :param data: dictionary representing JSON data to send
-        :param dst_path: remote (provider) destination path
-        """
-        return self.add(SendJson(data, dst_path))
-
-    def send_bytes(self, data: bytes, dst_path: str) -> Awaitable[CommandExecuted]:
-        """Schedule sending bytes data to the provider.
-
-        :param data: bytes to send
-        :param dst_path: remote (provider) destination path
-        """
-        return self.add(SendBytes(data, dst_path))
-
-    def send_file(self, src_path: str, dst_path: str) -> Awaitable[CommandExecuted]:
-        """Schedule sending a file to the provider.
-
-        :param src_path: local (requestor) source path
-        :param dst_path: remote (provider) destination path
-        """
-        return self.add(SendFile(src_path, dst_path))
-
     def run(
         self,
         cmd: str,
@@ -158,14 +134,6 @@ class Script:
         """
         return self.add(Run(cmd, *args, env=env, stdout=stdout, stderr=stderr))
 
-    def download_file(self, src_path: str, dst_path: str) -> Awaitable[CommandExecuted]:
-        """Schedule downloading a remote file from the provider.
-
-        :param src_path: remote (provider) source path
-        :param dst_path: local (requestor) destination path
-        """
-        return self.add(DownloadFile(src_path, dst_path))
-
     def download_bytes(
         self,
         src_path: str,
@@ -180,6 +148,14 @@ class Script:
         """
         return self.add(DownloadBytes(src_path, on_download, limit))
 
+    def download_file(self, src_path: str, dst_path: str) -> Awaitable[CommandExecuted]:
+        """Schedule downloading a remote file from the provider.
+
+        :param src_path: remote (provider) source path
+        :param dst_path: local (requestor) destination path
+        """
+        return self.add(DownloadFile(src_path, dst_path))
+
     def download_json(
         self,
         src_path: str,
@@ -193,3 +169,27 @@ class Script:
         :param limit: limit of bytes to be downloaded (expected size)
         """
         return self.add(DownloadJson(src_path, on_download, limit))
+
+    def upload_bytes(self, data: bytes, dst_path: str) -> Awaitable[CommandExecuted]:
+        """Schedule sending bytes data to the provider.
+
+        :param data: bytes to send
+        :param dst_path: remote (provider) destination path
+        """
+        return self.add(SendBytes(data, dst_path))
+
+    def upload_file(self, src_path: str, dst_path: str) -> Awaitable[CommandExecuted]:
+        """Schedule sending a file to the provider.
+
+        :param src_path: local (requestor) source path
+        :param dst_path: remote (provider) destination path
+        """
+        return self.add(SendFile(src_path, dst_path))
+
+    def upload_json(self, data: dict, dst_path: str) -> Awaitable[CommandExecuted]:
+        """Schedule sending JSON data to the provider.
+
+        :param data: dictionary representing JSON data to send
+        :param dst_path: remote (provider) destination path
+        """
+        return self.add(SendJson(data, dst_path))

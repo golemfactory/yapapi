@@ -35,7 +35,7 @@ class TestScript:
         self._on_download_executed = True
 
     @pytest.mark.asyncio
-    async def test_send_json(self):
+    async def test_upload_json(self):
         work_context = WorkContextFactory()
         storage: mock.AsyncMock = work_context._storage
         dst_path = "/test/path"
@@ -44,21 +44,21 @@ class TestScript:
         }
 
         script = work_context.new_script()
-        script.send_json(data, dst_path)
+        script.upload_json(data, dst_path)
         await script._before()
 
         storage.upload_bytes.assert_called_with(json.dumps(data).encode("utf-8"))
         self._assert_dst_path(script, dst_path)
 
     @pytest.mark.asyncio
-    async def test_send_bytes(self):
+    async def test_upload_bytes(self):
         work_context = WorkContextFactory()
         storage: mock.AsyncMock = work_context._storage
         dst_path = "/test/path"
         data = b"some byte string"
 
         script = work_context.new_script()
-        script.send_bytes(data, dst_path)
+        script.upload_bytes(data, dst_path)
         await script._before()
 
         storage.upload_bytes.assert_called_with(data)

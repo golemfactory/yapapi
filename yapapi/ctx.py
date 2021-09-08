@@ -155,7 +155,7 @@ class WorkContext:
         :param data: dictionary representing JSON data
         :return: None
         """
-        return self.__script.send_json(data, json_path)
+        return self.__script.upload_json(data, json_path)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def send_bytes(self, dst_path: str, data: bytes) -> Awaitable[CommandExecuted]:
@@ -165,7 +165,7 @@ class WorkContext:
         :param data: bytes to send
         :return: None
         """
-        return self.__script.send_bytes(data, dst_path)
+        return self.__script.upload_bytes(data, dst_path)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def send_file(self, src_path: str, dst_path: str) -> Awaitable[CommandExecuted]:
@@ -175,7 +175,7 @@ class WorkContext:
         :param dst_path: remote (provider) path
         :return: None
         """
-        return self.__script.send_file(src_path, dst_path)
+        return self.__script.upload_file(src_path, dst_path)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def run(
