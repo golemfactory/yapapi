@@ -72,10 +72,12 @@ async def main(running_time, subnet_tag, driver=None, network=None):
     async with Golem(
         budget=10.0, subnet_tag=subnet_tag, driver=driver, network=network, strategy=strategy
     ) as golem:
+        print("Running service")
         cluster = await golem.run_service(
             CustomCounterService,
             num_instances=1,
         )
+        print("Cluster ready")
 
         def print_instances():
             print(f"instances: {[{s.id, s.state.value} for s in cluster.instances]}", file=stderr)
@@ -88,6 +90,7 @@ async def main(running_time, subnet_tag, driver=None, network=None):
         start_time = datetime.now()
 
         while datetime.now() < start_time + timedelta(seconds=running_time):
+            print(f"Sleeping, current time: {datetime.now()}")
             await asyncio.sleep(3)
 
             n = len(cluster.instances)
