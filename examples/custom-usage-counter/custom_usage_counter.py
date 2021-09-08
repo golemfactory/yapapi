@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
+from sys import stderr
 
 from yapapi.strategy import LeastExpensiveLinearPayuMS, DecreaseScoreForUnconfirmedAgreement
 
@@ -33,20 +34,21 @@ class CustomCounterService(Service):
         return CustomCounterServicePayload()
 
     async def run(self):
-        print(f"service {self.id} running on {self.provider_name}...")
+        print(f"service {self.id} running on {self.provider_name}...", file=stderr)
         for _ in range(0, 10):
             self._ctx.run("sleep", "1000")
             yield self._ctx.commit()
             usage: ActivityUsage = await self._ctx.get_usage()
             cost = await self._ctx.get_cost()
             print(
-                f"total cost so far: {cost}; activity usage: {usage.current_usage} at {usage.timestamp}"
+                f"total cost so far: {cost}; activity usage: {usage.current_usage} at {usage.timestamp}",
+                file=stderr,
             )
             await asyncio.sleep(3)
 
     async def shutdown(self):
         await super().shutdown()
-        print(f"service {self.id} stopped on {self.provider_name}")
+        print(f"service {self.id} stopped on {self.provider_name}", file=stderr)
 
 
 async def main(running_time, subnet_tag, driver=None, network=None):
@@ -76,7 +78,7 @@ async def main(running_time, subnet_tag, driver=None, network=None):
         )
 
         def print_instances():
-            print(f"instances: {[{s.id, s.state.value} for s in cluster.instances]}")
+            print(f"instances: {[{s.id, s.state.value} for s in cluster.instances]}", file=stderr)
 
         def running():
             return any([s for s in cluster.instances if s.is_available])
