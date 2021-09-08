@@ -121,8 +121,8 @@ class Script:
         cmd: str,
         *args: str,
         env: Optional[Dict[str, str]] = None,
-        stderr: CaptureContext = CaptureContext.build(mode="stream"),
-        stdout: CaptureContext = CaptureContext.build(mode="stream"),
+        stderr: Optional[CaptureContext] = None,
+        stdout: Optional[CaptureContext] = None,
     ) -> Awaitable[CommandExecuted]:
         """Schedule running a shell command on the provider.
 
@@ -132,7 +132,13 @@ class Script:
         :param stderr: capture context to use for stderr
         :param stdout: capture context to use for stdout
         """
-        return self.add(Run(cmd, *args, env=env, stdout=stdout, stderr=stderr))
+        kwargs = {"env": env}
+        if stdout is not None:
+            kwargs["stdout"] = stdout
+        if stderr is not None:
+            kwargs["stderr"] = stderr
+
+        return self.add(Run(cmd, *args, **kwargs))
 
     def download_bytes(
         self,
