@@ -51,14 +51,12 @@ class TestWorkContext:
     @staticmethod
     def _assert_dst_path(script: Script, dst_path):
         batch = script._evaluate()
-        # transfer_cmd = {'transfer': {'from': 'some/mock/path', 'to': 'container:expected/path'}
         transfer_cmd = [cmd for cmd in batch if "transfer" in cmd][0]
         assert transfer_cmd["transfer"]["to"] == f"container:{dst_path}"
 
     @staticmethod
     def _assert_src_path(script: Script, src_path):
         batch = script._evaluate()
-        # transfer_cmd = {'transfer': {'from': 'container:expected/path', 'to': 'some/mock/path'}
         transfer_cmd = [cmd for cmd in batch if "transfer" in cmd][0]
         assert transfer_cmd["transfer"]["from"] == f"container:{src_path}"
 

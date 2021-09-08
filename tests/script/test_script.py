@@ -4,10 +4,12 @@ import pytest
 import sys
 from unittest import mock
 
-from yapapi import WorkContext
 from yapapi.events import CommandExecuted
 from yapapi.script import Script
 from yapapi.script.command import Deploy, Start
+
+if sys.version_info >= (3, 8):
+    from tests.factories.context import WorkContextFactory
 
 
 @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
@@ -16,21 +18,15 @@ class TestScript:
     def setUp(self):
         self._on_download_executed = False
 
-    @pytest.fixture
-    def work_context(self):
-        return WorkContext(mock.MagicMock(), mock.MagicMock(), storage=mock.AsyncMock())
-
     @staticmethod
     def _assert_dst_path(script: Script, dst_path):
         batch = script._evaluate()
-        # transfer_cmd = {'transfer': {'from': 'some/mock/path', 'to': 'container:expected/path'}
         transfer_cmd = [cmd for cmd in batch if "transfer" in cmd][0]
         assert transfer_cmd["transfer"]["to"] == f"container:{dst_path}"
 
     @staticmethod
     def _assert_src_path(script: Script, src_path):
         batch = script._evaluate()
-        # transfer_cmd = {'transfer': {'from': 'container:expected/path', 'to': 'some/mock/path'}
         transfer_cmd = [cmd for cmd in batch if "transfer" in cmd][0]
         assert transfer_cmd["transfer"]["from"] == f"container:{src_path}"
 
@@ -39,7 +35,8 @@ class TestScript:
         self._on_download_executed = True
 
     @pytest.mark.asyncio
-    async def test_send_json(self, work_context: WorkContext):
+    async def test_send_json(self):
+        work_context = WorkContextFactory()
         storage: mock.AsyncMock = work_context._storage
         dst_path = "/test/path"
         data = {
@@ -54,7 +51,8 @@ class TestScript:
         self._assert_dst_path(script, dst_path)
 
     @pytest.mark.asyncio
-    async def test_send_bytes(self, work_context: WorkContext):
+    async def test_send_bytes(self):
+        work_context = WorkContextFactory()
         storage: mock.AsyncMock = work_context._storage
         dst_path = "/test/path"
         data = b"some byte string"
@@ -67,7 +65,8 @@ class TestScript:
         self._assert_dst_path(script, dst_path)
 
     @pytest.mark.asyncio
-    async def test_download_bytes(self, work_context: WorkContext):
+    async def test_download_bytes(self):
+        work_context = WorkContextFactory()
         expected = b"some byte string"
         storage: mock.AsyncMock = work_context._storage
         storage.new_destination.return_value.download_bytes.return_value = expected
@@ -82,7 +81,8 @@ class TestScript:
         assert self._on_download_executed
 
     @pytest.mark.asyncio
-    async def test_download_json(self, work_context: WorkContext):
+    async def test_download_json(self):
+        work_context = WorkContextFactory()
         expected = {"key": "val"}
         storage: mock.AsyncMock = work_context._storage
         storage.new_destination.return_value.download_bytes.return_value = json.dumps(
@@ -99,7 +99,8 @@ class TestScript:
         assert self._on_download_executed
 
     @pytest.mark.asyncio
-    async def test_implicit_init(self, work_context: WorkContext):
+    async def test_implicit_init(self):
+        work_context = WorkContextFactory()
         script = work_context.new_script()
 
         # first script, should include implicit deploy and start cmds
@@ -118,7 +119,8 @@ class TestScript:
         assert len(script._commands) == 1
 
     @pytest.mark.asyncio
-    async def test_cmd_result(self, work_context: WorkContext):
+    async def test_cmd_result(self):
+        work_context = WorkContextFactory()
         script = work_context.new_script()
         future_result = script.run("/some/cmd", 1)
 
