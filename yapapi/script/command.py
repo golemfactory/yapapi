@@ -167,11 +167,7 @@ class Run(Command):
         self.stdout = stdout
 
     def evaluate(self, ctx: "WorkContext"):
-        capture = dict()
-        if self.stdout:
-            capture["stdout"] = self.stdout.to_dict()
-        if self.stderr:
-            capture["stderr"] = self.stderr.to_dict()
+        capture = {"stdout": self.stdout.to_dict(), "stderr": self.stderr.to_dict()}
         return self._make_batch_command(
             "run", entry_point=self.cmd, args=self.args, capture=capture
         )
