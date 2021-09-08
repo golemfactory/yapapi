@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from decimal import Decimal
+import json
 from typing import (
     Any,
     AsyncIterator,
@@ -20,6 +21,7 @@ from yapapi.ctx import WorkContext
 from yapapi.engine import _Engine, WorkItem
 from yapapi.executor import Executor
 from yapapi.executor.task import Task
+from yapapi.network import Network
 from yapapi.payload import Payload
 from yapapi.services import Cluster, Service
 
@@ -131,6 +133,8 @@ class Golem(_Engine):
         payload: Optional[Payload] = None,
         expiration: Optional[datetime] = None,
         respawn_unstarted_instances=True,
+        network: Optional[Network] = None,
+        network_addresses: Optional[List[str]] = None,
     ) -> Cluster:
         """Run a number of instances of a service represented by a given `Service` subclass.
 
@@ -153,6 +157,12 @@ class Golem(_Engine):
         :param expiration: optional expiration datetime for the service
         :param respawn_unstarted_instances: if an instance fails in the `starting` state, should
             the returned Cluster try to spawn another instance
+        :param network: optional Network, representing a VPN to attach this Cluster's instances to
+        :param network_addresses: optional list of addresses to assign to consecutive spawned instances.
+            If there are too few addresses given in the `network_addresses` iterable to satisfy
+            all spawned instances, the rest (or all when the list is empty or not provided at all)
+            of the addresses will be assigned automatically.
+            Requires the `network` argument to be provided at the same time.
         :return: a `Cluster` of service instances
 
         example usage:
@@ -211,13 +221,43 @@ class Golem(_Engine):
                 " nor given in the `payload` argument."
             )
 
+        if network_addresses and not network:
+            raise ValueError("`network_addresses` provided without a `network`.")
+
         cluster = Cluster(
             engine=self,
             service_class=service_class,
             payload=payload,
             expiration=expiration,
             respawn_unstarted_instances=respawn_unstarted_instances,
+            network=network,
         )
         await self._stack.enter_async_context(cluster)
-        cluster.spawn_instances(num_instances=num_instances, instance_params=instance_params)
+        cluster.spawn_instances(num_instances, instance_params, network_addresses)
         return cluster
+
+    async def create_network(
+        self,
+        ip: str,
+        owner_ip: Optional[str] = None,
+        mask: Optional[str] = None,
+        gateway: Optional[str] = None,
+    ) -> Network:
+        """
+        Create a VPN inside Golem network.
+
+        Requires yagna >= 0.8
+
+        :param ip: the IP address of the network. May contain netmask, e.g. "192.168.0.0/24"
+        :param owner_ip: the desired IP address of the requestor node within the newly-created Network
+        :param mask: Optional netmask (only if not provided within the `ip` argument)
+        :param gateway: Optional gateway address for the network
+
+        :return: a Network object allowing further manipulation of the created VPN
+        """
+        async with self._root_api_session.get(f"{self._api_config.root_url}/me") as resp:
+            identity = json.loads(await resp.text()).get("identity")
+
+        return await Network.create(
+            self._net_api, ip, identity, owner_ip, mask=mask, gateway=gateway
+        )
