@@ -72,15 +72,17 @@ async def main(running_time, subnet_tag, driver=None, network=None):
     async with Golem(
         budget=10.0, subnet_tag=subnet_tag, driver=driver, network=network, strategy=strategy
     ) as golem:
-        print("Running service")
+        print(f"Running service {datetime.now()}")
         cluster = await golem.run_service(
             CustomCounterService,
             num_instances=1,
         )
-        print("Cluster ready")
+        print(f"Cluster ready {datetime.now()}")
 
         def print_instances():
-            print(f"instances: {[{s.id, s.state.value} for s in cluster.instances]}", file=stderr)
+            print(
+                f"instances: {[{s.id, s.state.value} for s in cluster.instances]} {datetime.now()}"
+            )
 
         def running():
             return any([s for s in cluster.instances if s.is_available])
@@ -98,17 +100,24 @@ async def main(running_time, subnet_tag, driver=None, network=None):
                 print_instances()
                 break
             elif n > 0:
+                print(f"n > 0, {datetime.now()}")
                 print_instances()
                 was_running = True
                 cluster.instances[0].send_message_nowait("go")
+
+        print(f"Done")
 
         for svc in cluster.instances:
             cluster.stop_instance(svc)
 
         while running():
+            print(f"Running")
             print_instances()
             await asyncio.sleep(1)
 
+        print(f"Done 2")
+
+    print(f"Done 3")
     print_instances()
 
 
