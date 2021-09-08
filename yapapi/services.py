@@ -36,6 +36,7 @@ else:
 from yapapi import rest, events
 from yapapi.ctx import WorkContext
 from yapapi.engine import _Engine, Job
+from yapapi.network import Network, Node
 from yapapi.payload import Payload
 from yapapi.rest.activity import Activity, BatchError
 from yapapi.script import Script
@@ -111,7 +112,7 @@ class Service:
     Service specifications.
     """
 
-    def __init__(self, cluster: "Cluster", ctx: WorkContext):
+    def __init__(self, cluster: "Cluster", ctx: WorkContext, network_node: Optional[Node] = None):
         """Initialize the service instance for a specific Cluster and a specific WorkContext.
 
         :param cluster: a cluster to which this service instance of this service belongs
@@ -120,6 +121,7 @@ class Service:
         """
         self._cluster: "Cluster" = cluster
         self._ctx: WorkContext = ctx
+        self._network_node: Optional[Node] = network_node
 
         self.__inqueue: asyncio.Queue[ServiceSignal] = asyncio.Queue()
         self.__outqueue: asyncio.Queue[ServiceSignal] = asyncio.Queue()
@@ -139,7 +141,7 @@ class Service:
         return self._cluster
 
     @property
-    def id(self):
+    def id(self) -> str:
         """Return the id of this service instance.
 
         Guaranteed to be unique within a Cluster.
@@ -147,9 +149,24 @@ class Service:
         return self._ctx.id
 
     @property
-    def provider_name(self):
+    def provider_name(self) -> Optional[str]:
         """Return the name of the provider that runs this service instance."""
         return self._ctx.provider_name
+
+    @property
+    def provider_id(self) -> str:
+        """Return the id of the provider that runs this service instance."""
+        return self._ctx.provider_id
+
+    @property
+    def network(self) -> Optional[Network]:
+        """Return the Network to which this instance belongs (if any)"""
+        return self.network_node.network if self.network_node else None
+
+    @property
+    def network_node(self) -> Optional[Node]:
+        """Return the network Node record associated with this instance."""
+        return self._network_node
 
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.id}>"
@@ -211,6 +228,13 @@ class Service:
         `Golem.run_service` call.
         """
         pass
+
+    def get_deploy_args(self) -> Dict:
+        """Return the dictionary of kwargs needed to construct the `Deploy` exescript command."""
+        kwargs = dict()
+        if self._network_node:
+            kwargs.update(self._network_node.get_deploy_args())
+        return kwargs
 
     async def start(self) -> AsyncGenerator[Script, Awaitable[List[events.CommandEvent]]]:
         """Implement the handler for the `starting` state of the service.
@@ -274,7 +298,7 @@ class Service:
         based on the requirements for the given runtime/exe-unit type.
         """
 
-        self._ctx.deploy()
+        self._ctx.deploy(**self.get_deploy_args())
         self._ctx.start()
         yield self._ctx.commit()
 
@@ -419,6 +443,7 @@ class Cluster(AsyncContextManager):
         payload: Payload,
         expiration: Optional[datetime] = None,
         respawn_unstarted_instances: bool = True,
+        network: Optional[Network] = None,
     ):
         """Initialize this Cluster.
 
@@ -429,6 +454,8 @@ class Cluster(AsyncContextManager):
             in this Cluster should be terminated
         :param respawn_unstarted_instances: if an instance fails in the `starting` state,
             should this Cluster try to spawn another instance
+        :param network: optional Network representing the VPN that this Cluster's instances will
+            be attached to.
         """
 
         self.id = str(next(cluster_ids))
@@ -449,6 +476,8 @@ class Cluster(AsyncContextManager):
         self._instance_tasks: Set[asyncio.Task] = set()
         """Set of asyncio tasks that run spawn_service()"""
 
+        self._network: Optional[Network] = network
+
     @property
     def expiration(self) -> datetime:
         """Return the expiration datetime for agreements related to services in this Cluster."""
@@ -463,6 +492,11 @@ class Cluster(AsyncContextManager):
     def service_class(self) -> Type[Service]:
         """Return the class instantiated by all service instances in this Cluster."""
         return self._service_class
+
+    @property
+    def network(self) -> Optional[Network]:
+        """Return the Network record associated with the VPN used by this Cluster."""
+        return self._network
 
     def __repr__(self):
         return (
@@ -684,7 +718,7 @@ class Cluster(AsyncContextManager):
 
         logger.info("%s decommissioned", instance.service)
 
-    async def spawn_instance(self, params: Dict) -> None:
+    async def spawn_instance(self, params: Dict, network_address: Optional[str] = None) -> None:
         """Spawn a new service instance within this Cluster."""
 
         logger.debug("spawning instance within %s", self)
@@ -706,7 +740,14 @@ class Cluster(AsyncContextManager):
                     task_data=f"Service: {self._service_class.__name__}",
                 )
             )
-            instance = ServiceInstance(service=self._service_class(self, work_context, **params))  # type: ignore
+            # prepare the Node entry for this instance, if the cluster is attached to a VPN
+            node: Optional[Node] = None
+            if self.network:
+                node = await self.network.add_node(work_context.provider_id, network_address)
+
+            instance = ServiceInstance(
+                service=self._service_class(self, work_context, network_node=node, **params)  # type: ignore
+            )
             try:
                 instance_batches = self._run_instance(instance)
                 try:
@@ -766,6 +807,7 @@ class Cluster(AsyncContextManager):
         self,
         num_instances: Optional[int] = None,
         instance_params: Optional[Iterable[Dict]] = None,
+        network_addresses: Optional[List[str]] = None,
     ) -> None:
         """Spawn new instances within this Cluster.
 
@@ -780,6 +822,10 @@ class Cluster(AsyncContextManager):
             In other words, if both `num_instances` and `instance_params` are provided,
             the number of instances spawned will be equal to `num_instances` and if there are
             too few elements in the `instance_params` iterable, it will results in an error.
+        :param network_addresses: optional list of network addresses in case the Cluster is
+            attached to VPN. If the list is not provided (or if the number of elements is less
+            than the number of spawned instances), any instances for which the addresses have not
+            been given, will be assigned an address automatically.
 
         """
         # just a sanity check
@@ -797,12 +843,20 @@ class Cluster(AsyncContextManager):
         # if not provided, make a default iterator consisting of empty dictionaries
         instance_params = iter(instance_params or (dict() for _ in range(num_instances)))  # type: ignore
 
+        # supply network_addresses as long as there are any still left
+        if network_addresses is None:
+            network_addresses = []
+        network_addresses_generator = (
+            network_addresses[i] if i < len(network_addresses) else None for i in itertools.count()
+        )
+
         loop = asyncio.get_event_loop()
         spawned_instances = 0
         while not num_instances or spawned_instances < num_instances:
             try:
                 params = next(instance_params)
-                task = loop.create_task(self.spawn_instance(params))
+                network_address = next(network_addresses_generator)
+                task = loop.create_task(self.spawn_instance(params, network_address))
                 self._instance_tasks.add(task)
                 spawned_instances += 1
             except StopIteration:

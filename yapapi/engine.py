@@ -1,4 +1,5 @@
 import asyncio
+import aiohttp
 from asyncio import CancelledError
 from collections import defaultdict
 import contextlib
@@ -240,6 +241,17 @@ class _Engine(AsyncContextManager):
 
             payment_client = await stack.enter_async_context(self._api_config.payment())
             self._payment_api = rest.Payment(payment_client)
+
+            net_client = await stack.enter_async_context(self._api_config.net())
+            self._net_api = rest.Net(net_client)
+
+            # TODO replace with a proper REST API client once ya-client and ya-aioclient are updated
+            # https://github.com/golemfactory/yapapi/issues/636
+            self._root_api_session = await stack.enter_async_context(
+                aiohttp.ClientSession(
+                    headers=net_client.default_headers,
+                )
+            )
 
             self.payment_decorator = _Engine.PaymentDecorator(await self._create_allocations())
 

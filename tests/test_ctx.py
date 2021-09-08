@@ -144,6 +144,22 @@ class TestWorkContext:
 
         assert batch == [{"start": {"args": args}}]
 
+    @pytest.mark.parametrize(
+        "kwargs",
+        (
+            {"foo": 42},
+            {},
+        ),
+    )
+    def test_deploy(self, kwargs):
+        ctx = self._get_work_context()
+        ctx.deploy(**kwargs)
+        script = ctx.commit()
+
+        batch = script._evaluate()
+
+        assert batch == [{"deploy": kwargs}]
+
     def test_terminate(self):
         ctx = self._get_work_context(None)
         ctx.terminate()

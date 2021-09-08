@@ -104,9 +104,9 @@ class Script:
         self._commands.append(cmd)
         return cmd._result
 
-    def deploy(self) -> Awaitable[CommandExecuted]:
+    def deploy(self, **kwargs: dict) -> Awaitable[CommandExecuted]:
         """Schedule a Deploy command on the provider."""
-        return self.add(Deploy())
+        return self.add(Deploy(**kwargs))
 
     def start(self, *args: str) -> Awaitable[CommandExecuted]:
         """Schedule a Start command on the provider."""
@@ -132,7 +132,7 @@ class Script:
         :param stderr: capture context to use for stderr
         :param stdout: capture context to use for stdout
         """
-        kwargs = {"env": env}
+        kwargs: dict = {"env": env}
         if stdout is not None:
             kwargs["stdout"] = stdout
         if stderr is not None:

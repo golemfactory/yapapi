@@ -44,8 +44,15 @@ class Command(abc.ABC):
 class Deploy(Command):
     """Command which deploys a given runtime on the provider."""
 
+    def __init__(self, **kwargs: dict):
+        super().__init__()
+        self.kwargs = kwargs
+
+    def __repr__(self):
+        return f"deploy {self.kwargs}"
+
     def evaluate(self, ctx: "WorkContext"):
-        return self._make_batch_command("deploy")
+        return self._make_batch_command("deploy", **self.kwargs)
 
 
 class Start(Command):
@@ -56,7 +63,7 @@ class Start(Command):
         self.args = args
 
     def __repr__(self):
-        return f"start{self.args}"
+        return f"start {self.args}"
 
     def evaluate(self, ctx: "WorkContext"):
         return self._make_batch_command("start", args=self.args)

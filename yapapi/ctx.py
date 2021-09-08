@@ -111,6 +111,14 @@ class WorkContext:
         return self._agreement_details.provider_node_info.name
 
     @property
+    def provider_id(self) -> str:
+        """Return the id of the provider associated with this work context."""
+
+        # we cannot directly make it part of the `NodeInfo` record as the `provider_id` is not
+        # one of the `Offer.properties` but rather a separate attribute on the `Offer` class
+        return self._agreement_details.raw_details.offer.provider_id  # type: ignore
+
+    @property
     def _payment_model(self) -> ComLinear:
         """Return the characteristics of the payment model associated with this work context."""
 
@@ -133,9 +141,9 @@ class WorkContext:
         return Script(self)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
-    def deploy(self) -> Awaitable[CommandExecuted]:
+    def deploy(self, **kwargs) -> Awaitable[CommandExecuted]:
         """Schedule a Deploy command."""
-        return self.__script.deploy()
+        return self.__script.deploy(**kwargs)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def start(self, *args: str) -> Awaitable[CommandExecuted]:

@@ -1,4 +1,4 @@
-"""Test if subscription expiration is handled correctly by Executor"""
+"""Test if subscription expiration is handled correctly by Golem"""
 from datetime import timedelta
 import logging
 import os
@@ -19,7 +19,7 @@ from goth.runner import Runner
 from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
 
-from yapapi import Executor, Task
+from yapapi import Golem, Task
 from yapapi.events import (
     Event,
     ComputationStarted,
@@ -172,16 +172,19 @@ async def test_demand_resubscription(log_dir: Path, goth_config_path: Path, monk
                 yield work_ctx.commit()
                 task.accept_result()
 
-        async with Executor(
+        async with Golem(
             budget=10.0,
-            package=vm_package,
-            max_workers=1,
-            timeout=timedelta(seconds=30),
             event_consumer=monitor.add_event_sync,
-        ) as executor:
+        ) as golem:
 
             task: Task  # mypy needs this for some reason
-            async for task in executor.submit(worker, [Task(data=n) for n in range(20)]):
+            async for task in golem.execute_tasks(
+                worker,
+                [Task(data=n) for n in range(20)],
+                vm_package,
+                max_workers=1,
+                timeout=timedelta(seconds=30),
+            ):
                 logger.info("Task %d computed", task.data)
 
         await monitor.stop()
