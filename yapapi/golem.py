@@ -334,9 +334,9 @@ class Golem:
 
         :return: a Network object allowing further manipulation of the created VPN
         """
-        async with self._root_api_session.get(f"{self._api_config.root_url}/me") as resp:
+        async with self._engine._root_api_session.get(f"{self._engine._api_config.root_url}/me") as resp:
             identity = json.loads(await resp.text()).get("identity")
 
         return await Network.create(
-            self._net_api, ip, identity, owner_ip, mask=mask, gateway=gateway
+            self._engine._net_api, ip, identity, owner_ip, mask=mask, gateway=gateway
         )
