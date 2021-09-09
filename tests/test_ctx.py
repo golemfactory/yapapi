@@ -6,6 +6,7 @@ import sys
 from unittest import mock
 
 from yapapi.ctx import CommandContainer, WorkContext
+from yapapi.script import Script
 
 
 def test_command_container():
@@ -37,6 +38,7 @@ def test_command_container():
     assert json.loads(expected_commands) == c.commands()
 
 
+@pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
 class TestWorkContext:
     @pytest.fixture(autouse=True)
     def setUp(self):
@@ -47,23 +49,22 @@ class TestWorkContext:
         return WorkContext(mock.Mock(), mock.Mock(), storage=storage)
 
     @staticmethod
-    def _assert_dst_path(steps, dst_path):
-        c = CommandContainer()
-        steps.register(c)
-        assert c.commands().pop()["transfer"]["to"] == f"container:{dst_path}"
+    def _assert_dst_path(script: Script, dst_path):
+        batch = script._evaluate()
+        transfer_cmd = [cmd for cmd in batch if "transfer" in cmd][0]
+        assert transfer_cmd["transfer"]["to"] == f"container:{dst_path}"
 
     @staticmethod
-    def _assert_src_path(steps, src_path):
-        c = CommandContainer()
-        steps.register(c)
-        assert c.commands().pop()["transfer"]["from"] == f"container:{src_path}"
+    def _assert_src_path(script: Script, src_path):
+        batch = script._evaluate()
+        transfer_cmd = [cmd for cmd in batch if "transfer" in cmd][0]
+        assert transfer_cmd["transfer"]["from"] == f"container:{src_path}"
 
     async def _on_download(self, expected, data: bytes):
         assert data == expected
         self._on_download_executed = True
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
     async def test_send_json(self):
         storage = mock.AsyncMock()
         dst_path = "/test/path"
@@ -71,58 +72,60 @@ class TestWorkContext:
             "param": "value",
         }
         ctx = self._get_work_context(storage)
+
         ctx.send_json(dst_path, data)
-        steps = ctx.commit()
-        await steps.prepare()
+        script = ctx.commit()
+        await script._before()
+
         storage.upload_bytes.assert_called_with(json.dumps(data).encode("utf-8"))
-        self._assert_dst_path(steps, dst_path)
+        self._assert_dst_path(script, dst_path)
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
     async def test_send_bytes(self):
         storage = mock.AsyncMock()
         dst_path = "/test/path"
         data = b"some byte string"
         ctx = self._get_work_context(storage)
+
         ctx.send_bytes(dst_path, data)
-        steps = ctx.commit()
-        await steps.prepare()
+        script = ctx.commit()
+        await script._before()
+
         storage.upload_bytes.assert_called_with(data)
-        self._assert_dst_path(steps, dst_path)
+        self._assert_dst_path(script, dst_path)
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
     async def test_download_bytes(self):
         expected = b"some byte string"
-
         storage = mock.AsyncMock()
         storage.new_destination.return_value.download_bytes.return_value = expected
-
         src_path = "/test/path"
         ctx = self._get_work_context(storage)
+
         ctx.download_bytes(src_path, partial(self._on_download, expected))
-        steps = ctx.commit()
-        await steps.prepare()
-        await steps.post()
-        self._assert_src_path(steps, src_path)
+        script = ctx.commit()
+        await script._before()
+        await script._after()
+
+        self._assert_src_path(script, src_path)
         assert self._on_download_executed
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
     async def test_download_json(self):
         expected = {"key": "val"}
-
         storage = mock.AsyncMock()
         storage.new_destination.return_value.download_bytes.return_value = json.dumps(
             expected
         ).encode("utf-8")
         src_path = "/test/path"
         ctx = self._get_work_context(storage)
+
         ctx.download_json(src_path, partial(self._on_download, expected))
-        steps = ctx.commit()
-        await steps.prepare()
-        await steps.post()
-        self._assert_src_path(steps, src_path)
+        script = ctx.commit()
+        await script._before()
+        await script._after()
+
+        self._assert_src_path(script, src_path)
         assert self._on_download_executed
 
     @pytest.mark.parametrize(
@@ -135,12 +138,11 @@ class TestWorkContext:
     def test_start(self, args):
         ctx = self._get_work_context()
         ctx.start(*args)
-        steps = ctx.commit()
+        script = ctx.commit()
 
-        c = CommandContainer()
-        steps.register(c)
+        batch = script._evaluate()
 
-        assert c.commands() == [{"start": {"args": args}}]
+        assert batch == [{"start": {"args": args}}]
 
     @pytest.mark.parametrize(
         "kwargs",
@@ -152,19 +154,17 @@ class TestWorkContext:
     def test_deploy(self, kwargs):
         ctx = self._get_work_context()
         ctx.deploy(**kwargs)
-        steps = ctx.commit()
+        script = ctx.commit()
 
-        c = CommandContainer()
-        steps.register(c)
+        batch = script._evaluate()
 
-        assert c.commands() == [{"deploy": kwargs}]
+        assert batch == [{"deploy": kwargs}]
 
     def test_terminate(self):
         ctx = self._get_work_context(None)
         ctx.terminate()
-        steps = ctx.commit()
+        script = ctx.commit()
 
-        c = CommandContainer()
-        steps.register(c)
+        batch = script._evaluate()
 
-        assert c.commands() == [{"terminate": {}}]
+        assert batch == [{"terminate": {}}]
