@@ -66,6 +66,13 @@ class Script:
         self._id: int = next(script_ids)
 
     @property
+    def results(self) -> List[CommandExecuted]:
+        """Return results of all commands of a finished script.
+
+        Raises asyncio.exceptions.InvalidStateError if called before processing of the script finished"""
+        return [cmd._result.result() for cmd in self._commands]
+
+    @property
     def id(self) -> int:
         """Return the ID of this script instance.
 

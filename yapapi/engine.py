@@ -598,13 +598,11 @@ class _Engine(AsyncContextManager):
             )
 
             async def get_batch_results() -> List[events.CommandEvent]:
-                results = []
                 async for evt_ctx in remote:
                     evt = evt_ctx.event(
                         job_id=job_id, agr_id=agreement_id, script_id=script_id, cmds=batch
                     )
                     self.emit(evt)
-                    results.append(evt)
                     if isinstance(evt, events.CommandExecuted):
                         if evt.success:
                             script._set_cmd_result(evt)
@@ -619,7 +617,7 @@ class _Engine(AsyncContextManager):
                     events.ScriptFinished(job_id=job_id, agr_id=agreement_id, script_id=script_id)
                 )
                 await self.accept_payments_for_agreement(job_id, agreement_id, partial=True)
-                return results
+                return script.results
 
             loop = asyncio.get_event_loop()
 
