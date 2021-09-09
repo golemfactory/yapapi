@@ -90,6 +90,7 @@ def enable_default_logger(
     debug_activity_api: bool = False,
     debug_market_api: bool = False,
     debug_payment_api: bool = False,
+    debug_net_api: bool = False,
 ):
     """Enable the default logger that logs messages to stderr with level `INFO`.
 
@@ -126,6 +127,7 @@ def enable_default_logger(
             (debug_activity_api, "ya_activity"),
             (debug_market_api, "ya_market"),
             (debug_payment_api, "ya_payment"),
+            (debug_net_api, "ya_net"),
         ):
             if flag:
                 api_logger = logging.getLogger(logger_name)

@@ -142,6 +142,23 @@ class TestWorkContext:
 
         assert c.commands() == [{"start": {"args": args}}]
 
+    @pytest.mark.parametrize(
+        "kwargs",
+        (
+            {"foo": 42},
+            {},
+        ),
+    )
+    def test_deploy(self, kwargs):
+        ctx = self._get_work_context()
+        ctx.deploy(**kwargs)
+        steps = ctx.commit()
+
+        c = CommandContainer()
+        steps.register(c)
+
+        assert c.commands() == [{"deploy": kwargs}]
+
     def test_terminate(self):
         ctx = self._get_work_context(None)
         ctx.terminate()

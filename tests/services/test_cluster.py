@@ -18,45 +18,56 @@ def _get_cluster():
     [
         (
             {"num_instances": 1},
-            [call({})],
+            [call({}, None)],
             None,
         ),
         (
             {"num_instances": 3},
-            [call({}) for _ in range(3)],
+            [call({}, None) for _ in range(3)],
             None,
         ),
         (
             {"instance_params": [{}]},
-            [call({})],
+            [call({}, None)],
             None,
         ),
         (
             {"instance_params": [{"n": 1}, {"n": 2}]},
-            [call({"n": 1}), call({"n": 2})],
+            [call({"n": 1}, None), call({"n": 2}, None)],
             None,
         ),
         (
             # num_instances takes precedence
             {"num_instances": 2, "instance_params": [{} for _ in range(3)]},
-            [call({}), call({})],
+            [call({}, None), call({}, None)],
             None,
         ),
         (
             # num_instances takes precedence
             {"num_instances": 3, "instance_params": ({"n": i} for i in itertools.count(1))},
-            [call({"n": 1}), call({"n": 2}), call({"n": 3})],
+            [call({"n": 1}, None), call({"n": 2}, None), call({"n": 3}, None)],
             None,
         ),
         (
             # num_instances takes precedence
             {"num_instances": 4, "instance_params": [{} for _ in range(3)]},
-            [call({}) for _ in range(3)],
+            [call({}, None) for _ in range(3)],
             "`instance_params` iterable depleted after 3 spawned instances.",
         ),
         (
             {"num_instances": 0},
             [],
+            None,
+        ),
+        (
+            {
+                "num_instances": 3,
+                "network_addresses": [
+                    "10.0.0.1",
+                    "10.0.0.2",
+                ],
+            },
+            [call({}, "10.0.0.1"), call({}, "10.0.0.2"), call({}, None)],
             None,
         ),
     ],
