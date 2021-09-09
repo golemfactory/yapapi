@@ -1,3 +1,5 @@
+
+import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import cast, List
@@ -6,6 +8,31 @@ import pytest
 
 from goth.configuration import Override
 from yapapi.package import vm
+
+
+#  `pytest-rerunfailures` and `pytest-asyncio` don't work together
+#   (https://github.com/pytest-dev/pytest-rerunfailures/issues/154)
+#   The same problem occurs when `flaky` is used instead of `pytest-rerunfailures`.
+#   Here we have a patch that is quite ugly, but hopefully harmless.
+class LoopThatIsNeverClosed(asyncio.AbstractEventLoop):
+    """Just a loop, but if you try to use it after it was closed you use a fresh loop"""
+    def __init__(self):
+        self._loop = None
+
+    def __getattribute__(self, name):
+        if name == '_loop':
+            return super().__getattribute__('_loop')
+        if self._loop is None or self._loop._closed:
+            self._loop = asyncio.new_event_loop()
+        return getattr(self._loop, name)
+
+
+@pytest.fixture
+def event_loop():
+    """This overrides `pytest.asyncio` fixture"""
+    loop = LoopThatIsNeverClosed()
+    yield loop
+    loop.close()
 
 
 def pytest_addoption(parser):
