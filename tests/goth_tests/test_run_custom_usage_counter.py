@@ -52,5 +52,5 @@ async def test_run_custom_usage_counter(
             cmd_monitor.add_assertion(assert_no_errors)
             cmd_monitor.add_assertion(assert_all_invoices_accepted)
 
-            await cmd_monitor.wait_for_pattern(".*All jobs have finished", timeout=200)
+            await cmd_monitor.wait_for_pattern(".*All jobs have finished", timeout=300)
             logger.info(f"Requestor script finished")
