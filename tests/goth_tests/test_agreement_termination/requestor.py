@@ -4,7 +4,7 @@ import asyncio
 from datetime import timedelta
 import logging
 
-from yapapi import Executor, Task, WorkContext
+from yapapi import Golem, Task, WorkContext
 from yapapi.log import enable_default_logger
 from yapapi.payload import vm
 
@@ -20,7 +20,7 @@ async def main():
     first_worker = True
 
     async def worker(ctx: WorkContext, tasks):
-        """A worker function for `Executor.submit()`.
+        """A worker function for `Golem.execute_tasks()`.
 
         The first call to this function will produce a worker
         that sends an invalid `run` command to the provider.
@@ -48,18 +48,21 @@ async def main():
 
             task.accept_result()
 
-    async with Executor(
-        package=package,
-        max_workers=1,
+    async with Golem(
         budget=10.0,
-        timeout=timedelta(minutes=6),
         subnet_tag="goth",
         driver="zksync",
         network="rinkeby",
-    ) as executor:
+    ) as golem:
 
         tasks = [Task(data=n) for n in range(6)]
-        async for task in executor.submit(worker, tasks):
+        async for task in golem.execute_tasks(
+            worker,
+            tasks,
+            package,
+            max_workers=1,
+            timeout=timedelta(minutes=6),
+        ):
             print(f"Task computed: {task}, time: {task.running_time}")
 
         print("All tasks computed")

@@ -7,7 +7,7 @@ from ya_payment import RequestorApi
 
 from yapapi import NoPaymentAccountError
 from yapapi.engine import DEFAULT_NETWORK, DEFAULT_DRIVER
-from yapapi.executor import Executor
+from yapapi.golem import Golem
 from yapapi.rest.payment import Account, Payment
 
 
@@ -73,9 +73,8 @@ async def test_no_accounts_raises(monkeypatch):
     monkeypatch.setattr(Payment, "accounts", _mock_accounts_iterator())
 
     with pytest.raises(NoPaymentAccountError):
-        async with Executor(package=mock.Mock(), budget=10.0) as executor:
-            async for _ in executor.submit(worker=mock.Mock(), data=mock.Mock()):
-                pass
+        async with Golem(budget=10.0):
+            pass
 
 
 @pytest.mark.asyncio
@@ -93,11 +92,9 @@ async def test_no_matching_account_raises(monkeypatch):
     )
 
     with pytest.raises(NoPaymentAccountError) as exc_info:
-        async with Executor(
-            package=mock.Mock(), budget=10.0, driver="matching-driver", network="matching-network"
-        ) as executor:
-            async for _ in executor.submit(worker=mock.Mock(), data=mock.Mock()):
-                pass
+        async with Golem(budget=10.0, driver="matching-driver", network="matching-network"):
+            pass
+
     exc = exc_info.value
     assert exc.required_driver == "matching-driver"
     assert exc.required_network == "matching-network"
@@ -132,14 +129,12 @@ async def test_matching_account_creates_allocation(monkeypatch, _mock_decorate_d
     monkeypatch.setattr(RequestorApi, "release_allocation", mock_release_allocation)
 
     with pytest.raises(_StopExecutor):
-        async with Executor(
-            package=mock.Mock(),
+        async with Golem(
             budget=10.0,
             driver="matching-driver",
             network="matching-network",
-        ) as executor:
-            async for _ in executor.submit(worker=mock.Mock(), data=mock.Mock()):
-                pass
+        ):
+            pass
 
     assert len(create_allocation_args) == 2
     assert create_allocation_args[0].payment_platform == "platform-1"
@@ -153,14 +148,12 @@ async def test_driver_network_case_insensitive(monkeypatch, _mock_create_allocat
     monkeypatch.setattr(Payment, "accounts", _mock_accounts_iterator(("dRIVER", "NetWORK")))
 
     with pytest.raises(_StopExecutor):
-        async with Executor(
-            package=mock.Mock(),
+        async with Golem(
             budget=10.0,
             driver="dRiVeR",
             network="NeTwOrK",
-        ) as executor:
-            async for _ in executor.submit(worker=mock.Mock(), data=mock.Mock()):
-                pass
+        ):
+            pass
 
 
 @pytest.mark.asyncio
@@ -172,6 +165,5 @@ async def test_default_driver_network(monkeypatch, _mock_create_allocation):
     )
 
     with pytest.raises(_StopExecutor):
-        async with Executor(package=mock.Mock(), budget=10.0) as executor:
-            async for _ in executor.submit(worker=mock.Mock(), data=mock.Mock()):
-                pass
+        async with Golem(budget=10.0):
+            pass
