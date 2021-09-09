@@ -1,5 +1,7 @@
+import sys
 from datetime import datetime, timedelta
 import json
+from decimal import Decimal
 from typing import (
     Any,
     AsyncIterator,
@@ -12,6 +14,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    TYPE_CHECKING,
 )
 from typing_extensions import AsyncGenerator
 
@@ -24,11 +27,15 @@ from yapapi.network import Network
 from yapapi.payload import Payload
 from yapapi.services import Cluster, Service
 
+if TYPE_CHECKING:
+    from yapapi.strategy import MarketStrategy
+
+
 D = TypeVar("D")  # Type var for task data
 R = TypeVar("R")  # Type var for task result
 
 
-class Golem(_Engine):
+class Golem:
     """The main entrypoint of Golem's high-level API.
 
     Provides two methods that reflect the two modes of operation, or two types of jobs
@@ -59,6 +66,80 @@ class Golem(_Engine):
     either mode of operation, it's usually good to have just one instance of `Golem` active
     at any given time.
     """
+
+    def __init__(
+        self,
+        *,
+        budget: Union[float, Decimal],
+        strategy: Optional["MarketStrategy"] = None,
+        subnet_tag: Optional[str] = None,
+        driver: Optional[str] = None,
+        network: Optional[str] = None,
+        event_consumer: Optional[Callable[[events.Event], None]] = None,
+        stream_output: bool = False,
+        app_key: Optional[str] = None,
+    ):
+        self._init_args = {
+            "budget": budget,
+            "strategy": strategy,
+            "subnet_tag": subnet_tag,
+            "driver": driver,
+            "network": network,
+            "event_consumer": event_consumer,
+            "stream_output": stream_output,
+            "app_key": app_key,
+        }
+
+        self._engine: _Engine = self._get_new_engine()
+
+    @property
+    def driver(self) -> str:
+        """Name of the payment driver"""
+        return self._engine.driver
+
+    @property
+    def network(self) -> str:
+        """Name of the payment network"""
+        return self._engine.network
+
+    @property
+    def strategy(self) -> "MarketStrategy":
+        """Return the instance of `MarketStrategy` used by the engine"""
+        return self._engine.strategy
+
+    @property
+    def subnet_tag(self) -> Optional[str]:
+        """Return the name of the subnet, or `None` if it is not set."""
+        return self._engine.subnet_tag
+
+    async def __aenter__(self) -> "Golem":
+        try:
+            await self._engine.start()
+            return self
+        except:
+            await self.__aexit__(*sys.exc_info())
+            raise
+
+    async def __aexit__(self, *exc_info) -> Optional[bool]:
+        res = await self._engine.stop(*exc_info)
+
+        #   Engine that was stopped is not usable anymore, there is no "full" cleanup
+        #   That's why here we replace it with a fresh one
+        self._engine = self._get_new_engine()
+        return res
+
+    def _get_new_engine(self):
+        args = self._init_args
+        return _Engine(
+            budget=args["budget"],
+            strategy=args["strategy"],
+            subnet_tag=args["subnet_tag"],
+            driver=args["driver"],
+            network=args["network"],
+            event_consumer=args["event_consumer"],
+            stream_output=args["stream_output"],
+            app_key=args["app_key"],
+        )
 
     async def execute_tasks(
         self,
@@ -117,7 +198,7 @@ class Golem(_Engine):
         if timeout:
             kwargs["timeout"] = timeout
 
-        executor = Executor(_engine=self, **kwargs)
+        executor = Executor(_engine=self._engine, **kwargs)
         async for t in executor.submit(worker, data, job_id=job_id):
             yield t
 
@@ -221,15 +302,17 @@ class Golem(_Engine):
             raise ValueError("`network_addresses` provided without a `network`.")
 
         cluster = Cluster(
-            engine=self,
+            engine=self._engine,
             service_class=service_class,
             payload=payload,
             expiration=expiration,
             respawn_unstarted_instances=respawn_unstarted_instances,
             network=network,
         )
-        await self._stack.enter_async_context(cluster)
+
+        await self._engine.add_to_async_context(cluster)
         cluster.spawn_instances(num_instances, instance_params, network_addresses)
+
         return cluster
 
     async def create_network(
@@ -251,9 +334,11 @@ class Golem(_Engine):
 
         :return: a Network object allowing further manipulation of the created VPN
         """
-        async with self._root_api_session.get(f"{self._api_config.root_url}/me") as resp:
+        async with self._engine._root_api_session.get(
+            f"{self._engine._api_config.root_url}/me"
+        ) as resp:
             identity = json.loads(await resp.text()).get("identity")
 
         return await Network.create(
-            self._net_api, ip, identity, owner_ip, mask=mask, gateway=gateway
+            self._engine._net_api, ip, identity, owner_ip, mask=mask, gateway=gateway
         )
