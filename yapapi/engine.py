@@ -236,18 +236,18 @@ class _Engine:
             self._wrapped_consumer.async_call(event)
 
     async def stop(self, *exc_info) -> Optional[bool]:
-        '''Stop the engine.
+        """Stop the engine.
 
         This *must* be called at the end of the work, by the Engine user.
-        '''
+        """
         return await self._stack.__aexit__(*exc_info)
 
     async def start(self):
-        '''Start the engine.
+        """Start the engine.
 
         This is supposed to be called exactly once. Repeated or interrupted call
         will leave the engine in an unrecoverable state.
-        '''
+        """
 
         stack = self._stack
 

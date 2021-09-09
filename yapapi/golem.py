@@ -14,7 +14,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    TYPE_CHECKING
+    TYPE_CHECKING,
 )
 from typing_extensions import AsyncGenerator
 
@@ -71,7 +71,7 @@ class Golem:
         self,
         *,
         budget: Union[float, Decimal],
-        strategy: Optional['MarketStrategy'] = None,
+        strategy: Optional["MarketStrategy"] = None,
         subnet_tag: Optional[str] = None,
         driver: Optional[str] = None,
         network: Optional[str] = None,
@@ -80,14 +80,14 @@ class Golem:
         app_key: Optional[str] = None,
     ):
         self._init_args = {
-            'budget': budget,
-            'strategy': strategy,
-            'subnet_tag': subnet_tag,
-            'driver': driver,
-            'network': network,
-            'event_consumer': event_consumer,
-            'stream_output': stream_output,
-            'app_key': app_key,
+            "budget": budget,
+            "strategy": strategy,
+            "subnet_tag": subnet_tag,
+            "driver": driver,
+            "network": network,
+            "event_consumer": event_consumer,
+            "stream_output": stream_output,
+            "app_key": app_key,
         }
 
         self._engine: _Engine = self._get_new_engine()
@@ -103,7 +103,7 @@ class Golem:
         return self._engine.network
 
     @property
-    def strategy(self) -> 'MarketStrategy':
+    def strategy(self) -> "MarketStrategy":
         """Return the instance of `MarketStrategy` used by the engine"""
         return self._engine.strategy
 
@@ -112,7 +112,7 @@ class Golem:
         """Return the name of the subnet, or `None` if it is not set."""
         return self._engine.subnet_tag
 
-    async def __aenter__(self) -> 'Golem':
+    async def __aenter__(self) -> "Golem":
         try:
             await self._engine.start()
             return self
@@ -131,14 +131,14 @@ class Golem:
     def _get_new_engine(self):
         args = self._init_args
         return _Engine(
-            budget=args['budget'],
-            strategy=args['strategy'],
-            subnet_tag=args['subnet_tag'],
-            driver=args['driver'],
-            network=args['network'],
-            event_consumer=args['event_consumer'],
-            stream_output=args['stream_output'],
-            app_key=args['app_key'],
+            budget=args["budget"],
+            strategy=args["strategy"],
+            subnet_tag=args["subnet_tag"],
+            driver=args["driver"],
+            network=args["network"],
+            event_consumer=args["event_consumer"],
+            stream_output=args["stream_output"],
+            app_key=args["app_key"],
         )
 
     async def execute_tasks(
@@ -334,7 +334,9 @@ class Golem:
 
         :return: a Network object allowing further manipulation of the created VPN
         """
-        async with self._engine._root_api_session.get(f"{self._engine._api_config.root_url}/me") as resp:
+        async with self._engine._root_api_session.get(
+            f"{self._engine._api_config.root_url}/me"
+        ) as resp:
             identity = json.loads(await resp.text()).get("identity")
 
         return await Network.create(
