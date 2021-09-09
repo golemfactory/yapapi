@@ -35,10 +35,11 @@ else:
 
 from yapapi import rest, events
 from yapapi.ctx import WorkContext
-from yapapi.engine import _Engine, Job, WorkItem
+from yapapi.engine import _Engine, Job
 from yapapi.network import Network, Node
 from yapapi.payload import Payload
 from yapapi.rest.activity import Activity, BatchError
+from yapapi.script import Script
 
 
 logger = logging.getLogger(__name__)
@@ -235,7 +236,7 @@ class Service:
             kwargs.update(self._network_node.get_deploy_args())
         return kwargs
 
-    async def start(self) -> AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]]:
+    async def start(self) -> AsyncGenerator[Script, Awaitable[List[events.CommandEvent]]]:
         """Implement the handler for the `starting` state of the service.
 
         To be overridden by the author of a specific Service class.
@@ -246,7 +247,7 @@ class Service:
         service startup.
 
         As a handler implementing the [work generator pattern](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern),
-        it's expected to be a generator that yields `WorkItems` (generated using the service's
+        it's expected to be a generator that yields `Script`s (generated using the service's
         instance of the work context - `self._ctx`) that are then dispatched to the activity by
         the engine.
 
@@ -301,7 +302,7 @@ class Service:
         self._ctx.start()
         yield self._ctx.commit()
 
-    async def run(self) -> AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]]:
+    async def run(self) -> AsyncGenerator[Script, Awaitable[List[events.CommandEvent]]]:
         """Implement the handler for the `running` state of the service.
 
         To be overridden by the author of a specific Service class.
@@ -309,7 +310,7 @@ class Service:
         Should contain any operations needed to ensure continuous operation of a service.
 
         As a handler implementing the [work generator pattern](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern),
-        it's expected to be a generator that yields `WorkItems` (generated using the service's
+        it's expected to be a generator that yields `Script`s (generated using the service's
         instance of the work context - `self._ctx`) that are then dispatched to the activity by
         the engine.
 
@@ -345,7 +346,7 @@ class Service:
         await asyncio.Future()
         yield  # type: ignore # unreachable because of the indefinite wait above
 
-    async def shutdown(self) -> AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]]:
+    async def shutdown(self) -> AsyncGenerator[Script, Awaitable[List[events.CommandEvent]]]:
         """Implement the handler for the `stopping` state of the service.
 
         To be overridden by the author of a specific Service class.
@@ -354,7 +355,7 @@ class Service:
         and gracefully shut-down - e.g. that its final state is retrieved.
 
         As a handler implementing the [work generator pattern](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern),
-        it's expected to be a generator that yields `WorkItems` (generated using the service's
+        it's expected to be a generator that yields `Script`s (generated using the service's
         instance of the work context - `self._ctx`) that are then dispatched to the activity by
         the engine.
 
