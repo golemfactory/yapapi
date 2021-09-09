@@ -1,4 +1,3 @@
-
 import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,12 +15,13 @@ from yapapi.package import vm
 #   Here we have a patch that is quite ugly, but hopefully harmless.
 class LoopThatIsNeverClosed(asyncio.AbstractEventLoop):
     """Just a loop, but if you try to use it after it was closed you use a fresh loop"""
+
     def __init__(self):
         self._loop = None
 
     def __getattribute__(self, name):
-        if name == '_loop':
-            return super().__getattribute__('_loop')
+        if name == "_loop":
+            return super().__getattribute__("_loop")
         if self._loop is None or self._loop._closed:
             self._loop = asyncio.new_event_loop()
         return getattr(self._loop, name)
