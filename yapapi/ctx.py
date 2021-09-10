@@ -93,7 +93,6 @@ class WorkContext:
         self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
 
         self._pending_steps: List[Work] = []
-        self._started: bool = False
 
         self.__payment_model: Optional[ComLinear] = None
         self.__script: Script = self.new_script()
