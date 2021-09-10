@@ -186,6 +186,9 @@ class Executor:
         ) -> None:
             nonlocal job
 
+            work_context.deploy()
+            work_context.start()
+
             with work_queue.new_consumer() as consumer:
                 try:
 

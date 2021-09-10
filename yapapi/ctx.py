@@ -86,13 +86,11 @@ class WorkContext:
         agreement_details: AgreementDetails,
         storage: StorageProvider,
         emitter: Optional[Callable[[StorageEvent], None]] = None,
-        implicit_init: bool = True,
     ):
         self._activity = activity
         self._agreement_details = agreement_details
         self._storage: StorageProvider = storage
         self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
-        self._implicit_init = implicit_init
 
         self._pending_steps: List[Work] = []
         self._started: bool = False
