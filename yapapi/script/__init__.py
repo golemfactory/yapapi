@@ -89,9 +89,14 @@ class Script:
     async def _before(self):
         """Hook which is executed before the script is evaluated and sent to the provider."""
         if not self._ctx._started and self._ctx._implicit_init:
+            self._commands = [
+                c for c in self._commands if not (isinstance(c, Deploy) or isinstance(c, Start))
+            ]
+
             self._commands.insert(0, Deploy())
             self._commands.insert(1, Start())
-            self._ctx._started = True
+
+        self._ctx._started = True
 
         for cmd in self._commands:
             await cmd.before(self._ctx)

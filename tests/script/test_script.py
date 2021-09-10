@@ -6,7 +6,7 @@ from unittest import mock
 
 from yapapi.events import CommandExecuted
 from yapapi.script import Script
-from yapapi.script.command import Deploy, Start
+from yapapi.script.command import Deploy, Run, Start
 
 if sys.version_info >= (3, 8):
     from tests.factories.context import WorkContextFactory
@@ -99,26 +99,6 @@ class TestScript:
         assert self._on_download_executed
 
     @pytest.mark.asyncio
-    async def test_implicit_init(self):
-        work_context = WorkContextFactory()
-        script = work_context.new_script()
-
-        # first script, should include implicit deploy and start cmds
-        await script._before()
-        assert len(script._commands) == 2
-        deploy_cmd = script._commands[0]
-        assert isinstance(deploy_cmd, Deploy)
-        start_cmd = script._commands[1]
-        assert isinstance(start_cmd, Start)
-        assert work_context._started
-
-        # second script, should not include implicit deploy and start
-        script = work_context.new_script()
-        script.run("/some/cmd")
-        await script._before()
-        assert len(script._commands) == 1
-
-    @pytest.mark.asyncio
     async def test_cmd_result(self):
         work_context = WorkContextFactory()
         script = work_context.new_script()
@@ -133,3 +113,52 @@ class TestScript:
 
         assert future_result.done()
         assert future_result.result() == result
+
+    @pytest.mark.asyncio
+    async def test_implicit_init(self):
+        work_context = WorkContextFactory()
+        script = work_context.new_script()
+
+        # order of deploy and start is intentionally wrong here
+        script.start()
+        script.deploy()
+        script.run("/some/cmd")
+
+        # first script, should include implicit deploy and start cmds
+        await script._before()
+        assert len(script._commands) == 3
+        # check if newly added deploy and start are in correct order
+        deploy_cmd = script._commands[0]
+        assert isinstance(deploy_cmd, Deploy)
+        start_cmd = script._commands[1]
+        assert isinstance(start_cmd, Start)
+        assert work_context._started
+
+        # second script, should not include implicit deploy and start
+        script = work_context.new_script()
+        script.run("/some/cmd")
+        await script._before()
+        assert len(script._commands) == 1
+
+    @pytest.mark.asyncio
+    async def test_explicit_init(self):
+        work_context = WorkContextFactory(implicit_init=False)
+        script = work_context.new_script()
+
+        script.deploy()
+        script.run("/some/cmd")
+
+        # first script, should not include implicit deploy and start
+        await script._before()
+        assert len(script._commands) == 2
+        deploy_cmd = script._commands[0]
+        assert isinstance(deploy_cmd, Deploy)
+        run_cmd = script._commands[1]
+        assert isinstance(run_cmd, Run)
+        assert work_context._started
+
+        # second script, ctx._started should not trigger implicit init
+        script = work_context.new_script()
+        script.run("/some/cmd")
+        await script._before()
+        assert len(script._commands) == 1
