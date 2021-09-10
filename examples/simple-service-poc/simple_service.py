@@ -59,6 +59,8 @@ class SimpleService(Service):
 
     async def start(self):
         # handler responsible for starting the service
+        self._ctx.deploy()
+        self._ctx.start()
         self._ctx.run(self.SIMPLE_SERVICE_CTL, "--start")
         yield self._ctx.commit()
 

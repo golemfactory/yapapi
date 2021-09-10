@@ -39,6 +39,9 @@ class FirstInstanceFailsToStart(Service):
 
         global instances_started
 
+        self._ctx.deploy()
+        self._ctx.start()
+
         self._ctx.run("/bin/echo", "STARTING", str(instances_started + 1))
         future_results = yield self._ctx.commit()
         results = await future_results
