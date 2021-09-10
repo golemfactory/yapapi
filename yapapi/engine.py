@@ -539,7 +539,10 @@ class _Engine:
         )
 
     async def start_worker(
-        self, job: "Job", worker: Callable[[Agreement, Activity, WorkContext], Awaitable]
+        self,
+        job: "Job",
+        worker: Callable[[Agreement, Activity, WorkContext], Awaitable],
+        implicit_init: bool = False,
     ) -> Optional[asyncio.Task]:
         loop = asyncio.get_event_loop()
 
@@ -562,7 +565,11 @@ class _Engine:
             async with activity:
                 self.accept_debit_notes_for_agreement(job.id, agreement.id)
                 work_context = WorkContext(
-                    activity, agreement_details, self.storage_manager, emitter=self.emit
+                    activity,
+                    agreement_details,
+                    self.storage_manager,
+                    emitter=self.emit,
+                    implicit_init=implicit_init,
                 )
                 await worker(agreement, activity, work_context)
 

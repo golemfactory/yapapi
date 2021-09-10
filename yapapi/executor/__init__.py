@@ -232,7 +232,7 @@ class Executor:
                 if len(workers) < self._max_workers and work_queue.has_unassigned_items():
                     new_task = None
                     try:
-                        new_task = await self._engine.start_worker(job, _worker)
+                        new_task = await self._engine.start_worker(job, _worker, implicit_init=True)
                         if new_task is None:
                             continue
                         workers.add(new_task)
