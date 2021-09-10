@@ -1,3 +1,4 @@
+import asyncio
 import sys
 from datetime import datetime, timedelta
 import json
@@ -92,6 +93,7 @@ class Golem:
         }
 
         self._engine: _Engine = self._get_new_engine()
+        self._engine_state_lock = asyncio.Lock()
 
     @property
     def driver(self) -> str:
@@ -113,28 +115,41 @@ class Golem:
         """Return the name of the subnet, or `None` if it is not set."""
         return self._engine.subnet_tag
 
+    @property
+    def operative(self) -> bool:
+        """Return True if Golem started and didn't stop"""
+        return self._engine.started
+
     async def start(self) -> None:
-        await self._engine.start()
-
-    async def stop(self) -> None:
-        await self._stop_with_exc_info()
-
-    async def __aenter__(self) -> "Golem":
         try:
-            await self.start()
-            return self
+            async with self._engine_state_lock:
+                if self.operative:
+                    #   Something started us before we got to the locked part
+                    return
+                await self._engine.start()
         except:
             await self._stop_with_exc_info(*sys.exc_info())
             raise
+
+    async def stop(self) -> None:
+        await self._stop_with_exc_info(None, None, None)
+
+    async def __aenter__(self) -> "Golem":
+        await self.start()
+        return self
 
     async def __aexit__(self, *exc_info) -> Optional[bool]:
         return await self._stop_with_exc_info(*exc_info)
 
     async def _stop_with_exc_info(self, *exc_info) -> Optional[bool]:
-        res = await self._engine.stop(*exc_info)
+        async with self._engine_state_lock:
+            if not self.operative:
+                #   Something stopped us before we got to the locked part
+                return None
+            res = await self._engine.stop(*exc_info)
 
-        #   Engine that was stopped is not usable anymore, there is no "full" cleanup
-        #   That's why here we replace it with a fresh one
+        #   Engine that was stopped is not usable anymore, there is no "full" cleanup.
+        #   That's why here we replace it with a fresh one.
         self._engine = self._get_new_engine()
         return res
 
