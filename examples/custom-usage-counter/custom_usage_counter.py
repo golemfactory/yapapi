@@ -33,6 +33,10 @@ class CustomCounterService(Service):
     async def get_payload():
         return CustomCounterServicePayload()
 
+    async def start(self):
+        self._ctx.run("sleep", "1")
+        yield self._ctx.commit()
+
     async def run(self):
         print(f"service {self.id} running on {self.provider_name}...", file=stderr)
         for _ in range(0, 10):
