@@ -113,15 +113,24 @@ class Golem:
         """Return the name of the subnet, or `None` if it is not set."""
         return self._engine.subnet_tag
 
+    async def start(self) -> None:
+        await self._engine.start()
+
+    async def stop(self) -> None:
+        await self._stop_with_exc_info()
+
     async def __aenter__(self) -> "Golem":
         try:
-            await self._engine.start()
+            await self.start()
             return self
         except:
-            await self.__aexit__(*sys.exc_info())
+            await self._stop_with_exc_info(*sys.exc_info())
             raise
 
     async def __aexit__(self, *exc_info) -> Optional[bool]:
+        return await self._stop_with_exc_info(*exc_info)
+
+    async def _stop_with_exc_info(self, *exc_info) -> Optional[bool]:
         res = await self._engine.stop(*exc_info)
 
         #   Engine that was stopped is not usable anymore, there is no "full" cleanup
