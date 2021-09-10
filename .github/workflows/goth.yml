@@ -1,6 +1,7 @@
 name: Goth (PR and push)
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - master
