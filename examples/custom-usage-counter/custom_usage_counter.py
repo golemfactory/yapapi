@@ -51,7 +51,7 @@ class CustomCounterService(Service):
             await asyncio.sleep(3)
 
     async def shutdown(self):
-        yield await super().shutdown()
+        yield from super().shutdown()
         print(f"service {self.id} stopped on {self.provider_name}", file=stderr)
 
 
