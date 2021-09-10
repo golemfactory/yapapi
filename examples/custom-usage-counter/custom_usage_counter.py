@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
-from sys import stderr
 
 from yapapi.strategy import LeastExpensiveLinearPayuMS, DecreaseScoreForUnconfirmedAgreement
 
@@ -38,7 +37,7 @@ class CustomCounterService(Service):
         yield self._ctx.commit()
 
     async def run(self):
-        print(f"service {self.id} running on {self.provider_name}...", file=stderr)
+        print(f"service {self.id} running on {self.provider_name}...")
         for _ in range(0, 10):
             self._ctx.run("sleep", "1000")
             yield self._ctx.commit()
@@ -46,13 +45,13 @@ class CustomCounterService(Service):
             cost = await self._ctx.get_cost()
             print(
                 f"total cost so far: {cost}; activity usage: {usage.current_usage} at {usage.timestamp}",
-                file=stderr,
             )
             await asyncio.sleep(3)
 
     async def shutdown(self):
-        yield from super().shutdown()
-        print(f"service {self.id} stopped on {self.provider_name}", file=stderr)
+        async for s in super().shutdown():
+            yield s
+        print(f"service {self.id} stopped on {self.provider_name}")
 
 
 async def main(running_time, subnet_tag, driver=None, network=None):
