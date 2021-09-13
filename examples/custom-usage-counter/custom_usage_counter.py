@@ -32,13 +32,17 @@ class CustomCounterService(Service):
     async def get_payload():
         return CustomCounterServicePayload()
 
+    def __init__(self, running_time_sec):
+        self._running_time_sec = running_time_sec
+
     async def start(self):
         self._ctx.run("sleep", "1")
         yield self._ctx.commit()
 
     async def run(self):
+        start_time = datetime.now()
         print(f"service {self.id} running on '{self.provider_name}'...")
-        for _ in range(0, 10):
+        while datetime.now() < start_time + timedelta(seconds=self._running_time_sec):
             self._ctx.run("sleep", "1000")
             yield self._ctx.commit()
             usage: ActivityUsage = await self._ctx.get_usage()
@@ -54,7 +58,7 @@ class CustomCounterService(Service):
         print(f"service {self.id} stopped on '{self.provider_name}'")
 
 
-async def main(running_time, subnet_tag, driver=None, network=None):
+async def main(running_time_sec, subnet_tag, driver=None, network=None):
 
     enable_default_logger(
         log_file=str(Path(__file__).parent / "custom-counters.log"),
@@ -76,7 +80,7 @@ async def main(running_time, subnet_tag, driver=None, network=None):
         budget=10.0, subnet_tag=subnet_tag, driver=driver, network=network, strategy=strategy
     ) as golem:
         cluster = await golem.run_service(
-            CustomCounterService,
+            CustomCounterService(running_time_sec),
             num_instances=1,
         )
 
@@ -93,9 +97,7 @@ async def main(running_time, subnet_tag, driver=None, network=None):
 
         was_running = False
 
-        start_time = datetime.now()
-
-        while datetime.now() < start_time + timedelta(seconds=running_time):
+        while True:
             await asyncio.sleep(3)
 
             if all_terminated() and was_running:
@@ -124,12 +126,9 @@ parser.add_argument("--network", help="Network name, for example `rinkeby`")
 parser.add_argument("--subnet-tag", help="Subnet name, for example `devnet-beta.2`")
 parser.add_argument(
     "--running-time",
-    default=120,
+    default=30,
     type=int,
-    help=(
-        "How long should the instance run before the cluster is stopped "
-        "(in seconds, default: %(default)s)"
-    ),
+    help="How long should the the service run (in seconds, default: %(default)s)",
 )
 args = parser.parse_args()
 asyncio.run(main(args.running_time, args.subnet_tag, args.driver, args.network))
