@@ -23,6 +23,19 @@ RUNNING_TIME = 200  # in seconds
 SUBNET_TAG = "goth"
 
 
+async def assert_counter_not_decremented(output_lines: EventStream[str]):
+    """Assert that the custom usage counter is not decremented."""
+    last_value = -1
+
+    async for line in output_lines:
+        m = re.search("total cost so far .* 'golem.usage.custom.counter': '([^']*)'", line)
+        value = float(m.group(1))
+        logger.info(f"Custom usage counter value: {value}")
+        if value < last_value:
+            raise AssertionError(f"Current custom usage counter was decremented.")
+        last_value = value
+
+
 async def assert_correct_startup_and_shutdown(output_lines: EventStream[str]):
     """Assert that all providers and services that started stopped successfully."""
     providers_names = set()
@@ -83,6 +96,7 @@ async def test_run_custom_usage_counter(
             cmd_monitor.add_assertion(assert_all_invoices_accepted)
 
             cmd_monitor.add_assertion(assert_correct_startup_and_shutdown)
+            cmd_monitor.add_assertion(assert_counter_not_decremented)
 
             await cmd_monitor.wait_for_pattern(".*All jobs have finished", timeout=300)
             logger.info(f"Requestor script finished")
