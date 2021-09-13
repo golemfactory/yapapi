@@ -37,7 +37,7 @@ class CustomCounterService(Service):
         yield self._ctx.commit()
 
     async def run(self):
-        print(f"service {self.id} running on {self.provider_name}...")
+        print(f"service {self.id} running on '{self.provider_name}'...")
         for _ in range(0, 10):
             self._ctx.run("sleep", "1000")
             yield self._ctx.commit()
@@ -51,7 +51,7 @@ class CustomCounterService(Service):
     async def shutdown(self):
         async for s in super().shutdown():
             yield s
-        print(f"service {self.id} stopped on {self.provider_name}")
+        print(f"service {self.id} stopped on '{self.provider_name}'")
 
 
 async def main(running_time, subnet_tag, driver=None, network=None):
@@ -75,12 +75,10 @@ async def main(running_time, subnet_tag, driver=None, network=None):
     async with Golem(
         budget=10.0, subnet_tag=subnet_tag, driver=driver, network=network, strategy=strategy
     ) as golem:
-        print(f"Running service {datetime.now()}")
         cluster = await golem.run_service(
             CustomCounterService,
             num_instances=1,
         )
-        print(f"Cluster ready {datetime.now()}")
 
         def print_instances():
             print(
@@ -95,7 +93,6 @@ async def main(running_time, subnet_tag, driver=None, network=None):
         start_time = datetime.now()
 
         while datetime.now() < start_time + timedelta(seconds=running_time):
-            print(f"Sleeping, current time: {datetime.now()}")
             await asyncio.sleep(3)
 
             n = len(cluster.instances)
@@ -103,24 +100,17 @@ async def main(running_time, subnet_tag, driver=None, network=None):
                 print_instances()
                 break
             elif n > 0:
-                print(f"n > 0, {datetime.now()}")
                 print_instances()
                 was_running = True
                 cluster.instances[0].send_message_nowait("go")
-
-        print(f"Done")
 
         for svc in cluster.instances:
             cluster.stop_instance(svc)
 
         while running():
-            print(f"Running")
             print_instances()
             await asyncio.sleep(1)
 
-        print(f"Done 2")
-
-    print(f"Done 3")
     print_instances()
 
 
