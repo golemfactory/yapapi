@@ -1,29 +1,29 @@
 import abc
 from dataclasses import dataclass, field
 from datetime import timedelta, datetime
+from deprecated import deprecated  # type: ignore
 import enum
-import json
 import logging
-from os import PathLike
-from functools import partial
-from pathlib import Path
-from typing import Callable, Iterable, Optional, Dict, List, Tuple, Union, Any, Awaitable
+from typing import Callable, Optional, Dict, List, Any, Awaitable
 
 from ya_activity.models import (
     ActivityUsage as yaa_ActivityUsage,
     ActivityState as yaa_ActivityState,
 )
 
-from yapapi.events import DownloadStarted, DownloadFinished
-from yapapi.props.com import ComLinear, Counter
-from yapapi.storage import StorageProvider, Source, Destination, DOWNLOAD_BYTES_LIMIT_DEFAULT
+from yapapi.events import CommandExecuted
+from yapapi.props.com import ComLinear
+from yapapi.script import Script
+from yapapi.storage import StorageProvider, DOWNLOAD_BYTES_LIMIT_DEFAULT
 from yapapi.rest.market import AgreementDetails
 from yapapi.rest.activity import Activity
+from yapapi.script.command import StorageEvent
 from yapapi.utils import get_local_timezone
 
 logger = logging.getLogger(__name__)
 
 
+@deprecated(version="0.7.0", reason="replaced by Script._commands")
 class CommandContainer:
     def __init__(self):
         self._commands = []
@@ -65,234 +65,6 @@ class Work(abc.ABC):
         return None
 
 
-class _Deploy(Work):
-    def register(self, commands: CommandContainer):
-        commands.deploy()
-
-
-class _Start(Work):
-    def __init__(self, *args: str):
-        self.args = args
-
-    def __repr__(self):
-        return f"start{self.args}"
-
-    def register(self, commands: CommandContainer):
-        commands.start(args=self.args)
-
-
-class _Terminate(Work):
-    def register(self, commands: CommandContainer):
-        commands.terminate()
-
-
-class _SendWork(Work, abc.ABC):
-    def __init__(self, storage: StorageProvider, dst_path: str):
-        self._storage = storage
-        self._dst_path = dst_path
-        self._src: Optional[Source] = None
-        self._idx: Optional[int] = None
-
-    @abc.abstractmethod
-    async def do_upload(self, storage: StorageProvider) -> Source:
-        pass
-
-    async def prepare(self):
-        self._src = await self.do_upload(self._storage)
-
-    def register(self, commands: CommandContainer):
-        assert self._src is not None, "cmd prepared"
-        self._idx = commands.transfer(
-            _from=self._src.download_url, _to=f"container:{self._dst_path}"
-        )
-
-    async def post(self) -> None:
-        assert self._src is not None
-        await self._storage.release_source(self._src)
-
-
-class _SendBytes(_SendWork):
-    def __init__(self, storage: StorageProvider, data: bytes, dst_path: str):
-        super().__init__(storage, dst_path)
-        self._data: Optional[bytes] = data
-
-    async def do_upload(self, storage: StorageProvider) -> Source:
-        assert self._data is not None, "buffer unintialized"
-        src = await storage.upload_bytes(self._data)
-        self._data = None
-        return src
-
-
-class _SendJson(_SendBytes):
-    def __init__(self, storage: StorageProvider, data: dict, dst_path: str):
-        super().__init__(storage, json.dumps(data).encode(encoding="utf-8"), dst_path)
-
-
-class _SendFile(_SendWork):
-    def __init__(self, storage: StorageProvider, src_path: str, dst_path: str):
-        super(_SendFile, self).__init__(storage, dst_path)
-        self._src_path = Path(src_path)
-
-    async def do_upload(self, storage: StorageProvider) -> Source:
-        return await storage.upload_file(self._src_path)
-
-
-class _Run(Work):
-    def __init__(
-        self,
-        cmd: str,
-        *args: Iterable[str],
-        env: Optional[Dict[str, str]] = None,
-        stdout: Optional["CaptureContext"] = None,
-        stderr: Optional["CaptureContext"] = None,
-    ):
-        self.cmd = cmd
-        self.args = args
-        self.env = env
-        self.stdout = stdout
-        self.stderr = stderr
-        self._idx = None
-
-    def register(self, commands: CommandContainer):
-        capture = dict()
-        if self.stdout:
-            capture["stdout"] = self.stdout.to_dict()
-        if self.stderr:
-            capture["stderr"] = self.stderr.to_dict()
-        self._idx = commands.run(entry_point=self.cmd, args=self.args, capture=capture)
-
-
-StorageEvent = Union[DownloadStarted, DownloadFinished]
-
-
-class _ReceiveContent(Work):
-    def __init__(
-        self,
-        storage: StorageProvider,
-        src_path: str,
-        emitter: Optional[Callable[[StorageEvent], None]] = None,
-    ):
-        self._storage = storage
-        self._src_path: str = src_path
-        self._idx: Optional[int] = None
-        self._dst_slot: Optional[Destination] = None
-        self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
-        self._dst_path: Optional[PathLike] = None
-
-    async def prepare(self):
-        self._dst_slot = await self._storage.new_destination(destination_file=self._dst_path)
-
-    def register(self, commands: CommandContainer):
-        assert self._dst_slot, f"{self.__class__} command creation without prepare"
-
-        self._idx = commands.transfer(
-            _from=f"container:{self._src_path}", to=self._dst_slot.upload_url
-        )
-
-    def _emit_download_start(self):
-        assert self._dst_slot, f"{self.__class__} post without prepare"
-        if self._emitter:
-            self._emitter(DownloadStarted(path=self._src_path))
-
-    def _emit_download_end(self):
-        if self._emitter:
-            self._emitter(DownloadFinished(path=str(self._dst_path)))
-
-
-class _ReceiveFile(_ReceiveContent):
-    def __init__(
-        self,
-        storage: StorageProvider,
-        src_path: str,
-        dst_path: str,
-        emitter: Optional[Callable[[StorageEvent], None]] = None,
-    ):
-        super().__init__(storage, src_path, emitter)
-        self._dst_path = Path(dst_path)
-
-    async def post(self) -> None:
-        self._emit_download_start()
-        assert self._dst_path
-        assert self._dst_slot
-
-        await self._dst_slot.download_file(self._dst_path)
-        self._emit_download_end()
-
-
-class _ReceiveBytes(_ReceiveContent):
-    def __init__(
-        self,
-        storage: StorageProvider,
-        src_path: str,
-        on_download: Callable[[bytes], Awaitable],
-        limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
-        emitter: Optional[Callable[[StorageEvent], None]] = None,
-    ):
-        super().__init__(storage, src_path, emitter)
-        self._on_download = on_download
-        self._limit = limit
-
-    async def post(self) -> None:
-        self._emit_download_start()
-        assert self._dst_slot
-
-        output = await self._dst_slot.download_bytes(limit=self._limit)
-        self._emit_download_end()
-        await self._on_download(output)
-
-
-class _ReceiveJson(_ReceiveBytes):
-    def __init__(
-        self,
-        storage: StorageProvider,
-        src_path: str,
-        on_download: Callable[[Any], Awaitable],
-        limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
-        emitter: Optional[Callable[[StorageEvent], None]] = None,
-    ):
-        super().__init__(
-            storage, src_path, partial(self.__on_json_download, on_download), limit, emitter
-        )
-
-    @staticmethod
-    async def __on_json_download(on_download: Callable[[bytes], Awaitable], content: bytes):
-        await on_download(json.loads(content))
-
-
-class Steps(Work):
-    def __init__(self, *steps: Work, timeout: Optional[timedelta] = None):
-        """Create a `Work` item consisting of a sequence of steps (subitems).
-
-        :param steps: sequence of steps to be executed
-        :param timeout: timeout for waiting for the steps' results
-        """
-        self._steps: Tuple[Work, ...] = steps
-        self._timeout: Optional[timedelta] = timeout
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}: {self._steps}"
-
-    @property
-    def timeout(self) -> Optional[timedelta]:
-        """Return the optional timeout set for execution of all steps."""
-        return self._timeout
-
-    async def prepare(self):
-        """Execute the `prepare` hook for all the defined steps."""
-        for step in self._steps:
-            await step.prepare()
-
-    def register(self, commands: CommandContainer):
-        """Execute the `register` hook for all the defined steps."""
-        for step in self._steps:
-            step.register(commands)
-
-    async def post(self):
-        """Execute the `post` step for all the defined steps."""
-        for step in self._steps:
-            await step.post()
-
-
 @dataclass
 class ExecOptions:
     """Options related to command batch execution."""
@@ -326,6 +98,7 @@ class WorkContext:
         self._started: bool = False
 
         self.__payment_model: Optional[ComLinear] = None
+        self.__script: Script = self.new_script()
 
     @property
     def id(self) -> str:
@@ -336,6 +109,14 @@ class WorkContext:
     def provider_name(self) -> Optional[str]:
         """Return the name of the provider associated with this work context."""
         return self._agreement_details.provider_node_info.name
+
+    @property
+    def provider_id(self) -> str:
+        """Return the id of the provider associated with this work context."""
+
+        # we cannot directly make it part of the `NodeInfo` record as the `provider_id` is not
+        # one of the `Offer.properties` but rather a separate attribute on the `Offer` class
+        return self._agreement_details.raw_details.offer.provider_id  # type: ignore
 
     @property
     def _payment_model(self) -> ComLinear:
@@ -351,65 +132,66 @@ class WorkContext:
 
         return self.__payment_model
 
-    def __prepare(self):
-        if not self._started and self._implicit_init:
-            self.deploy()
-            self.start()
-            self._started = True
+    def new_script(self):
+        """Create an instance of `Script` attached to this `WorkContext` instance.
 
-    def begin(self):
-        pass
+        This is equivalent to calling `Script(work_context)`. This method is intended to provide a
+        direct link between the two object instances.
+        """
+        return Script(self)
 
-    def deploy(self):
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
+    def deploy(self, **kwargs) -> Awaitable[CommandExecuted]:
         """Schedule a Deploy command."""
-        self._implicit_init = False
-        self._pending_steps.append(_Deploy())
+        return self.__script.deploy(**kwargs)
 
-    def start(self, *args: str):
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
+    def start(self, *args: str) -> Awaitable[CommandExecuted]:
         """Schedule a Start command."""
-        self._implicit_init = False
-        self._pending_steps.append(_Start(*args))
+        return self.__script.start(*args)
 
-    def terminate(self):
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
+    def terminate(self) -> Awaitable[CommandExecuted]:
         """Schedule a Terminate command."""
-        self._pending_steps.append(_Terminate())
+        return self.__script.terminate()
 
-    def send_json(self, json_path: str, data: dict):
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
+    def send_json(self, json_path: str, data: dict) -> Awaitable[CommandExecuted]:
         """Schedule sending JSON data to the provider.
 
         :param json_path: remote (provider) path
         :param data: dictionary representing JSON data
         :return: None
         """
-        self.__prepare()
-        self._pending_steps.append(_SendJson(self._storage, data, json_path))
+        return self.__script.upload_json(data, json_path)
 
-    def send_bytes(self, dst_path: str, data: bytes):
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
+    def send_bytes(self, dst_path: str, data: bytes) -> Awaitable[CommandExecuted]:
         """Schedule sending bytes data to the provider.
 
         :param dst_path: remote (provider) path
         :param data: bytes to send
         :return: None
         """
-        self.__prepare()
-        self._pending_steps.append(_SendBytes(self._storage, data, dst_path))
+        return self.__script.upload_bytes(data, dst_path)
 
-    def send_file(self, src_path: str, dst_path: str):
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
+    def send_file(self, src_path: str, dst_path: str) -> Awaitable[CommandExecuted]:
         """Schedule sending file to the provider.
 
         :param src_path: local (requestor) path
         :param dst_path: remote (provider) path
         :return: None
         """
-        self.__prepare()
-        self._pending_steps.append(_SendFile(self._storage, src_path, dst_path))
+        return self.__script.upload_file(src_path, dst_path)
 
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def run(
         self,
         cmd: str,
-        *args: Iterable[str],
+        *args: str,
         env: Optional[Dict[str, str]] = None,
-    ):
+    ) -> Awaitable[CommandExecuted]:
         """Schedule running a command.
 
         :param cmd: command to run on the provider, e.g. /my/dir/run.sh
@@ -417,79 +199,75 @@ class WorkContext:
         :param env: optional dictionary with environmental variables
         :return: None
         """
-        stdout = CaptureContext.build(mode="stream")
-        stderr = CaptureContext.build(mode="stream")
+        return self.__script.run(cmd, *args, env=env)
 
-        self.__prepare()
-        self._pending_steps.append(_Run(cmd, *args, env=env, stdout=stdout, stderr=stderr))
-
-    def download_file(self, src_path: str, dst_path: str):
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
+    def download_file(self, src_path: str, dst_path: str) -> Awaitable[CommandExecuted]:
         """Schedule downloading remote file from the provider.
 
         :param src_path: remote (provider) path
         :param dst_path: local (requestor) path
         :return: None
         """
-        self.__prepare()
-        self._pending_steps.append(_ReceiveFile(self._storage, src_path, dst_path, self._emitter))
+        return self.__script.download_file(src_path, dst_path)
 
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def download_bytes(
         self,
         src_path: str,
         on_download: Callable[[bytes], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
-    ):
+    ) -> Awaitable[CommandExecuted]:
         """Schedule downloading a remote file as bytes
+
         :param src_path: remote (provider) path
         :param on_download: the callable to run on the received data
         :param limit: the maximum length of the expected byte string
         :return None
         """
-        self.__prepare()
-        self._pending_steps.append(
-            _ReceiveBytes(self._storage, src_path, on_download, limit, self._emitter)
-        )
+        return self.__script.download_bytes(src_path, on_download, limit)
 
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def download_json(
         self,
         src_path: str,
         on_download: Callable[[Any], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
-    ):
+    ) -> Awaitable[CommandExecuted]:
         """Schedule downloading a remote file as JSON
+
         :param src_path: remote (provider) path
         :param on_download: the callable to run on the received JSON data
         :param limit: the maximum length of the expected remote file
         :return None
         """
-        self.__prepare()
-        self._pending_steps.append(
-            _ReceiveJson(self._storage, src_path, on_download, limit, self._emitter)
-        )
+        return self.__script.download_json(src_path, on_download, limit)
 
-    def commit(self, timeout: Optional[timedelta] = None) -> Work:
+    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
+    def commit(self, timeout: Optional[timedelta] = None) -> Script:
         """Creates a sequence of commands to be sent to provider.
 
-        :return: Work object containing the sequence of commands
-                 scheduled within this work context before calling this method)
+        :return: Script object containing the sequence of commands
+                 scheduled within this work context before calling this method
         """
-        steps = self._pending_steps
-        self._pending_steps = []
-        return Steps(*steps, timeout=timeout)
+        assert self.__script._commands, "commit called with no commands scheduled"
+        if timeout:
+            self.__script.timeout = timeout
+        script_to_commit = self.__script
+        self.__script = self.new_script()
+        return script_to_commit
 
     async def get_raw_usage(self) -> yaa_ActivityUsage:
         """Get the raw usage vector for the activity bound to this work context.
 
         The value comes directly from the low level API and is not interpreted in any way.
         """
-
         usage = await self._activity.usage()
         logger.debug(f"WorkContext raw usage: id={self.id}, usage={usage}")
         return usage
 
     async def get_usage(self) -> "ActivityUsage":
         """Get the current usage for the activity bound to this work context."""
-
         raw_usage = await self.get_raw_usage()
         usage = ActivityUsage()
         if raw_usage.current_usage:
@@ -508,7 +286,6 @@ class WorkContext:
 
     async def get_cost(self) -> Optional[float]:
         """Get the accumulated cost of the activity based on the reported usage."""
-
         usage = await self.get_raw_usage()
         if usage.current_usage:
             return self._payment_model.calculate_cost(usage.current_usage)

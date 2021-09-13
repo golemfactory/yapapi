@@ -1,4 +1,5 @@
 import asyncio
+import aiohttp
 from asyncio import CancelledError
 from collections import defaultdict
 import contextlib
@@ -19,7 +20,6 @@ from typing import (
     List,
     Optional,
     Set,
-    Tuple,
     Union,
 )
 from typing_extensions import Final, AsyncGenerator
@@ -31,13 +31,15 @@ else:
 
 from yapapi import rest, events
 from yapapi.agreements_pool import AgreementsPool
-from yapapi.ctx import CommandContainer, ExecOptions, Work, WorkContext
+from yapapi.ctx import WorkContext
 from yapapi.payload import Payload
 from yapapi import props
 from yapapi.props import com
 from yapapi.props.builder import DemandBuilder, DemandDecorator
 from yapapi.rest.activity import CommandExecutionError, Activity
 from yapapi.rest.market import Agreement, AgreementDetails, OfferProposal, Subscription
+from yapapi.script import Script
+from yapapi.script.command import BatchCommand
 from yapapi.storage import gftp
 from yapapi.strategy import (
     DecreaseScoreForUnconfirmedAgreement,
@@ -86,31 +88,12 @@ class NoPaymentAccountError(Exception):
         )
 
 
-WorkItem = Union[Work, Tuple[Work, ExecOptions]]
-"""The type of items yielded by a generator created by the `worker` function supplied by user."""
-
-
-def _unpack_work_item(item: WorkItem) -> Tuple[Work, ExecOptions]:
-    """Extract `Work` object and options from a work item.
-
-    If the item does not specify options, default ones are provided.
-    """
-    if isinstance(item, tuple):
-        return item
-    else:
-        return item, ExecOptions()
-
-
-exescript_ids: Iterator[int] = itertools.count(1)
-"""An iterator providing unique ids used to correlate events related to a single exe script."""
-
-
 # Type aliases to make some type annotations more meaningful
 JobId = str
 AgreementId = str
 
 
-class _Engine(AsyncContextManager):
+class _Engine:
     """Base execution engine containing functions common to all modes of operation."""
 
     def __init__(
@@ -234,48 +217,67 @@ class _Engine(AsyncContextManager):
         if self._wrapped_consumer:
             self._wrapped_consumer.async_call(event)
 
-    async def __aenter__(self) -> "_Engine":
-        """Initialize resources and start background services used by this engine."""
+    async def stop(self, *exc_info) -> Optional[bool]:
+        """Stop the engine.
 
-        try:
-            stack = self._stack
+        This *must* be called at the end of the work, by the Engine user.
+        """
+        return await self._stack.__aexit__(*exc_info)
 
-            await stack.enter_async_context(self._wrapped_consumer)
+    async def start(self):
+        """Start the engine.
 
-            def report_shutdown(*exc_info):
-                if any(item for item in exc_info):
-                    self.emit(events.ShutdownFinished(exc_info=exc_info))  # noqa
-                else:
-                    self.emit(events.ShutdownFinished())
+        This is supposed to be called exactly once. Repeated or interrupted call
+        will leave the engine in an unrecoverable state.
+        """
 
-            stack.push(report_shutdown)
+        stack = self._stack
 
-            market_client = await stack.enter_async_context(self._api_config.market())
-            self._market_api = rest.Market(market_client)
+        await stack.enter_async_context(self._wrapped_consumer)
 
-            activity_client = await stack.enter_async_context(self._api_config.activity())
-            self._activity_api = rest.Activity(activity_client)
+        def report_shutdown(*exc_info):
+            if any(item for item in exc_info):
+                self.emit(events.ShutdownFinished(exc_info=exc_info))  # noqa
+            else:
+                self.emit(events.ShutdownFinished())
 
-            payment_client = await stack.enter_async_context(self._api_config.payment())
-            self._payment_api = rest.Payment(payment_client)
+        stack.push(report_shutdown)
 
-            self.payment_decorator = _Engine.PaymentDecorator(await self._create_allocations())
+        market_client = await stack.enter_async_context(self._api_config.market())
+        self._market_api = rest.Market(market_client)
 
-            # TODO: make the method starting the process_invoices() task an async context manager
-            # to simplify code in __aexit__()
-            loop = asyncio.get_event_loop()
-            self._process_invoices_job = loop.create_task(self._process_invoices())
-            self._services.add(self._process_invoices_job)
-            self._services.add(loop.create_task(self._process_debit_notes()))
+        activity_client = await stack.enter_async_context(self._api_config.activity())
+        self._activity_api = rest.Activity(activity_client)
 
-            self._storage_manager = await stack.enter_async_context(gftp.provider())
+        payment_client = await stack.enter_async_context(self._api_config.payment())
+        self._payment_api = rest.Payment(payment_client)
 
-            stack.push_async_exit(self._shutdown)
+        net_client = await stack.enter_async_context(self._api_config.net())
+        self._net_api = rest.Net(net_client)
 
-            return self
-        except:
-            await self.__aexit__(*sys.exc_info())
-            raise
+        # TODO replace with a proper REST API client once ya-client and ya-aioclient are updated
+        # https://github.com/golemfactory/yapapi/issues/636
+        self._root_api_session = await stack.enter_async_context(
+            aiohttp.ClientSession(
+                headers=net_client.default_headers,
+            )
+        )
+
+        self.payment_decorator = _Engine.PaymentDecorator(await self._create_allocations())
+
+        # TODO: make the method starting the process_invoices() task an async context manager
+        # to simplify code in __aexit__()
+        loop = asyncio.get_event_loop()
+        self._process_invoices_job = loop.create_task(self._process_invoices())
+        self._services.add(self._process_invoices_job)
+        self._services.add(loop.create_task(self._process_debit_notes()))
+
+        self._storage_manager = await stack.enter_async_context(gftp.provider())
+
+        stack.push_async_exit(self._shutdown)
+
+    async def add_to_async_context(self, async_context_manager: AsyncContextManager) -> None:
+        await self._stack.enter_async_context(async_context_manager)
 
     def _unpaid_agreement_ids(self) -> Set[AgreementId]:
         """Return the set of all yet unpaid agreement ids."""
@@ -339,9 +341,6 @@ class _Engine(AsyncContextManager):
                 logger.debug("%s still running: %s", pluralize(len(pending), "service"), pending)
         except Exception:
             logger.debug("Got error when waiting for services to finish", exc_info=True)
-
-    async def __aexit__(self, *exc_info) -> Optional[bool]:
-        return await self._stack.__aexit__(*exc_info)
 
     async def _create_allocations(self) -> rest.payment.MarketDecoration:
 
@@ -576,48 +575,30 @@ class _Engine(AsyncContextManager):
         job_id: str,
         agreement_id: str,
         activity: rest.activity.Activity,
-        command_generator: AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
+        command_generator: AsyncGenerator[Script, Awaitable[List[events.CommandEvent]]],
     ) -> None:
         """Send command batches produced by `command_generator` to `activity`."""
 
-        item = await command_generator.__anext__()
+        script: Script = await command_generator.__anext__()
 
         while True:
-
-            batch, exec_options = _unpack_work_item(item)
-
-            # TODO: `task_id` should really be `batch_id`, but then we should also rename
-            # `task_id` field of several events (e.g. `ScriptSent`)
-            script_id = str(next(exescript_ids))
-
-            if batch.timeout:
-                if exec_options.batch_timeout:
-                    logger.warning(
-                        "Overriding batch timeout set with commit(batch_timeout)"
-                        "by the value set in exec options"
-                    )
-                else:
-                    exec_options.batch_timeout = batch.timeout
+            script_id = str(script.id)
 
             batch_deadline = (
-                datetime.now(timezone.utc) + exec_options.batch_timeout
-                if exec_options.batch_timeout
-                else None
+                datetime.now(timezone.utc) + script.timeout if script.timeout is not None else None
             )
 
-            cc = CommandContainer()
             try:
-                await batch.prepare()
-                batch.register(cc)
-                remote = await activity.send(cc.commands(), deadline=batch_deadline)
+                await script._before()
+                batch: List[BatchCommand] = script._evaluate()
+                remote = await activity.send(batch, deadline=batch_deadline)
             except Exception:
-                item = await command_generator.athrow(*sys.exc_info())
+                script = await command_generator.athrow(*sys.exc_info())
                 continue
 
-            cmds = cc.commands()
             self.emit(
                 events.ScriptSent(
-                    job_id=job_id, agr_id=agreement_id, script_id=script_id, cmds=cmds
+                    job_id=job_id, agr_id=agreement_id, script_id=script_id, cmds=batch
                 )
             )
 
@@ -625,17 +606,20 @@ class _Engine(AsyncContextManager):
                 results = []
                 async for evt_ctx in remote:
                     evt = evt_ctx.event(
-                        job_id=job_id, agr_id=agreement_id, script_id=script_id, cmds=cmds
+                        job_id=job_id, agr_id=agreement_id, script_id=script_id, cmds=batch
                     )
                     self.emit(evt)
                     results.append(evt)
-                    if isinstance(evt, events.CommandExecuted) and not evt.success:
-                        raise CommandExecutionError(evt.command, evt.message, evt.stderr)
+                    if isinstance(evt, events.CommandExecuted):
+                        if evt.success:
+                            script._set_cmd_result(evt)
+                        else:
+                            raise CommandExecutionError(evt.command, evt.message, evt.stderr)
 
                 self.emit(
                     events.GettingResults(job_id=job_id, agr_id=agreement_id, script_id=script_id)
                 )
-                await batch.post()
+                await script._after()
                 self.emit(
                     events.ScriptFinished(job_id=job_id, agr_id=agreement_id, script_id=script_id)
                 )
@@ -644,7 +628,7 @@ class _Engine(AsyncContextManager):
 
             loop = asyncio.get_event_loop()
 
-            if exec_options.wait_for_results:
+            if script.wait_for_results:
                 # Block until the results are available
                 try:
                     future_results = loop.create_future()
@@ -654,14 +638,14 @@ class _Engine(AsyncContextManager):
                     # Raise the exception in `command_generator` (the `worker` coroutine).
                     # If the client code is able to handle it then we'll proceed with
                     # subsequent batches. Otherwise the worker finishes with error.
-                    item = await command_generator.athrow(*sys.exc_info())
+                    script = await command_generator.athrow(*sys.exc_info())
                 else:
-                    item = await command_generator.asend(future_results)
+                    script = await command_generator.asend(future_results)
 
             else:
                 # Schedule the coroutine in a separate asyncio task
                 future_results = loop.create_task(get_batch_results())
-                item = await command_generator.asend(future_results)
+                script = await command_generator.asend(future_results)
 
 
 class Job:
