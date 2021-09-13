@@ -17,7 +17,7 @@ from yapapi.props import inf, com
 from yapapi import Golem
 from yapapi.ctx import ActivityUsage
 from yapapi.payload import Payload
-from yapapi.services import Service
+from yapapi.services import Service, ServiceState
 
 
 @dataclass
@@ -88,6 +88,9 @@ async def main(running_time, subnet_tag, driver=None, network=None):
         def running():
             return any([s for s in cluster.instances if s.is_available])
 
+        def all_terminated():
+            return all([s.state == ServiceState.terminated for s in cluster.instances])
+
         was_running = False
 
         start_time = datetime.now()
@@ -95,11 +98,12 @@ async def main(running_time, subnet_tag, driver=None, network=None):
         while datetime.now() < start_time + timedelta(seconds=running_time):
             await asyncio.sleep(3)
 
-            n = len(cluster.instances)
-            if n == 0 and was_running:
+            if all_terminated() and was_running:
                 print_instances()
+                print("All services were successfully terminated")
                 break
-            elif n > 0:
+
+            if len(cluster.instances) > 0:
                 print_instances()
                 was_running = True
                 cluster.instances[0].send_message_nowait("go")
