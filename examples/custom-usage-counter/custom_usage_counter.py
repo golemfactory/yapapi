@@ -99,7 +99,6 @@ async def main(running_time_sec, subnet_tag, driver=None, network=None):
             if len(cluster.instances) > 0:
                 print_instances()
                 was_running = True
-                cluster.instances[0].send_message_nowait("go")
 
         for svc in cluster.instances:
             cluster.stop_instance(svc)
