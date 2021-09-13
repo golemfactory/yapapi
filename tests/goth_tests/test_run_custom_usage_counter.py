@@ -29,11 +29,12 @@ async def assert_counter_not_decremented(output_lines: EventStream[str]):
 
     async for line in output_lines:
         m = re.search("total cost so far .* 'golem.usage.custom.counter': '([^']*)'", line)
-        value = float(m.group(1))
-        logger.info(f"Custom usage counter value: {value}")
-        if value < last_value:
-            raise AssertionError(f"Current custom usage counter was decremented.")
-        last_value = value
+        if m:
+            value = float(m.group(1))
+            logger.info(f"Custom usage counter value: {value}")
+            if value < last_value:
+                raise AssertionError(f"Current custom usage counter was decremented.")
+            last_value = value
 
 
 async def assert_correct_startup_and_shutdown(output_lines: EventStream[str]):
