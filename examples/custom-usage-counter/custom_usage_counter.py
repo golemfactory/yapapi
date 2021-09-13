@@ -80,15 +80,12 @@ async def main(running_time_sec, subnet_tag, driver=None, network=None):
     async with Golem(
         budget=10.0, subnet_tag=subnet_tag, driver=driver, network=network, strategy=strategy
     ) as golem:
-        cluster = await golem.run_service(
-            CustomCounterService,
-            instance_params=[{"running_time_sec": running_time_sec}],
-        )
+        instance_params = [{"running_time_sec": running_time_sec}]
+        cluster = await golem.run_service(CustomCounterService, instance_params=instance_params)
 
         def print_instances():
-            print(
-                f"instances: {[{s.id, s.state.value} for s in cluster.instances]} {datetime.now()}"
-            )
+            instances = [{s.id, s.state.value} for s in cluster.instances]
+            print(f"instances: {instances}")
 
         def running():
             return any([s for s in cluster.instances if s.is_available])
