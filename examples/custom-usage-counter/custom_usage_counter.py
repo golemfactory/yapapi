@@ -84,21 +84,14 @@ async def main(running_time_sec, subnet_tag, driver=None, network=None):
         cluster = await golem.run_service(CustomCounterService, instance_params=instance_params)
 
         def print_instances():
-            instances = [{s.id, s.state.value} for s in cluster.instances]
-            print(f"instances: {instances}")
-
-        def running():
-            return any([s for s in cluster.instances if s.is_available])
-
-        def all_terminated():
-            return all([s.state == ServiceState.terminated for s in cluster.instances])
+            print(f"instances: {[{s.id, s.state.value} for s in cluster.instances]}")
 
         was_running = False
 
         while True:
             await asyncio.sleep(3)
 
-            if all_terminated() and was_running:
+            if was_running and all([s.state == ServiceState.terminated for s in cluster.instances]):
                 print_instances()
                 print("All services were successfully terminated")
                 break
@@ -110,10 +103,6 @@ async def main(running_time_sec, subnet_tag, driver=None, network=None):
 
         for svc in cluster.instances:
             cluster.stop_instance(svc)
-
-        while running():
-            print_instances()
-            await asyncio.sleep(1)
 
     print_instances()
 
