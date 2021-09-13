@@ -32,7 +32,7 @@ class CustomCounterService(Service):
     async def get_payload():
         return CustomCounterServicePayload()
 
-    def __init__(self, *args, running_time_sec, **kwargs):
+    def __init__(self, running_time_sec, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._running_time_sec = running_time_sec
 
