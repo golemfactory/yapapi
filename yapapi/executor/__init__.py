@@ -56,6 +56,7 @@ class Executor:
         *,
         _engine: _Engine,
         payload: Payload,
+        implicit_init: bool,
         max_workers: int = 5,
         timeout: timedelta = DEFAULT_EXECUTOR_TIMEOUT,
     ):
@@ -63,6 +64,7 @@ class Executor:
 
         self._engine = _engine
         self._payload = payload
+        self._implicit_init = implicit_init
         self._timeout = timeout
         self._max_workers = max_workers
 
@@ -186,8 +188,9 @@ class Executor:
         ) -> None:
             nonlocal job
 
-            work_context.deploy()
-            work_context.start()
+            if self._implicit_init:
+                work_context.deploy()
+                work_context.start()
 
             with work_queue.new_consumer() as consumer:
                 try:
