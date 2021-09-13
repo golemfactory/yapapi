@@ -32,7 +32,7 @@ class CustomCounterService(Service):
     async def get_payload():
         return CustomCounterServicePayload()
 
-    def __init__(self, running_time_sec, *args, **kwargs):
+    def __init__(self, *args, running_time_sec, **kwargs):
         super().__init__(*args, **kwargs)
         self._running_time_sec = running_time_sec
 
@@ -81,7 +81,7 @@ async def main(running_time_sec, subnet_tag, driver=None, network=None):
         budget=10.0, subnet_tag=subnet_tag, driver=driver, network=network, strategy=strategy
     ) as golem:
         cluster = await golem.run_service(
-            CustomCounterService(running_time_sec),
+            CustomCounterService(running_time_sec=running_time_sec),
             num_instances=1,
         )
 
