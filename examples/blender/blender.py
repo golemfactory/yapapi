@@ -30,7 +30,14 @@ from utils import (
 )
 
 
-async def main(subnet_tag, driver=None, network=None, show_usage=False):
+async def main(golem, show_usage=False):
+    print(
+        f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n"
+        f"Using subnet: {TEXT_COLOR_YELLOW}{golem.subnet_tag}{TEXT_COLOR_DEFAULT}, "
+        f"payment driver: {TEXT_COLOR_YELLOW}{golem.driver}{TEXT_COLOR_DEFAULT}, "
+        f"and network: {TEXT_COLOR_YELLOW}{golem.network}{TEXT_COLOR_DEFAULT}\n"
+    )
+
     package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         min_mem_gib=0.5,
@@ -108,44 +115,31 @@ async def main(subnet_tag, driver=None, network=None, show_usage=False):
     min_timeout, max_timeout = 6, 30
 
     timeout = timedelta(minutes=max(min(init_overhead + len(frames) * 2, max_timeout), min_timeout))
+    num_tasks = 0
+    start_time = datetime.now()
 
-    async with Golem(
-        budget=10.0,
-        subnet_tag=subnet_tag,
-        driver=driver,
-        network=network,
-    ) as golem:
-
-        print(
-            f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n"
-            f"Using subnet: {TEXT_COLOR_YELLOW}{subnet_tag}{TEXT_COLOR_DEFAULT}, "
-            f"payment driver: {TEXT_COLOR_YELLOW}{golem.driver}{TEXT_COLOR_DEFAULT}, "
-            f"and network: {TEXT_COLOR_YELLOW}{golem.network}{TEXT_COLOR_DEFAULT}\n"
-        )
-
-        num_tasks = 0
-        start_time = datetime.now()
-
-        completed_tasks = golem.execute_tasks(
-            worker,
-            [Task(data=frame) for frame in frames],
-            payload=package,
-            max_workers=3,
-            timeout=timeout,
-        )
-        async for task in completed_tasks:
-            num_tasks += 1
-            print(
-                f"{TEXT_COLOR_CYAN}"
-                f"Task computed: {task}, result: {task.result}, time: {task.running_time}"
-                f"{TEXT_COLOR_DEFAULT}"
-            )
-
+    await golem.start()
+    completed_tasks = golem.execute_tasks(
+        worker,
+        [Task(data=frame) for frame in frames],
+        payload=package,
+        max_workers=3,
+        timeout=timeout,
+    )
+    async for task in completed_tasks:
+        num_tasks += 1
         print(
             f"{TEXT_COLOR_CYAN}"
-            f"{num_tasks} tasks computed, total time: {datetime.now() - start_time}"
+            f"Task computed: {task}, result: {task.result}, time: {task.running_time}"
             f"{TEXT_COLOR_DEFAULT}"
         )
+
+    print(
+        f"{TEXT_COLOR_CYAN}"
+        f"{num_tasks} tasks computed, total time: {datetime.now() - start_time}"
+        f"{TEXT_COLOR_DEFAULT}"
+    )
+    await golem.stop()
 
 
 if __name__ == "__main__":
@@ -166,13 +160,14 @@ if __name__ == "__main__":
     )
 
     loop = asyncio.get_event_loop()
+    golem = Golem(
+        budget=10,
+        subnet_tag=args.subnet_tag,
+        driver=args.driver,
+        network=args.network,
+    )
     task = loop.create_task(
-        main(
-            subnet_tag=args.subnet_tag,
-            driver=args.driver,
-            network=args.network,
-            show_usage=args.show_usage,
-        )
+        main(golem, show_usage=args.show_usage)
     )
 
     try:
