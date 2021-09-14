@@ -74,8 +74,8 @@ class Golem:
         budget: Union[float, Decimal],
         strategy: Optional["MarketStrategy"] = None,
         subnet_tag: Optional[str] = None,
-        driver: Optional[str] = None,
-        network: Optional[str] = None,
+        payment_driver: Optional[str] = None,
+        payment_network: Optional[str] = None,
         event_consumer: Optional[Callable[[events.Event], None]] = None,
         stream_output: bool = False,
         app_key: Optional[str] = None,
@@ -84,8 +84,8 @@ class Golem:
             "budget": budget,
             "strategy": strategy,
             "subnet_tag": subnet_tag,
-            "driver": driver,
-            "network": network,
+            "payment_driver": payment_driver,
+            "payment_network": payment_network,
             "event_consumer": event_consumer,
             "stream_output": stream_output,
             "app_key": app_key,
@@ -94,14 +94,14 @@ class Golem:
         self._engine: _Engine = self._get_new_engine()
 
     @property
-    def driver(self) -> str:
+    def payment_driver(self) -> str:
         """Name of the payment driver"""
-        return self._engine.driver
+        return self._engine.payment_driver
 
     @property
-    def network(self) -> str:
+    def payment_network(self) -> str:
         """Name of the payment network"""
-        return self._engine.network
+        return self._engine.payment_network
 
     @property
     def strategy(self) -> "MarketStrategy":
@@ -135,8 +135,8 @@ class Golem:
             budget=args["budget"],
             strategy=args["strategy"],
             subnet_tag=args["subnet_tag"],
-            driver=args["driver"],
-            network=args["network"],
+            payment_driver=args["payment_driver"],
+            payment_network=args["payment_network"],
             event_consumer=args["event_consumer"],
             stream_output=args["stream_output"],
             app_key=args["app_key"],

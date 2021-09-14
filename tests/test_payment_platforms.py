@@ -29,8 +29,8 @@ def _mock_accounts_iterator(*account_specs):
             params = {
                 "platform": "mock-platform",
                 "address": "mock-address",
-                "driver": spec[0],
-                "network": spec[1],
+                "payment_driver": spec[0],
+                "payment_network": spec[1],
                 "token": "mock-token",
                 "send": True,
                 "receive": True,
@@ -92,7 +92,9 @@ async def test_no_matching_account_raises(monkeypatch):
     )
 
     with pytest.raises(NoPaymentAccountError) as exc_info:
-        async with Golem(budget=10.0, driver="matching-driver", network="matching-network"):
+        async with Golem(
+            budget=10.0, payment_driver="matching-driver", payment_network="matching-network"
+        ):
             pass
 
     exc = exc_info.value
@@ -131,8 +133,8 @@ async def test_matching_account_creates_allocation(monkeypatch, _mock_decorate_d
     with pytest.raises(_StopExecutor):
         async with Golem(
             budget=10.0,
-            driver="matching-driver",
-            network="matching-network",
+            payment_driver="matching-driver",
+            payment_network="matching-network",
         ):
             pass
 
@@ -150,8 +152,8 @@ async def test_driver_network_case_insensitive(monkeypatch, _mock_create_allocat
     with pytest.raises(_StopExecutor):
         async with Golem(
             budget=10.0,
-            driver="dRiVeR",
-            network="NeTwOrK",
+            payment_driver="dRiVeR",
+            payment_network="NeTwOrK",
         ):
             pass
 

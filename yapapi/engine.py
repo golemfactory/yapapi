@@ -56,7 +56,7 @@ DEBIT_NOTE_MIN_TIMEOUT: Final[int] = 30  # in seconds
 DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: Final[str] = "golem.com.payment.debit-notes.accept-timeout?"
 
 DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "zksync").lower()
-DEFAULT_NETWORK: str = os.getenv("YAGNA_NETWORK", "rinkeby").lower()
+DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "rinkeby").lower()
 DEFAULT_SUBNET: Optional[str] = os.getenv("YAGNA_SUBNET", "devnet-beta.2")
 
 
@@ -102,8 +102,8 @@ class _Engine:
         budget: Union[float, Decimal],
         strategy: Optional[MarketStrategy] = None,
         subnet_tag: Optional[str] = None,
-        driver: Optional[str] = None,
-        network: Optional[str] = None,
+        payment_driver: Optional[str] = None,
+        payment_network: Optional[str] = None,
         event_consumer: Optional[Callable[[events.Event], None]] = None,
         stream_output: bool = False,
         app_key: Optional[str] = None,
@@ -115,11 +115,11 @@ class _Engine:
             (e.g. LeastExpensiveLinearPayuMS or DummyMS)
         :param subnet_tag: use only providers in the subnet with the subnet_tag name.
             Uses `YAGNA_SUBNET` environment variable, defaults to `None`
-        :param driver: name of the payment driver to use. Uses `YAGNA_PAYMENT_DRIVER`
+        :param payment_driver: name of the payment driver to use. Uses `YAGNA_PAYMENT_DRIVER`
             environment variable, defaults to `zksync`. Only payment platforms with
             the specified driver will be used
-        :param network: name of the network to use. Uses `YAGNA_NETWORK` environment
-            variable, defaults to `rinkeby`. Only payment platforms with the specified
+        :param payment_network: name of the payment network to use. Uses `YAGNA_PAYMENT_NETWORK`
+        environment variable, defaults to `rinkeby`. Only payment platforms with the specified
             network will be used
         :param event_consumer: a callable that processes events related to the
             computation; by default it is a function that logs all events
@@ -142,8 +142,8 @@ class _Engine:
         self._strategy = strategy
 
         self._subnet: Optional[str] = subnet_tag or DEFAULT_SUBNET
-        self._driver: str = driver.lower() if driver else DEFAULT_DRIVER
-        self._network: str = network.lower() if network else DEFAULT_NETWORK
+        self._payment_driver: str = payment_driver.lower() if payment_driver else DEFAULT_DRIVER
+        self._payment_network: str = payment network.lower() if payment network else DEFAULT_NETWORK
 
         if not event_consumer:
             # Use local import to avoid cyclic imports when yapapi.log
@@ -188,14 +188,14 @@ class _Engine:
         return builder
 
     @property
-    def driver(self) -> str:
+    def payment_driver(self) -> str:
         """Return the name of the payment driver used by this engine."""
-        return self._driver
+        return self._payment_driver
 
     @property
-    def network(self) -> str:
-        """Return the name of the payment network used by this engine."""
-        return self._network
+    def payment_network(self) -> str:
+        """Return the name of the payment payment network used by this engine."""
+        return self._payment_network
 
     @property
     def storage_manager(self):
@@ -348,15 +348,15 @@ class _Engine:
             async for account in self._payment_api.accounts():
                 driver = account.driver.lower()
                 network = account.network.lower()
-                if (driver, network) != (self._driver, self._network):
+                if (driver, network) != (self._payment_driver, self._payment_network):
                     logger.debug(
                         "Not using payment platform `%s`, platform's driver/network "
                         "`%s`/`%s` is different than requested driver/network `%s`/`%s`",
                         account.platform,
                         driver,
                         network,
-                        self._driver,
-                        self._network,
+                        self._payment_driver,
+                        self._payment_network,
                     )
                     continue
                 logger.debug("Creating allocation using payment platform `%s`", account.platform)
@@ -375,7 +375,7 @@ class _Engine:
                 self._budget_allocations.append(allocation)
 
             if not self._budget_allocations:
-                raise NoPaymentAccountError(self._driver, self._network)
+                raise NoPaymentAccountError(self._payment_driver, self._payment_network)
 
         allocation_ids = [allocation.id for allocation in self._budget_allocations]
         return await self._payment_api.decorate_demand(allocation_ids)
