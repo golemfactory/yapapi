@@ -291,7 +291,7 @@ class Service:
 
         Therefore, this default implementation performs the minimum required for a VM payload to
         start responding to `run` commands. If your service requires any additional operations -
-        you'll need to override this method (possibly first yielding from the parent - `super().start()` - generator ) 
+        you'll need to override this method (possibly first yielding from the parent - `super().start()` - generator)
         to add appropriate preparatory steps.
 
         In case of runtimes other than VM, `deploy` and/or `start` might be optional or altogether
