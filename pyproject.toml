@@ -53,11 +53,12 @@ python-statemachine = "^0.8.0"
 # Docs
 sphinx = { version = "^4.0.1", optional = true }
 sphinx-autodoc-typehints = { version = "^1.12.0", optional = true }
+sphinx-rtd-theme = { version = "^1.0.0", optional = true}
 
 [tool.poetry.extras]
 cli = ['fire', 'rich']
 integration-tests = ['goth', 'pytest', 'pytest-asyncio']
-docs = ['sphinx', 'sphinx-autodoc-typehints']
+docs = ['sphinx', 'sphinx-autodoc-typehints', 'sphinx-rtd-theme']
 
 [tool.poetry.dev-dependencies]
 black = "^21.7b0"
