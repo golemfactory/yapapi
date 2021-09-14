@@ -20,7 +20,6 @@ from typing import (
     List,
     Optional,
     Set,
-    Tuple,
     Union,
 )
 from typing_extensions import Final, AsyncGenerator
@@ -32,13 +31,15 @@ else:
 
 from yapapi import rest, events
 from yapapi.agreements_pool import AgreementsPool
-from yapapi.ctx import CommandContainer, ExecOptions, Work, WorkContext
+from yapapi.ctx import WorkContext
 from yapapi.payload import Payload
 from yapapi import props
 from yapapi.props import com
 from yapapi.props.builder import DemandBuilder, DemandDecorator
 from yapapi.rest.activity import CommandExecutionError, Activity
 from yapapi.rest.market import Agreement, AgreementDetails, OfferProposal, Subscription
+from yapapi.script import Script
+from yapapi.script.command import BatchCommand
 from yapapi.storage import gftp
 from yapapi.strategy import (
     DecreaseScoreForUnconfirmedAgreement,
@@ -85,25 +86,6 @@ class NoPaymentAccountError(Exception):
             f"No payment account available for driver `{self.required_driver}`"
             f" and network `{self.required_network}`"
         )
-
-
-WorkItem = Union[Work, Tuple[Work, ExecOptions]]
-"""The type of items yielded by a generator created by the `worker` function supplied by user."""
-
-
-def _unpack_work_item(item: WorkItem) -> Tuple[Work, ExecOptions]:
-    """Extract `Work` object and options from a work item.
-
-    If the item does not specify options, default ones are provided.
-    """
-    if isinstance(item, tuple):
-        return item
-    else:
-        return item, ExecOptions()
-
-
-exescript_ids: Iterator[int] = itertools.count(1)
-"""An iterator providing unique ids used to correlate events related to a single exe script."""
 
 
 # Type aliases to make some type annotations more meaningful
@@ -599,46 +581,30 @@ class _Engine:
         job_id: str,
         agreement_id: str,
         activity: rest.activity.Activity,
-        batch_generator: AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
+        batch_generator: AsyncGenerator[Script, Awaitable[List[events.CommandEvent]]],
     ) -> None:
-        """Send command batches produced by `command_generator` to `activity`."""
+        """Send command batches produced by `batch_generator` to `activity`."""
 
-        item = await batch_generator.__anext__()
+        script: Script = await batch_generator.__anext__()
 
         while True:
-
-            batch, exec_options = _unpack_work_item(item)
-
-            script_id = str(next(exescript_ids))
-
-            if batch.timeout:
-                if exec_options.batch_timeout:
-                    logger.warning(
-                        "Overriding batch timeout set with commit(batch_timeout)"
-                        "by the value set in exec options"
-                    )
-                else:
-                    exec_options.batch_timeout = batch.timeout
+            script_id = str(script.id)
 
             batch_deadline = (
-                datetime.now(timezone.utc) + exec_options.batch_timeout
-                if exec_options.batch_timeout
-                else None
+                datetime.now(timezone.utc) + script.timeout if script.timeout is not None else None
             )
 
-            cc = CommandContainer()
             try:
-                await batch.prepare()
-                batch.register(cc)
-                remote = await activity.send(cc.commands(), deadline=batch_deadline)
+                await script._before()
+                batch: List[BatchCommand] = script._evaluate()
+                remote = await activity.send(batch, deadline=batch_deadline)
             except Exception:
-                item = await batch_generator.athrow(*sys.exc_info())
+                script = await batch_generator.athrow(*sys.exc_info())
                 continue
 
-            cmds = cc.commands()
             self.emit(
                 events.ScriptSent(
-                    job_id=job_id, agr_id=agreement_id, script_id=script_id, cmds=cmds
+                    job_id=job_id, agr_id=agreement_id, script_id=script_id, cmds=batch
                 )
             )
 
@@ -646,17 +612,20 @@ class _Engine:
                 results = []
                 async for evt_ctx in remote:
                     evt = evt_ctx.event(
-                        job_id=job_id, agr_id=agreement_id, script_id=script_id, cmds=cmds
+                        job_id=job_id, agr_id=agreement_id, script_id=script_id, cmds=batch
                     )
                     self.emit(evt)
                     results.append(evt)
-                    if isinstance(evt, events.CommandExecuted) and not evt.success:
-                        raise CommandExecutionError(evt.command, evt.message, evt.stderr)
+                    if isinstance(evt, events.CommandExecuted):
+                        if evt.success:
+                            script._set_cmd_result(evt)
+                        else:
+                            raise CommandExecutionError(evt.command, evt.message, evt.stderr)
 
                 self.emit(
                     events.GettingResults(job_id=job_id, agr_id=agreement_id, script_id=script_id)
                 )
-                await batch.post()
+                await script._after()
                 self.emit(
                     events.ScriptFinished(job_id=job_id, agr_id=agreement_id, script_id=script_id)
                 )
@@ -665,24 +634,24 @@ class _Engine:
 
             loop = asyncio.get_event_loop()
 
-            if exec_options.wait_for_results:
+            if script.wait_for_results:
                 # Block until the results are available
                 try:
                     future_results = loop.create_future()
                     results = await get_batch_results()
                     future_results.set_result(results)
                 except Exception:
-                    # Raise the exception in `command_generator` (the `worker` coroutine).
+                    # Raise the exception in `batch_generator` (the `worker` coroutine).
                     # If the client code is able to handle it then we'll proceed with
                     # subsequent batches. Otherwise the worker finishes with error.
-                    item = await batch_generator.athrow(*sys.exc_info())
+                    script = await batch_generator.athrow(*sys.exc_info())
                 else:
-                    item = await batch_generator.asend(future_results)
+                    script = await batch_generator.asend(future_results)
 
             else:
                 # Schedule the coroutine in a separate asyncio task
                 future_results = loop.create_task(get_batch_results())
-                item = await batch_generator.asend(future_results)
+                script = await batch_generator.asend(future_results)
 
 
 class Job:

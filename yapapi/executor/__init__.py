@@ -21,7 +21,8 @@ from yapapi import rest, events
 from yapapi.ctx import WorkContext
 from yapapi.payload import Payload
 from yapapi.rest.activity import Activity
-from yapapi.engine import _Engine, Job, WorkItem
+from yapapi.script import Script
+from yapapi.engine import _Engine, Job
 import yapapi.utils
 
 from .task import Task, TaskStatus
@@ -83,7 +84,7 @@ class Executor:
         self,
         worker: Callable[
             [WorkContext, AsyncIterator[Task[D, R]]],
-            AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
+            AsyncGenerator[Script, Awaitable[List[events.CommandEvent]]],
         ],
         data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
         job_id: Optional[str] = None,
@@ -106,7 +107,7 @@ class Executor:
         self,
         worker: Callable[
             [WorkContext, AsyncIterator[Task[D, R]]],
-            AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
+            AsyncGenerator[Script, Awaitable[List[events.CommandEvent]]],
         ],
         data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
         job_id: Optional[str],
@@ -151,7 +152,7 @@ class Executor:
         self,
         worker: Callable[
             [WorkContext, AsyncIterator[Task[D, R]]],
-            AsyncGenerator[WorkItem, Awaitable[List[events.CommandEvent]]],
+            AsyncGenerator[Script, Awaitable[List[events.CommandEvent]]],
         ],
         data: Union[AsyncIterator[Task[D, R]], Iterable[Task[D, R]]],
         services: Set[asyncio.Task],
