@@ -19,12 +19,12 @@ from yapapi.ctx import ActivityUsage
 from yapapi.payload import Payload
 from yapapi.services import Service, ServiceState
 
+from utils import build_parser
+
 
 @dataclass
 class CustomCounterServicePayload(Payload):
     runtime: str = constraint(inf.INF_RUNTIME_NAME, default="test-counters")
-    min_mem_gib: float = constraint(inf.INF_MEM, operator=">=", default=0.5)
-    min_storage_gib: float = constraint(inf.INF_STORAGE, operator=">=", default=0.1)
 
 
 class CustomCounterService(Service):
@@ -59,13 +59,6 @@ class CustomCounterService(Service):
 
 async def main(running_time_sec, subnet_tag, driver=None, network=None):
 
-    enable_default_logger(
-        log_file=str(Path(__file__).parent / "custom-counters.log"),
-        debug_activity_api=True,
-        debug_market_api=True,
-        debug_payment_api=True,
-    )
-
     strategy = LeastExpensiveLinearPayuMS(
         max_price_for={
             com.Counter.CPU.value: Decimal("0.2"),
@@ -99,10 +92,7 @@ async def main(running_time_sec, subnet_tag, driver=None, network=None):
                 was_running = True
 
 
-parser = argparse.ArgumentParser(description="Custom Usage Counter Example")
-parser.add_argument("--driver", help="Payment driver name, for example `zksync`")
-parser.add_argument("--network", help="Network name, for example `rinkeby`")
-parser.add_argument("--subnet-tag", help="Subnet name, for example `devnet-beta.2`")
+parser = build_parser("Custom Usage Counter Example")
 parser.add_argument(
     "--running-time",
     default=30,
@@ -110,4 +100,10 @@ parser.add_argument(
     help="How long should the the service run (in seconds, default: %(default)s)",
 )
 args = parser.parse_args()
+enable_default_logger(
+    log_file=args.log_file,
+    debug_activity_api=True,
+    debug_market_api=True,
+    debug_payment_api=True,
+)
 asyncio.run(main(args.running_time, args.subnet_tag, args.driver, args.network))
