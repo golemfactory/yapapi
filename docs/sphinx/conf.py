@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath("../../"))
 # -- Project information -----------------------------------------------------
 
 project = "yapapi"
-copyright = "2019-2021, Golem Factory"
+copyright = "2020-2021, Golem Factory"
 author = "Golem Factory"
 
 # The full version, including alpha/beta/rc tags
