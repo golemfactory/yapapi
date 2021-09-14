@@ -2,6 +2,7 @@ from datetime import timedelta
 import itertools
 from typing import Any, Awaitable, Callable, Dict, Iterator, Optional, List, TYPE_CHECKING
 
+import yapapi
 from yapapi.events import CommandExecuted
 from yapapi.script.capture import CaptureContext
 from yapapi.script.command import (
@@ -55,7 +56,7 @@ class Script:
 
     def __init__(
         self,
-        context: "WorkContext",
+        context: "yapapi.ctx.WorkContext",
         timeout: Optional[timedelta] = None,
         wait_for_results: bool = True,
     ):

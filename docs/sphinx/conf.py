@@ -17,12 +17,12 @@ sys.path.insert(0, os.path.abspath("../../"))
 
 # -- Project information -----------------------------------------------------
 
-project = "Yapapi"
-copyright = "2021, Golem Factory"
+project = "yapapi"
+copyright = "2019-2021, Golem Factory"
 author = "Golem Factory"
 
 # The full version, including alpha/beta/rc tags
-release = "123"
+release = "0.7.0"
 
 
 # -- General configuration ---------------------------------------------------
