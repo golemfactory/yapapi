@@ -19,6 +19,9 @@ from yapapi.ctx import ActivityUsage
 from yapapi.payload import Payload
 from yapapi.services import Service, ServiceState
 
+examples_dir = pathlib.Path(__file__).resolve().parent.parent
+sys.path.append(str(examples_dir))
+
 from utils import build_parser
 
 
