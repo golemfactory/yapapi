@@ -5,7 +5,7 @@ import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
-from pathlib import Path
+import pathlib
 
 from yapapi.strategy import LeastExpensiveLinearPayuMS, DecreaseScoreForUnconfirmedAgreement
 
