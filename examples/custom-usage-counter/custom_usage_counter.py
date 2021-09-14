@@ -91,17 +91,14 @@ async def main(running_time_sec, subnet_tag, driver=None, network=None):
         while True:
             await asyncio.sleep(3)
 
-            if was_running and all([s.state == ServiceState.terminated for s in cluster.instances]):
-                print_instances()
-                print("All services were successfully terminated")
-                break
-
             if len(cluster.instances) > 0:
                 print_instances()
                 was_running = True
 
-        for svc in cluster.instances:
-            cluster.stop_instance(svc)
+            if was_running and all([s.state == ServiceState.terminated for s in cluster.instances]):
+                print_instances()
+                print("All services were successfully terminated")
+                break
 
     print_instances()
 
