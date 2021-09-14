@@ -166,9 +166,7 @@ if __name__ == "__main__":
         driver=args.driver,
         network=args.network,
     )
-    task = loop.create_task(
-        main(golem, show_usage=args.show_usage)
-    )
+    task = loop.create_task(main(golem, show_usage=args.show_usage))
 
     try:
         loop.run_until_complete(task)
