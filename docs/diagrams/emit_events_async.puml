@@ -1,0 +1,40 @@
+@startuml
+title Emitting events using AsyncWrapper
+hide footbox
+skinparam BoxPadding 10
+
+box "yapapi 'core'"
+participant ":_Engine" as engine
+participant ":AsyncWrapper" as wrapper
+participant ":asyncio.Queue" as queue
+participant "worker" as worker <<asyncio.Task>>
+end box
+
+box "user code"
+participant "event_consumer" as consumer
+end box
+
+activate engine
+create wrapper
+engine -> wrapper : <<create>>
+
+create queue
+wrapper -> queue : <<create>>
+
+create worker
+wrapper -> worker : <<create_task>>
+activate worker
+
+worker -> queue : get()
+
+engine -> wrapper ++ : emit(event)
+
+wrapper -> queue : put(event)
+return
+
+queue -> worker : return event
+
+worker -> consumer ++ : callback(event)
+|||
+
+@enduml

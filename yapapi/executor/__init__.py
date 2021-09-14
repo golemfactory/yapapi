@@ -181,10 +181,10 @@ class Executor:
 
         work_queue = SmartQueue(input_tasks())
 
-        async def _worker(
+        async def run_worker(
             agreement: rest.market.Agreement, activity: Activity, work_context: WorkContext
         ) -> None:
-            nonlocal job
+            """Run an instance of `worker` for the particular activity and work context."""
 
             with work_queue.new_consumer() as consumer:
                 try:
@@ -232,7 +232,7 @@ class Executor:
                 if len(workers) < self._max_workers and work_queue.has_unassigned_items():
                     new_task = None
                     try:
-                        new_task = await self._engine.start_worker(job, _worker)
+                        new_task = await self._engine.start_worker(job, run_worker)
                         if new_task is None:
                             continue
                         workers.add(new_task)

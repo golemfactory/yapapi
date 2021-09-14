@@ -539,11 +539,17 @@ class _Engine:
         )
 
     async def start_worker(
-        self, job: "Job", worker: Callable[[Agreement, Activity, WorkContext], Awaitable]
+        self, job: "Job", run_worker: Callable[[Agreement, Activity, WorkContext], Awaitable]
     ) -> Optional[asyncio.Task]:
         loop = asyncio.get_event_loop()
 
-        async def _worker(agreement: Agreement, agreement_details: AgreementDetails):
+        async def worker_task(agreement: Agreement, agreement_details: AgreementDetails):
+            """A coroutine run by every worker task.
+
+            It creates an Activity and WorkContext for given Agreement
+            and then passes them to `run_worker`.
+            """
+
             self.emit(events.WorkerStarted(job_id=job.id, agr_id=agreement.id))
 
             try:
@@ -564,10 +570,10 @@ class _Engine:
                 work_context = WorkContext(
                     activity, agreement_details, self.storage_manager, emitter=self.emit
                 )
-                await worker(agreement, activity, work_context)
+                await run_worker(agreement, activity, work_context)
 
         return await job.agreements_pool.use_agreement(
-            lambda agreement, details: loop.create_task(_worker(agreement, details))
+            lambda agreement, details: loop.create_task(worker_task(agreement, details))
         )
 
     async def process_batches(
@@ -575,11 +581,11 @@ class _Engine:
         job_id: str,
         agreement_id: str,
         activity: rest.activity.Activity,
-        command_generator: AsyncGenerator[Script, Awaitable[List[events.CommandEvent]]],
+        batch_generator: AsyncGenerator[Script, Awaitable[List[events.CommandEvent]]],
     ) -> None:
-        """Send command batches produced by `command_generator` to `activity`."""
+        """Send command batches produced by `batch_generator` to `activity`."""
 
-        script: Script = await command_generator.__anext__()
+        script: Script = await batch_generator.__anext__()
 
         while True:
             script_id = str(script.id)
@@ -593,7 +599,7 @@ class _Engine:
                 batch: List[BatchCommand] = script._evaluate()
                 remote = await activity.send(batch, deadline=batch_deadline)
             except Exception:
-                script = await command_generator.athrow(*sys.exc_info())
+                script = await batch_generator.athrow(*sys.exc_info())
                 continue
 
             self.emit(
@@ -635,17 +641,17 @@ class _Engine:
                     results = await get_batch_results()
                     future_results.set_result(results)
                 except Exception:
-                    # Raise the exception in `command_generator` (the `worker` coroutine).
+                    # Raise the exception in `batch_generator` (the `worker` coroutine).
                     # If the client code is able to handle it then we'll proceed with
                     # subsequent batches. Otherwise the worker finishes with error.
-                    script = await command_generator.athrow(*sys.exc_info())
+                    script = await batch_generator.athrow(*sys.exc_info())
                 else:
-                    script = await command_generator.asend(future_results)
+                    script = await batch_generator.asend(future_results)
 
             else:
                 # Schedule the coroutine in a separate asyncio task
                 future_results = loop.create_task(get_batch_results())
-                script = await command_generator.asend(future_results)
+                script = await batch_generator.asend(future_results)
 
 
 class Job:
