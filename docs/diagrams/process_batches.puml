@@ -1,0 +1,58 @@
+@startuml
+title Creating and executing command batches
+hide footbox
+
+participant "executor:Executor" as executor #Violet
+participant ":Activity" as act
+participant "golem:[[../../yapapi/golem.py Golem]]" as engine #Turquoise
+participant "batch_generator:AsyncGenerator" as batch_generator
+participant ":WorkContext" as ctx
+
+executor -> engine ++ : process_batches(batch_generator)
+
+' batch 1
+engine -> batch_generator : anext()
+activate batch_generator
+batch_generator -> ctx : send_file()
+activate ctx
+deactivate ctx
+batch_generator -> ctx : run()
+activate ctx
+deactivate ctx
+batch_generator -> ctx : commit()
+activate ctx
+return batch_1
+batch_generator --> engine : yield batch_1
+
+engine -> act : send(batch_1)
+activate act
+return batch_results_1
+
+' batch 2
+engine -> batch_generator : asend(batch_results_1)
+batch_generator -> ctx : run()
+activate ctx
+deactivate ctx
+batch_generator -> ctx : download_file()
+activate ctx
+deactivate ctx
+batch_generator -> ctx: commit()
+activate ctx
+return batch_2
+batch_generator --> engine : yield batch_2
+
+engine -> act : send(batch_2)
+activate act
+return batch_results_2
+
+engine -> batch_generator : asend(batch_results_2)
+return StopIteration
+
+return
+
+deactivate executor
+deactivate executor
+
+deactivate engine
+
+@enduml

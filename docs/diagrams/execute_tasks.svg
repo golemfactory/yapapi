@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="1376px" preserveAspectRatio="none" style="width:1718px;height:1376px;background:#FFFFFF;" version="1.1" viewBox="0 0 1718 1376" width="1718px" zoomAndPan="magnify"><defs><filter height="300%" id="f1ls0830z9482u" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="1157.8594" style="stroke:#A80036;stroke-width:1.0;" width="10" x="515" y="137.0234"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="1054.2969" style="stroke:#A80036;stroke-width:1.0;" width="10" x="671" y="211.4531"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="810.7109" style="stroke:#A80036;stroke-width:1.0;" width="10" x="676" y="425.9063"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="119.7266" style="stroke:#A80036;stroke-width:1.0;" width="10" x="933" y="306.1797"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="30" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1143" y="636.4922"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="30" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1143" y="695.625"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="29.1328" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1143" y="754.7578"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="30" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1143" y="929.5547"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="30" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1143" y="988.6875"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="29.1328" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1143" y="1047.8203"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="205.6641" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1311" y="607.3594"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="205.6641" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1311" y="900.4219"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="29.1328" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1311" y="1193.4844"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="658.3906" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1507.5" y="578.2266"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="29.1328" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1657.5" y="842.1563"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="29.1328" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1657.5" y="1135.2188"/><line style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="53" x2="53" y1="60.5938" y2="1312.8828"/><line style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="519.5" x2="519.5" y1="103.2422" y2="1312.8828"/><line style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="676" x2="676" y1="177.6719" y2="1312.8828"/><line style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="937.5" x2="937.5" y1="262.25" y2="1312.8828"/><line style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="1148" x2="1148" y1="392.125" y2="1312.8828"/><line style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="1316" x2="1316" y1="474.7031" y2="1312.8828"/><line style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="1512" x2="1512" y1="536.2969" y2="1312.8828"/><line style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="1662" x2="1662" y1="346.8281" y2="1312.8828"/><rect fill="#FFD700" filter="url(#f1ls0830z9482u)" height="30.2969" style="stroke:#A80036;stroke-width:1.5;" width="92" x="5" y="25.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="78" x="12" y="45.292">Client code</text><rect fill="#FFD700" filter="url(#f1ls0830z9482u)" height="30.2969" style="stroke:#A80036;stroke-width:1.5;" width="92" x="5" y="1311.8828"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="78" x="12" y="1331.8779">Client code</text><rect fill="#40E0D0" filter="url(#f1ls0830z9482u)" height="30.2969" style="stroke:#A80036;stroke-width:1.5;" width="107" x="464.5" y="1311.8828"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="48" x="471.5" y="1331.8779">golem:</text><a href="../../yapapi/golem.py" target="_top" title="../../yapapi/golem.py" xlink:actuate="onRequest" xlink:href="../../yapapi/golem.py" xlink:show="new" xlink:title="../../yapapi/golem.py" xlink:type="simple"><text fill="#0000FF" font-family="sans-serif" font-size="14" lengthAdjust="spacing" text-decoration="underline" textLength="45" x="519.5" y="1331.8779">Golem</text></a><rect fill="#EE82EE" filter="url(#f1ls0830z9482u)" height="30.2969" style="stroke:#A80036;stroke-width:1.5;" width="80" x="634" y="1311.8828"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="66" x="641" y="1331.8779">:Executor</text><rect fill="#40E0D0" filter="url(#f1ls0830z9482u)" height="46.5938" style="stroke:#A80036;stroke-width:1.5;" width="151" x="862.5" y="1311.8828"/><rect fill="#40E0D0" filter="url(#f1ls0830z9482u)" height="46.5938" style="stroke:#A80036;stroke-width:1.5;" width="151" x="858.5" y="1315.8828"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="106" x="881" y="1335.8779">«asyncio.Task»</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="137" x="865.5" y="1352.1748">:golem.start_worker</text><rect fill="#87CEEB" filter="url(#f1ls0830z9482u)" height="30.2969" style="stroke:#A80036;stroke-width:1.5;" width="128" x="1082" y="1311.8828"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="114" x="1089" y="1331.8779">ctx:WorkContext</text><rect fill="#FFD700" filter="url(#f1ls0830z9482u)" height="46.5938" style="stroke:#A80036;stroke-width:1.5;" width="180" x="1224" y="1311.8828"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="130" x="1249" y="1331.8779">«AsyncGenerator»</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="166" x="1231" y="1348.1748">batch_generator:worker</text><rect fill="#40E0D0" filter="url(#f1ls0830z9482u)" height="46.5938" style="stroke:#A80036;stroke-width:1.5;" width="185" x="1418" y="1311.8828"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="84" x="1468.5" y="1331.8779">«coroutine»</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="171" x="1425" y="1348.1748">:golem.process_batches</text><rect fill="#87CEEB" filter="url(#f1ls0830z9482u)" height="30.2969" style="stroke:#A80036;stroke-width:1.5;" width="87" x="1617" y="1311.8828"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="73" x="1624" y="1331.8779">act:Activity</text><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="1157.8594" style="stroke:#A80036;stroke-width:1.0;" width="10" x="515" y="137.0234"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="1054.2969" style="stroke:#A80036;stroke-width:1.0;" width="10" x="671" y="211.4531"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="810.7109" style="stroke:#A80036;stroke-width:1.0;" width="10" x="676" y="425.9063"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="119.7266" style="stroke:#A80036;stroke-width:1.0;" width="10" x="933" y="306.1797"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="30" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1143" y="636.4922"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="30" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1143" y="695.625"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="29.1328" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1143" y="754.7578"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="30" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1143" y="929.5547"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="30" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1143" y="988.6875"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="29.1328" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1143" y="1047.8203"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="205.6641" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1311" y="607.3594"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="205.6641" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1311" y="900.4219"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="29.1328" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1311" y="1193.4844"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="658.3906" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1507.5" y="578.2266"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="29.1328" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1657.5" y="842.1563"/><rect fill="#FFFFFF" filter="url(#f1ls0830z9482u)" height="29.1328" style="stroke:#A80036;stroke-width:1.0;" width="10" x="1657.5" y="1135.2188"/><polygon fill="#A80036" points="452.5,87.7266,462.5,91.7266,452.5,95.7266,456.5,91.7266" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="53" x2="458.5" y1="91.7266" y2="91.7266"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="85" x="60" y="86.6606">&lt;&lt;create&gt;&gt;</text><rect fill="#40E0D0" filter="url(#f1ls0830z9482u)" height="30.2969" style="stroke:#A80036;stroke-width:1.5;" width="107" x="464.5" y="70.5938"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="48" x="471.5" y="90.5889">golem:</text><a href="../../yapapi/golem.py" target="_top" title="../../yapapi/golem.py" xlink:actuate="onRequest" xlink:href="../../yapapi/golem.py" xlink:show="new" xlink:title="../../yapapi/golem.py" xlink:type="simple"><text fill="#0000FF" font-family="sans-serif" font-size="14" lengthAdjust="spacing" text-decoration="underline" textLength="45" x="519.5" y="90.5889">Golem</text></a><polygon fill="#A80036" points="503,133.0234,513,137.0234,503,141.0234,507,137.0234" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="53" x2="509" y1="137.0234" y2="137.0234"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="443" x="60" y="131.9575">execute_tasks(worker)  ' ++ is a shorthand for activating the receiver</text><polygon fill="#A80036" points="622,162.1563,632,166.1563,622,170.1563,626,166.1563" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="525" x2="628" y1="166.1563" y2="166.1563"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="85" x="532" y="161.0903">&lt;&lt;create&gt;&gt;</text><rect fill="#EE82EE" filter="url(#f1ls0830z9482u)" height="30.2969" style="stroke:#A80036;stroke-width:1.5;" width="80" x="634" y="145.0234"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="66" x="641" y="165.0186">:Executor</text><polygon fill="#A80036" points="659,207.4531,669,211.4531,659,215.4531,663,211.4531" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="525" x2="665" y1="211.4531" y2="211.4531"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="96" x="532" y="206.3872">submit(worker)</text><polygon fill="#A80036" points="846.5,236.5859,856.5,240.5859,846.5,244.5859,850.5,240.5859" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="681" x2="852.5" y1="240.5859" y2="240.5859"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="85" x="688" y="235.52">&lt;&lt;create&gt;&gt;</text><rect fill="#40E0D0" filter="url(#f1ls0830z9482u)" height="46.5938" style="stroke:#A80036;stroke-width:1.5;" width="151" x="862.5" y="219.4531"/><rect fill="#40E0D0" filter="url(#f1ls0830z9482u)" height="46.5938" style="stroke:#A80036;stroke-width:1.5;" width="151" x="858.5" y="223.4531"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="106" x="881" y="243.4482">«asyncio.Task»</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="137" x="865.5" y="259.7451">:golem.start_worker</text><polygon fill="#A80036" points="921,302.1797,931,306.1797,921,310.1797,925,306.1797" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="681" x2="927" y1="306.1797" y2="306.1797"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="113" x="688" y="301.1138">&lt;&lt;run-in-loop&gt;&gt;</text><polygon fill="#A80036" points="1605,331.3125,1615,335.3125,1605,339.3125,1609,335.3125" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="943" x2="1611" y1="335.3125" y2="335.3125"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="85" x="950" y="330.2466">&lt;&lt;create&gt;&gt;</text><rect fill="#87CEEB" filter="url(#f1ls0830z9482u)" height="30.2969" style="stroke:#A80036;stroke-width:1.5;" width="87" x="1617" y="314.1797"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="73" x="1624" y="334.1748">act:Activity</text><polygon fill="#A80036" points="1070,376.6094,1080,380.6094,1070,384.6094,1074,380.6094" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="943" x2="1076" y1="380.6094" y2="380.6094"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="115" x="950" y="375.5435">&lt;&lt;create&gt;&gt;(act)</text><rect fill="#87CEEB" filter="url(#f1ls0830z9482u)" height="30.2969" style="stroke:#A80036;stroke-width:1.5;" width="128" x="1082" y="359.4766"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="114" x="1089" y="379.4717">ctx:WorkContext</text><polygon fill="#A80036" points="697,421.9063,687,425.9063,697,429.9063,693,425.9063" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="691" x2="937" y1="425.9063" y2="425.9063"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="228" x="703" y="420.8403">executor.submit().worker_wrapper()</text><polygon fill="#A80036" points="1212,451.0391,1222,455.0391,1212,459.0391,1216,455.0391" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="686" x2="1218" y1="455.0391" y2="455.0391"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="114" x="693" y="449.9731">&lt;&lt;create&gt;&gt;(ctx)</text><rect fill="#FFD700" filter="url(#f1ls0830z9482u)" height="46.5938" style="stroke:#A80036;stroke-width:1.5;" width="180" x="1224" y="433.9063"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="130" x="1249" y="453.9014">«AsyncGenerator»</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="166" x="1231" y="470.1982">batch_generator:worker</text><polygon fill="#A80036" points="1406,512.6328,1416,516.6328,1406,520.6328,1410,516.6328" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="686" x2="1412" y1="516.6328" y2="516.6328"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="201" x="693" y="511.5669">&lt;&lt;create&gt;&gt;(batch_generator)</text><rect fill="#40E0D0" filter="url(#f1ls0830z9482u)" height="46.5938" style="stroke:#A80036;stroke-width:1.5;" width="185" x="1418" y="495.5"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="84" x="1468.5" y="515.4951">«coroutine»</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="171" x="1425" y="531.792">:golem.process_batches</text><polygon fill="#A80036" points="1495.5,574.2266,1505.5,578.2266,1495.5,582.2266,1499.5,578.2266" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="686" x2="1501.5" y1="578.2266" y2="578.2266"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="33" x="693" y="573.1606">await</text><polygon fill="#A80036" points="1332,603.3594,1322,607.3594,1332,611.3594,1328,607.3594" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="1326" x2="1506.5" y1="607.3594" y2="607.3594"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="46" x="1338" y="602.2935">anext()</text><polygon fill="#A80036" points="1164,632.4922,1154,636.4922,1164,640.4922,1160,636.4922" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="1158" x2="1310" y1="636.4922" y2="636.4922"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="66" x="1170" y="631.4263">send_file()</text><polygon fill="#A80036" points="1164,691.625,1154,695.625,1164,699.625,1160,695.625" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="1158" x2="1310" y1="695.625" y2="695.625"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="31" x="1170" y="690.5591">run()</text><polygon fill="#A80036" points="1164,750.7578,1154,754.7578,1164,758.7578,1160,754.7578" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="1158" x2="1310" y1="754.7578" y2="754.7578"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="59" x="1170" y="749.6919">commit()</text><polygon fill="#A80036" points="1299,779.8906,1309,783.8906,1299,787.8906,1303,783.8906" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1148" x2="1305" y1="783.8906" y2="783.8906"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="51" x="1155" y="778.8247">batch_1</text><polygon fill="#A80036" points="1495.5,809.0234,1505.5,813.0234,1495.5,817.0234,1499.5,813.0234" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1316" x2="1501.5" y1="813.0234" y2="813.0234"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="84" x="1323" y="807.9575">yield batch_1</text><polygon fill="#A80036" points="1645.5,838.1563,1655.5,842.1563,1645.5,846.1563,1649.5,842.1563" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="1517.5" x2="1651.5" y1="842.1563" y2="842.1563"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="92" x="1524.5" y="837.0903">send(batch_1)</text><polygon fill="#A80036" points="1528.5,867.2891,1518.5,871.2891,1528.5,875.2891,1524.5,871.2891" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1522.5" x2="1661.5" y1="871.2891" y2="871.2891"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="101" x="1534.5" y="866.2231">batch_results_1</text><polygon fill="#A80036" points="1332,896.4219,1322,900.4219,1332,904.4219,1328,900.4219" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="1326" x2="1506.5" y1="900.4219" y2="900.4219"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="150" x="1338" y="895.356">asend(batch_results_1)</text><polygon fill="#A80036" points="1164,925.5547,1154,929.5547,1164,933.5547,1160,929.5547" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="1158" x2="1310" y1="929.5547" y2="929.5547"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="31" x="1170" y="924.4888">run()</text><polygon fill="#A80036" points="1164,984.6875,1154,988.6875,1164,992.6875,1160,988.6875" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="1158" x2="1310" y1="988.6875" y2="988.6875"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="95" x="1170" y="983.6216">download_file()</text><polygon fill="#A80036" points="1164,1043.8203,1154,1047.8203,1164,1051.8203,1160,1047.8203" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="1158" x2="1310" y1="1047.8203" y2="1047.8203"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="59" x="1170" y="1042.7544">commit()</text><polygon fill="#A80036" points="1299,1072.9531,1309,1076.9531,1299,1080.9531,1303,1076.9531" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1148" x2="1305" y1="1076.9531" y2="1076.9531"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="51" x="1155" y="1071.8872">batch_2</text><polygon fill="#A80036" points="1495.5,1102.0859,1505.5,1106.0859,1495.5,1110.0859,1499.5,1106.0859" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1316" x2="1501.5" y1="1106.0859" y2="1106.0859"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="84" x="1323" y="1101.02">yield batch_2</text><polygon fill="#A80036" points="1645.5,1131.2188,1655.5,1135.2188,1645.5,1139.2188,1649.5,1135.2188" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="1517.5" x2="1651.5" y1="1135.2188" y2="1135.2188"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="92" x="1524.5" y="1130.1528">send(batch_2)</text><polygon fill="#A80036" points="1528.5,1160.3516,1518.5,1164.3516,1528.5,1168.3516,1524.5,1164.3516" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1522.5" x2="1661.5" y1="1164.3516" y2="1164.3516"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="101" x="1534.5" y="1159.2856">batch_results_2</text><polygon fill="#A80036" points="1332,1189.4844,1322,1193.4844,1332,1197.4844,1328,1193.4844" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="1326" x2="1506.5" y1="1193.4844" y2="1193.4844"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="150" x="1338" y="1188.4185">asend(batch_results_2)</text><polygon fill="#A80036" points="1495.5,1218.6172,1505.5,1222.6172,1495.5,1226.6172,1499.5,1222.6172" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1316" x2="1501.5" y1="1222.6172" y2="1222.6172"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="83" x="1323" y="1217.5513">StopIteration</text><polygon fill="#A80036" points="692,1232.6172,682,1236.6172,692,1240.6172,688,1236.6172" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="686" x2="1511.5" y1="1236.6172" y2="1236.6172"/><polygon fill="#A80036" points="536,1261.75,526,1265.75,536,1269.75,532,1265.75" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="530" x2="675" y1="1265.75" y2="1265.75"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="94" x="542" y="1260.6841">task generator</text><polygon fill="#A80036" points="64,1290.8828,54,1294.8828,64,1298.8828,60,1294.8828" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="58" x2="519" y1="1294.8828" y2="1294.8828"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="94" x="70" y="1289.8169">task generator</text><!--MD5=[f29c8818e1a1b63a3fc9a4b6c74d18b1]
+@startuml
+participant "Client code" #Gold
+participant "golem:[[../../yapapi/golem.py Golem]]" as engine #Turquoise
+participant ":Executor" as executor #Violet
+collections ":golem.start_worker" as start_worker <<asyncio.Task>> #Turquoise
+participant "ctx:WorkContext" as ctx #SkyBlue
+participant "batch_generator:worker" as batch_generator <<AsyncGenerator>> #Gold
+participant ":golem.process_batches" as process_batches <<coroutine>> #Turquoise
+participant "act:Activity" as act #SkyBlue
+
+create engine
+"Client code" -> engine : <<create>>
+"Client code" -> engine ++ : execute_tasks(worker)  ' ++ is a shorthand for activating the receiver
+
+create executor
+engine -> executor : <<create>>
+engine -> executor ++ : submit(worker)
+
+create start_worker
+executor -> start_worker : <<create>>
+executor -> start_worker ++ : <<run-in-loop>>
+
+' activate start_worker
+create act
+start_worker -> act : <<create>>
+create ctx
+start_worker -> ctx : <<create>>(act)
+
+start_worker -> executor : executor.submit().worker_wrapper()
+deactivate start_worker
+
+activate executor
+
+create batch_generator
+executor -> batch_generator : <<create>>(ctx)
+
+create process_batches
+executor -> process_batches : <<create>>(batch_generator)
+executor -> process_batches : await
+
+activate process_batches
+
+' batch 1
+process_batches -> batch_generator : anext()
+activate batch_generator
+batch_generator -> ctx : send_file()
+activate ctx
+deactivate ctx
+batch_generator -> ctx : run()
+activate ctx
+deactivate ctx
+batch_generator -> ctx : commit()
+activate ctx
+return batch_1
+return yield batch_1
+
+process_batches -> act : send(batch_1)
+activate act
+return batch_results_1
+
+' batch 2
+process_batches -> batch_generator : asend(batch_results_1)
+
+activate batch_generator
+batch_generator -> ctx : run()
+activate ctx
+deactivate ctx
+batch_generator -> ctx : download_file()
+activate ctx
+deactivate ctx
+batch_generator -> ctx: commit()
+activate ctx
+return batch_2
+return yield batch_2
+
+process_batches -> act : send(batch_2)
+activate act
+return batch_results_2
+
+' ... more batches processed ...
+
+' last batch processed
+process_batches -> batch_generator : asend(batch_results_2)
+activate batch_generator
+return StopIteration
+
+executor <- - process_batches
+deactivate process_batches
+
+deactivate executor
+engine <- - executor : task generator
+deactivate executor
+
+"Client code" <- - engine: task generator
+deactivate engine
+
+@enduml
+
+@startuml
+participant "Client code" #Gold
+participant "golem:[[../../yapapi/golem.py Golem]]" as engine #Turquoise
+participant ":Executor" as executor #Violet
+collections ":golem.start_worker" as start_worker <<asyncio.Task>> #Turquoise
+participant "ctx:WorkContext" as ctx #SkyBlue
+participant "batch_generator:worker" as batch_generator <<AsyncGenerator>> #Gold
+participant ":golem.process_batches" as process_batches <<coroutine>> #Turquoise
+participant "act:Activity" as act #SkyBlue
+
+create engine
+"Client code" -> engine : <<create>>
+"Client code" -> engine ++ : execute_tasks(worker)  ' ++ is a shorthand for activating the receiver
+
+create executor
+engine -> executor : <<create>>
+engine -> executor ++ : submit(worker)
+
+create start_worker
+executor -> start_worker : <<create>>
+executor -> start_worker ++ : <<run-in-loop>>
+
+create act
+start_worker -> act : <<create>>
+create ctx
+start_worker -> ctx : <<create>>(act)
+
+start_worker -> executor : executor.submit().worker_wrapper()
+deactivate start_worker
+
+activate executor
+
+create batch_generator
+executor -> batch_generator : <<create>>(ctx)
+
+create process_batches
+executor -> process_batches : <<create>>(batch_generator)
+executor -> process_batches : await
+
+activate process_batches
+
+process_batches -> batch_generator : anext()
+activate batch_generator
+batch_generator -> ctx : send_file()
+activate ctx
+deactivate ctx
+batch_generator -> ctx : run()
+activate ctx
+deactivate ctx
+batch_generator -> ctx : commit()
+activate ctx
+return batch_1
+return yield batch_1
+
+process_batches -> act : send(batch_1)
+activate act
+return batch_results_1
+
+process_batches -> batch_generator : asend(batch_results_1)
+
+activate batch_generator
+batch_generator -> ctx : run()
+activate ctx
+deactivate ctx
+batch_generator -> ctx : download_file()
+activate ctx
+deactivate ctx
+batch_generator -> ctx: commit()
+activate ctx
+return batch_2
+return yield batch_2
+
+process_batches -> act : send(batch_2)
+activate act
+return batch_results_2
+
+
+process_batches -> batch_generator : asend(batch_results_2)
+activate batch_generator
+return StopIteration
+
+executor <- - process_batches
+deactivate process_batches
+
+deactivate executor
+engine <- - executor : task generator
+deactivate executor
+
+"Client code" <- - engine: task generator
+deactivate engine
+
+@enduml
+
+PlantUML version 1.2021.9(Sun Jul 25 12:13:56 CEST 2021)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

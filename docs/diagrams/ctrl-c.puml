@@ -1,0 +1,47 @@
+@startuml
+title Handling Ctrl+C
+
+hide footbox
+
+participant "_ _main_ _" as main
+
+participant ":EventLoop" as loop
+
+participant "task:asyncio.Task" as task
+
+activate main
+
+create loop
+main -> loop : get_event_loop()
+
+create task
+main -> task : loop.create_task()
+note right: task runs yapapi code
+
+main -> loop : run_until_complete(task)
+
+activate loop
+loop -> task ++ : <<callback>>
+deactivate
+
+loop -> task ++ : <<callback>>
+deactivate
+
+'user -> loop : Ctrl+C
+
+== Ctrl+C pressed ==
+
+return raise KeyboardInterrupt
+
+main -> main : except KeyboardInterrupt
+main -> task ++ : cancel()
+deactivate
+
+main -> loop ++ : run_until_complete(task)
+loop -> task ++ : throw CancelledError
+task -> task : except CancelledError
+note over task: handle CancelledError\ne.g. peform Executor shutdown
+return
+return
+
+@enduml
