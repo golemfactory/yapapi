@@ -48,9 +48,7 @@ class CustomCounterService(Service):
             yield self._ctx.commit()
             usage: ActivityUsage = await self._ctx.get_usage()
             cost = await self._ctx.get_cost()
-            print(
-                f"total cost so far: {cost}; activity usage: {usage.current_usage} at {usage.timestamp}",
-            )
+            print(f"total cost so far: {cost}; activity usage: {usage.current_usage}")
             await asyncio.sleep(3)
 
     async def shutdown(self):
