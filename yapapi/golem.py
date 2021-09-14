@@ -18,6 +18,7 @@ from typing import (
 )
 from typing_extensions import AsyncGenerator
 
+import yapapi
 from yapapi import events
 from yapapi.ctx import WorkContext
 from yapapi.engine import _Engine
@@ -39,17 +40,17 @@ R = TypeVar("R")  # Type var for task result
 class Golem:
     """The main entrypoint of Golem\\'s high-level API.
 
-    Provides two methods that reflect the two modes of operation, or two types of jobs
-    that can currently be executed on the Golem network.
+    Its principal role is providing an interface to run the requestor's payload using one of two
+    modes of operation - executing tasks and running services.
 
-    The first one - `execute_tasks` - instructs `Golem` to take a sequence of tasks
-    that the user wishes to compute on Golem and distributes those among the providers.
+    The first one, available through `execute_tasks`, instructs `Golem` to take a sequence of
+    tasks that the user wishes to compute on Golem and distributes those among the providers.
 
-    The second one - `run_service` - instructs `Golem` to spawn a certain number of instances
+    The second one, invoked with `run_service`, makes `Golem` spawn a certain number of instances
     of a service based on a single service specification (a specialized implementation
     inheriting from `yapapi.Service`).
 
-    While the two models are not necessarily completely disjoint - in that we can create a
+    While the two modes are not necessarily completely disjoint - in that we can create a
     service that exists to process a certain number of computations and, similarly, we can
     use the task model to run some service - the main difference lies in the lifetime of
     such a job.
@@ -63,16 +64,17 @@ class Golem:
     certain, discrete phases of a lifetime of each service instance - startup, running and
     shutdown.
 
-    As `Golem`'s job includes tracking and executing payments for activities spawned by
-    either mode of operation, it's usually good to have just one instance of `Golem` active
-    at any given time.
+    Internally, `Golem`'s job includes running the engine which takes care of first finding the
+    providers interested in the jobs the requestors want to execute, then negotiating agreements
+    with them and facilitating the execution of those jobs and lastly, processing payments. For this
+    reason, it's usually good to have just one instance of `Golem` active at any given time.
     """
 
     def __init__(
         self,
         *,
         budget: Union[float, Decimal],
-        strategy: Optional["MarketStrategy"] = None,
+        strategy: Optional["yapapi.strategy.MarketStrategy"] = None,
         subnet_tag: Optional[str] = None,
         driver: Optional[str] = None,
         network: Optional[str] = None,
@@ -80,6 +82,26 @@ class Golem:
         stream_output: bool = False,
         app_key: Optional[str] = None,
     ):
+        """Initialize Golem engine
+
+        :param budget: maximum budget for payments
+        :param strategy: market strategy used to select providers from the market
+            (e.g. `yapapi.strategy.LeastExpensiveLinearPayuMS` or `yapapi.strategy.DummyMS`)
+        :param subnet_tag: use only providers in the subnet with the subnet_tag name.
+            Uses `YAGNA_SUBNET` environment variable, defaults to `None`
+        :param driver: name of the payment driver to use. Uses `YAGNA_PAYMENT_DRIVER`
+            environment variable, defaults to `zksync`. Only payment platforms with
+            the specified driver will be used
+        :param network: name of the network to use. Uses `YAGNA_NETWORK` environment
+            variable, defaults to `rinkeby`. Only payment platforms with the specified
+            network will be used
+        :param event_consumer: a callable that processes events related to the
+            computation; by default it is a function that logs all events
+        :param stream_output: stream computation output from providers
+        :param app_key: optional Yagna application key. If not provided, the default is to
+                        get the value from `YAGNA_APPKEY` environment variable
+        """
+
         self._init_args = {
             "budget": budget,
             "strategy": strategy,
@@ -160,7 +182,7 @@ class Golem:
         and calls its `submit()` method with given worker function and sequence of tasks.
 
         :param worker: an async generator that takes a `WorkContext` object and a sequence
-            of tasks, and generates as sequence of work items to be executed on providers in order
+            of tasks, and generates as sequence of scripts to be executed on providers in order
             to compute given tasks
         :param data: an iterable or an async generator of `Task` objects to be computed on providers
         :param payload: specification of the payload that needs to be deployed on providers
