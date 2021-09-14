@@ -1,0 +1,86 @@
+@startuml
+title Golem.execute_tasks()
+
+' Define colors for activation rectangles of
+!$task_1 = "#White"
+!$task_2 = "#White"
+!$task_3 = "#White"
+
+hide footbox
+skinparam BoxPadding 10
+
+box "main task" #ffffee
+participant "Client code"
+participant "golem:Golem" as engine #Turquoise
+participant "executor:Executor" as executor #Violet
+end box
+
+box "worker_starter() task" #ffeeff
+participant "executor:Executor" as executor2 #Violet
+participant "golem:Golem" as engine2 #Turquoise
+participant ":AgreementPool" as pool
+end box
+
+box "worker_task() task" #eeffff
+collections "golem:Golem" as engine3 #Turquoise
+collections "executor:Executor" as executor3 #Violet
+
+participant "batch_generator:AsyncGenerator" as batch_generator
+end box
+
+create engine
+"Client code" -> engine : <<create>>
+"Client code" -> engine ++ $task_1 : execute_tasks(worker)
+
+create executor
+engine -> executor : <<create>>
+engine -> executor ++ $task_1 : submit(worker)
+
+create pool
+executor -> pool : <<create>>
+
+executor -> executor2 ++ $task_2 : <<create_task>>
+note right: worker_starter()
+
+loop executed every 2 seconds if there is unassigned work, each iteration can create new worker_task
+  executor2 -> engine2 ++ $task_2 : start_worker(run_worker)
+
+  engine2 -> pool ++ $task_2: use_agreement(worker_task)
+  deactivate engine2
+  ?<- pool : agr = create_agreement()
+
+  pool -> engine3 ++ $task_3: <<create_task>> \n <<callback>>
+  note right: worker_task(agr)
+  deactivate pool
+end
+
+engine3 ->? : act = new_activity()
+engine3 ->? : ctx = WorkContext()
+
+engine3 -> executor3 ++ $task_3: <<callback>>
+note right: run_worker(act, ctx)
+
+create batch_generator
+executor3 -> batch_generator : <<callback>>
+note over batch_generator: worker(ctx)
+executor3 -> engine3++ : process_batches(batch_generator)
+
+|||
+
+ref over engine3, executor3, batch_generator
+  See the diagram for process_batches()
+end ref
+
+|||
+
+return
+return
+deactivate engine3
+
+legend left
+* Three background boxes represent different asyncio tasks.
+* Participants with the same name represent the same object activated by different asyncio tasks
+* <<create_task>> message represents loop.create_task() call
+endlegend
+
+@enduml

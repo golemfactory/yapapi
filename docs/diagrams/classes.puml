@@ -1,0 +1,60 @@
+@startuml
+title Main yapapi classes
+
+hide empty fields
+
+class Golem {
+  execute_tasks()
+  run_service()
+ }
+
+together {
+  class Executor <<AsyncContextManager>> {
+    submit()
+    add_job()
+    process_batches()
+  }
+  class Cluster <<AsyncContextManager>>
+  ' Cluster -[hidden] Executor
+}
+
+class _Engine <<AsyncContextManager>> {
+  process_batches()
+  start_worker()
+}
+
+class Job {
+  find_offers()
+}
+
+class AgreementsPool
+
+
+
+Golem --|> _Engine
+Golem .. "creates" Executor
+Golem .. "creates" Cluster
+
+Executor -- "1" _Engine
+Cluster -- "1" _Engine
+' Cluster -- "1" Job
+
+_Engine o-- "0..*" Job
+
+Job *-- "1" AgreementsPool
+
+class Payload
+' Executor --> Payload
+' Cluster --> Payload
+Job "0..*" -- "1" Payload
+
+class Service
+class MyService
+MyService --|> Service
+
+Cluster *-- "0..*" Service
+(Cluster, Service) .. ServiceInstance
+
+MyService -[hidden]-- AgreementsPool
+
+@enduml
