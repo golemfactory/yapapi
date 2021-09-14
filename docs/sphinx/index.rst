@@ -5,9 +5,9 @@ Golem Python API Reference
 .. toctree::
     :maxdepth: 4
     :hidden:
-    
-    Golem Handbook <https://handbook.golem.network/>
+
     index
+    Golem Handbook <https://handbook.golem.network/>
     Github <https://github.com/golemfactory/yapapi>
     Pypi <https://pypi.org/project/yapapi/>
 
