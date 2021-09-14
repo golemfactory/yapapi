@@ -39,7 +39,7 @@ async def assert_counter_not_decremented(output_lines: EventStream[str]):
 
 async def assert_correct_startup_and_shutdown(output_lines: EventStream[str]):
     """Assert that all providers and services that started stopped successfully."""
-    providers_names = set()
+    provider_names = set()
     service_ids = set()
 
     async for line in output_lines:
@@ -49,17 +49,17 @@ async def assert_correct_startup_and_shutdown(output_lines: EventStream[str]):
             prov_name = m.group(2)
             logger.debug("service %s running on provider '%s'", service_id, prov_name)
             service_ids.add(service_id)
-            providers_names.add(prov_name)
+            provider_names.add(prov_name)
         m = re.search("service ([a-zA-Z0-9]+) stopped on '([^']*)'", line)
         if m:
             service_id = m.group(1)
             prov_name = m.group(2)
             logger.debug("service %s stopped on provider '%s'", service_id, prov_name)
             service_ids.remove(service_id)
-            providers_names.remove(prov_name)
+            provider_names.remove(prov_name)
 
-    if providers_names:
-        raise AssertionError(f"Providers not stopped: {','.join(providers_names)}")
+    if provider_names:
+        raise AssertionError(f"Providers not stopped: {','.join(provider_names)}")
 
     if service_ids:
         raise AssertionError(f"Services not stopped: {','.join(service_ids)}")
