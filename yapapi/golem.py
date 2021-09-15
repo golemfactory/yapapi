@@ -67,7 +67,7 @@ class Golem:
     Internally, `Golem`'s job includes running the engine which takes care of first finding the
     providers interested in the jobs the requestors want to execute, then negotiating agreements
     with them and facilitating the execution of those jobs and lastly, processing payments. For this
-    reason, it's usually good to have just one instance of `Golem` active at any given time.
+    reason, it's usually good to have just one instance of `Golem` operative at any given time.
     """
 
     def __init__(
