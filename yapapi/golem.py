@@ -175,6 +175,7 @@ class Golem:
         max_workers: Optional[int] = None,
         timeout: Optional[timedelta] = None,
         job_id: Optional[str] = None,
+        implicit_init: bool = True,
     ) -> AsyncIterator[Task[D, R]]:
         """Submit a sequence of tasks to be executed on providers.
 
@@ -192,6 +193,9 @@ class Golem:
         :param timeout: timeout for computing all tasks, passed to the `Executor` instance
         :param job_id: an optional string to identify the job created by this method.
             Passed as the value of the `id` parameter to `Job()`.
+        :param implicit_init: True -> `ctx.deploy()` and `ctx.start()` will be called internally by the `Executor`.
+            False -> those calls must be in the `worker` function
+
         :return: an iterator that yields completed `Task` objects
 
         example usage::
@@ -214,7 +218,7 @@ class Golem:
 
         """
 
-        kwargs: Dict[str, Any] = {"payload": payload}
+        kwargs: Dict[str, Any] = {"payload": payload, "implicit_init": implicit_init}
         if max_workers:
             kwargs["max_workers"] = max_workers
         if timeout:

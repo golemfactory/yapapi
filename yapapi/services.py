@@ -244,7 +244,8 @@ class Service:
         Should perform the minimum set of operations after which the instance of a service can be
         treated as "started", or, in other words, ready to receive service requests. It's up to the
         developer of the specific Service class to decide what exact operations constitute a
-        service startup.
+        service startup. In the most common scenario `ctx.deploy()` and `ctx.start()` are required,
+        check the `Default implementation` section for more details.
 
         As a handler implementing the [work generator pattern](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern),
         it's expected to be a generator that yields `Script`s (generated using the service's
@@ -283,15 +284,16 @@ class Service:
 
         Additionally, it also assumes that the exe-unit doesn't need any additional parameters
         in its `start()` call (e.g. for the VM runtime, all the required parameters are already
-        passed as part of the agreement between the requestor and the provider).
+        passed as part of the agreement between the requestor and the provider), and parameters
+        passed to `deploy()` are returned by `self.get_deploy_args()` method.
 
         Therefore, this default implementation performs the minimum required for a VM payload to
         start responding to `run` commands. If your service requires any additional operations -
-        you'll need to override this method (possibly starting with a call to `super().start()`)
+        you'll need to override this method (possibly first yielding from the parent - `super().start()` - generator)
         to add appropriate preparatory steps.
 
         In case of runtimes other than VM, `deploy` and/or `start` might be optional or altogether
-        disallowed, plus `start` itself might take some parameters. It is up to the author of the
+        disallowed, plus `deploy`/`start` themselves may take some parameters. It is up to the author of the
         specific `Service` implementation that uses such a payload to adjust this method accordingly
         based on the requirements for the given runtime/exe-unit type.
         """
