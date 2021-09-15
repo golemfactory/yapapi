@@ -2,7 +2,7 @@
 import asyncio
 import pathlib
 import sys
-from urllib.parse import urlparse
+from uuid import uuid4
 
 
 from datetime import datetime, timedelta
@@ -39,12 +39,8 @@ class SshService(Service):
         )
 
     async def run(self):
-        ip = self.network_node.ip
-        net = self.network.network_id
+        connection_uri = self.network_node.get_websocket_uri(22)
         app_key = self.cluster._engine._api_config.app_key
-        net_api_ws = (
-            urlparse(self.cluster._engine._api_config.net_url)._replace(scheme="ws").geturl()
-        )
 
         self._ctx.run("/bin/bash", "-c", "syslogd")
         self._ctx.run("/bin/bash", "-c", "ssh-keygen -A")
@@ -54,7 +50,7 @@ class SshService(Service):
         print(
             "Connect with:\n"
             f"{TEXT_COLOR_CYAN}"
-            f"ssh -o ProxyCommand='websocat asyncstdio: {net_api_ws}/net/{net}/tcp/{ip}/22 --binary -H=Authorization:\"Bearer {app_key}\"' root@{ip}"
+            f"ssh -o ProxyCommand='websocat asyncstdio: {connection_uri} --binary -H=Authorization:\"Bearer {app_key}\"' root@{uuid4().hex}"
             f"{TEXT_COLOR_DEFAULT}"
         )
 
