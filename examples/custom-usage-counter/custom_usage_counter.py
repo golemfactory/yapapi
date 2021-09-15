@@ -96,18 +96,19 @@ async def main(running_time_sec, subnet_tag, driver=None, network=None):
                 was_running = True
 
 
-parser = build_parser("Custom Usage Counter Example")
-parser.add_argument(
-    "--running-time",
-    default=30,
-    type=int,
-    help="How long should the the service run (in seconds, default: %(default)s)",
-)
-args = parser.parse_args()
-enable_default_logger(
-    log_file=args.log_file,
-    debug_activity_api=True,
-    debug_market_api=True,
-    debug_payment_api=True,
-)
-asyncio.run(main(args.running_time, args.subnet_tag, args.driver, args.network))
+if __name__ == "__main__":
+    parser = build_parser("Custom Usage Counter Example")
+    parser.add_argument(
+        "--running-time",
+        default=30,
+        type=int,
+        help="How long should the the service run (in seconds, default: %(default)s)",
+    )
+    args = parser.parse_args()
+    enable_default_logger(
+        log_file=args.log_file,
+        debug_activity_api=True,
+        debug_market_api=True,
+        debug_payment_api=True,
+    )
+    asyncio.run(main(args.running_time, args.subnet_tag, args.driver, args.network))
