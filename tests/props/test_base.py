@@ -9,6 +9,7 @@ class Foo(props_base.Model):
     bar: str = props_base.prop("bar", "cafebiba")
     max_baz: int = props_base.constraint("baz", "<=", 100)
     min_baz: int = props_base.constraint("baz", ">=", 1)
+    lst: list = props_base.constraint("lst", "=", default_factory=list)
 
 
 @dataclass
@@ -23,7 +24,7 @@ class FooZero(props_base.Model):
 
 def test_constraint_fields():
     fields = Foo.constraint_fields()
-    assert len(fields) == 2
+    assert len(fields) == 3
     assert any(f.name == "max_baz" for f in fields)
     assert all(f.name != "bar" for f in fields)
 
@@ -41,71 +42,95 @@ def test_constraint_to_str():
     assert props_base.constraint_to_str(foo.max_baz, max_baz) == "(baz<=42)"
 
 
+@pytest.mark.parametrize(
+    "value, constraint_str", [
+        (["one"], "(lst=one)"),
+        (["one", "two"], "(&(lst=one)\n\t(lst=two))"),
+    ]
+)
+def test_constraint_to_str_list(value, constraint_str):
+    foo = Foo(lst=value)
+    lst = [f for f in foo.constraint_fields() if f.name == "lst"][0]
+    assert props_base.constraint_to_str(foo.lst, lst) == constraint_str
+
+
 def test_constraint_model_serialize():
     foo = Foo()
     constraints = props_base.constraint_model_serialize(foo)
-    assert constraints == ["(baz<=100)", "(baz>=1)"]
+    assert constraints == ["(baz<=100)", "(baz>=1)", ""]
 
 
 @pytest.mark.parametrize(
     "model, operator, result, error",
     [
         (
-            Foo,
+            Foo(),
             None,
             "(&(baz<=100)\n\t(baz>=1))",
             False,
         ),
         (
-            Foo,
+            Foo(),
             "&",
             "(&(baz<=100)\n\t(baz>=1))",
             False,
         ),
         (
-            Foo,
+            Foo(lst=["one"]),
+            None,
+            "(&(baz<=100)\n\t(baz>=1)\n\t(lst=one))",
+            False,
+        ),
+        (
+            Foo(lst=["one", "other"]),
+            None,
+            "(&(baz<=100)\n\t(baz>=1)\n\t(&(lst=one)\n\t(lst=other)))",
+            False,
+        ),
+        (
+            Foo(),
             "|",
             "(|(baz<=100)\n\t(baz>=1))",
             False,
         ),
         (
-            Foo,
+            Foo(),
             "!",
             None,
             True,
         ),
         (
-            FooToo,
+            FooToo(),
             "!",
             "(!(baz=21))",
             False,
         ),
         (
-            FooToo,
+            FooToo(),
             "&",
             "(baz=21)",
             False,
         ),
         (
-            FooToo,
+            FooToo(),
             "|",
             "(baz=21)",
             False,
         ),
         (
-            FooZero,
+            FooZero(),
             None,
             "(&)",
             False,
         ),
         (
-            FooZero,
+            FooZero(),
             "&",
             "(&)",
             False,
         ),
         (
-            FooZero,
+            FooZero(),
             "|",
             "(|)",
             False,
@@ -113,7 +138,7 @@ def test_constraint_model_serialize():
     ],
 )
 def test_join_str_constraints(model, operator, result, error):
-    args = [props_base.constraint_model_serialize(model())]
+    args = [props_base.constraint_model_serialize(model)]
     if operator:
         args.append(operator)
     try:

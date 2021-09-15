@@ -205,7 +205,7 @@ class ModelFieldType(enum.Enum):
     property = "property"
 
 
-def constraint(key: str, operator: ConstraintOperator = "=", default=MISSING):
+def constraint(key: str, operator: ConstraintOperator = "=", default=MISSING, default_factory=MISSING):
     """
     Return a constraint-type dataclass field for a Model.
 
@@ -229,6 +229,7 @@ def constraint(key: str, operator: ConstraintOperator = "=", default=MISSING):
     """
     return field(
         default=default,
+        default_factory=default_factory,
         metadata={
             PROP_KEY: key,
             PROP_OPERATOR: operator,
@@ -271,7 +272,10 @@ def constraint_to_str(value, f: Field) -> str:
     :param value: the value of the the constraint field
     :param f: the dataclass field for this constraint
     """
-    return f"({f.metadata[PROP_KEY]}{f.metadata[PROP_OPERATOR]}{value})"
+    if type(value) == list:
+        return join_str_constraints([constraint_to_str(v, f) for v in value]) if value else ""
+    else:
+        return f"({f.metadata[PROP_KEY]}{f.metadata[PROP_OPERATOR]}{value})"
 
 
 def constraint_model_serialize(m: Model) -> List[str]:
@@ -316,6 +320,8 @@ def join_str_constraints(constraints: List[str], operator: ConstraintGroupOperat
         (bar<=128))
     ```
     """
+    constraints = list(filter(bool, constraints))
+
     if operator == "!":
         if len(constraints) == 1:
             return f"({operator}{constraints[0]})"

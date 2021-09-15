@@ -15,6 +15,7 @@ from yapapi import (
 )
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.payload import vm
+from yapapi.payload.vm import VM_CAPS_VPN
 from yapapi.services import Service
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
@@ -36,6 +37,7 @@ class SshService(Service):
             image_hash="ea233c6774b1621207a48e10b46e3e1f944d881911f499f5cbac546a",
             min_mem_gib=0.5,
             min_storage_gib=2.0,
+            capabilities=[VM_CAPS_VPN],
         )
 
     async def run(self):
