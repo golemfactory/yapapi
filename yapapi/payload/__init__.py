@@ -17,21 +17,21 @@ class Payload(AutodecoratingModel, abc.ABC):
 
         from yapapi.payload import Payload
 
-        TURBOGETH_RUNTIME_NAME = "turbogeth-managed"
-        PROP_TURBOGETH_CHAIN = "golem.srv.app.eth.chain"
+        CUSTOM_RUNTIME_NAME = "my-runtime"
+        CUSTOM_PROPERTY = "golem.srv.app.myprop"
 
 
         @dataclass
-        class TurbogethPayload(Payload):
-            chain: str = prop(PROP_TURBOGETH_CHAIN, default="rinkeby")
-            runtime: str = constraint(inf.INF_RUNTIME_NAME, default=TURBOGETH_RUNTIME_NAME)
+        class MyPayload(Payload):
+            myprop: str = prop(CUSTOM_PROPERTY, default="myvalue")
+            runtime: str = constraint(inf.INF_RUNTIME_NAME, default=CUSTOM_RUNTIME_NAME)
             min_mem_gib: float = constraint(inf.INF_MEM, operator=">=", default=16)
             min_storage_gib: float = constraint(inf.INF_STORAGE, operator=">=", default=1024)
 
 
         async def main():
             builder = DemandBuilder()
-            payload = TurbogethPayload(chain="mainnet", min_mem_gib=32)
+            payload = MyPayload(myprop="othervalue", min_mem_gib=32)
             await builder.decorate(payload)
             print(builder)
 
@@ -39,5 +39,5 @@ class Payload(AutodecoratingModel, abc.ABC):
 
     output::
 
-        {'properties': {'golem.srv.app.eth.chain': 'mainnet'}, 'constraints': ['(&(golem.runtime.name=turbogeth-managed)\n\t(golem.inf.mem.gib>=32)\n\t(golem.inf.storage.gib>=1024))']}
+        {'properties': {'golem.srv.app.myprop': 'othervalue'}, 'constraints': ['(&(golem.runtime.name=my-runtime)\n\t(golem.inf.mem.gib>=32)\n\t(golem.inf.storage.gib>=1024))']}
     """
