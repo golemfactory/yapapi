@@ -5,13 +5,11 @@ import sys
 from uuid import uuid4
 
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from yapapi import (
     Golem,
-    NoPaymentAccountError,
     __version__ as yapapi_version,
-    windows_event_loop_fix,
 )
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.payload import vm
@@ -26,6 +24,7 @@ from utils import (
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_RED,
     TEXT_COLOR_YELLOW,
+    run_golem_example,
 )
 
 
@@ -107,48 +106,7 @@ if __name__ == "__main__":
     parser.set_defaults(log_file=f"ssh-yapapi-{now}.log")
     args = parser.parse_args()
 
-    # This is only required when running on Windows with Python prior to 3.8:
-    windows_event_loop_fix()
-
-    enable_default_logger(
+    run_golem_example(
+        main(subnet_tag=args.subnet_tag, driver=args.driver, network=args.network),
         log_file=args.log_file,
-        debug_activity_api=True,
-        debug_market_api=True,
-        debug_payment_api=True,
-        debug_net_api=True,
     )
-
-    loop = asyncio.get_event_loop()
-    task = loop.create_task(
-        main(subnet_tag=args.subnet_tag, driver=args.driver, network=args.network)
-    )
-
-    try:
-        loop.run_until_complete(task)
-    except NoPaymentAccountError as e:
-        handbook_url = (
-            "https://handbook.golem.network/requestor-tutorials/"
-            "flash-tutorial-of-requestor-development"
-        )
-        print(
-            f"{TEXT_COLOR_RED}"
-            f"No payment account initialized for driver `{e.required_driver}` "
-            f"and network `{e.required_network}`.\n\n"
-            f"See {handbook_url} on how to initialize payment accounts for a requestor node."
-            f"{TEXT_COLOR_DEFAULT}"
-        )
-    except KeyboardInterrupt:
-        print(
-            f"{TEXT_COLOR_YELLOW}"
-            "Shutting down gracefully, please wait a short while "
-            "or press Ctrl+C to exit immediately..."
-            f"{TEXT_COLOR_DEFAULT}"
-        )
-        task.cancel()
-        try:
-            loop.run_until_complete(task)
-            print(
-                f"{TEXT_COLOR_YELLOW}Shutdown completed, thank you for waiting!{TEXT_COLOR_DEFAULT}"
-            )
-        except (asyncio.CancelledError, KeyboardInterrupt):
-            pass
