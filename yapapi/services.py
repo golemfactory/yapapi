@@ -263,7 +263,7 @@ class Service:
         `respawn_unstarted_instances` is set to `False`.
 
         **Example**::
-        
+
             async def start(self):
                 # deploy the exe-unit
                 self._ctx.deploy()
