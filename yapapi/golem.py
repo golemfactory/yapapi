@@ -211,7 +211,7 @@ class Golem:
             async with Golem(budget=1.0, subnet_tag="devnet-beta.2") as golem:
                 async for completed in golem.execute_tasks(worker, [Task(data=None)], payload=package):
                     print(completed.result.stdout)
-        
+
         """
 
         kwargs: Dict[str, Any] = {"payload": payload}
