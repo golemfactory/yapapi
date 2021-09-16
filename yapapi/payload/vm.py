@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 VM_CAPS_VPN: str = "vpn"
 
-VmCaps = Literal[VM_CAPS_VPN,]
+VmCaps = Literal["vpn"]
 
 @dataclass
 class InfVm(InfBase):

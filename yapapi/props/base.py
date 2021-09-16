@@ -235,7 +235,7 @@ def constraint(key: str, operator: ConstraintOperator = "=", default=MISSING, de
             PROP_OPERATOR: operator,
             PROP_MODEL_FIELD_TYPE: ModelFieldType.constraint,
         },
-    )
+    )  # type: ignore  # the default / default_factory exception is resolved by the `field` function
 
 
 def prop(key: str, default=MISSING):
