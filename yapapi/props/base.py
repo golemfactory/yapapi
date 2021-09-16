@@ -229,7 +229,7 @@ def constraint(
     ['(baz<=100)']
     ```
     """
-    return field(
+    return field(  # type: ignore  # the default / default_factory exception is resolved by the `field` function
         default=default,
         default_factory=default_factory,
         metadata={
@@ -237,7 +237,7 @@ def constraint(
             PROP_OPERATOR: operator,
             PROP_MODEL_FIELD_TYPE: ModelFieldType.constraint,
         },
-    )  # type: ignore  # the default / default_factory exception is resolved by the `field` function
+    )
 
 
 def prop(key: str, default=MISSING):
