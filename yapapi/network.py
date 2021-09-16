@@ -1,14 +1,11 @@
 import asyncio
 from dataclasses import dataclass
 from ipaddress import ip_address, ip_network, IPv4Address, IPv6Address, IPv4Network, IPv6Network
-from typing import Dict, Optional, Union, TYPE_CHECKING
+from typing import Dict, Optional, Union
+import yapapi
 
 IpAddress = Union[IPv4Address, IPv6Address]
 IpNetwork = Union[IPv4Network, IPv6Network]
-
-
-if TYPE_CHECKING:
-    from yapapi.rest.net import Net
 
 
 @dataclass
@@ -54,7 +51,7 @@ class Network:
     @classmethod
     async def create(
         cls,
-        net_api: "Net",
+        net_api: "yapapi.rest.net.Net",
         ip: str,
         owner_id: str,
         owner_ip: Optional[str] = None,
@@ -87,7 +84,7 @@ class Network:
 
     def __init__(
         self,
-        net_api: "Net",
+        net_api: "yapapi.rest.net.Net",
         ip: str,
         owner_id: str,
         owner_ip: Optional[str] = None,
