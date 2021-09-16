@@ -322,7 +322,7 @@ def join_str_constraints(constraints: List[str], operator: ConstraintGroupOperat
         (bar<=128))
     ```
     """
-    constraints = list(filter(bool, constraints))
+    constraints = [c for c in constraints if c]
 
     if operator == "!":
         if len(constraints) == 1:
