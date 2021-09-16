@@ -47,7 +47,7 @@ Network
 -------
 
 .. autoclass:: yapapi.network.Network
-    :members: __init__, create, owner_ip, network_address, netmask, gateway, nodes_dict, network_id, add_owner_address, add_node,
+    :members: create, owner_ip, network_address, netmask, gateway, nodes_dict, network_id, add_owner_address, add_node,
 
 Node
 ----
