@@ -40,10 +40,6 @@ class CustomCounterService(Service):
         super().__init__(*args, **kwargs)
         self._running_time_sec = running_time_sec
 
-    async def start(self):
-        self._ctx.run("sleep", "1")
-        yield self._ctx.commit()
-
     async def run(self):
         start_time = datetime.now()
         print(f"service {self.id} running on '{self.provider_name}'...")
