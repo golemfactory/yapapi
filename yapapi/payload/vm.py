@@ -2,8 +2,15 @@ from dns.exception import DNSException
 from dataclasses import dataclass, field
 from enum import Enum
 import logging
-from typing import Optional
+import sys
+from typing import Optional, List
 from typing_extensions import Final
+
+if sys.version_info > (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
+
 from srvresolver.srv_resolver import SRVResolver, SRVRecord  # type: ignore
 
 from yapapi.payload.package import (
@@ -21,6 +28,10 @@ _DEFAULT_REPO_SRV: Final = "_girepo._tcp.dev.golem.network"
 _FALLBACK_REPO_URL: Final = "http://girepo.dev.golem.network:8000"
 
 logger = logging.getLogger(__name__)
+
+VM_CAPS_VPN: str = "vpn"
+
+VmCaps = Literal["vpn"]
 
 
 @dataclass
@@ -47,7 +58,10 @@ class _VmConstraints:
     min_mem_gib: float = prop_base.constraint(inf.INF_MEM, operator=">=")
     min_storage_gib: float = prop_base.constraint(inf.INF_STORAGE, operator=">=")
     min_cpu_threads: int = prop_base.constraint(inf.INF_THREADS, operator=">=")
-    # cores: int = prop_base.constraint(inf.INF_CORES, operator=">=")
+
+    capabilities: List[VmCaps] = prop_base.constraint(
+        "golem.runtime.capabilities", operator="=", default_factory=list
+    )
 
     runtime: str = prop_base.constraint(inf.INF_RUNTIME_NAME, operator="=", default=RUNTIME_VM)
 
@@ -80,6 +94,7 @@ async def repo(
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,
     min_cpu_threads: int = 1,
+    capabilities: Optional[List[VmCaps]] = None,
 ) -> Package:
     """
     Build a reference to application package.
@@ -89,13 +104,15 @@ async def repo(
     :param min_mem_gib: minimal memory required to execute application code
     :param min_storage_gib: minimal disk storage to execute tasks
     :param min_cpu_threads: minimal available logical CPU cores
+    :param capabilities: an optional list of required vm capabilities
     :return: the payload definition for the given VM image
     """
+    capabilities = capabilities or list()
     return _VmPackage(
         repo_url=resolve_repo_srv(_DEFAULT_REPO_SRV),
         image_hash=image_hash,
         image_url=image_url,
-        constraints=_VmConstraints(min_mem_gib, min_storage_gib, min_cpu_threads),
+        constraints=_VmConstraints(min_mem_gib, min_storage_gib, min_cpu_threads, capabilities),
     )
 
 
