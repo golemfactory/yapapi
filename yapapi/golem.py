@@ -43,12 +43,12 @@ class Golem:
     Its principal role is providing an interface to run the requestor's payload using one of two
     modes of operation - executing tasks and running services.
 
-    The first one, available through `execute_tasks`, instructs `Golem` to take a sequence of
+    The first one, available through :func:`execute_tasks`, instructs :class:`Golem` to take a sequence of
     tasks that the user wishes to compute on Golem and distributes those among the providers.
 
-    The second one, invoked with `run_service`, makes `Golem` spawn a certain number of instances
+    The second one, invoked with :func:`run_service`, makes :class:`Golem` spawn a certain number of instances
     of a service based on a single service specification (a specialized implementation
-    inheriting from `yapapi.Service`).
+    inheriting from :class:`~yapapi.services.Service`).
 
     While the two modes are not necessarily completely disjoint - in that we can create a
     service that exists to process a certain number of computations and, similarly, we can
@@ -64,10 +64,10 @@ class Golem:
     certain, discrete phases of a lifetime of each service instance - startup, running and
     shutdown.
 
-    Internally, `Golem`'s job includes running the engine which takes care of first finding the
+    Internally, :class:`Golem`'s job includes running the engine which takes care of first finding the
     providers interested in the jobs the requestors want to execute, then negotiating agreements
     with them and facilitating the execution of those jobs and lastly, processing payments. For this
-    reason, it's usually good to have just one instance of `Golem` operative at any given time.
+    reason, it's usually good to have just one instance of :class:`Golem` operative at any given time.
     """
 
     def __init__(
@@ -86,7 +86,7 @@ class Golem:
 
         :param budget: maximum budget for payments
         :param strategy: market strategy used to select providers from the market
-            (e.g. `yapapi.strategy.LeastExpensiveLinearPayuMS` or `yapapi.strategy.DummyMS`)
+            (e.g. :class:`yapapi.strategy.LeastExpensiveLinearPayuMS` or :class:`yapapi.strategy.DummyMS`)
         :param subnet_tag: use only providers in the subnet with the subnet_tag name.
             Uses `YAGNA_SUBNET` environment variable, defaults to `None`
         :param driver: name of the payment driver to use. Uses `YAGNA_PAYMENT_DRIVER`
@@ -179,24 +179,24 @@ class Golem:
     ) -> AsyncIterator[Task[D, R]]:
         """Submit a sequence of tasks to be executed on providers.
 
-        Internally, this method creates an instance of `yapapi.executor.Executor`
-        and calls its `submit()` method with given worker function and sequence of tasks.
+        Internally, this method creates an instance of :class:`yapapi.executor.Executor`
+        and calls its :func:`submit()` method with given worker function and sequence of tasks.
 
-        :param worker: an async generator that takes a `WorkContext` object and a sequence
+        :param worker: an async generator that takes a :class:`WorkContext` object and a sequence
             of tasks, and generates as sequence of scripts to be executed on providers in order
             to compute given tasks
-        :param data: an iterable or an async generator of `Task` objects to be computed on providers
+        :param data: an iterable or an async generator of :class:`Task` objects to be computed on providers
         :param payload: specification of the payload that needs to be deployed on providers
             (for example, a VM runtime package) in order to compute the tasks, passed to
-            the created `Executor` instance
-        :param max_workers: maximum number of concurrent workers, passed to the `Executor` instance
-        :param timeout: timeout for computing all tasks, passed to the `Executor` instance
+            the created :class:`Executor` instance
+        :param max_workers: maximum number of concurrent workers, passed to the :class:`Executor` instance
+        :param timeout: timeout for computing all tasks, passed to the :class:`Executor` instance
         :param job_id: an optional string to identify the job created by this method.
-            Passed as the value of the `id` parameter to `Job()`.
-        :param implicit_init: True -> `ctx.deploy()` and `ctx.start()` will be called internally by the `Executor`.
-            False -> those calls must be in the `worker` function
+            Passed as the value of the `id` parameter to :class:`yapapi.engine.Job`.
+        :param implicit_init: True -> :func:`~yapapi.script.Script.deploy()` and :func:`~yapapi.script.Script.start()`
+            will be called internally by the :class:`Executor`. False -> those calls must be in the `worker` function
 
-        :return: an iterator that yields completed `Task` objects
+        :return: an async iterator that yields completed `Task` objects
 
         example usage::
 
@@ -239,34 +239,34 @@ class Golem:
         network: Optional[Network] = None,
         network_addresses: Optional[List[str]] = None,
     ) -> Cluster:
-        """Run a number of instances of a service represented by a given `Service` subclass.
+        """Run a number of instances of a service represented by a given :class:`~yapapi.services.Service` subclass.
 
-        :param service_class: a subclass of `Service` that represents the service to be run
+        :param service_class: a subclass of :class:`~yapapi.services.Service` that represents the service to be run
         :param num_instances: optional number of service instances to run. Defaults to a single
-            instance, unless `instance_params` is given, in which case, the Cluster will be created
-            with as many instances as there are elements in the `instance_params` iterable.
-            if `num_instances` is set to < 1, the `Cluster` will still be created but no instances
-            will be spawned within it.
+            instance, unless `instance_params` is given, in which case, the :class:`~yapapi.services.Cluster` will be
+            created with as many instances as there are elements in the `instance_params` iterable.
+            if `num_instances` is set to < 1, the :class:`~yapapi.services.Cluster` will still be created but no
+            instances will be spawned within it.
         :param instance_params: optional list of dictionaries of keyword arguments that will be passed
             to consecutive, spawned instances. The number of elements in the iterable determines the
             number of instances spawned, unless `num_instances` is given, in which case the latter takes
             precedence.
             In other words, if both `num_instances` and `instance_params` are provided,
-            the Cluster will be created with the number of instances determined by `num_instances`
-            and if there are too few elements in the `instance_params` iterable, it will results in
+            the :class:`~yapapi.services.Cluster` will be created with the number of instances determined by
+            `num_instances` and if there are too few elements in the `instance_params` iterable, it will results in
             an error.
         :param payload: optional runtime definition for the service; if not provided, the
-            payload specified by the `get_payload()` method of `service_class` is used
+            payload specified by the :func:`~yapapi.services.Service.get_payload()` method of `service_class` is used
         :param expiration: optional expiration datetime for the service
         :param respawn_unstarted_instances: if an instance fails in the `starting` state, should
-            the returned Cluster try to spawn another instance
-        :param network: optional Network, representing a VPN to attach this Cluster's instances to
+            the returned :class:`~yapapi.services.Cluster` try to spawn another instance
+        :param network: optional :class:`~yapapi.network.Network`, representing a VPN to attach this
+            :class:`~yapapi.services.Cluster`'s instances to
         :param network_addresses: optional list of addresses to assign to consecutive spawned instances.
             If there are too few addresses given in the `network_addresses` iterable to satisfy
             all spawned instances, the rest (or all when the list is empty or not provided at all)
             of the addresses will be assigned automatically.
             Requires the `network` argument to be provided at the same time.
-        :return: a `Cluster` of service instances
 
         example usage::
 
@@ -356,8 +356,6 @@ class Golem:
         :param owner_ip: the desired IP address of the requestor node within the newly-created Network
         :param mask: Optional netmask (only if not provided within the `ip` argument)
         :param gateway: Optional gateway address for the network
-
-        :return: a Network object allowing further manipulation of the created VPN
         """
         async with self._engine._root_api_session.get(
             f"{self._engine._api_config.root_url}/me"
