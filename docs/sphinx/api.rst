@@ -27,7 +27,7 @@ Service
 -------
 
 .. autoclass:: yapapi.services.Service
-    :members: id, provider_name, state, is_available, start, run, shutdown, send_message, send_message_nowait, receive_message, receive_message_nowait, get_payload
+    :members: id, provider_name, state, is_available, start, run, shutdown, send_message, send_message_nowait, receive_message, receive_message_nowait, get_payload, network, network_node
 
 Cluster
 -------
@@ -49,8 +49,14 @@ Network
 .. autoclass:: yapapi.network.Network
     :members: __init__, create, owner_ip, network_address, netmask, gateway, nodes_dict, network_id, add_owner_address, add_node,
 
+Node
+----
+
 .. autoclass:: yapapi.network.Node
     :members: network, node_id, ip, get_deploy_args
+
+Exceptions
+----------
 
 .. autoclass:: yapapi.network.NetworkError
 
