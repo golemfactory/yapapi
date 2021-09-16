@@ -6,7 +6,6 @@ from unittest import mock
 
 from yapapi.events import CommandExecuted
 from yapapi.script import Script
-from yapapi.script.command import Deploy, Start
 
 if sys.version_info >= (3, 8):
     from tests.factories.context import WorkContextFactory
@@ -99,35 +98,15 @@ class TestScript:
         assert self._on_download_executed
 
     @pytest.mark.asyncio
-    async def test_implicit_init(self):
-        work_context = WorkContextFactory()
-        script = work_context.new_script()
-
-        # first script, should include implicit deploy and start cmds
-        await script._before()
-        assert len(script._commands) == 2
-        deploy_cmd = script._commands[0]
-        assert isinstance(deploy_cmd, Deploy)
-        start_cmd = script._commands[1]
-        assert isinstance(start_cmd, Start)
-        assert work_context._started
-
-        # second script, should not include implicit deploy and start
-        script = work_context.new_script()
-        script.run("/some/cmd")
-        await script._before()
-        assert len(script._commands) == 1
-
-    @pytest.mark.asyncio
     async def test_cmd_result(self):
         work_context = WorkContextFactory()
         script = work_context.new_script()
         future_result = script.run("/some/cmd", 1)
 
         await script._before()
-        run_cmd = script._commands[2]
+        run_cmd = script._commands[0]
         result = CommandExecuted(
-            "job_id", "agr_id", "script_id", 2, command=run_cmd.evaluate(work_context)
+            "job_id", "agr_id", "script_id", 0, command=run_cmd.evaluate(work_context)
         )
         script._set_cmd_result(result)
 

@@ -36,6 +36,7 @@ class SshService(Service):
             image_hash="ea233c6774b1621207a48e10b46e3e1f944d881911f499f5cbac546a",
             min_mem_gib=0.5,
             min_storage_gib=2.0,
+            capabilities=[vm.VM_CAPS_VPN],
         )
 
     async def run(self):
