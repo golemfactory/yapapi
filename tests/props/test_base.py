@@ -43,10 +43,11 @@ def test_constraint_to_str():
 
 
 @pytest.mark.parametrize(
-    "value, constraint_str", [
+    "value, constraint_str",
+    [
         (["one"], "(lst=one)"),
         (["one", "two"], "(&(lst=one)\n\t(lst=two))"),
-    ]
+    ],
 )
 def test_constraint_to_str_list(value, constraint_str):
     foo = Foo(lst=value)

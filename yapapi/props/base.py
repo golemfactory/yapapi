@@ -205,7 +205,9 @@ class ModelFieldType(enum.Enum):
     property = "property"
 
 
-def constraint(key: str, operator: ConstraintOperator = "=", default=MISSING, default_factory=MISSING):
+def constraint(
+    key: str, operator: ConstraintOperator = "=", default=MISSING, default_factory=MISSING
+):
     """
     Return a constraint-type dataclass field for a Model.
 

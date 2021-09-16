@@ -5,6 +5,7 @@ import logging
 import sys
 from typing import Optional, List
 from typing_extensions import Final
+
 if sys.version_info > (3, 8):
     from typing import Literal
 else:
@@ -32,6 +33,7 @@ VM_CAPS_VPN: str = "vpn"
 
 VmCaps = Literal["vpn"]
 
+
 @dataclass
 class InfVm(InfBase):
     runtime = RUNTIME_VM
@@ -57,7 +59,9 @@ class _VmConstraints:
     min_storage_gib: float = prop_base.constraint(inf.INF_STORAGE, operator=">=")
     min_cpu_threads: int = prop_base.constraint(inf.INF_THREADS, operator=">=")
 
-    capabilities: List[VmCaps] = prop_base.constraint("golem.runtime.capabilities", operator="=", default_factory=list)
+    capabilities: List[VmCaps] = prop_base.constraint(
+        "golem.runtime.capabilities", operator="=", default_factory=list
+    )
 
     runtime: str = prop_base.constraint(inf.INF_RUNTIME_NAME, operator="=", default=RUNTIME_VM)
 
