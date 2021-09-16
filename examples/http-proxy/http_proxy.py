@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """
-the requestor agent controlling and interacting with the "simple service"
+a simple http proxy example
 """
 import asyncio
-from datetime import datetime, timedelta, timezone
+
+import aiohttp
+from aiohttp import web
+from datetime import datetime, timedelta
+import functools
 import pathlib
 import sys
 
@@ -12,7 +16,7 @@ from yapapi import (
     __version__ as yapapi_version,
 )
 from yapapi import Golem
-from yapapi.services import Service
+from yapapi.services import Service, Cluster, ServiceState
 
 from yapapi.payload import vm
 
@@ -23,28 +27,52 @@ from utils import (
     build_parser,
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
-    TEXT_COLOR_RED,
+    TEXT_COLOR_GREEN,
     TEXT_COLOR_YELLOW,
-    TEXT_COLOR_MAGENTA,
-    format_usage,
     run_golem_example,
 )
 
 STARTING_TIMEOUT = timedelta(minutes=4)
 
 
+# ######## aiohttp server
+
+async def web_root(cluster: Cluster, request: web.Request):
+    print(f"{TEXT_COLOR_GREEN}local HTTP request: {dict(request.query)}{TEXT_COLOR_DEFAULT}")
+
+    instance_ws = cluster.instances[0].network_node.get_websocket_uri(80)
+    app_key = cluster._engine._api_config.app_key
+
+    ws_session = aiohttp.ClientSession()
+    async with ws_session.ws_connect(instance_ws, headers={"Authorization": f"Bearer {app_key}"}) as ws:
+        await ws.send_str("GET / HTTP/1.0\n\n")
+        headers = await ws.__anext__()
+        print(f"{TEXT_COLOR_GREEN}remote headers: {headers.data} {TEXT_COLOR_DEFAULT}")
+        content = await ws.__anext__()
+        data: bytes = content.data
+        print(f"{TEXT_COLOR_GREEN}remote content: {data} {TEXT_COLOR_DEFAULT}")
+        
+        # todo pass headers to the response ? ...
+
+    return web.Response(text=content.data.decode("utf-8"))
+
+
+async def run_local_server(cluster: Cluster, port: int):
+    runner = web.ServerRunner(web.Server(functools.partial(web_root, cluster)))
+    await runner.setup()
+    site = web.TCPSite(runner, port=port)
+    await site.start()
+
+    return site
+
+# ######## Golem Service
+
 class HttpService(Service):
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__} on {self.provider_name}>"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     @staticmethod
     async def get_payload():
         return await vm.repo(
             image_hash="de6d4cf997138af384caf32b1d222f35ead1d3639eebafa575359f1d",
+            capabilities=[vm.VM_CAPS_VPN],
         )
 
     async def start(self):
@@ -56,21 +84,6 @@ class HttpService(Service):
         self._ctx.run("/bin/chmod", "a+x", "/")
         self._ctx.run("/usr/sbin/nginx"),
         yield self._ctx.commit()
-
-    async def run(self):
-        app_key = self.cluster._engine._api_config.app_key
-        http_ws = self.network_node.get_websocket_uri(80)
-
-        print(
-            "Connect using:\n"
-            f"{TEXT_COLOR_CYAN}"
-            f"websocat {http_ws} --binary -H=Authorization:\"Bearer {app_key}\""
-            f"{TEXT_COLOR_DEFAULT}"
-        )
-
-        # await indefinitely...
-        await asyncio.Future()
-        yield
 
 
 async def main(
@@ -90,6 +103,8 @@ async def main(
             f"and network: {TEXT_COLOR_YELLOW}{golem.network}{TEXT_COLOR_DEFAULT}\n"
         )
 
+        commissioning_time = datetime.now()
+
         network = await golem.create_network("192.168.0.1/24")
         cluster = await golem.run_service(HttpService, network=network, num_instances=num_instances)
 
@@ -99,12 +114,34 @@ async def main(
         def still_running():
             return any([s for s in cluster.instances if s.is_available])
 
+        def still_starting():
+            return len(cluster.instances) < num_instances or any(
+                [s for s in cluster.instances if s.state == ServiceState.starting]
+            )
+
+        # wait until instances are started
+
+        while still_starting() and datetime.now() < commissioning_time + STARTING_TIMEOUT:
+            print(f"instances: {instances()}")
+            await asyncio.sleep(5)
+
+        # service instances started, start the local HTTP server
+
+        port = 8080
+        site = await run_local_server(cluster, port)
+
+        print(f"{TEXT_COLOR_CYAN}Local HTTP server listening on:\nhttp://localhost:{port}{TEXT_COLOR_DEFAULT}")
+
+        # wait until Ctrl-C
+
         while True:
             print(instances())
             try:
-                await asyncio.sleep(5)
+                await asyncio.sleep(10)
             except (KeyboardInterrupt, asyncio.CancelledError):
                 break
+
+        # perform the shutdown of the local server and
 
         cluster.stop()
 
@@ -113,6 +150,9 @@ async def main(
             print(instances())
             await asyncio.sleep(5)
             cnt += 1
+
+        await site.stop()
+        print(f"{TEXT_COLOR_CYAN}HTTP server stopped{TEXT_COLOR_DEFAULT}")
 
 
 if __name__ == "__main__":

@@ -169,7 +169,7 @@ class Service:
         return self._network_node
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}: {self.id}>"
+        return f"<{self.__class__.__name__} on {self.provider_name} [ {self.provider_id} ]>"
 
     def exc_info(self) -> ExcInfo:
         """Return exception info for an exception that caused the last state transition.
