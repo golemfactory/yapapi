@@ -35,7 +35,7 @@ from utils import (
 STARTING_TIMEOUT = timedelta(minutes=4)
 
 
-# ######## aiohttp server
+# ######## local http server
 
 async def web_root(cluster: Cluster, request: web.Request):
     print(f"{TEXT_COLOR_GREEN}local HTTP request: {dict(request.query)}{TEXT_COLOR_DEFAULT}")
@@ -65,6 +65,7 @@ async def run_local_server(cluster: Cluster, port: int):
 
     return site
 
+
 # ######## Golem Service
 
 class HttpService(Service):
@@ -85,6 +86,8 @@ class HttpService(Service):
         self._ctx.run("/usr/sbin/nginx"),
         yield self._ctx.commit()
 
+
+# ######## Main application code which spawns the Golem service and the local HTTP server
 
 async def main(
     subnet_tag, driver=None, network=None, num_instances=1,
