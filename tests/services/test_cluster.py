@@ -1,15 +1,21 @@
+import asyncio
 import itertools
 import sys
 import pytest
 from unittest.mock import Mock, patch, call
-from yapapi.services import Cluster, Service, ServiceError
+from yapapi.services import Cluster, Service, ServiceError, ServiceInstance
 
 
 class _TestService(Service):
     pass
 
 
-def _get_cluster():
+class _BrokenService(Service):
+    async def start(self):
+        await asyncio.Future()
+
+
+def _get_cluster() -> Cluster:
     return Cluster(engine=Mock(), service_class=_TestService, payload=Mock())
 
 
@@ -88,3 +94,30 @@ async def test_spawn_instances(kwargs, calls, error):
             assert error is None, f"Expected ServiceError: {error}"
 
     assert spawn_instance.mock_calls == calls
+
+
+@pytest.mark.parametrize(
+    "service, error",
+    (
+        (
+            _TestService(Mock(), Mock()),
+            None
+        ),
+        (
+            _BrokenService(Mock(), Mock()),
+            "must be an asynchronous generator"
+        ),
+    )
+)
+def test_get_handler(service, error):
+    service_instance = ServiceInstance(service=service)
+    try:
+        handler = Cluster._get_handler(service_instance)
+        assert handler
+    except ServiceError as e:
+        if error is not None:
+            assert error in str(e)
+        else:
+            assert False, e
+    else:
+        assert error is None, f"Expected ServiceError containing '{error}'"

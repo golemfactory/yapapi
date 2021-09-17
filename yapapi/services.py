@@ -1,5 +1,6 @@
 """Implementation of high-level services API."""
 import asyncio
+import inspect
 import itertools
 from dataclasses import dataclass, field
 from datetime import timedelta, datetime, timezone
@@ -592,7 +593,10 @@ class Cluster(AsyncContextManager):
         }
         handler = _handlers.get(instance.state, None)
         if handler:
-            return handler()
+            if inspect.isasyncgenfunction(handler):
+                return handler()
+            else:
+                raise ServiceError(f"Service handler: `{handler}` must be an asynchronous generator.")
 
     @staticmethod
     def _change_state(
