@@ -46,9 +46,9 @@ class MarketStrategy(DemandDecorator, abc.ABC):
 class DummyMS(MarketStrategy, object):
     """A default market strategy implementation.
 
-    Its `score_offer()` method returns `SCORE_NEUTRAL` for every offer with prices
+    Its :func:`score_offer()` method returns :const:`SCORE_NEUTRAL` for every offer with prices
     that do not exceed maximum prices specified for each counter.
-    For other offers, returns `SCORE_REJECTED`.
+    For other offers, returns :const:`SCORE_REJECTED`.
     """
 
     def __init__(
