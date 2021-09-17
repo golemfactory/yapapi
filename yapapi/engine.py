@@ -216,7 +216,7 @@ class _Engine:
 
     @property
     def started(self) -> bool:
-        """True if Engine initialization finished"""
+        """Return `True` if this instance is initialized, `False` otherwise."""
         return self._started
 
     def emit(self, event: events.Event) -> None:
