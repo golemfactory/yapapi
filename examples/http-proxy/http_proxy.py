@@ -101,19 +101,22 @@ class HttpService(Service):
         )
 
     async def start(self):
-        self._ctx._started = True
-        async for script in super().start():
-            yield script
+        async for s in super().start():
+            yield s
 
-        self._ctx.run("/docker-entrypoint.sh")
-        self._ctx.run("/bin/chmod", "a+x", "/")
-        self._ctx.run(
+        s = self._ctx.new_script()
+        s.run("/docker-entrypoint.sh")
+        s.run("/bin/chmod", "a+x", "/")
+        s.run(
             "/bin/sh",
             "-c",
             f"echo running on {shlex.quote(self.provider_name)} >> /usr/share/nginx/html/index.html",
         )
-        self._ctx.run("/usr/sbin/nginx"),
-        yield self._ctx.commit()
+        s.run("/usr/sbin/nginx"),
+        yield s
+
+    # we don't need to implement `run` since, after the service is started,
+    # all communication is performed through the VPN
 
 
 # ######## Main application code which spawns the Golem service and the local HTTP server

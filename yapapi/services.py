@@ -300,9 +300,10 @@ class Service:
         based on the requirements for the given runtime/exe-unit type.
         """
 
-        self._ctx.deploy(**self.get_deploy_args())
-        self._ctx.start()
-        yield self._ctx.commit()
+        s = self._ctx.new_script()
+        s.deploy(**self.get_deploy_args())
+        s.start()
+        yield s
 
     async def run(self) -> AsyncGenerator[Script, Awaitable[List[events.CommandEvent]]]:
         """Implement the handler for the `running` state of the service.
