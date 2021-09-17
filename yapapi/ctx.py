@@ -130,7 +130,7 @@ class WorkContext:
         return self.__payment_model
 
     def new_script(self):
-        """Create an instance of `Script` attached to this `WorkContext` instance.
+        """Create an instance of :class:`~yapapi.script.Script` attached to this :class:`WorkContext` instance.
 
         This is equivalent to calling `Script(work_context)`. This method is intended to provide a
         direct link between the two object instances.
@@ -194,7 +194,6 @@ class WorkContext:
         :param cmd: command to run on the provider, e.g. /my/dir/run.sh
         :param args: command arguments, e.g. "input1.txt", "output1.txt"
         :param env: optional dictionary with environmental variables
-        :return: None
         """
         return self.__script.run(cmd, *args, env=env)
 
@@ -204,7 +203,6 @@ class WorkContext:
 
         :param src_path: remote (provider) path
         :param dst_path: local (requestor) path
-        :return: None
         """
         return self.__script.download_file(src_path, dst_path)
 
@@ -220,7 +218,6 @@ class WorkContext:
         :param src_path: remote (provider) path
         :param on_download: the callable to run on the received data
         :param limit: the maximum length of the expected byte string
-        :return None
         """
         return self.__script.download_bytes(src_path, on_download, limit)
 
@@ -236,7 +233,6 @@ class WorkContext:
         :param src_path: remote (provider) path
         :param on_download: the callable to run on the received JSON data
         :param limit: the maximum length of the expected remote file
-        :return None
         """
         return self.__script.download_json(src_path, on_download, limit)
 

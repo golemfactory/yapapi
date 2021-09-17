@@ -2,6 +2,7 @@ from datetime import timedelta
 import itertools
 from typing import Any, Awaitable, Callable, Dict, Iterator, Optional, List, TYPE_CHECKING
 
+import yapapi
 from yapapi.events import CommandExecuted
 from yapapi.script.capture import CaptureContext
 from yapapi.script.command import (
@@ -30,32 +31,28 @@ script_ids: Iterator[int] = itertools.count(1)
 class Script:
     """Represents a series of commands to be executed on a provider node.
 
-    New commands are added to the script either through its `add` method or by calling one of the
-    convenience methods provided (for example: `run` or `upload_json`).
-    Adding a new command *does not* result in it being immediately executed. Once ready, a `Script`
+    New commands are added to the script either through its :func:`add` method or by calling one of the
+    convenience methods provided (for example: :func:`run` or :func:`upload_json`).
+    Adding a new command *does not* result in it being immediately executed. Once ready, a :class:`Script`
     instance is meant to be yielded from a worker function (work generator pattern).
     Commands will be run in the order in which they were added to the script.
-
-    """
-
-    timeout: Optional[timedelta]
-    """Time after which this script's execution should be forcefully interrupted.
-
-    The default value is `None` which means there's no timeout set.
-    """
-
-    wait_for_results: bool
-    """Whether this script's execution should block until its results are available.
-
-    The default value is `True`.
     """
 
     def __init__(
         self,
-        context: "WorkContext",
+        context: "yapapi.ctx.WorkContext",
         timeout: Optional[timedelta] = None,
         wait_for_results: bool = True,
     ):
+        """Initialize a :class:`Script`
+
+        :param context: A :class:`yapapi.WorkContext` that will be used to evaluate the script (i.e. to send
+            commands to the provider)
+        :param timeout: Time after which this script's execution should be forcefully interrupted.
+            The default value is `None` which means there's no timeout set.
+        :param wait_for_results: Whether this script's execution should block until its results are available.
+            The default value is `True`.
+        """
         self.timeout = timeout
         self.wait_for_results = wait_for_results
         self._ctx: "WorkContext" = context
@@ -64,7 +61,7 @@ class Script:
 
     @property
     def id(self) -> int:
-        """Return the ID of this script instance.
+        """Return the ID of this :class:`Script` instance.
 
         IDs are provided by a global iterator and therefore are guaranteed to be unique during
         the program's execution.
@@ -93,19 +90,20 @@ class Script:
         cmd._result.set_result(cmd_event)
 
     def add(self, cmd: Command) -> Awaitable[CommandExecuted]:
+        """Add a :class:`yapapi.script.command.Command` to the :class:`Script`"""
         self._commands.append(cmd)
         return cmd._result
 
     def deploy(self, **kwargs: dict) -> Awaitable[CommandExecuted]:
-        """Schedule a Deploy command on the provider."""
+        """Schedule a :class:`Deploy` command on the provider."""
         return self.add(Deploy(**kwargs))
 
     def start(self, *args: str) -> Awaitable[CommandExecuted]:
-        """Schedule a Start command on the provider."""
+        """Schedule a :class:`Start` command on the provider."""
         return self.add(Start(*args))
 
     def terminate(self) -> Awaitable[CommandExecuted]:
-        """Schedule a Terminate command on the provider."""
+        """Schedule a :class:`Terminate` command on the provider."""
         return self.add(Terminate())
 
     def run(

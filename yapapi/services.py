@@ -58,7 +58,7 @@ class ServiceError(Exception):
 
 
 class ServiceState(statemachine.StateMachine):
-    """State machine describing the state and lifecycle of a Service instance."""
+    """State machine describing the state and lifecycle of a :class:`Service` instance."""
 
     # states
     starting = statemachine.State("starting", initial=True)
@@ -144,7 +144,7 @@ class Service:
     def id(self) -> str:
         """Return the id of this service instance.
 
-        Guaranteed to be unique within a Cluster.
+        Guaranteed to be unique within a :class:`~yapapi.services.Cluster`.
         """
         return self._ctx.id
 
@@ -160,12 +160,12 @@ class Service:
 
     @property
     def network(self) -> Optional[Network]:
-        """Return the Network to which this instance belongs (if any)"""
+        """Return the :class:`~yapapi.network.Network` to which this instance belongs (if any)"""
         return self.network_node.network if self.network_node else None
 
     @property
     def network_node(self) -> Optional[Node]:
-        """Return the network Node record associated with this instance."""
+        """Return the network :class:`~yapapi.network.Node` record associated with this instance."""
         return self._network_node
 
     def __repr__(self):
@@ -185,7 +185,7 @@ class Service:
     def send_message_nowait(self, message: Optional[Any] = None):
         """Send a control message to this instance without blocking.
 
-        May raise `asyncio.QueueFull` if the channel for sending control messages is full.
+        May raise :class:`asyncio.QueueFull` if the channel for sending control messages is full.
         """
         self.__inqueue.put_nowait(ServiceSignal(message=message))
 
@@ -222,10 +222,10 @@ class Service:
     async def get_payload() -> Optional[Payload]:
         """Return the payload (runtime) definition for this service.
 
-        To be overridden by the author of a specific Service class.
+        To be overridden by the author of a specific :class:`Service` class.
 
-        If `get_payload` is not implemented, the payload will need to be provided in the
-        `Golem.run_service` call.
+        If :func:`get_payload` is not implemented, the payload will need to be provided in the
+        :func:`~yapapi.Golem.run_service` call.
         """
         pass
 
@@ -239,18 +239,20 @@ class Service:
     async def start(self) -> AsyncGenerator[Script, Awaitable[List[events.CommandEvent]]]:
         """Implement the handler for the `starting` state of the service.
 
-        To be overridden by the author of a specific Service class.
+        To be overridden by the author of a specific :class:`Service` class.
 
         Should perform the minimum set of operations after which the instance of a service can be
         treated as "started", or, in other words, ready to receive service requests. It's up to the
-        developer of the specific Service class to decide what exact operations constitute a
-        service startup. In the most common scenario `ctx.deploy()` and `ctx.start()` are required,
+        developer of the specific :class:`Service` class to decide what exact operations constitute a
+        service startup. In the most common scenario :func:`~yapapi.script.Script.deploy()` and
+        :func:`~yapapi.script.Script.start()` are required,
         check the `Default implementation` section for more details.
 
-        As a handler implementing the [work generator pattern](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern),
-        it's expected to be a generator that yields `Script`s (generated using the service's
-        instance of the work context - `self._ctx`) that are then dispatched to the activity by
-        the engine.
+        As a handler implementing the `work generator pattern
+        <https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern>`_,
+        it's expected to be a generator that yields :class:`~yapapi.script.Script` (generated using the
+        service's instance of the :class:`~yapapi.WorkContext` - :attr:`self._ctx`) that are then dispatched
+        to the activity by the engine.
 
         Results of those batches can then be retrieved by awaiting the values captured from yield
         statements.
@@ -259,35 +261,34 @@ class Service:
         instance to the next stage in service's lifecycle - in this case, to `running`.
 
         On the other hand, any unhandled exception will cause the instance to be either retried on
-        another provider node, if the Cluster's `respawn_unstarted_instances` argument is set to
-        `True`, which is also the default behavior, or altogether terminated, if
-        `respawn_unstarted_instances` is set to `False`.
+        another provider node, if the :class:`Cluster`'s :attr:`respawn_unstarted_instances` argument is set to
+        `True` in :func:`~yapapi.Golem.run_service`, which is also the default behavior, or altogether terminated, if
+        :attr:`respawn_unstarted_instances` is set to `False`.
 
-        ### Example
+        **Example**::
 
-        ```
-        async def start(self):
-            # deploy the exe-unit
-            self._ctx.deploy()
-            # start the exe-unit's container
-            self._ctx.start()
-            # start some service process within the container
-            self._ctx.run("/golem/run/service_ctl", "--start")
-            # send the batch to the provider
-            yield self._ctx.commit()
-        ```
+            async def start(self):
+                # deploy the exe-unit
+                self._ctx.deploy()
+                # start the exe-unit's container
+                self._ctx.start()
+                # start some service process within the container
+                self._ctx.run("/golem/run/service_ctl", "--start")
+                # send the batch to the provider
+                yield self._ctx.commit()
 
         ### Default implementation
 
         The default implementation assumes that, in order to accept commands, the runtime needs to
-        be first deployed using the `deploy` command, which is analogous to creation of a container
-        corresponding with the desired payload, and then started using the `start` command,
+        be first deployed using the :func:`~yapapi.script.Script.deploy` command, which is analogous
+        to creation of a container corresponding with the desired payload, and then started using the
+        :func:`~yapapi.script.Script.start` command,
         actually launching the process that runs the aforementioned container.
 
         Additionally, it also assumes that the exe-unit doesn't need any additional parameters
-        in its `start()` call (e.g. for the VM runtime, all the required parameters are already
-        passed as part of the agreement between the requestor and the provider), and parameters
-        passed to `deploy()` are returned by `self.get_deploy_args()` method.
+        in its :func:`~yapapi.script.Script.start` call (e.g. for the VM runtime, all the required parameters are
+        already passed as part of the agreement between the requestor and the provider), and parameters
+        passed to :func:`~yapapi.script.Script.deploy` are returned by :func:`Service.get_deploy_args()` method.
 
         Therefore, this default implementation performs the minimum required for a VM payload to
         start responding to `run` commands. If your service requires any additional operations -
@@ -295,7 +296,7 @@ class Service:
         to add appropriate preparatory steps.
 
         In case of runtimes other than VM, `deploy` and/or `start` might be optional or altogether
-        disallowed, plus `deploy`/`start` themselves may take some parameters. It is up to the author of the
+        disallowed, or they may take some parameters. It is up to the author of the
         specific `Service` implementation that uses such a payload to adjust this method accordingly
         based on the requirements for the given runtime/exe-unit type.
         """
@@ -307,16 +308,17 @@ class Service:
     async def run(self) -> AsyncGenerator[Script, Awaitable[List[events.CommandEvent]]]:
         """Implement the handler for the `running` state of the service.
 
-        To be overridden by the author of a specific Service class.
+        To be overridden by the author of a specific :class:`Service` class.
 
         Should contain any operations needed to ensure continuous operation of a service.
 
-        As a handler implementing the [work generator pattern](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern),
-        it's expected to be a generator that yields `Script`s (generated using the service's
-        instance of the work context - `self._ctx`) that are then dispatched to the activity by
-        the engine.
+        As a handler implementing the `work generator pattern
+        <https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern>`_,
+        it's expected to be a generator that yields :class:`~yapapi.script.Script` (generated using the
+        service's instance of the :class:`~yapapi.WorkContext` - :attr:`self._ctx`) that are then dispatched
+        to the activity by the engine.
 
-        Results of those batches can then be retrieved by awaiting the values captured from yield
+        Results of those batches can then be retrieved by awaiting the values captured from `yield`
         statements.
 
         A clean exit from a handler function triggers the engine to transition the state of the
@@ -324,22 +326,20 @@ class Service:
 
         Any unhandled exception will cause the instance to be terminated.
 
-        ### Example
+        **Example**::
 
-        ```
-        async def run(self):
-            while True:
-                self._ctx.run("/golem/run/report", "--stats")  # index 0
-                future_results = yield self._ctx.commit()
-                results = await future_results
-                stats = results[0].stdout.strip()  # retrieve from index 0
-                print(f"stats: {stats}")
-        ```
+            async def run(self):
+                while True:
+                    self._ctx.run("/golem/run/report", "--stats")  # index 0
+                    future_results = yield self._ctx.commit()
+                    results = await future_results
+                    stats = results[0].stdout.strip()  # retrieve from index 0
+                    print(f"stats: {stats}")
 
-        ### Default implementation
+        **Default implementation**
 
         Because the nature of the operations required during the "running" state depends directly
-        on the specifics of a given Service and because it's entirely plausible for a service
+        on the specifics of a given :class:`Service` and because it's entirely plausible for a service
         not to require any direct interaction with the exe-unit (runtime) from the requestor's end
         after the service has been started, the default is to just wait indefinitely without
         producing any batches.
@@ -351,15 +351,16 @@ class Service:
     async def shutdown(self) -> AsyncGenerator[Script, Awaitable[List[events.CommandEvent]]]:
         """Implement the handler for the `stopping` state of the service.
 
-        To be overridden by the author of a specific Service class.
+        To be overridden by the author of a specific :class:`Service` class.
 
         Should contain any operations that the requestor needs to ensure the instance is correctly
         and gracefully shut-down - e.g. that its final state is retrieved.
 
-        As a handler implementing the [work generator pattern](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern),
-        it's expected to be a generator that yields `Script`s (generated using the service's
-        instance of the work context - `self._ctx`) that are then dispatched to the activity by
-        the engine.
+        As a handler implementing the `work generator pattern
+        <https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern>`_,
+        it's expected to be a generator that yields :class:`~yapapi.script.Script` (generated using the
+        service's instance of the :class:`~yapapi.WorkContext` - :attr:`self._ctx`) that are then dispatched
+        to the activity by the engine.
 
         Results of those batches can then be retrieved by awaiting the values captured from yield
         statements.
@@ -371,17 +372,15 @@ class Service:
         has been lost, the service will transition to the `terminated` state and the shutdown
         handler won't be run.
 
-        ### Example
+        **Example**::
 
-        ```
-        async def shutdown(self):
-            self._ctx.run("/golem/run/dump_state")
-            self._ctx.download_file("/golem/output/state", "/some/local/path/state")
-            self._ctx.terminate()
-            yield self._ctx.commit()
-        ```
+            async def shutdown(self):
+                self._ctx.run("/golem/run/dump_state")
+                self._ctx.download_file("/golem/output/state", "/some/local/path/state")
+                self._ctx.terminate()
+                yield self._ctx.commit()
 
-        ### Default implementation
+        **Default implementation**
 
         By default, the activity is just sent a `terminate` command. Whether it's absolutely
         required or not, again, depends on the implementation of the given runtime.
@@ -436,7 +435,7 @@ class ServiceInstance:
 
 
 class Cluster(AsyncContextManager):
-    """Golem's sub-engine used to spawn and control instances of a single Service."""
+    """Golem's sub-engine used to spawn and control instances of a single :class:`Service`."""
 
     def __init__(
         self,
@@ -482,22 +481,22 @@ class Cluster(AsyncContextManager):
 
     @property
     def expiration(self) -> datetime:
-        """Return the expiration datetime for agreements related to services in this Cluster."""
+        """Return the expiration datetime for agreements related to services in this :class:`Cluster`."""
         return self._expiration
 
     @property
     def payload(self) -> Payload:
-        """Return the service runtime definition for this Cluster."""
+        """Return the service runtime definition for this :class:`Cluster`."""
         return self._payload
 
     @property
     def service_class(self) -> Type[Service]:
-        """Return the class instantiated by all service instances in this Cluster."""
+        """Return the class instantiated by all service instances in this :class:`Cluster`."""
         return self._service_class
 
     @property
     def network(self) -> Optional[Network]:
-        """Return the Network record associated with the VPN used by this Cluster."""
+        """Return the :class:`~yapapi.network.Network` record associated with the VPN used by this :class:`Cluster`."""
         return self._network
 
     def __repr__(self):
@@ -565,12 +564,12 @@ class Cluster(AsyncContextManager):
         self._engine.finalize_job(self._job)
 
     def emit(self, event: events.Event) -> None:
-        """Emit an event using this Cluster's engine."""
+        """Emit an event using this :class:`Cluster`'s engine."""
         self._engine.emit(event)
 
     @property
     def instances(self) -> List[Service]:
-        """Return the list of service instances in this Cluster."""
+        """Return the list of service instances in this :class:`Cluster`."""
         return [i.service for i in self.__instances]
 
     def __get_service_instance(self, service: Service) -> ServiceInstance:
@@ -580,7 +579,7 @@ class Cluster(AsyncContextManager):
         assert False, f"No instance found for {service}"
 
     def get_state(self, service: Service) -> ServiceState:
-        """Return the state of the specific instance in this Cluster."""
+        """Return the state of the specific instance in this :class:`Cluster`."""
         instance = self.__get_service_instance(service)
         return instance.state
 
@@ -721,7 +720,7 @@ class Cluster(AsyncContextManager):
         logger.info("%s decommissioned", instance.service)
 
     async def spawn_instance(self, params: Dict, network_address: Optional[str] = None) -> None:
-        """Spawn a new service instance within this Cluster."""
+        """Spawn a new service instance within this :class:`Cluster`."""
 
         logger.debug("spawning instance within %s", self)
         instance: Optional[ServiceInstance] = None
@@ -800,7 +799,7 @@ class Cluster(AsyncContextManager):
                     return
 
     def stop_instance(self, service: Service):
-        """Stop the specific service instance belonging to this Cluster."""
+        """Stop the specific :class:`Service` instance belonging to this :class:`Cluster`."""
 
         instance = self.__get_service_instance(service)
         instance.control_queue.put_nowait(ControlSignal.stop)
@@ -811,10 +810,10 @@ class Cluster(AsyncContextManager):
         instance_params: Optional[Iterable[Dict]] = None,
         network_addresses: Optional[List[str]] = None,
     ) -> None:
-        """Spawn new instances within this Cluster.
+        """Spawn new instances within this :class:`Cluster`.
 
         :param num_instances: optional number of service instances to run. Defaults to a single
-            instance, unless `instance_params` is given, in which case, the Cluster will spawn
+            instance, unless `instance_params` is given, in which case, the :class:`Cluster` will spawn
             as many instances as there are elements in the `instance_params` iterable.
             if `num_instances` is not None and < 1, the method will immediately return and log a warning.
         :param instance_params: optional list of dictionaries of keyword arguments that will be passed
@@ -824,7 +823,7 @@ class Cluster(AsyncContextManager):
             In other words, if both `num_instances` and `instance_params` are provided,
             the number of instances spawned will be equal to `num_instances` and if there are
             too few elements in the `instance_params` iterable, it will results in an error.
-        :param network_addresses: optional list of network addresses in case the Cluster is
+        :param network_addresses: optional list of network addresses in case the :class:`Cluster` is
             attached to VPN. If the list is not provided (or if the number of elements is less
             than the number of spawned instances), any instances for which the addresses have not
             been given, will be assigned an address automatically.
@@ -869,6 +868,6 @@ class Cluster(AsyncContextManager):
                 break
 
     def stop(self):
-        """Signal the whole cluster to stop."""
+        """Signal the whole :class:`Cluster` to stop."""
         for s in self.instances:
             self.stop_instance(s)
