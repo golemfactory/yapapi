@@ -57,7 +57,7 @@ class Network:
         owner_ip: Optional[str] = None,
         mask: Optional[str] = None,
         gateway: Optional[str] = None,
-    ) -> 'Network':
+    ) -> "Network":
         """Create a new VPN.
 
         :param net_api: the mid-level binding used directly to perform calls to the REST API.
@@ -222,4 +222,4 @@ class Network:
 
 
 class NetworkError(Exception):
-    '''Exception raised by :class:`Network` when an operation is not possible'''
+    """Exception raised by :class:`Network` when an operation is not possible"""
