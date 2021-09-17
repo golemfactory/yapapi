@@ -99,15 +99,9 @@ async def test_spawn_instances(kwargs, calls, error):
 @pytest.mark.parametrize(
     "service, error",
     (
-        (
-            _TestService(Mock(), Mock()),
-            None
-        ),
-        (
-            _BrokenService(Mock(), Mock()),
-            "must be an asynchronous generator"
-        ),
-    )
+        (_TestService(Mock(), Mock()), None),
+        (_BrokenService(Mock(), Mock()), "must be an asynchronous generator"),
+    ),
 )
 def test_get_handler(service, error):
     service_instance = ServiceInstance(service=service)

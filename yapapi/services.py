@@ -596,7 +596,9 @@ class Cluster(AsyncContextManager):
             if inspect.isasyncgenfunction(handler):
                 return handler()
             else:
-                raise ServiceError(f"Service handler: `{handler}` must be an asynchronous generator.")
+                raise ServiceError(
+                    f"Service handler: `{handler}` must be an asynchronous generator."
+                )
 
     @staticmethod
     def _change_state(
