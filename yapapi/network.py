@@ -1,14 +1,11 @@
 import asyncio
 from dataclasses import dataclass
 from ipaddress import ip_address, ip_network, IPv4Address, IPv6Address, IPv4Network, IPv6Network
-from typing import Dict, Optional, Union, TYPE_CHECKING
+from typing import Dict, Optional, Union
+import yapapi
 
 IpAddress = Union[IPv4Address, IPv6Address]
 IpNetwork = Union[IPv4Network, IPv6Network]
-
-
-if TYPE_CHECKING:
-    from yapapi.rest.net import Net
 
 
 @dataclass
@@ -18,7 +15,7 @@ class Node:
     """
 
     network: "Network"
-    """The Network (the specific VPN) this node is part of."""
+    """The :class:`Network` (the specific VPN) this node is part of."""
 
     node_id: str
     """Golem id of the node."""
@@ -54,23 +51,21 @@ class Network:
     @classmethod
     async def create(
         cls,
-        net_api: "Net",
+        net_api: "yapapi.rest.net.Net",
         ip: str,
         owner_id: str,
         owner_ip: Optional[str] = None,
         mask: Optional[str] = None,
         gateway: Optional[str] = None,
-    ):
+    ) -> "Network":
         """Create a new VPN.
 
         :param net_api: the mid-level binding used directly to perform calls to the REST API.
         :param ip: the IP address of the network. May contain netmask, e.g. "192.168.0.0/24"
         :param owner_id: the node ID of the owner of this VPN (the requestor)
-        :param owner_ip: the desired IP address of the requestor node within the newly-created Network
+        :param owner_ip: the desired IP address of the requestor node within the newly-created network
         :param mask: Optional netmask (only if not provided within the `ip` argument)
         :param gateway: Optional gateway address for the network
-
-        :return: a Network object allowing further manipulation of the created VPN
         """
 
         network = cls(net_api, ip, owner_id, owner_ip, mask, gateway)
@@ -87,7 +82,7 @@ class Network:
 
     def __init__(
         self,
-        net_api: "Net",
+        net_api: "yapapi.rest.net.Net",
         ip: str,
         owner_id: str,
         owner_ip: Optional[str] = None,
@@ -98,7 +93,7 @@ class Network:
         :param net_api: the mid-level binding used directly to perform calls to the REST API.
         :param ip: the IP address of the network. May contain netmask, e.g. "192.168.0.0/24"
         :param owner_id: the node ID of the owner of this VPN (the requestor)
-        :param owner_ip: the desired IP address of the requestor node within the newly-created Network
+        :param owner_ip: the desired IP address of the requestor node within the newly-created network
         :param mask: Optional netmask (only if not provided within the `ip` argument)
         :param gateway: Optional gateway address for the network
         """
@@ -133,7 +128,7 @@ class Network:
 
     @property
     def owner_ip(self) -> str:
-        """the IP address of the requestor node within the Network"""
+        """the IP address of the requestor node within the network"""
         return str(self._owner_ip)
 
     @property
@@ -176,7 +171,7 @@ class Network:
             raise NetworkError(f"'{ip}' has already been assigned in this network.")
 
     async def add_owner_address(self, ip: str):
-        """Assign the given IP address to the requestor in the Network.
+        """Assign the given IP address to the requestor in the network.
 
         :param ip: the IP address to assign to the requestor node.
         """
@@ -227,4 +222,4 @@ class Network:
 
 
 class NetworkError(Exception):
-    pass
+    """Exception raised by :class:`Network` when an operation is not possible"""
