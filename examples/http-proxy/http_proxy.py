@@ -38,24 +38,16 @@ STARTING_TIMEOUT = timedelta(minutes=4)
 
 # ######## local http server
 
-
-class CurrentInstance:
-    __index = 0
-
-    @classmethod
-    def get_index(cls, count: int):
-        if cls.__index >= count:
-            cls.__index = 0
-        idx = cls.__index
-        cls.__index += 1
-        return idx
+request_count = 0
 
 
-async def web_root(cluster: Cluster, request: web.Request):
+async def request_handler(cluster: Cluster, request: web.Request):
+    global request_count
+
     print(f"{TEXT_COLOR_GREEN}local HTTP request: {dict(request.query)}{TEXT_COLOR_DEFAULT}")
 
-    idx = CurrentInstance.get_index(len(cluster.instances))
-    instance = cluster.instances[idx]
+    instance = cluster.instances[request_count % len(cluster.instances)]
+    request_count += 1
     instance_ws = instance.network_node.get_websocket_uri(80)
     app_key = cluster._engine._api_config.app_key
 
@@ -81,7 +73,12 @@ async def web_root(cluster: Cluster, request: web.Request):
 
 
 async def run_local_server(cluster: Cluster, port: int):
-    runner = web.ServerRunner(web.Server(functools.partial(web_root, cluster)))
+    """
+    run a local HTTP server, listening on `port`
+    and passing all requests throught the `request_handler` function above
+    """
+    handler = functools.partial(request_handler, cluster)
+    runner = web.ServerRunner(web.Server(handler))
     await runner.setup()
     site = web.TCPSite(runner, port=port)
     await site.start()
