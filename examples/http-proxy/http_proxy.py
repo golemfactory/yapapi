@@ -70,15 +70,12 @@ async def run_local_server(cluster: Cluster, port: int):
 
 
 class HttpService(Service):
-
     @staticmethod
     async def get_payload():
         return await vm.repo(
             image_hash="16ad039c00f60a48c76d0644c96ccba63b13296d140477c736512127",
-
             # we're adding an additional constraint to only select those nodes that
             # are offering VPN-capable VM runtimes so that we can connect them to the VPN
-
             capabilities=[vm.VM_CAPS_VPN],
         )
 
@@ -112,7 +109,7 @@ class HttpService(Service):
         print(f"{TEXT_COLOR_GREEN}sending a remote request to {self}{TEXT_COLOR_DEFAULT}")
         ws_session = aiohttp.ClientSession()
         async with ws_session.ws_connect(
-                instance_ws, headers={"Authorization": f"Bearer {app_key}"}
+            instance_ws, headers={"Authorization": f"Bearer {app_key}"}
         ) as ws:
             await ws.send_str(f"GET {query_string} HTTP/1.0\n\n")
             headers = await ws.__anext__()
@@ -175,7 +172,9 @@ async def main(
             await asyncio.sleep(5)
 
         if still_starting():
-            raise Exception(f"Failed to start instances after {STARTING_TIMEOUT.total_seconds()} seconds")
+            raise Exception(
+                f"Failed to start instances after {STARTING_TIMEOUT.total_seconds()} seconds"
+            )
 
         # service instances started, start the local HTTP server
 
