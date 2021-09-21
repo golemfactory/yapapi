@@ -602,7 +602,6 @@ class Cluster(AsyncContextManager):
                     f"Service handler: `{service_cls_name}.{handler_name}` must be an asynchronous generator."
                 )
 
-
     @staticmethod
     def _change_state(
         instance: ServiceInstance,

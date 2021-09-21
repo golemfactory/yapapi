@@ -108,7 +108,7 @@ def test_get_handler(service, error):
     try:
         handler = Cluster._get_handler(service_instance)
         assert handler
-    except ServiceError as e:
+    except TypeError as e:
         if error is not None:
             assert error in str(e)
         else:
