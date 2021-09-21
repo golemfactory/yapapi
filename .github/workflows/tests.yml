@@ -41,7 +41,7 @@ jobs:
         id: extended-checks
       - run: poetry install -E cli
       - run: poetry run poe test
-      - run: poetry run poe typecheck
+      - run: poetry run poe typecheck --python-version ${{ matrix.python-version }}
       - run: poetry run poe codestyle
         if: ${{ steps.extended-checks.outputs.ENABLE }}
       - run: poetry run poe liccheck
