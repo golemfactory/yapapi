@@ -75,7 +75,7 @@ async def request_handler(cluster: Cluster, request: web.Request):
 async def run_local_server(cluster: Cluster, port: int):
     """
     run a local HTTP server, listening on `port`
-    and passing all requests throught the `request_handler` function above
+    and passing all requests through the `request_handler` function above
     """
     handler = functools.partial(request_handler, cluster)
     runner = web.ServerRunner(web.Server(handler))
