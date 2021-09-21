@@ -162,7 +162,7 @@ async def main(
 
         def still_starting():
             return len(cluster.instances) < num_instances or any(
-                [s for s in cluster.instances if s.state == ServiceState.starting]
+                s.state == ServiceState.starting for s in cluster.instances
             )
 
         # wait until all remote http instances are started
