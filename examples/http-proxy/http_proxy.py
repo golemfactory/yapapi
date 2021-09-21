@@ -166,6 +166,9 @@ async def main(
             print(f"instances: {instances()}")
             await asyncio.sleep(5)
 
+        if still_starting():
+            raise Exception(f"Failed to start instances after {STARTING_TIMEOUT.total_seconds()} seconds")
+
         # service instances started, start the local HTTP server
 
         site = await run_local_server(cluster, port)
