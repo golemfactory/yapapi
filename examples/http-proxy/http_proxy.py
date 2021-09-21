@@ -96,7 +96,7 @@ class HttpService(Service):
     @staticmethod
     async def get_payload():
         return await vm.repo(
-            image_hash="de6d4cf997138af384caf32b1d222f35ead1d3639eebafa575359f1d",
+            image_hash="16ad039c00f60a48c76d0644c96ccba63b13296d140477c736512127",
             capabilities=[vm.VM_CAPS_VPN],
         )
 
@@ -107,10 +107,11 @@ class HttpService(Service):
         s = self._ctx.new_script()
         s.run("/docker-entrypoint.sh")
         s.run("/bin/chmod", "a+x", "/")
+        msg = f"Hello from inside Golem!\n... running on {self.provider_name}"
         s.run(
             "/bin/sh",
             "-c",
-            f"echo running on {shlex.quote(self.provider_name)} >> /usr/share/nginx/html/index.html",
+            f"echo {shlex.quote(msg)} > /usr/share/nginx/html/index.html",
         )
         s.run("/usr/sbin/nginx"),
         yield s
