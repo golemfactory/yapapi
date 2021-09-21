@@ -46,30 +46,10 @@ async def request_handler(cluster: Cluster, request: web.Request):
 
     print(f"{TEXT_COLOR_GREEN}local HTTP request: {dict(request.query)}{TEXT_COLOR_DEFAULT}")
 
-    instance = cluster.instances[request_count % len(cluster.instances)]
+    instance: HttpService = cluster.instances[request_count % len(cluster.instances)]
     request_count += 1
-    instance_ws = instance.network_node.get_websocket_uri(80)
-    app_key = cluster._engine._api_config.app_key
-
-    print(f"{TEXT_COLOR_GREEN}sending a remote request to {instance}{TEXT_COLOR_DEFAULT}")
-    ws_session = aiohttp.ClientSession()
-    async with ws_session.ws_connect(
-        instance_ws, headers={"Authorization": f"Bearer {app_key}"}
-    ) as ws:
-        await ws.send_str("GET / HTTP/1.0\n\n")
-        headers = await ws.__anext__()
-        print(f"{TEXT_COLOR_GREEN}remote headers: {headers.data} {TEXT_COLOR_DEFAULT}")
-        content = await ws.__anext__()
-        data: bytes = content.data
-        print(f"{TEXT_COLOR_GREEN}remote content: {data} {TEXT_COLOR_DEFAULT}")
-
-        # todo pass headers to the response ? ...
-        response_text = data.decode("utf-8")
-        print(f"{TEXT_COLOR_GREEN}local response: {response_text}{TEXT_COLOR_DEFAULT}")
-
-    await ws_session.close()
-
-    return web.Response(text=response_text)
+    response = await instance.handle_request(request.path_qs)
+    return web.Response(text=response)
 
 
 async def run_local_server(cluster: Cluster, port: int):
@@ -90,10 +70,15 @@ async def run_local_server(cluster: Cluster, port: int):
 
 
 class HttpService(Service):
+
     @staticmethod
     async def get_payload():
         return await vm.repo(
             image_hash="16ad039c00f60a48c76d0644c96ccba63b13296d140477c736512127",
+
+            # we're adding an additional constraint to only select those nodes that
+            # are offering VPN-capable VM runtimes so that we can connect them to the VPN
+
             capabilities=[vm.VM_CAPS_VPN],
         )
 
@@ -115,6 +100,32 @@ class HttpService(Service):
 
     # we don't need to implement `run` since, after the service is started,
     # all communication is performed through the VPN
+
+    async def handle_request(self, query_string: str):
+        """
+        handle the request coming from the local HTTP server
+        by passing it to the instance through the VPN
+        """
+        instance_ws = self.network_node.get_websocket_uri(80)
+        app_key = self.cluster._engine._api_config.app_key
+
+        print(f"{TEXT_COLOR_GREEN}sending a remote request to {self}{TEXT_COLOR_DEFAULT}")
+        ws_session = aiohttp.ClientSession()
+        async with ws_session.ws_connect(
+                instance_ws, headers={"Authorization": f"Bearer {app_key}"}
+        ) as ws:
+            await ws.send_str(f"GET {query_string} HTTP/1.0\n\n")
+            headers = await ws.__anext__()
+            print(f"{TEXT_COLOR_GREEN}remote headers: {headers.data} {TEXT_COLOR_DEFAULT}")
+            content = await ws.__anext__()
+            data: bytes = content.data
+            print(f"{TEXT_COLOR_GREEN}remote content: {data} {TEXT_COLOR_DEFAULT}")
+
+            response_text = data.decode("utf-8")
+            print(f"{TEXT_COLOR_GREEN}local response: {response_text}{TEXT_COLOR_DEFAULT}")
+
+        await ws_session.close()
+        return response_text
 
 
 # ######## Main application code which spawns the Golem service and the local HTTP server
