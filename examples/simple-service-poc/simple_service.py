@@ -59,6 +59,8 @@ class SimpleService(Service):
 
     async def start(self):
         # handler responsible for starting the service
+        async for script in super().start():
+            yield script
         self._ctx.run(self.SIMPLE_SERVICE_CTL, "--start")
         yield self._ctx.commit()
 

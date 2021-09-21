@@ -33,7 +33,7 @@ class Task(Generic[TaskData, TaskResult]):
         self,
         data: TaskData,
     ):
-        """Create a new Task object.
+        """Create a new :class:`Task` object.
 
         :param data: contains information needed to prepare command list for the provider
         """
@@ -110,7 +110,6 @@ class Task(Generic[TaskData, TaskResult]):
         as completed.
 
         :param result: task computation result (optional)
-        :return: None
         """
         if self._emit:
             self._emit(events.TaskAccepted(task_id=self.id, result=result))
@@ -128,7 +127,6 @@ class Task(Generic[TaskData, TaskResult]):
         that the task should be retried.
 
         :param reason: task rejection description (optional)
-        :return: None
         """
         if self._emit:
             self._emit(events.TaskRejected(task_id=self.id, reason=reason))
