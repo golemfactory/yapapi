@@ -81,19 +81,22 @@ async def main(subnet_tag, driver=None, network=None, show_usage=False):
                 raise
 
             if show_usage:
+                raw_state = await ctx.get_raw_state()
+                usage = format_usage(await ctx.get_usage())
+                cost = await ctx.get_cost()
                 print(
                     f"{TEXT_COLOR_MAGENTA}"
-                    f" --- {ctx.provider_name} STATE: {await ctx.get_raw_state()}"
+                    f" --- {ctx.provider_name} STATE: {raw_state}"
                     f"{TEXT_COLOR_DEFAULT}"
                 )
                 print(
                     f"{TEXT_COLOR_MAGENTA}"
-                    f" --- {ctx.provider_name} USAGE: {format_usage(await ctx.get_usage())}"
+                    f" --- {ctx.provider_name} USAGE: {usage}"
                     f"{TEXT_COLOR_DEFAULT}"
                 )
                 print(
                     f"{TEXT_COLOR_MAGENTA}"
-                    f" --- {ctx.provider_name}  COST: {await ctx.get_cost()}"
+                    f" --- {ctx.provider_name}  COST: {cost}"
                     f"{TEXT_COLOR_DEFAULT}"
                 )
 
