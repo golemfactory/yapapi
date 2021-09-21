@@ -143,7 +143,7 @@ class _Engine:
 
         self._subnet: Optional[str] = subnet_tag or DEFAULT_SUBNET
         self._payment_driver: str = payment_driver.lower() if payment_driver else DEFAULT_DRIVER
-        self._payment_network: str = payment network.lower() if payment network else DEFAULT_NETWORK
+        self._payment_network: str = payment_network.lower() if payment_network else DEFAULT_NETWORK
 
         if not event_consumer:
             # Use local import to avoid cyclic imports when yapapi.log

@@ -27,6 +27,7 @@ from yapapi.network import Network
 from yapapi.payload import Payload
 from yapapi.script import Script
 from yapapi.services import Cluster, Service
+from yapapi.utils import warn_deprecated, Deprecated
 
 if TYPE_CHECKING:
     from yapapi.strategy import MarketStrategy
@@ -74,12 +75,21 @@ class Golem:
         budget: Union[float, Decimal],
         strategy: Optional["MarketStrategy"] = None,
         subnet_tag: Optional[str] = None,
+        driver: Optional[str] = None,
         payment_driver: Optional[str] = None,
+        network: Optional[str] = None,
         payment_network: Optional[str] = None,
         event_consumer: Optional[Callable[[events.Event], None]] = None,
         stream_output: bool = False,
         app_key: Optional[str] = None,
     ):
+        if driver:
+            warn_deprecated("driver", "payment_driver", "0.7.0", Deprecated.parameter)
+            payment_driver = payment_driver if payment_driver else driver
+        if network:
+            warn_deprecated("network", "payment_network", "0.7.0", Deprecated.parameter)
+            payment_network = payment_network if payment_network else network
+
         self._init_args = {
             "budget": budget,
             "strategy": strategy,
@@ -94,13 +104,31 @@ class Golem:
         self._engine: _Engine = self._get_new_engine()
 
     @property
-    def payment_driver(self) -> str:
-        """Name of the payment driver"""
+    def driver(self) -> str:
+        """Name of the payment driver.
+
+        This property is deprecated, please use `payment_driver` instead.
+        """
+        warn_deprecated("driver", "payment_driver", "0.7.0", Deprecated.property)
         return self._engine.payment_driver
 
     @property
+    def payment_driver(self) -> str:
+        """Name of the payment driver to be used by this instance."""
+        return self._engine.payment_driver
+
+    @property
+    def network(self) -> str:
+        """Name of the payment network.
+
+        This property is deprecated, please use `payment_network` instead.
+        """
+        warn_deprecated("network", "payment_network", "0.7.0", Deprecated.property)
+        return self._engine.payment_network
+
+    @property
     def payment_network(self) -> str:
-        """Name of the payment network"""
+        """Name of the payment network to be used by this instance."""
         return self._engine.payment_network
 
     @property

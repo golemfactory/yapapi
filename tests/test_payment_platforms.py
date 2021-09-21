@@ -29,8 +29,8 @@ def _mock_accounts_iterator(*account_specs):
             params = {
                 "platform": "mock-platform",
                 "address": "mock-address",
-                "payment_driver": spec[0],
-                "payment_network": spec[1],
+                "driver": spec[0],
+                "network": spec[1],
                 "token": "mock-token",
                 "send": True,
                 "receive": True,

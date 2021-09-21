@@ -69,7 +69,7 @@ class Executor:
     @property
     def driver(self) -> str:
         """Return the payment driver used for this `Executor`'s engine."""
-        return self._engine.driver
+        return self._engine.payment_driver
 
     @property
     def payment_network(self) -> str:
