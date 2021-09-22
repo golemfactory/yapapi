@@ -3,7 +3,7 @@
 """Other version of the blender example.
 
 Instead of using Golem in the default way - as a context manager - we directly call `Golem.start()` and `Golem.stop()`.
-This way of using Golem might be more convenient for some specific usage cases (although doesn't change a lot
+This way of using Golem might be more convenient for some specific use cases (although doesn't change a lot
 in the blender example).
 """
 
