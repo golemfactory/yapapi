@@ -19,7 +19,7 @@ from .assertions import assert_no_errors, assert_all_invoices_accepted
 
 logger = logging.getLogger("goth.test.run_custom_usage_counter")
 
-RUNNING_TIME = 200  # in seconds
+RUNNING_TIME = 50  # in seconds
 SUBNET_TAG = "goth"
 
 
