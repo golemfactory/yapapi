@@ -170,7 +170,7 @@ class Service:
         return self._network_node
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}: {self.id}>"
+        return f"<{self.__class__.__name__} on {self.provider_name} [ {self.provider_id} ]>"
 
     def exc_info(self) -> ExcInfo:
         """Return exception info for an exception that caused the last state transition.
@@ -302,9 +302,10 @@ class Service:
         based on the requirements for the given runtime/exe-unit type.
         """
 
-        self._ctx.deploy(**self.get_deploy_args())
-        self._ctx.start()
-        yield self._ctx.commit()
+        s = self._ctx.new_script()
+        s.deploy(**self.get_deploy_args())
+        s.start()
+        yield s
 
     async def run(self) -> AsyncGenerator[Script, Awaitable[List[events.CommandEvent]]]:
         """Implement the handler for the `running` state of the service.

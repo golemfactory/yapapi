@@ -29,7 +29,7 @@ from utils import (
 )
 
 
-async def main(subnet_tag, driver=None, network=None):
+async def main(subnet_tag, payment_driver=None, payment_network=None):
     package = await vm.repo(
         image_hash="a23ce2c0c29ea9711e4a293a2805700e2f0cb6450fddf9506812eb1b",
         min_mem_gib=0.5,
@@ -60,15 +60,15 @@ async def main(subnet_tag, driver=None, network=None):
     async with Golem(
         budget=10.0,
         subnet_tag=subnet_tag,
-        driver=driver,
-        network=network,
+        payment_driver=payment_driver,
+        payment_network=payment_network,
     ) as golem:
 
         print(
             f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n"
             f"Using subnet: {TEXT_COLOR_YELLOW}{subnet_tag}{TEXT_COLOR_DEFAULT}, "
-            f"payment driver: {TEXT_COLOR_YELLOW}{golem.driver}{TEXT_COLOR_DEFAULT}, "
-            f"and network: {TEXT_COLOR_YELLOW}{golem.network}{TEXT_COLOR_DEFAULT}\n"
+            f"payment driver: {TEXT_COLOR_YELLOW}{golem.payment_driver}{TEXT_COLOR_DEFAULT}, "
+            f"and network: {TEXT_COLOR_YELLOW}{golem.payment_network}{TEXT_COLOR_DEFAULT}\n"
         )
 
         num_tasks = 0
@@ -114,7 +114,11 @@ if __name__ == "__main__":
 
     loop = asyncio.get_event_loop()
     task = loop.create_task(
-        main(subnet_tag=args.subnet_tag, driver=args.driver, network=args.network)
+        main(
+            subnet_tag=args.subnet_tag,
+            payment_driver=args.payment_driver,
+            payment_network=args.payment_network,
+        )
     )
 
     try:
