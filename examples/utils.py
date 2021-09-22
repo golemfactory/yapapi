@@ -29,8 +29,12 @@ def build_parser(description: str) -> argparse.ArgumentParser:
     default_log_path = Path(tempfile.gettempdir()) / f"yapapi_{current_time_str}.log"
 
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument("--driver", help="Payment driver name, for example `zksync`")
-    parser.add_argument("--network", help="Network name, for example `rinkeby`")
+    parser.add_argument(
+        "--payment-driver", "--driver", help="Payment driver name, for example `zksync`"
+    )
+    parser.add_argument(
+        "--payment-network", "--network", help="Payment network name, for example `rinkeby`"
+    )
     parser.add_argument("--subnet-tag", help="Subnet name, for example `devnet-beta.2`")
     parser.add_argument(
         "--log-file",

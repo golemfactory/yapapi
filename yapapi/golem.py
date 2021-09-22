@@ -29,6 +29,7 @@ from yapapi.network import Network
 from yapapi.payload import Payload
 from yapapi.script import Script
 from yapapi.services import Cluster, Service
+from yapapi.utils import warn_deprecated, Deprecated
 
 if TYPE_CHECKING:
     from yapapi.strategy import MarketStrategy
@@ -78,22 +79,26 @@ class Golem:
         strategy: Optional["yapapi.strategy.MarketStrategy"] = None,
         subnet_tag: Optional[str] = None,
         driver: Optional[str] = None,
+        payment_driver: Optional[str] = None,
         network: Optional[str] = None,
+        payment_network: Optional[str] = None,
         event_consumer: Optional[Callable[[events.Event], None]] = None,
         stream_output: bool = False,
         app_key: Optional[str] = None,
     ):
-        """Initialize Golem engine
+        """Initialize Golem engine.
 
         :param budget: maximum budget for payments
         :param strategy: market strategy used to select providers from the market
             (e.g. :class:`yapapi.strategy.LeastExpensiveLinearPayuMS` or :class:`yapapi.strategy.DummyMS`)
         :param subnet_tag: use only providers in the subnet with the subnet_tag name.
             Uses `YAGNA_SUBNET` environment variable, defaults to `None`
-        :param driver: name of the payment driver to use. Uses `YAGNA_PAYMENT_DRIVER`
+        :param driver: deprecated, please use `payment_driver` instead
+        :param payment_driver: name of the payment driver to use. Uses `YAGNA_PAYMENT_DRIVER`
             environment variable, defaults to `zksync`. Only payment platforms with
             the specified driver will be used
-        :param network: name of the network to use. Uses `YAGNA_NETWORK` environment
+        :param network: deprecated, please use `payment_network` instead
+        :param payment_network: name of the network to use. Uses `YAGNA_NETWORK` environment
             variable, defaults to `rinkeby`. Only payment platforms with the specified
             network will be used
         :param event_consumer: a callable that processes events related to the
@@ -102,13 +107,19 @@ class Golem:
         :param app_key: optional Yagna application key. If not provided, the default is to
                         get the value from `YAGNA_APPKEY` environment variable
         """
+        if driver:
+            warn_deprecated("driver", "payment_driver", "0.7.0", Deprecated.parameter)
+            payment_driver = payment_driver if payment_driver else driver
+        if network:
+            warn_deprecated("network", "payment_network", "0.7.0", Deprecated.parameter)
+            payment_network = payment_network if payment_network else network
 
         self._init_args = {
             "budget": budget,
             "strategy": strategy,
             "subnet_tag": subnet_tag,
-            "driver": driver,
-            "network": network,
+            "payment_driver": payment_driver,
+            "payment_network": payment_network,
             "event_consumer": event_consumer,
             "stream_output": stream_output,
             "app_key": app_key,
@@ -119,13 +130,31 @@ class Golem:
 
     @property
     def driver(self) -> str:
-        """Name of the payment driver"""
-        return self._engine.driver
+        """Name of the payment driver.
+
+        This property is deprecated, please use `payment_driver` instead.
+        """
+        warn_deprecated("driver", "payment_driver", "0.7.0", Deprecated.property)
+        return self._engine.payment_driver
+
+    @property
+    def payment_driver(self) -> str:
+        """Name of the payment driver to be used by this instance."""
+        return self._engine.payment_driver
 
     @property
     def network(self) -> str:
-        """Name of the payment network"""
-        return self._engine.network
+        """Name of the payment network.
+
+        This property is deprecated, please use `payment_network` instead.
+        """
+        warn_deprecated("network", "payment_network", "0.7.0", Deprecated.property)
+        return self._engine.payment_network
+
+    @property
+    def payment_network(self) -> str:
+        """Name of the payment network to be used by this instance."""
+        return self._engine.payment_network
 
     @property
     def strategy(self) -> "MarketStrategy":
@@ -181,8 +210,8 @@ class Golem:
             budget=args["budget"],
             strategy=args["strategy"],
             subnet_tag=args["subnet_tag"],
-            driver=args["driver"],
-            network=args["network"],
+            payment_driver=args["payment_driver"],
+            payment_network=args["payment_network"],
             event_consumer=args["event_consumer"],
             stream_output=args["stream_output"],
             app_key=args["app_key"],

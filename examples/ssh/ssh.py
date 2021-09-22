@@ -58,22 +58,22 @@ class SshService(Service):
         await asyncio.Future()
 
 
-async def main(subnet_tag, driver=None, network=None):
+async def main(subnet_tag, payment_driver=None, payment_network=None):
     # By passing `event_consumer=log_summary()` we enable summary logging.
     # See the documentation of the `yapapi.log` module on how to set
     # the level of detail and format of the logged information.
     async with Golem(
         budget=1.0,
         subnet_tag=subnet_tag,
-        driver=driver,
-        network=network,
+        payment_driver=payment_driver,
+        payment_network=payment_network,
     ) as golem:
 
         print(
             f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n"
             f"Using subnet: {TEXT_COLOR_YELLOW}{golem.subnet_tag}{TEXT_COLOR_DEFAULT}, "
-            f"payment driver: {TEXT_COLOR_YELLOW}{golem.driver}{TEXT_COLOR_DEFAULT}, "
-            f"and network: {TEXT_COLOR_YELLOW}{golem.network}{TEXT_COLOR_DEFAULT}\n"
+            f"payment driver: {TEXT_COLOR_YELLOW}{golem.payment_driver}{TEXT_COLOR_DEFAULT}, "
+            f"and network: {TEXT_COLOR_YELLOW}{golem.payment_network}{TEXT_COLOR_DEFAULT}\n"
         )
 
         network = await golem.create_network("192.168.0.1/24")
@@ -108,6 +108,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     run_golem_example(
-        main(subnet_tag=args.subnet_tag, driver=args.driver, network=args.network),
+        main(
+            subnet_tag=args.subnet_tag,
+            payment_driver=args.payment_driver,
+            payment_network=args.payment_network,
+        ),
         log_file=args.log_file,
     )

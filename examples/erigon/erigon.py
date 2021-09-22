@@ -17,7 +17,7 @@ PROP_ERIGON_ETHEREUM_NETWORK = "golem.srv.app.eth.network"
 
 @dataclass
 class ErigonPayload(Payload):
-    network: str = prop(PROP_ERIGON_ETHEREUM_NETWORK)
+    payment_network: str = prop(PROP_ERIGON_ETHEREUM_NETWORK)
 
     runtime: str = constraint(inf.INF_RUNTIME_NAME, default=TURBOGETH_RUNTIME_NAME)
     min_mem_gib: float = constraint(inf.INF_MEM, operator=">=", default=16)
@@ -36,7 +36,7 @@ class ErigonService(Service):
 
     @staticmethod
     async def get_payload():
-        return ErigonPayload(network="rinkeby")
+        return ErigonPayload(payment_network="rinkeby")
 
     async def start(self):
         deploy_idx = self.ctx.deploy()
@@ -62,13 +62,13 @@ class ErigonService(Service):
         yield self.ctx.commit()
 
 
-async def main(subnet_tag, driver=None, network=None):
+async def main(subnet_tag, payment_driver=None, payment_network=None):
 
     async with Golem(
         budget=10.0,
         subnet_tag=subnet_tag,
-        driver=driver,
-        network=network,
+        payment_driver=payment_driver,
+        payment_network=payment_network,
     ) as golem:
         cluster = await golem.run_service(
             ErigonService,
