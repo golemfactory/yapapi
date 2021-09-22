@@ -42,8 +42,8 @@ async def main(golem, show_usage=False):
     print(
         f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n"
         f"Using subnet: {TEXT_COLOR_YELLOW}{golem.subnet_tag}{TEXT_COLOR_DEFAULT}, "
-        f"payment driver: {TEXT_COLOR_YELLOW}{golem.driver}{TEXT_COLOR_DEFAULT}, "
-        f"and network: {TEXT_COLOR_YELLOW}{golem.network}{TEXT_COLOR_DEFAULT}\n"
+        f"payment driver: {TEXT_COLOR_YELLOW}{golem.payment_driver}{TEXT_COLOR_DEFAULT}, "
+        f"and network: {TEXT_COLOR_YELLOW}{golem.payment_network}{TEXT_COLOR_DEFAULT}\n"
     )
 
     package = await vm.repo(
@@ -175,8 +175,8 @@ if __name__ == "__main__":
     golem = Golem(
         budget=10,
         subnet_tag=args.subnet_tag,
-        driver=args.driver,
-        network=args.network,
+        payment_driver=args.payment_driver,
+        payment_network=args.payment_network,
     )
     task = loop.create_task(main(golem, show_usage=args.show_usage))
 
