@@ -91,9 +91,7 @@ class SimpleService(Service):
                 f"{TEXT_COLOR_CYAN}downloading plot: {plot} to {plot_filename}{TEXT_COLOR_DEFAULT}"
             )
             s = self._ctx.new_script()
-            s.download_file(
-                plot, str(pathlib.Path(__file__).resolve().parent / plot_filename)
-            )
+            s.download_file(plot, str(pathlib.Path(__file__).resolve().parent / plot_filename))
             yield s
 
             if self._show_usage:

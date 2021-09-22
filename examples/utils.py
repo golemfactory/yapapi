@@ -8,7 +8,10 @@ import tempfile
 import colorama  # type: ignore
 
 from yapapi import (
-    Golem, windows_event_loop_fix, NoPaymentAccountError, __version__ as yapapi_version
+    Golem,
+    windows_event_loop_fix,
+    NoPaymentAccountError,
+    __version__ as yapapi_version,
 )
 from yapapi.log import enable_default_logger
 

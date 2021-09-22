@@ -129,7 +129,9 @@ class WorkContext:
 
         return self.__payment_model
 
-    def new_script(self, timeout: Optional[timedelta] = None, wait_for_results: bool = True) -> Script:
+    def new_script(
+        self, timeout: Optional[timedelta] = None, wait_for_results: bool = True
+    ) -> Script:
         """Create an instance of :class:`~yapapi.script.Script` attached to this :class:`WorkContext` instance.
 
         This is equivalent to calling `Script(work_context)`. This method is intended to provide a

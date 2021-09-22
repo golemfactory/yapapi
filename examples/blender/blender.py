@@ -35,7 +35,6 @@ async def main(subnet_tag, payment_driver=None, payment_network=None, show_usage
     )
 
     async def worker(ctx: WorkContext, tasks):
-
         def new_script():
             return ctx.new_script(timeout=timedelta(minutes=10))
 
