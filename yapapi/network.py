@@ -2,6 +2,7 @@ import asyncio
 from dataclasses import dataclass
 from ipaddress import ip_address, ip_network, IPv4Address, IPv6Address, IPv4Network, IPv6Network
 from typing import Dict, Optional, Union
+from urllib.parse import urlparse
 import yapapi
 
 IpAddress = Union[IPv4Address, IPv6Address]
@@ -41,6 +42,16 @@ class Node:
             ]
         }
         return deploy_args
+
+    def get_websocket_uri(self, port: int) -> str:
+        """
+        Get the websocket URI corresponding with a specific TCP port on this Node.
+
+        :param port: TCP port of the service within the runtime
+        :return: the url
+        """
+        net_api_ws = urlparse(self.network._net_api.api_url)._replace(scheme="ws").geturl()
+        return f"{net_api_ws}/net/{self.network.network_id}/tcp/{self.ip}/{port}"
 
 
 class Network:
