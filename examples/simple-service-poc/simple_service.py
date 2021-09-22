@@ -159,13 +159,8 @@ async def main(
         def instances():
             return [f"{s.name}: {s.state.value} on {s.provider_name}" for s in cluster.instances]
 
-        def still_running():
-            return any([s for s in cluster.instances if s.is_available])
-
         def still_starting():
-            return len(cluster.instances) < num_instances or any(
-                [s for s in cluster.instances if s.state == ServiceState.starting]
-            )
+            return len(cluster.instances) < num_instances or cluster.has_starting_instances
 
         # wait until instances are started
 
@@ -193,7 +188,7 @@ async def main(
         # wait for instances to stop
 
         cnt = 0
-        while cnt < 10 and still_running():
+        while cnt < 10 and cluster.has_active_instances:
             print(f"instances: {instances()}")
             await asyncio.sleep(5)
 

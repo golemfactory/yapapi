@@ -82,9 +82,6 @@ async def main(subnet_tag, driver=None, network=None):
         def instances():
             return [f"{s.provider_name}: {s.state.value}" for s in cluster.instances]
 
-        def still_running():
-            return any([s for s in cluster.instances if s.is_available])
-
         while True:
             print(instances())
             try:
@@ -95,7 +92,7 @@ async def main(subnet_tag, driver=None, network=None):
         cluster.stop()
 
         cnt = 0
-        while cnt < 3 and still_running():
+        while cnt < 3 and cluster.has_active_instances:
             print(instances())
             await asyncio.sleep(5)
             cnt += 1
