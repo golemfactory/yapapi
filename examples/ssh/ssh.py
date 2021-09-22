@@ -35,17 +35,22 @@ class SshService(Service):
             image_hash="ea233c6774b1621207a48e10b46e3e1f944d881911f499f5cbac546a",
             min_mem_gib=0.5,
             min_storage_gib=2.0,
+
+            # we're adding an additional constraint to only select those nodes that
+            # are offering VPN-capable VM runtimes so that we can connect them to the VPN
             capabilities=[vm.VM_CAPS_VPN],
+
         )
 
     async def run(self):
         connection_uri = self.network_node.get_websocket_uri(22)
         app_key = self.cluster._engine._api_config.app_key
 
-        self._ctx.run("/bin/bash", "-c", "syslogd")
-        self._ctx.run("/bin/bash", "-c", "ssh-keygen -A")
-        self._ctx.run("/bin/bash", "-c", "/usr/sbin/sshd")
-        yield self._ctx.commit()
+        s = self._ctx.new_script()
+        s.run("/bin/bash", "-c", "syslogd")
+        s.run("/bin/bash", "-c", "ssh-keygen -A")
+        s.run("/bin/bash", "-c", "/usr/sbin/sshd")
+        yield s
 
         print(
             "Connect with:\n"

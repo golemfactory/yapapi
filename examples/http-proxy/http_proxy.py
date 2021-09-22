@@ -31,6 +31,7 @@ from utils import (
     TEXT_COLOR_GREEN,
     TEXT_COLOR_YELLOW,
     run_golem_example,
+    print_env_info,
 )
 
 STARTING_TIMEOUT = timedelta(minutes=4)
@@ -80,9 +81,12 @@ class HttpService(Service):
         )
 
     async def start(self):
+        # perform the initialization of the Service
+        # (which includes sending the network details within the `deploy` command)
         async for s in super().start():
             yield s
 
+        # start the remote HTTP server and give it some content to serve in the `index.html`
         s = self._ctx.new_script()
         s.run("/docker-entrypoint.sh")
         s.run("/bin/chmod", "a+x", "/")
@@ -141,13 +145,7 @@ async def main(
         driver=driver,
         network=network,
     ) as golem:
-
-        print(
-            f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n"
-            f"Using subnet: {TEXT_COLOR_YELLOW}{subnet_tag}{TEXT_COLOR_DEFAULT}, "
-            f"payment driver: {TEXT_COLOR_YELLOW}{golem.driver}{TEXT_COLOR_DEFAULT}, "
-            f"and network: {TEXT_COLOR_YELLOW}{golem.network}{TEXT_COLOR_DEFAULT}\n"
-        )
+        print_env_info(golem)
 
         commissioning_time = datetime.now()
 
