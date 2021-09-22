@@ -13,6 +13,10 @@ class Net(object):
     def __init__(self, api_client: ApiClient):
         self._api = RequestorApi(api_client)
 
+    @property
+    def api_url(self):
+        return self._api.api_client.configuration.host
+
     async def create_network(
         self, network_address: str, netmask: Optional[str], gateway: Optional[str]
     ) -> str:
