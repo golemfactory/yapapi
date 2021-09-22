@@ -31,8 +31,12 @@ def build_parser(description: str) -> argparse.ArgumentParser:
     default_log_path = Path(tempfile.gettempdir()) / f"yapapi_{current_time_str}.log"
 
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument("--driver", help="Payment driver name, for example `zksync`")
-    parser.add_argument("--network", help="Network name, for example `rinkeby`")
+    parser.add_argument(
+        "--payment-driver", "--driver", help="Payment driver name, for example `zksync`"
+    )
+    parser.add_argument(
+        "--payment-network", "--network", help="Payment network name, for example `rinkeby`"
+    )
     parser.add_argument("--subnet-tag", help="Subnet name, for example `devnet-beta`")
     parser.add_argument(
         "--log-file",
@@ -53,8 +57,8 @@ def print_env_info(golem: Golem):
     print(
         f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n"
         f"Using subnet: {TEXT_COLOR_YELLOW}{golem.subnet_tag}{TEXT_COLOR_DEFAULT}, "
-        f"payment driver: {TEXT_COLOR_YELLOW}{golem.driver}{TEXT_COLOR_DEFAULT}, "
-        f"and network: {TEXT_COLOR_YELLOW}{golem.network}{TEXT_COLOR_DEFAULT}\n"
+        f"payment driver: {TEXT_COLOR_YELLOW}{golem.payment_driver}{TEXT_COLOR_DEFAULT}, "
+        f"and network: {TEXT_COLOR_YELLOW}{golem.payment_network}{TEXT_COLOR_DEFAULT}\n"
     )
 
 

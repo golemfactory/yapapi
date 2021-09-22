@@ -134,16 +134,16 @@ class HttpService(Service):
 
 async def main(
     subnet_tag,
-    driver=None,
-    network=None,
+    payment_driver=None,
+    payment_network=None,
     num_instances=1,
     port=8080,
 ):
     async with Golem(
         budget=1.0,
         subnet_tag=subnet_tag,
-        driver=driver,
-        network=network,
+        payment_driver=payment_driver,
+        payment_network=payment_network,
     ) as golem:
         print_env_info(golem)
 
@@ -221,8 +221,8 @@ if __name__ == "__main__":
     run_golem_example(
         main(
             subnet_tag=args.subnet_tag,
-            driver=args.driver,
-            network=args.network,
+            payment_driver=args.payment_driver,
+            payment_network=args.payment_network,
             num_instances=args.num_instances,
             port=args.port,
         ),

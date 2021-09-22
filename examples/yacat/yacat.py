@@ -154,8 +154,8 @@ async def main(args):
     async with Golem(
         budget=10.0,
         subnet_tag=args.subnet_tag,
-        driver=args.driver,
-        network=args.network,
+        payment_driver=args.payment_driver,
+        payment_network=args.payment_network,
     ) as golem:
         print_env_info(golem)
 

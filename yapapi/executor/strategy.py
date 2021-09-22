@@ -2,14 +2,16 @@ from deprecated import deprecated  # type: ignore
 
 import yapapi.strategy
 from yapapi.strategy import SCORE_NEUTRAL, SCORE_REJECTED, SCORE_TRUSTED
-from yapapi.utils import show_module_deprecation_warning
+from yapapi.utils import warn_deprecated, Deprecated
 
 
 _deprecation_version = "0.6.0"
 _deprecation_reason = "Please use the class with the same name defined in yapapi.strategy instead"
 
 
-show_module_deprecation_warning("yapapi.executor.strategy", "yapapi.strategy", _deprecation_version)
+warn_deprecated(
+    "yapapi.executor.strategy", "yapapi.strategy", _deprecation_version, Deprecated.module
+)
 
 
 @deprecated(version=_deprecation_version, reason=_deprecation_reason)

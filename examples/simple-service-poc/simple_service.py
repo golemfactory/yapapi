@@ -128,13 +128,18 @@ class SimpleService(Service):
 
 
 async def main(
-    subnet_tag, running_time, driver=None, network=None, num_instances=1, show_usage=False
+    subnet_tag,
+    running_time,
+    payment_driver=None,
+    payment_network=None,
+    num_instances=1,
+    show_usage=False,
 ):
     async with Golem(
         budget=1.0,
         subnet_tag=subnet_tag,
-        driver=driver,
-        network=network,
+        payment_driver=payment_driver,
+        payment_network=payment_network,
     ) as golem:
         print_env_info(golem)
 
@@ -241,8 +246,8 @@ if __name__ == "__main__":
         main(
             subnet_tag=args.subnet_tag,
             running_time=args.running_time,
-            driver=args.driver,
-            network=args.network,
+            payment_driver=args.payment_driver,
+            payment_network=args.payment_network,
             num_instances=args.num_instances,
             show_usage=args.show_usage,
         )
