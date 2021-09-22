@@ -30,7 +30,7 @@ from utils import (
 )
 
 
-async def main(subnet_tag, driver=None, network=None, show_usage=False):
+async def main(subnet_tag, payment_driver=None, payment_network=None, show_usage=False):
     package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         min_mem_gib=0.5,
@@ -115,15 +115,15 @@ async def main(subnet_tag, driver=None, network=None, show_usage=False):
     async with Golem(
         budget=10.0,
         subnet_tag=subnet_tag,
-        driver=driver,
-        network=network,
+        payment_driver=payment_driver,
+        payment_network=payment_network,
     ) as golem:
 
         print(
             f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n"
             f"Using subnet: {TEXT_COLOR_YELLOW}{subnet_tag}{TEXT_COLOR_DEFAULT}, "
-            f"payment driver: {TEXT_COLOR_YELLOW}{golem.driver}{TEXT_COLOR_DEFAULT}, "
-            f"and network: {TEXT_COLOR_YELLOW}{golem.network}{TEXT_COLOR_DEFAULT}\n"
+            f"payment driver: {TEXT_COLOR_YELLOW}{golem.payment_driver}{TEXT_COLOR_DEFAULT}, "
+            f"and network: {TEXT_COLOR_YELLOW}{golem.payment_network}{TEXT_COLOR_DEFAULT}\n"
         )
 
         num_tasks = 0
@@ -172,8 +172,8 @@ if __name__ == "__main__":
     task = loop.create_task(
         main(
             subnet_tag=args.subnet_tag,
-            driver=args.driver,
-            network=args.network,
+            payment_driver=args.payment_driver,
+            payment_network=args.payment_network,
             show_usage=args.show_usage,
         )
     )

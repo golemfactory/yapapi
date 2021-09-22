@@ -151,14 +151,14 @@ async def main(args):
     async with Golem(
         budget=10.0,
         subnet_tag=args.subnet_tag,
-        driver=args.driver,
-        network=args.network,
+        payment_driver=args.payment_driver,
+        payment_network=args.payment_network,
     ) as golem:
 
         print(
             f"Using subnet: {TEXT_COLOR_YELLOW}{args.subnet_tag}{TEXT_COLOR_DEFAULT}, "
-            f"payment driver: {TEXT_COLOR_YELLOW}{golem.driver}{TEXT_COLOR_DEFAULT}, "
-            f"and network: {TEXT_COLOR_YELLOW}{golem.network}{TEXT_COLOR_DEFAULT}\n"
+            f"payment driver: {TEXT_COLOR_YELLOW}{golem.payment_driver}{TEXT_COLOR_DEFAULT}, "
+            f"and network: {TEXT_COLOR_YELLOW}{golem.payment_network}{TEXT_COLOR_DEFAULT}\n"
         )
 
         start_time = datetime.now()

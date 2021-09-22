@@ -1,14 +1,14 @@
 from deprecated.classic import ClassicAdapter  # type: ignore
 
 import yapapi.events
-from yapapi.utils import show_module_deprecation_warning
+from yapapi.utils import warn_deprecated, Deprecated
 
 
 _deprecation_version = "0.6.0"
 _deprecation_reason = "Please use the class with the same name defined in yapapi.events instead"
 
 
-show_module_deprecation_warning("yapapi.executor.events", "yapapi.events", _deprecation_version)
+warn_deprecated("yapapi.executor.events", "yapapi.events", _deprecation_version, Deprecated.module)
 
 
 for id, item in yapapi.events.__dict__.items():

@@ -1,6 +1,7 @@
 """Utility functions and classes used within the `yapapi.executor` package."""
 import asyncio
 from datetime import datetime, timezone, tzinfo
+import enum
 import functools
 import logging
 from typing import AsyncContextManager, Callable, Optional
@@ -80,12 +81,27 @@ class AsyncWrapper(AsyncContextManager):
         self._args_buffer.put_nowait((args, kwargs))
 
 
-def show_module_deprecation_warning(old_module: str, new_module: str, since_version: str) -> None:
+class Deprecated(enum.Enum):
+    module = "module"
+    parameter = "parameter"
+    property = "property"
 
-    warnings.filterwarnings("default", category=DeprecationWarning, module=old_module)
+
+def warn_deprecated(old_name: str, new_name: str, since_version: str, entity: Deprecated) -> None:
+    """Log a pre-formatted deprecation warning with given parameters.
+
+    :param old_name: name of the entity being deprecated
+    :param new_name: name of the entity to be used in favour of deprecated one
+    :param since_version: `yapapi` version in which the old entity was first deprecated
+    :param entity: enum value indicating the type of the entity being deprecated (e.g. module)
+    """
+    warning_msg = (
+        f"{entity.value.capitalize()} `{old_name}` is deprecated since version {since_version}, "
+        f"please use {entity.value} `{new_name}` instead."
+    )
+    warnings.filterwarnings("default", category=DeprecationWarning, message=warning_msg)
     warnings.warn(
-        f"Module `{old_module}` is deprecated since version {since_version}, "
-        f"please use module `{new_module}` instead",
+        warning_msg,
         category=DeprecationWarning,
         stacklevel=2,
     )

@@ -72,12 +72,12 @@ class Executor:
     @property
     def driver(self) -> str:
         """Return the payment driver used for this `Executor`'s engine."""
-        return self._engine.driver
+        return self._engine.payment_driver
 
     @property
-    def network(self) -> str:
+    def payment_network(self) -> str:
         """Return the payment network used for this `Executor`'s engine."""
-        return self._engine.network
+        return self._engine.payment_network
 
     def emit(self, event: events.Event) -> None:
         """Emit a computation event using this `Executor`'s engine."""
