@@ -108,4 +108,4 @@ if __name__ == "__main__":
         debug_market_api=True,
         debug_payment_api=True,
     )
-    asyncio.run(main(args.running_time, args.subnet_tag, args.driver, args.network))
+    asyncio.run(main(args.running_time, args.subnet_tag, args.payment_driver, args.payment_network))
