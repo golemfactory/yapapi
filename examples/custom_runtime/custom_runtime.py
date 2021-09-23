@@ -23,6 +23,7 @@ SOME_CUSTOM_PROPERTY = "golem.srv.app.eth.network"
 # It is up to the author of said runtime to define any additional properties that would
 # describe the requestor's demand and `custom_property` is just an example.
 
+
 @dataclass
 class CustomPayload(Payload):
     custom_property: str = prop(SOME_CUSTOM_PROPERTY)
