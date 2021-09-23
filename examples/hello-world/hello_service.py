@@ -19,29 +19,29 @@ class DateService(Service):
         )
 
     async def start(self):
-        async for s in super().start():
-            yield s
+        async for script in super().start():
+            yield script
 
         # every `DATE_POLL_INTERVAL` write output of `date` to `DATE_OUTPUT_PATH`
-        s = self._ctx.new_script()
-        s.run(
+        script = self._ctx.new_script()
+        script.run(
             "/bin/sh",
             "-c",
             f"while true; do date > {DATE_OUTPUT_PATH}; sleep {REFRESH_INTERVAL_SEC}; done &",
         )
-        yield s
+        yield script
 
     async def run(self):
         while True:
             await asyncio.sleep(REFRESH_INTERVAL_SEC)
-            s = self._ctx.new_script()
-            s.run(
+            script = self._ctx.new_script()
+            script.run(
                 "/bin/sh",
                 "-c",
                 f"cat {DATE_OUTPUT_PATH}",
             )
 
-            future_results = yield s
+            future_results = yield script
             results = await future_results
             print(results[0].stdout.strip() if results[0].stdout else "")
 

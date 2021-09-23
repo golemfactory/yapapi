@@ -36,17 +36,22 @@ async def main(subnet_tag, payment_driver=None, payment_network=None, show_usage
 
     async def worker(ctx: WorkContext, tasks):
         def new_script():
+            # Set timeout for executing the script on the provider. Usually, 30 seconds
+            # should be more than enough for computing a single frame, however a provider
+            # may require more time for the first task if it needs to download a VM image
+            # first. Once downloaded, the VM image will be cached and other tasks that use
+            # that image will be computed faster.
             return ctx.new_script(timeout=timedelta(minutes=10))
 
         script_dir = pathlib.Path(__file__).resolve().parent
         scene_path = str(script_dir / "cubes.blend")
-        s = new_script()
-        s.upload_file(scene_path, "/golem/resource/scene.blend")
+        script = new_script()
+        script.upload_file(scene_path, "/golem/resource/scene.blend")
 
         async for task in tasks:
             frame = task.data
             crops = [{"outfilebasename": "out", "borders_x": [0.0, 1.0], "borders_y": [0.0, 1.0]}]
-            s.upload_json(
+            script.upload_json(
                 {
                     "scene_file": "/golem/resource/scene.blend",
                     "resolution": (400, 300),
@@ -62,16 +67,11 @@ async def main(subnet_tag, payment_driver=None, payment_network=None, show_usage
                 "/golem/work/params.json",
             )
 
-            s.run("/golem/entrypoints/run-blender.sh")
+            script.run("/golem/entrypoints/run-blender.sh")
             output_file = f"output_{frame}.png"
-            s.download_file(f"/golem/output/out{frame:04d}.png", output_file)
+            script.download_file(f"/golem/output/out{frame:04d}.png", output_file)
             try:
-                # Set timeout for executing the script on the provider. Usually, 30 seconds
-                # should be more than enough for computing a single frame, however a provider
-                # may require more time for the first task if it needs to download a VM image
-                # first. Once downloaded, the VM image will be cached and other tasks that use
-                # that image will be computed faster.
-                yield s
+                yield script
                 # TODO: Check if job results are valid
                 # and reject by: task.reject_task(reason = 'invalid file')
                 task.accept_result(result=output_file)
@@ -83,7 +83,7 @@ async def main(subnet_tag, payment_driver=None, payment_network=None, show_usage
                 )
                 raise
 
-            s = new_script()  # reinitialize the script which we send to the engine
+            script = new_script()  # reinitialize the script which we send to the engine
 
             if show_usage:
                 raw_state = await ctx.get_raw_state()

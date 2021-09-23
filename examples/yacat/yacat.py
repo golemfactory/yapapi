@@ -108,13 +108,13 @@ async def perform_mask_attack(ctx: WorkContext, tasks: AsyncIterable[Task]):
         output_name = f"yacat_{skip}.potfile"
         worker_output_path = f"/golem/output/{output_name}"
 
-        s = ctx.new_script(timeout=MASK_ATTACK_TIMEOUT)
-        s.run(f"/bin/sh", "-c", _make_attack_command(skip, limit, worker_output_path))
+        script = ctx.new_script(timeout=MASK_ATTACK_TIMEOUT)
+        script.run(f"/bin/sh", "-c", _make_attack_command(skip, limit, worker_output_path))
         try:
             output_file = Path(gettempdir()) / output_name
-            s.download_file(worker_output_path, str(output_file))
+            script.download_file(worker_output_path, str(output_file))
 
-            yield s
+            yield script
 
             with output_file.open() as f:
                 result = f.readline()

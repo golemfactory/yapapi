@@ -62,24 +62,23 @@ class SimpleService(Service):
         """handler responsible for starting the service."""
 
         # perform the initialization of the Service
-        # (which includes sending the network details within the `deploy` command)
         async for script in super().start():
             yield script
 
         # start the service
-        s = self._ctx.new_script()
-        s.run(self.SIMPLE_SERVICE_CTL, "--start")
-        yield s
+        script = self._ctx.new_script()
+        script.run(self.SIMPLE_SERVICE_CTL, "--start")
+        yield script
 
     async def run(self):
         # handler responsible for providing the required interactions while the service is running
         while True:
             await asyncio.sleep(10)
-            s = self._ctx.new_script()
-            s.run(self.SIMPLE_SERVICE, "--stats")  # idx 0
-            s.run(self.SIMPLE_SERVICE, "--plot", "dist")  # idx 1
+            script = self._ctx.new_script()
+            script.run(self.SIMPLE_SERVICE, "--stats")  # idx 0
+            script.run(self.SIMPLE_SERVICE, "--plot", "dist")  # idx 1
 
-            future_results = yield s
+            future_results = yield script
             results = await future_results
             stats = results[0].stdout.strip()
             plot = results[1].stdout.strip().strip('"')
@@ -90,9 +89,9 @@ class SimpleService(Service):
             print(
                 f"{TEXT_COLOR_CYAN}downloading plot: {plot} to {plot_filename}{TEXT_COLOR_DEFAULT}"
             )
-            s = self._ctx.new_script()
-            s.download_file(plot, str(pathlib.Path(__file__).resolve().parent / plot_filename))
-            yield s
+            script = self._ctx.new_script()
+            script.download_file(plot, str(pathlib.Path(__file__).resolve().parent / plot_filename))
+            yield script
 
             if self._show_usage:
                 print(
@@ -113,9 +112,9 @@ class SimpleService(Service):
 
     async def shutdown(self):
         # handler reponsible for executing operations on shutdown
-        s = self._ctx.new_script()
-        s.run(self.SIMPLE_SERVICE_CTL, "--stop")
-        yield s
+        script = self._ctx.new_script()
+        script.run(self.SIMPLE_SERVICE_CTL, "--stop")
+        yield script
 
         if self._show_usage:
             print(

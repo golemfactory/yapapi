@@ -44,11 +44,11 @@ class SshService(Service):
         connection_uri = self.network_node.get_websocket_uri(22)
         app_key = self.cluster._engine._api_config.app_key
 
-        s = self._ctx.new_script()
-        s.run("/bin/bash", "-c", "syslogd")
-        s.run("/bin/bash", "-c", "ssh-keygen -A")
-        s.run("/bin/bash", "-c", "/usr/sbin/sshd")
-        yield s
+        script = self._ctx.new_script()
+        script.run("/bin/bash", "-c", "syslogd")
+        script.run("/bin/bash", "-c", "ssh-keygen -A")
+        script.run("/bin/bash", "-c", "/usr/sbin/sshd")
+        yield script
 
         print(
             "Connect with:\n"
