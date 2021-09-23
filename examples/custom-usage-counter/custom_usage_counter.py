@@ -66,7 +66,6 @@ async def main(running_time_sec, subnet_tag, driver=None, network=None):
             "golem.usage.custom.counter": Decimal("0.1"),
         }
     )
-    strategy = DecreaseScoreForUnconfirmedAgreement(strategy, 0.5)
 
     async with Golem(
         budget=10.0, subnet_tag=subnet_tag, driver=driver, network=network, strategy=strategy
