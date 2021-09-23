@@ -35,17 +35,15 @@ async def main(subnet_tag, payment_driver=None, payment_network=None, show_usage
     )
 
     async def worker(ctx: WorkContext, tasks):
-        def new_script():
-            # Set timeout for executing the script on the provider. Usually, 30 seconds
-            # should be more than enough for computing a single frame, however a provider
-            # may require more time for the first task if it needs to download a VM image
-            # first. Once downloaded, the VM image will be cached and other tasks that use
-            # that image will be computed faster.
-            return ctx.new_script(timeout=timedelta(minutes=10))
-
         script_dir = pathlib.Path(__file__).resolve().parent
         scene_path = str(script_dir / "cubes.blend")
-        script = new_script()
+
+        # Set timeout for the first script executed on the provider. Usually, 30 seconds
+        # should be more than enough for computing a single frame of the provided scene,
+        # however a provider may require more time for the first task if it needs to download
+        # the VM image first. Once downloaded, the VM image will be cached and other tasks that use
+        # that image will be computed faster.
+        script = ctx.new_script(timeout=timedelta(minutes=10))
         script.upload_file(scene_path, "/golem/resource/scene.blend")
 
         async for task in tasks:
@@ -83,7 +81,8 @@ async def main(subnet_tag, payment_driver=None, payment_network=None, show_usage
                 )
                 raise
 
-            script = new_script()  # reinitialize the script which we send to the engine
+            # reinitialize the script which we send to the engine to compute subsequent frames
+            script = ctx.new_script(timeout=timedelta(minutes=1))
 
             if show_usage:
                 raw_state = await ctx.get_raw_state()

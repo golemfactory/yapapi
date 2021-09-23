@@ -13,6 +13,15 @@ from yapapi.services import Service
 RUNTIME_NAME = "my-runtime"
 SOME_CUSTOM_PROPERTY = "golem.srv.app.eth.network"
 
+# The `CustomPayload` in this example is an arbitrary definition of some demand
+# that the requestor might wish to be fulfilled by the providers on the Golem network
+#
+# This payload must correspond with a runtime running on providers, either a runtime
+# written by some other party, or developed alongside its requestor counterpart using
+# the Runtime SDK (https://github.com/golemfactory/ya-runtime-sdk/)
+#
+# It is up to the author of said runtime to define any additional properties that would
+# describe the requestor's demand and `custom_property` is just an example.
 
 @dataclass
 class CustomPayload(Payload):
