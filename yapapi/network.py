@@ -1,6 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 from ipaddress import ip_address, ip_network, IPv4Address, IPv6Address, IPv4Network, IPv6Network
+from statemachine import State, StateMachine
 from typing import Dict, Optional, Union
 from urllib.parse import urlparse
 import yapapi
@@ -54,6 +55,26 @@ class Node:
         return f"{net_api_ws}/net/{self.network.network_id}/tcp/{self.ip}/{port}"
 
 
+class NetworkStateMachine(StateMachine):
+    """State machine describing the states and lifecycle of a :class:`Network` instance."""
+
+    # states
+    initialized = State("initialized", initial=True)
+    creating = State("creating")
+    ready = State("ready")
+    removing = State("removing")
+    removed = State("removed")
+
+    # transitions
+    add_address = creating.to.itself() | ready.to.itself()
+    add_node = ready.to.itself()
+    get_id = creating.to.itself() | ready.to.itself() | removing.to.itself()
+
+    # lifecycle
+    create = initialized.to(creating) | creating.to(ready)
+    remove = ready.to(removing) | removing.to(removed)
+
+
 class Network:
     """
     Describes a VPN created between the requestor and the provider nodes within Golem Network.
@@ -80,6 +101,7 @@ class Network:
         """
 
         network = cls(net_api, ip, owner_id, owner_ip, mask, gateway)
+        network._state_machine.create()
 
         # create the network in yagna and set the id
         network._network_id = await net_api.create_network(
@@ -89,6 +111,7 @@ class Network:
         # add requestor's own address to the network
         await network.add_owner_address(network.owner_ip)
 
+        network._state_machine.create()
         return network
 
     def __init__(
@@ -121,6 +144,7 @@ class Network:
         self._gateway = gateway
         self._owner_id = owner_id
         self._owner_ip: IpAddress = ip_address(owner_ip) if owner_ip else self._next_address()
+        self._state_machine: NetworkStateMachine = NetworkStateMachine()
 
         self._nodes: Dict[str, Node] = dict()
         """the mapping between a Golem node id and a Node in this VPN."""
@@ -139,8 +163,13 @@ class Network:
 
     @property
     def owner_ip(self) -> str:
-        """the IP address of the requestor node within the network"""
+        """The IP address of the requestor node within the network."""
         return str(self._owner_ip)
+
+    @property
+    def state(self) -> State:
+        """Current state in this network's lifecycle."""
+        return self._state_machine.current_state
 
     @property
     def network_address(self) -> str:
@@ -165,8 +194,10 @@ class Network:
         return {str(v.ip): k for k, v in self._nodes.items()}
 
     @property
-    def network_id(self) -> Optional[str]:
+    def network_id(self) -> str:
         """The automatically-generated, unique ID of this VPN."""
+        self._state_machine.get_id()
+        assert self._network_id
         return self._network_id
 
     def _ensure_ip_in_network(self, ip: str):
@@ -186,8 +217,7 @@ class Network:
 
         :param ip: the IP address to assign to the requestor node.
         """
-        assert self.network_id, "Network not initialized correctly"
-
+        self._state_machine.add_address()
         self._ensure_ip_in_network(ip)
 
         async with self._nodes_lock:
@@ -202,7 +232,7 @@ class Network:
         :param node_id: Node ID within the Golem network of this VPN node.
         :param ip: IP address to assign to this node.
         """
-        assert self.network_id, "Network not initialized correctly"
+        self._state_machine.add_node()
 
         async with self._nodes_lock:
             if ip:
@@ -220,6 +250,12 @@ class Network:
         await self._net_api.add_node(self.network_id, node_id, ip)
 
         return node
+
+    async def remove(self) -> None:
+        """Remove this network, terminating any connections it provides."""
+        self._state_machine.remove()
+        await self._net_api.remove_network(self.network_id)
+        self._state_machine.remove()
 
     def _next_address(self) -> IpAddress:
         """Provide the next available IP address within this Network.
