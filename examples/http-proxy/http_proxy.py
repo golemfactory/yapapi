@@ -156,7 +156,7 @@ async def main(
             return [f"{s.provider_name}: {s.state.value}" for s in cluster.instances]
 
         def still_starting():
-            return len(cluster.instances) < num_instances or cluster.has_starting_instances
+            return len(cluster.instances) < num_instances or any(s.state == ServiceState.starting for s in cluster.instances)
 
         # wait until all remote http instances are started
 
@@ -194,7 +194,7 @@ async def main(
         cluster.stop()
 
         cnt = 0
-        while cnt < 3 and cluster.has_active_instances:
+        while cnt < 3 and any(s.is_available for s in cluster.instances):
             print(instances())
             await asyncio.sleep(5)
             cnt += 1

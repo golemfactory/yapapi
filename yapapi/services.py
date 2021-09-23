@@ -880,18 +880,3 @@ class Cluster(AsyncContextManager):
         """Signal the whole :class:`Cluster` to stop."""
         for s in self.instances:
             self.stop_instance(s)
-
-    @property
-    def has_active_instances(self) -> bool:
-        """Check if this :class:`Cluster` has any instances that are currently active.
-
-        Specifically, this includes any instances that are starting, running or stopping - or -
-        in other words, the instances for which the Activities on the provider's end are still
-        available.
-        """
-        return any(s.is_available for s in self.instances)
-
-    @property
-    def has_starting_instances(self) -> bool:
-        """Check if this :class:`Cluster` has any instances that are currently starting."""
-        return any(s.state == ServiceState.starting for s in self.instances)

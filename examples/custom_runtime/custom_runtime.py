@@ -62,7 +62,7 @@ async def main(subnet_tag, driver=None, network=None):
         cluster.stop()
 
         cnt = 0
-        while cnt < 10 and cluster.has_active_instances:
+        while cnt < 10 and any(s.is_available for s in cluster.instances):
             print(f"instances: {instances()}")
             await asyncio.sleep(1)
 
