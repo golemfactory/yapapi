@@ -175,6 +175,8 @@ class _Engine:
         self._services: Set[asyncio.Task] = set()
         self._stack = AsyncExitStack()
 
+        self._started = False
+
     async def create_demand_builder(
         self, expiration_time: datetime, payload: Payload
     ) -> DemandBuilder:
@@ -211,6 +213,11 @@ class _Engine:
     def subnet_tag(self) -> Optional[str]:
         """Return the name of the subnet used by this engine, or `None` if it is not set."""
         return self._subnet
+
+    @property
+    def started(self) -> bool:
+        """Return `True` if this instance is initialized, `False` otherwise."""
+        return self._started
 
     def emit(self, event: events.Event) -> None:
         """Emit an event to be consumed by this engine's event consumer."""
@@ -275,6 +282,8 @@ class _Engine:
         self._storage_manager = await stack.enter_async_context(gftp.provider())
 
         stack.push_async_exit(self._shutdown)
+
+        self._started = True
 
     async def add_to_async_context(self, async_context_manager: AsyncContextManager) -> None:
         await self._stack.enter_async_context(async_context_manager)
