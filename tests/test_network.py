@@ -143,3 +143,13 @@ class TestNetwork:
 
         with pytest.raises(TransitionNotAllowed, match=".*Can't remove when in removed.*") as e:
             await network.remove()
+
+    @pytest.mark.asyncio
+    async def test_network_context_manager(self):
+        network = NetworkFactory(ip="192.168.0.0/24")
+        assert network.state == NetworkStateMachine.ready
+
+        async with network:
+            pass
+
+        assert network.state == NetworkStateMachine.removed

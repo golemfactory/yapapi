@@ -1,7 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 from ipaddress import ip_address, ip_network, IPv4Address, IPv6Address, IPv4Network, IPv6Network
-from statemachine import State, StateMachine
+from statemachine import State, StateMachine  # type: ignore
 from typing import Dict, Optional, Union
 from urllib.parse import urlparse
 import yapapi
@@ -160,6 +160,12 @@ class Network:
         owner_ip: {self._owner_ip}
         nodes: {self.nodes_dict}
     }}"""
+
+    async def __aenter__(self) -> "Network":
+        return self
+
+    async def __aexit__(self, *exc_info) -> None:
+        await self.remove()
 
     @property
     def owner_ip(self) -> str:
