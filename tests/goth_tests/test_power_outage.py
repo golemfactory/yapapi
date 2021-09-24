@@ -37,7 +37,7 @@ async def assert_all_tasks_computed(output_lines: EventStream[str]):
 
 """ Test when provider has a power outage.
 
-    Start a regular blender task, when the first task is started on the provider it gets 
+    Start a regular blender task, when the first task is started on the provider it gets
     shut down. The requestor is supposed to send all tasks to the other machine and complete
     the task. The invoice for the power-outage provider will not be paid. """
 
@@ -91,6 +91,7 @@ async def test_power_outage(
             await provider_1.stop()
             provider_1.container.stop()
             logger.info("Provider 1 stopped.")
+            provider_1.container.restart()
 
             await cmd_monitor.wait_for_pattern(".*Terminated agreement with provider-1")
             logger.info("Agreement properly terminated")
