@@ -35,6 +35,8 @@ class SshService(Service):
             image_hash="ea233c6774b1621207a48e10b46e3e1f944d881911f499f5cbac546a",
             min_mem_gib=0.5,
             min_storage_gib=2.0,
+            # we're adding an additional constraint to only select those nodes that
+            # are offering VPN-capable VM runtimes so that we can connect them to the VPN
             capabilities=[vm.VM_CAPS_VPN],
         )
 
@@ -42,10 +44,11 @@ class SshService(Service):
         connection_uri = self.network_node.get_websocket_uri(22)
         app_key = self.cluster._engine._api_config.app_key
 
-        self._ctx.run("/bin/bash", "-c", "syslogd")
-        self._ctx.run("/bin/bash", "-c", "ssh-keygen -A")
-        self._ctx.run("/bin/bash", "-c", "/usr/sbin/sshd")
-        yield self._ctx.commit()
+        script = self._ctx.new_script()
+        script.run("/bin/bash", "-c", "syslogd")
+        script.run("/bin/bash", "-c", "ssh-keygen -A")
+        script.run("/bin/bash", "-c", "/usr/sbin/sshd")
+        yield script
 
         print(
             "Connect with:\n"
@@ -82,9 +85,6 @@ async def main(subnet_tag, payment_driver=None, payment_network=None):
         def instances():
             return [f"{s.provider_name}: {s.state.value}" for s in cluster.instances]
 
-        def still_running():
-            return any([s for s in cluster.instances if s.is_available])
-
         while True:
             print(instances())
             try:
@@ -95,7 +95,7 @@ async def main(subnet_tag, payment_driver=None, payment_network=None):
         cluster.stop()
 
         cnt = 0
-        while cnt < 3 and still_running():
+        while cnt < 3 and any(s.is_available for s in cluster.instances):
             print(instances())
             await asyncio.sleep(5)
             cnt += 1

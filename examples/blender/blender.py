@@ -1,18 +1,13 @@
 #!/usr/bin/env python3
-import asyncio
 from datetime import datetime, timedelta
 import pathlib
 import sys
 
 from yapapi import (
     Golem,
-    NoPaymentAccountError,
     Task,
-    __version__ as yapapi_version,
     WorkContext,
-    windows_event_loop_fix,
 )
-from yapapi.log import enable_default_logger
 from yapapi.payload import vm
 from yapapi.rest.activity import BatchTimeoutError
 
@@ -27,6 +22,8 @@ from utils import (
     TEXT_COLOR_YELLOW,
     TEXT_COLOR_MAGENTA,
     format_usage,
+    run_golem_example,
+    print_env_info,
 )
 
 
@@ -40,12 +37,19 @@ async def main(subnet_tag, payment_driver=None, payment_network=None, show_usage
     async def worker(ctx: WorkContext, tasks):
         script_dir = pathlib.Path(__file__).resolve().parent
         scene_path = str(script_dir / "cubes.blend")
-        ctx.send_file(scene_path, "/golem/resource/scene.blend")
+
+        # Set timeout for the first script executed on the provider. Usually, 30 seconds
+        # should be more than enough for computing a single frame of the provided scene,
+        # however a provider may require more time for the first task if it needs to download
+        # the VM image first. Once downloaded, the VM image will be cached and other tasks that use
+        # that image will be computed faster.
+        script = ctx.new_script(timeout=timedelta(minutes=10))
+        script.upload_file(scene_path, "/golem/resource/scene.blend")
+
         async for task in tasks:
             frame = task.data
             crops = [{"outfilebasename": "out", "borders_x": [0.0, 1.0], "borders_y": [0.0, 1.0]}]
-            ctx.send_json(
-                "/golem/work/params.json",
+            script.upload_json(
                 {
                     "scene_file": "/golem/resource/scene.blend",
                     "resolution": (400, 300),
@@ -58,17 +62,14 @@ async def main(subnet_tag, payment_driver=None, payment_network=None, show_usage
                     "WORK_DIR": "/golem/work",
                     "OUTPUT_DIR": "/golem/output",
                 },
+                "/golem/work/params.json",
             )
-            ctx.run("/golem/entrypoints/run-blender.sh")
+
+            script.run("/golem/entrypoints/run-blender.sh")
             output_file = f"output_{frame}.png"
-            ctx.download_file(f"/golem/output/out{frame:04d}.png", output_file)
+            script.download_file(f"/golem/output/out{frame:04d}.png", output_file)
             try:
-                # Set timeout for executing the script on the provider. Usually, 30 seconds
-                # should be more than enough for computing a single frame, however a provider
-                # may require more time for the first task if it needs to download a VM image
-                # first. Once downloaded, the VM image will be cached and other tasks that use
-                # that image will be computed faster.
-                yield ctx.commit(timeout=timedelta(minutes=10))
+                yield script
                 # TODO: Check if job results are valid
                 # and reject by: task.reject_task(reason = 'invalid file')
                 task.accept_result(result=output_file)
@@ -79,6 +80,9 @@ async def main(subnet_tag, payment_driver=None, payment_network=None, show_usage
                     f"{TEXT_COLOR_DEFAULT}"
                 )
                 raise
+
+            # reinitialize the script which we send to the engine to compute subsequent frames
+            script = ctx.new_script(timeout=timedelta(minutes=1))
 
             if show_usage:
                 raw_state = await ctx.get_raw_state()
@@ -118,13 +122,7 @@ async def main(subnet_tag, payment_driver=None, payment_network=None, show_usage
         payment_driver=payment_driver,
         payment_network=payment_network,
     ) as golem:
-
-        print(
-            f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n"
-            f"Using subnet: {TEXT_COLOR_YELLOW}{subnet_tag}{TEXT_COLOR_DEFAULT}, "
-            f"payment driver: {TEXT_COLOR_YELLOW}{golem.payment_driver}{TEXT_COLOR_DEFAULT}, "
-            f"and network: {TEXT_COLOR_YELLOW}{golem.payment_network}{TEXT_COLOR_DEFAULT}\n"
-        )
+        print_env_info(golem)
 
         num_tasks = 0
         start_time = datetime.now()
@@ -158,52 +156,12 @@ if __name__ == "__main__":
     parser.set_defaults(log_file=f"blender-yapapi-{now}.log")
     args = parser.parse_args()
 
-    # This is only required when running on Windows with Python prior to 3.8:
-    windows_event_loop_fix()
-
-    enable_default_logger(
-        log_file=args.log_file,
-        debug_activity_api=True,
-        debug_market_api=True,
-        debug_payment_api=True,
-    )
-
-    loop = asyncio.get_event_loop()
-    task = loop.create_task(
+    run_golem_example(
         main(
             subnet_tag=args.subnet_tag,
             payment_driver=args.payment_driver,
             payment_network=args.payment_network,
             show_usage=args.show_usage,
-        )
+        ),
+        log_file=args.log_file,
     )
-
-    try:
-        loop.run_until_complete(task)
-    except NoPaymentAccountError as e:
-        handbook_url = (
-            "https://handbook.golem.network/requestor-tutorials/"
-            "flash-tutorial-of-requestor-development"
-        )
-        print(
-            f"{TEXT_COLOR_RED}"
-            f"No payment account initialized for driver `{e.required_driver}` "
-            f"and network `{e.required_network}`.\n\n"
-            f"See {handbook_url} on how to initialize payment accounts for a requestor node."
-            f"{TEXT_COLOR_DEFAULT}"
-        )
-    except KeyboardInterrupt:
-        print(
-            f"{TEXT_COLOR_YELLOW}"
-            "Shutting down gracefully, please wait a short while "
-            "or press Ctrl+C to exit immediately..."
-            f"{TEXT_COLOR_DEFAULT}"
-        )
-        task.cancel()
-        try:
-            loop.run_until_complete(task)
-            print(
-                f"{TEXT_COLOR_YELLOW}Shutdown completed, thank you for waiting!{TEXT_COLOR_DEFAULT}"
-            )
-        except (asyncio.CancelledError, KeyboardInterrupt):
-            pass

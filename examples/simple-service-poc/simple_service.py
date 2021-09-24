@@ -32,6 +32,7 @@ from utils import (
     TEXT_COLOR_YELLOW,
     TEXT_COLOR_MAGENTA,
     format_usage,
+    print_env_info,
 )
 
 STARTING_TIMEOUT = timedelta(minutes=4)
@@ -58,20 +59,26 @@ class SimpleService(Service):
         )
 
     async def start(self):
-        # handler responsible for starting the service
+        """handler responsible for starting the service."""
+
+        # perform the initialization of the Service
         async for script in super().start():
             yield script
-        self._ctx.run(self.SIMPLE_SERVICE_CTL, "--start")
-        yield self._ctx.commit()
+
+        # start the service
+        script = self._ctx.new_script()
+        script.run(self.SIMPLE_SERVICE_CTL, "--start")
+        yield script
 
     async def run(self):
         # handler responsible for providing the required interactions while the service is running
         while True:
             await asyncio.sleep(10)
-            self._ctx.run(self.SIMPLE_SERVICE, "--stats")  # idx 0
-            self._ctx.run(self.SIMPLE_SERVICE, "--plot", "dist")  # idx 1
+            script = self._ctx.new_script()
+            script.run(self.SIMPLE_SERVICE, "--stats")  # idx 0
+            script.run(self.SIMPLE_SERVICE, "--plot", "dist")  # idx 1
 
-            future_results = yield self._ctx.commit()
+            future_results = yield script
             results = await future_results
             stats = results[0].stdout.strip()
             plot = results[1].stdout.strip().strip('"')
@@ -82,12 +89,9 @@ class SimpleService(Service):
             print(
                 f"{TEXT_COLOR_CYAN}downloading plot: {plot} to {plot_filename}{TEXT_COLOR_DEFAULT}"
             )
-            self._ctx.download_file(
-                plot, str(pathlib.Path(__file__).resolve().parent / plot_filename)
-            )
-
-            steps = self._ctx.commit()
-            yield steps
+            script = self._ctx.new_script()
+            script.download_file(plot, str(pathlib.Path(__file__).resolve().parent / plot_filename))
+            yield script
 
             if self._show_usage:
                 print(
@@ -108,8 +112,10 @@ class SimpleService(Service):
 
     async def shutdown(self):
         # handler reponsible for executing operations on shutdown
-        self._ctx.run(self.SIMPLE_SERVICE_CTL, "--stop")
-        yield self._ctx.commit()
+        script = self._ctx.new_script()
+        script.run(self.SIMPLE_SERVICE_CTL, "--stop")
+        yield script
+
         if self._show_usage:
             print(
                 f"{TEXT_COLOR_MAGENTA}"
@@ -132,13 +138,7 @@ async def main(
         payment_driver=payment_driver,
         payment_network=payment_network,
     ) as golem:
-
-        print(
-            f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n"
-            f"Using subnet: {TEXT_COLOR_YELLOW}{subnet_tag}{TEXT_COLOR_DEFAULT}, "
-            f"payment driver: {TEXT_COLOR_YELLOW}{golem.payment_driver}{TEXT_COLOR_DEFAULT}, "
-            f"and network: {TEXT_COLOR_YELLOW}{golem.payment_network}{TEXT_COLOR_DEFAULT}\n"
-        )
+        print_env_info(golem)
 
         commissioning_time = datetime.now()
 
@@ -164,12 +164,9 @@ async def main(
         def instances():
             return [f"{s.name}: {s.state.value} on {s.provider_name}" for s in cluster.instances]
 
-        def still_running():
-            return any([s for s in cluster.instances if s.is_available])
-
         def still_starting():
             return len(cluster.instances) < num_instances or any(
-                [s for s in cluster.instances if s.state == ServiceState.starting]
+                s.state == ServiceState.starting for s in cluster.instances
             )
 
         # wait until instances are started
@@ -198,7 +195,7 @@ async def main(
         # wait for instances to stop
 
         cnt = 0
-        while cnt < 10 and still_running():
+        while cnt < 10 and any(s.is_available for s in cluster.instances):
             print(f"instances: {instances()}")
             await asyncio.sleep(5)
 

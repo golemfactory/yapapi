@@ -44,8 +44,9 @@ class CustomCounterService(Service):
         start_time = datetime.now()
         print(f"service {self.id} running on '{self.provider_name}'...")
         while datetime.now() < start_time + timedelta(seconds=self._running_time_sec):
-            self._ctx.run("sleep", "1000")
-            yield self._ctx.commit()
+            script = self._ctx.new_script()
+            script.run("sleep", "1000")
+            yield script
             usage: ActivityUsage = await self._ctx.get_usage()
             cost = await self._ctx.get_cost()
             print(f"total cost so far: {cost}; activity usage: {usage.current_usage}")

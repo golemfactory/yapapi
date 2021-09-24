@@ -198,7 +198,7 @@ It's possible to set various elements of `yagna` configuration through environme
 - `YAGNA_PAYMENT_NETWORK`, Ethereum network name for `yagna` to use, e.g. `rinkeby`
 - `YAGNA_PAYMENT_DRIVER`, payment driver name for `yagna` to use, e.g. `zksync`
 - `YAGNA_PAYMENT_URL`, URL to `yagna` payment API, e.g. `http://localhost:7500/payment-api/v1`
-- `YAGNA_SUBNET`, name of the `yagna` sub network to be used, e.g. `devnet-beta.2`
+- `YAGNA_SUBNET`, name of the `yagna` sub network to be used, e.g. `devnet-beta`
 - `YAPAPI_USE_GFTP_CLOSE`, if set to a _truthy_ value (e.g. "1", "Y", "True", "on") then `yapapi`
   will ask `gftp` to close files when there's no need to publish them any longer. This may greatly
   reduce the number of files kept open while `yapapi` is running but requires `yagna`

@@ -19,30 +19,35 @@ class DateService(Service):
         )
 
     async def start(self):
+        async for script in super().start():
+            yield script
+
         # every `DATE_POLL_INTERVAL` write output of `date` to `DATE_OUTPUT_PATH`
-        self._ctx.run(
+        script = self._ctx.new_script()
+        script.run(
             "/bin/sh",
             "-c",
             f"while true; do date > {DATE_OUTPUT_PATH}; sleep {REFRESH_INTERVAL_SEC}; done &",
         )
-        yield self._ctx.commit()
+        yield script
 
     async def run(self):
         while True:
             await asyncio.sleep(REFRESH_INTERVAL_SEC)
-            self._ctx.run(
+            script = self._ctx.new_script()
+            script.run(
                 "/bin/sh",
                 "-c",
                 f"cat {DATE_OUTPUT_PATH}",
             )
 
-            future_results = yield self._ctx.commit()
+            future_results = yield script
             results = await future_results
-            print(results[0].stdout.strip())
+            print(results[0].stdout.strip() if results[0].stdout else "")
 
 
 async def main():
-    async with Golem(budget=1.0, subnet_tag="devnet-beta.2") as golem:
+    async with Golem(budget=1.0, subnet_tag="devnet-beta") as golem:
         cluster = await golem.run_service(DateService, num_instances=1)
         start_time = datetime.now()
 
