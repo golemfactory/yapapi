@@ -7,7 +7,12 @@ import tempfile
 
 import colorama  # type: ignore
 
-from yapapi import windows_event_loop_fix, NoPaymentAccountError
+from yapapi import (
+    Golem,
+    windows_event_loop_fix,
+    NoPaymentAccountError,
+    __version__ as yapapi_version,
+)
 from yapapi.log import enable_default_logger
 
 
@@ -35,7 +40,7 @@ def build_parser(description: str) -> argparse.ArgumentParser:
     parser.add_argument(
         "--payment-network", "--network", help="Payment network name, for example `rinkeby`"
     )
-    parser.add_argument("--subnet-tag", help="Subnet name, for example `devnet-beta.2`")
+    parser.add_argument("--subnet-tag", help="Subnet name, for example `devnet-beta`")
     parser.add_argument(
         "--log-file",
         default=str(default_log_path),
@@ -49,6 +54,15 @@ def format_usage(usage):
         "current_usage": {k.name: v for k, v in usage.current_usage.items()},
         "timestamp": usage.timestamp.isoformat(sep=" ") if usage.timestamp else None,
     }
+
+
+def print_env_info(golem: Golem):
+    print(
+        f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n"
+        f"Using subnet: {TEXT_COLOR_YELLOW}{golem.subnet_tag}{TEXT_COLOR_DEFAULT}, "
+        f"payment driver: {TEXT_COLOR_YELLOW}{golem.payment_driver}{TEXT_COLOR_DEFAULT}, "
+        f"and network: {TEXT_COLOR_YELLOW}{golem.payment_network}{TEXT_COLOR_DEFAULT}\n"
+    )
 
 
 def run_golem_example(example_main, log_file=None):

@@ -129,13 +129,15 @@ class WorkContext:
 
         return self.__payment_model
 
-    def new_script(self):
+    def new_script(
+        self, timeout: Optional[timedelta] = None, wait_for_results: bool = True
+    ) -> Script:
         """Create an instance of :class:`~yapapi.script.Script` attached to this :class:`WorkContext` instance.
 
         This is equivalent to calling `Script(work_context)`. This method is intended to provide a
         direct link between the two object instances.
         """
-        return Script(self)
+        return Script(self, timeout=timeout, wait_for_results=wait_for_results)
 
     @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
     def deploy(self, **kwargs) -> Awaitable[CommandExecuted]:
