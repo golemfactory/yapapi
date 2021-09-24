@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import asyncio
 import pathlib
+import random
 import sys
+import string
 from uuid import uuid4
 
 
@@ -32,7 +34,7 @@ class SshService(Service):
     @staticmethod
     async def get_payload():
         return await vm.repo(
-            image_hash="ea233c6774b1621207a48e10b46e3e1f944d881911f499f5cbac546a",
+            image_hash="1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
             min_mem_gib=0.5,
             min_storage_gib=2.0,
             # we're adding an additional constraint to only select those nodes that
@@ -44,9 +46,12 @@ class SshService(Service):
         connection_uri = self.network_node.get_websocket_uri(22)
         app_key = self.cluster._engine._api_config.app_key
 
+        password = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(8))
+
         script = self._ctx.new_script()
         script.run("/bin/bash", "-c", "syslogd")
         script.run("/bin/bash", "-c", "ssh-keygen -A")
+        script.run("/bin/bash", "-c", f"echo -e \"{password}\n{password}\" | passwd")
         script.run("/bin/bash", "-c", "/usr/sbin/sshd")
         yield script
 
@@ -56,6 +61,8 @@ class SshService(Service):
             f"ssh -o ProxyCommand='websocat asyncstdio: {connection_uri} --binary -H=Authorization:\"Bearer {app_key}\"' root@{uuid4().hex}"
             f"{TEXT_COLOR_DEFAULT}"
         )
+
+        print(f"{TEXT_COLOR_RED}password: {password}{TEXT_COLOR_DEFAULT}")
 
         # await indefinitely...
         await asyncio.Future()
