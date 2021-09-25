@@ -46,12 +46,12 @@ class SshService(Service):
         connection_uri = self.network_node.get_websocket_uri(22)
         app_key = self.cluster._engine._api_config.app_key
 
-        password = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(8))
+        password = "".join(random.choice(string.ascii_letters + string.digits) for _ in range(8))
 
         script = self._ctx.new_script()
         script.run("/bin/bash", "-c", "syslogd")
         script.run("/bin/bash", "-c", "ssh-keygen -A")
-        script.run("/bin/bash", "-c", f"echo -e \"{password}\n{password}\" | passwd")
+        script.run("/bin/bash", "-c", f'echo -e "{password}\n{password}" | passwd')
         script.run("/bin/bash", "-c", "/usr/sbin/sshd")
         yield script
 
