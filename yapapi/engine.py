@@ -57,7 +57,7 @@ DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: Final[str] = "golem.com.payment.debit-notes.
 
 DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "zksync").lower()
 DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "rinkeby").lower()
-DEFAULT_SUBNET: Optional[str] = os.getenv("YAGNA_SUBNET", "devnet-beta.2")
+DEFAULT_SUBNET: Optional[str] = os.getenv("YAGNA_SUBNET", "devnet-beta")
 
 
 logger = logging.getLogger("yapapi.executor")

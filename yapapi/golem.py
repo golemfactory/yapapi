@@ -265,7 +265,7 @@ class Golem:
                 image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
             )
 
-            async with Golem(budget=1.0, subnet_tag="devnet-beta.2") as golem:
+            async with Golem(budget=1.0, subnet_tag="devnet-beta") as golem:
                 async for completed in golem.execute_tasks(worker, [Task(data=None)], payload=package):
                     print(completed.result.stdout)
 
@@ -358,7 +358,7 @@ class Golem:
 
 
             async def main():
-                async with Golem(budget=1.0, subnet_tag="devnet-beta.2") as golem:
+                async with Golem(budget=1.0, subnet_tag="devnet-beta") as golem:
                     cluster = await golem.run_service(DateService, num_instances=1)
                     start_time = datetime.now()
 

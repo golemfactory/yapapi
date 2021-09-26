@@ -31,6 +31,7 @@ from utils import (
     TEXT_COLOR_GREEN,
     TEXT_COLOR_YELLOW,
     run_golem_example,
+    print_env_info,
 )
 
 STARTING_TIMEOUT = timedelta(minutes=4)
@@ -80,20 +81,23 @@ class HttpService(Service):
         )
 
     async def start(self):
-        async for s in super().start():
-            yield s
+        # perform the initialization of the Service
+        # (which includes sending the network details within the `deploy` command)
+        async for script in super().start():
+            yield script
 
-        s = self._ctx.new_script()
-        s.run("/docker-entrypoint.sh")
-        s.run("/bin/chmod", "a+x", "/")
+        # start the remote HTTP server and give it some content to serve in the `index.html`
+        script = self._ctx.new_script()
+        script.run("/docker-entrypoint.sh")
+        script.run("/bin/chmod", "a+x", "/")
         msg = f"Hello from inside Golem!\n... running on {self.provider_name}"
-        s.run(
+        script.run(
             "/bin/sh",
             "-c",
             f"echo {shlex.quote(msg)} > /usr/share/nginx/html/index.html",
         )
-        s.run("/usr/sbin/nginx"),
-        yield s
+        script.run("/usr/sbin/nginx"),
+        yield script
 
     # we don't need to implement `run` since, after the service is started,
     # all communication is performed through the VPN
@@ -141,13 +145,7 @@ async def main(
         payment_driver=payment_driver,
         payment_network=payment_network,
     ) as golem:
-
-        print(
-            f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n"
-            f"Using subnet: {TEXT_COLOR_YELLOW}{subnet_tag}{TEXT_COLOR_DEFAULT}, "
-            f"payment driver: {TEXT_COLOR_YELLOW}{golem.payment_driver}{TEXT_COLOR_DEFAULT}, "
-            f"and network: {TEXT_COLOR_YELLOW}{golem.payment_network}{TEXT_COLOR_DEFAULT}\n"
-        )
+        print_env_info(golem)
 
         commissioning_time = datetime.now()
 
@@ -156,9 +154,6 @@ async def main(
 
         def instances():
             return [f"{s.provider_name}: {s.state.value}" for s in cluster.instances]
-
-        def still_running():
-            return any([s for s in cluster.instances if s.is_available])
 
         def still_starting():
             return len(cluster.instances) < num_instances or any(
@@ -201,7 +196,7 @@ async def main(
         cluster.stop()
 
         cnt = 0
-        while cnt < 3 and still_running():
+        while cnt < 3 and any(s.is_available for s in cluster.instances):
             print(instances())
             await asyncio.sleep(5)
             cnt += 1
