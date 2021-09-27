@@ -43,13 +43,19 @@ semantic-version="^2.8"
 # It will be then installable with `poetry install -E integration-tests`.
 # Note that putting `goth` in `poetry.dev-dependencies` instead of `poetry.dependencies`
 # would not work: see https://github.com/python-poetry/poetry/issues/129.
-goth = { version = "^0.6", optional = true, python = "^3.8.0" }
+goth = { version = "^0.7", optional = true, python = "^3.8.0" }
 # goth = { git = "https://github.com/golemfactory/goth.git", branch = "your-branch-name", optional = true, python = "^3.8.0", develop = true }
 Deprecated = "^1.2.12"
 python-statemachine = "^0.8.0"
 
+# Docs
+sphinx = { version = "^4.0.1", optional = true }
+sphinx-autodoc-typehints = { version = "^1.12.0", optional = true }
+sphinx-rtd-theme = { version = "^1.0.0", optional = true}
+
 [tool.poetry.extras]
 integration-tests = ['goth', 'pytest', 'pytest-asyncio']
+docs = ['sphinx', 'sphinx-autodoc-typehints', 'sphinx-rtd-theme']
 
 [tool.poetry.dev-dependencies]
 black = "^21.7b0"
@@ -121,6 +127,7 @@ clean_examples = ["clean_blender", "clean_simple_service"]
 docs = "portray as_html --overwrite"
 pdocs = "pdocs as_markdown yapapi -e -ov -o md"
 pydoc-markdown = "pydoc-markdown --build --site-dir=_"
+sphinx = "sphinx-build docs/sphinx/ build -E"
 _handbook_gen = "python handbook_gen/handbook_gen.py --overwrite"
 handbook = ['pydoc-markdown', '_handbook_gen']
 

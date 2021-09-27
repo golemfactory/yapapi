@@ -8,4 +8,4 @@ class NodeInfoFactory(factory.Factory):
         model = NodeInfo
 
     name = factory.Faker("pystr")
-    subnet_tag = "devnet-beta.1"
+    subnet_tag = "devnet-beta"

@@ -39,6 +39,9 @@ class FirstInstanceFailsToStart(Service):
 
         global instances_started
 
+        async for script in super().start():
+            yield script
+
         self._ctx.run("/bin/echo", "STARTING", str(instances_started + 1))
         future_results = yield self._ctx.commit()
         results = await future_results

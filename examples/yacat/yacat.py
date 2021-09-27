@@ -8,9 +8,8 @@ import sys
 from tempfile import gettempdir
 from typing import AsyncIterable, List, Optional
 
-from yapapi import Golem, NoPaymentAccountError, Task, WorkContext, windows_event_loop_fix
+from yapapi import Golem, Task, WorkContext
 from yapapi.events import CommandExecuted
-from yapapi.log import enable_default_logger
 from yapapi.payload import vm
 from yapapi.rest.activity import CommandExecutionError
 
@@ -24,6 +23,8 @@ from utils import (
     TEXT_COLOR_GREEN,
     TEXT_COLOR_RED,
     TEXT_COLOR_YELLOW,
+    print_env_info,
+    run_golem_example,
 )
 
 HASHCAT_ATTACK_MODE = 3  # stands for mask attack, hashcat -a option
@@ -77,10 +78,11 @@ async def compute_keyspace(context: WorkContext, tasks: AsyncIterable[Task]):
     """
     async for task in tasks:
         cmd = f"hashcat --keyspace " f"-a {HASHCAT_ATTACK_MODE} -m {args.hash_type} {args.mask}"
-        context.run("/bin/bash", "-c", cmd)
+        s = context.new_script(timeout=KEYSPACE_TIMEOUT)
+        s.run("/bin/bash", "-c", cmd)
 
         try:
-            future_result = yield context.commit(timeout=KEYSPACE_TIMEOUT)
+            future_result = yield s
 
             # each item is the result of a single command on the provider (including setup commands)
             result: List[CommandExecuted] = await future_result
@@ -106,12 +108,13 @@ async def perform_mask_attack(ctx: WorkContext, tasks: AsyncIterable[Task]):
         output_name = f"yacat_{skip}.potfile"
         worker_output_path = f"/golem/output/{output_name}"
 
-        ctx.run(f"/bin/sh", "-c", _make_attack_command(skip, limit, worker_output_path))
+        script = ctx.new_script(timeout=MASK_ATTACK_TIMEOUT)
+        script.run(f"/bin/sh", "-c", _make_attack_command(skip, limit, worker_output_path))
         try:
             output_file = Path(gettempdir()) / output_name
-            ctx.download_file(worker_output_path, str(output_file))
+            script.download_file(worker_output_path, str(output_file))
 
-            yield ctx.commit(timeout=MASK_ATTACK_TIMEOUT)
+            yield script
 
             with output_file.open() as f:
                 result = f.readline()
@@ -151,15 +154,10 @@ async def main(args):
     async with Golem(
         budget=10.0,
         subnet_tag=args.subnet_tag,
-        driver=args.driver,
-        network=args.network,
+        payment_driver=args.payment_driver,
+        payment_network=args.payment_network,
     ) as golem:
-
-        print(
-            f"Using subnet: {TEXT_COLOR_YELLOW}{args.subnet_tag}{TEXT_COLOR_DEFAULT}, "
-            f"payment driver: {TEXT_COLOR_YELLOW}{golem.driver}{TEXT_COLOR_DEFAULT}, "
-            f"and network: {TEXT_COLOR_YELLOW}{golem.network}{TEXT_COLOR_DEFAULT}\n"
-        )
+        print_env_info(golem)
 
         start_time = datetime.now()
 
@@ -213,41 +211,4 @@ async def main(args):
 
 if __name__ == "__main__":
     args = arg_parser.parse_args()
-
-    # This is only required when running on Windows with Python prior to 3.8:
-    windows_event_loop_fix()
-
-    enable_default_logger(log_file=args.log_file)
-
-    loop = asyncio.get_event_loop()
-    task = loop.create_task(main(args))
-
-    try:
-        loop.run_until_complete(task)
-    except NoPaymentAccountError as e:
-        handbook_url = (
-            "https://handbook.golem.network/requestor-tutorials/"
-            "flash-tutorial-of-requestor-development"
-        )
-        print(
-            f"{TEXT_COLOR_RED}"
-            f"No payment account initialized for driver `{e.required_driver}` "
-            f"and network `{e.required_network}`.\n\n"
-            f"See {handbook_url} on how to initialize payment accounts for a requestor node."
-            f"{TEXT_COLOR_DEFAULT}"
-        )
-    except KeyboardInterrupt:
-        print(
-            f"{TEXT_COLOR_YELLOW}"
-            "Shutting down gracefully, please wait a short while "
-            "or press Ctrl+C to exit immediately..."
-            f"{TEXT_COLOR_DEFAULT}"
-        )
-        task.cancel()
-        try:
-            loop.run_until_complete(task)
-            print(
-                f"{TEXT_COLOR_YELLOW}Shutdown completed, thank you for waiting!{TEXT_COLOR_DEFAULT}"
-            )
-        except KeyboardInterrupt:
-            pass
+    run_golem_example(main(args), log_file=args.log_file)
