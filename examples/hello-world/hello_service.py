@@ -35,15 +35,16 @@ class DateService(Service):
         while True:
             await asyncio.sleep(REFRESH_INTERVAL_SEC)
             script = self._ctx.new_script()
-            script.run(
+            future_result = script.run(
                 "/bin/sh",
                 "-c",
                 f"cat {DATE_OUTPUT_PATH}",
             )
 
-            future_results = yield script
-            results = await future_results
-            print(results[0].stdout.strip() if results[0].stdout else "")
+            yield script
+
+            result = (await future_result).stdout
+            print(result.strip() if result else "")
 
 
 async def main():

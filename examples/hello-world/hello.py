@@ -10,11 +10,11 @@ from yapapi.payload import vm
 async def worker(context: WorkContext, tasks: AsyncIterable[Task]):
     async for task in tasks:
         script = context.new_script()
-        script.run("/bin/sh", "-c", "date")
+        future_result = script.run("/bin/sh", "-c", "date")
 
-        future_results = yield script
-        results = await future_results
-        task.accept_result(result=results[-1])
+        yield script
+
+        task.accept_result(result=await future_result)
 
 
 async def main():
@@ -24,7 +24,7 @@ async def main():
 
     tasks = [Task(data=None)]
 
-    async with Golem(budget=1.0, subnet_tag="devnet-beta") as golem:
+    async with Golem(budget=1.0, subnet_tag="devnet-beta.2") as golem:
         async for completed in golem.execute_tasks(worker, tasks, payload=package):
             print(completed.result.stdout)
 

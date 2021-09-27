@@ -75,13 +75,13 @@ class SimpleService(Service):
         while True:
             await asyncio.sleep(10)
             script = self._ctx.new_script()
-            script.run(self.SIMPLE_SERVICE, "--stats")  # idx 0
-            script.run(self.SIMPLE_SERVICE, "--plot", "dist")  # idx 1
+            stats_results = script.run(self.SIMPLE_SERVICE, "--stats")
+            plot_results = script.run(self.SIMPLE_SERVICE, "--plot", "dist")
 
-            future_results = yield script
-            results = await future_results
-            stats = results[0].stdout.strip()
-            plot = results[1].stdout.strip().strip('"')
+            yield script
+
+            stats = (await stats_results).stdout.strip()
+            plot = (await plot_results).stdout.strip().strip('"')
 
             print(f"{TEXT_COLOR_CYAN}stats: {stats}{TEXT_COLOR_DEFAULT}")
 
