@@ -1,10 +1,15 @@
 import asyncio
+import logging
 from dataclasses import dataclass
 from ipaddress import ip_address, ip_network, IPv4Address, IPv6Address, IPv4Network, IPv6Network
 from statemachine import State, StateMachine  # type: ignore
 from typing import Dict, Optional, Union
 from urllib.parse import urlparse
+
 import yapapi
+from ya_net.exceptions import ApiException
+
+logger = logging.getLogger("yapapi.network")
 
 IpAddress = Union[IPv4Address, IPv6Address]
 IpNetwork = Union[IPv4Network, IPv6Network]
@@ -262,7 +267,13 @@ class Network:
     async def remove(self) -> None:
         """Remove this network, terminating any connections it provides."""
         self._state_machine.stop()
-        await self._net_api.remove_network(self.network_id)
+        try:
+            await self._net_api.remove_network(self.network_id)
+        except ApiException as e:
+            if e.status == 404:
+                logger.debug(
+                    "Tried removing a network which doesn't exist. network_id=%s", self.network_id
+                )
         self._state_machine.remove()
 
     def _next_address(self) -> IpAddress:
