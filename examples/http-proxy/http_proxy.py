@@ -201,6 +201,8 @@ async def main(
             await asyncio.sleep(5)
             cnt += 1
 
+        await network.remove()
+
 
 if __name__ == "__main__":
     parser = build_parser("An extremely simple http proxy")
