@@ -268,15 +268,17 @@ class Service:
 
         **Example**::
 
+
             async def start(self):
+                s = self._ctx.new_script()
                 # deploy the exe-unit
-                self._ctx.deploy()
+                s.deploy(**self.get_deploy_args())
                 # start the exe-unit's container
-                self._ctx.start()
+                s.start()
                 # start some service process within the container
-                self._ctx.run("/golem/run/service_ctl", "--start")
+                s.run("/golem/run/service_ctl", "--start")
                 # send the batch to the provider
-                yield self._ctx.commit()
+                yield s
 
         ### Default implementation
 
@@ -332,10 +334,10 @@ class Service:
 
             async def run(self):
                 while True:
-                    self._ctx.run("/golem/run/report", "--stats")  # index 0
-                    future_results = yield self._ctx.commit()
-                    results = await future_results
-                    stats = results[0].stdout.strip()  # retrieve from index 0
+                    script = self._ctx.new_script()
+                    stats_results = script.run(self.SIMPLE_SERVICE, "--stats")
+                    yield script
+                    stats = (await stats_results).stdout.strip()
                     print(f"stats: {stats}")
 
         **Default implementation**

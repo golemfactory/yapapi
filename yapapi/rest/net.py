@@ -29,6 +29,9 @@ class Net(object):
         )
         return yan_network.id
 
+    async def remove_network(self, network_id: str) -> None:
+        await self._api.remove_network(network_id)
+
     async def add_address(self, network_id: str, ip: str):
         address = yan.Address(ip)
         await self._api.add_address(network_id, address)
