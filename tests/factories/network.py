@@ -21,6 +21,7 @@ class NetworkFactory(factory.Factory):
             net_api.create_network = mock.AsyncMock(
                 return_value=faker.Faker().binary(length=16).hex()
             )
+            net_api.remove_network = mock.AsyncMock()
             kwargs["net_api"] = net_api
 
         # we're using `futures.ThreadPoolExecutor` here

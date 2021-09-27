@@ -87,25 +87,26 @@ async def main(subnet_tag, payment_driver=None, payment_network=None):
         )
 
         network = await golem.create_network("192.168.0.1/24")
-        cluster = await golem.run_service(SshService, network=network, num_instances=2)
+        async with network:
+            cluster = await golem.run_service(SshService, network=network, num_instances=2)
 
-        def instances():
-            return [f"{s.provider_name}: {s.state.value}" for s in cluster.instances]
+            def instances():
+                return [f"{s.provider_name}: {s.state.value}" for s in cluster.instances]
 
-        while True:
-            print(instances())
-            try:
+            while True:
+                print(instances())
+                try:
+                    await asyncio.sleep(5)
+                except (KeyboardInterrupt, asyncio.CancelledError):
+                    break
+
+            cluster.stop()
+
+            cnt = 0
+            while cnt < 3 and any(s.is_available for s in cluster.instances):
+                print(instances())
                 await asyncio.sleep(5)
-            except (KeyboardInterrupt, asyncio.CancelledError):
-                break
-
-        cluster.stop()
-
-        cnt = 0
-        while cnt < 3 and any(s.is_available for s in cluster.instances):
-            print(instances())
-            await asyncio.sleep(5)
-            cnt += 1
+                cnt += 1
 
 
 if __name__ == "__main__":
