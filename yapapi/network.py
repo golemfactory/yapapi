@@ -65,14 +65,16 @@ class NetworkState(StateMachine):
     removing = State("removing")
     removed = State("removed")
 
-    # transitions
-    add_address = creating.to.itself() | ready.to.itself()
+    # state-altering transitions (lifecycle)
+    create = initialized.to(creating)
+    start = creating.to(ready)
+    stop = ready.to(removing)
+    remove = removing.to(removed)
+
+    # same-state transitions
+    add_owner_address = creating.to.itself() | ready.to.itself()
     add_node = ready.to.itself()
     get_id = creating.to.itself() | ready.to.itself() | removing.to.itself()
-
-    # lifecycle
-    create = initialized.to(creating) | creating.to(ready)
-    remove = ready.to(removing) | removing.to(removed)
 
 
 class Network:
@@ -111,7 +113,7 @@ class Network:
         # add requestor's own address to the network
         await network.add_owner_address(network.owner_ip)
 
-        network._state_machine.create()
+        network._state_machine.start()
         return network
 
     def __init__(
@@ -223,7 +225,7 @@ class Network:
 
         :param ip: the IP address to assign to the requestor node.
         """
-        self._state_machine.add_address()
+        self._state_machine.add_owner_address()
         self._ensure_ip_in_network(ip)
 
         async with self._nodes_lock:
@@ -259,7 +261,7 @@ class Network:
 
     async def remove(self) -> None:
         """Remove this network, terminating any connections it provides."""
-        self._state_machine.remove()
+        self._state_machine.stop()
         await self._net_api.remove_network(self.network_id)
         self._state_machine.remove()
 

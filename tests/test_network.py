@@ -132,7 +132,7 @@ class TestNetwork:
     @pytest.mark.asyncio
     async def test_remove_when_initialized(self):
         network = Network(mock.Mock(), f"192.168.0.0/24", "0xdeadbeef")
-        with pytest.raises(TransitionNotAllowed, match=".*Can't remove when in initialized.*") as e:
+        with pytest.raises(TransitionNotAllowed, match=".*Can't stop when in initialized.*") as e:
             await network.remove()
 
     @pytest.mark.asyncio
@@ -141,7 +141,7 @@ class TestNetwork:
 
         await network.remove()
 
-        with pytest.raises(TransitionNotAllowed, match=".*Can't remove when in removed.*") as e:
+        with pytest.raises(TransitionNotAllowed, match=".*Can't stop when in removed.*") as e:
             await network.remove()
 
     @pytest.mark.asyncio
