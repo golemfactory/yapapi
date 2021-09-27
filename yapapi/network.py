@@ -55,7 +55,7 @@ class Node:
         return f"{net_api_ws}/net/{self.network.network_id}/tcp/{self.ip}/{port}"
 
 
-class NetworkStateMachine(StateMachine):
+class NetworkState(StateMachine):
     """State machine describing the states and lifecycle of a :class:`Network` instance."""
 
     # states
@@ -144,7 +144,7 @@ class Network:
         self._gateway = gateway
         self._owner_id = owner_id
         self._owner_ip: IpAddress = ip_address(owner_ip) if owner_ip else self._next_address()
-        self._state_machine: NetworkStateMachine = NetworkStateMachine()
+        self._state_machine: NetworkState = NetworkState()
 
         self._nodes: Dict[str, Node] = dict()
         """the mapping between a Golem node id and a Node in this VPN."""

@@ -4,7 +4,7 @@ from unittest import mock
 
 from statemachine.exceptions import TransitionNotAllowed
 
-from yapapi.network import Network, NetworkError, NetworkStateMachine
+from yapapi.network import Network, NetworkError, NetworkState
 
 if sys.version_info >= (3, 8):
     from tests.factories.network import NetworkFactory
@@ -40,7 +40,7 @@ class TestNetwork:
         assert network.network_address == ip
         assert network.netmask == "255.255.255.0"
         assert network.nodes_dict == {"192.168.0.1": owner_id}
-        assert network.state == NetworkStateMachine.ready
+        assert network.state == NetworkState.ready
         network._net_api.create_network.assert_called_with(
             network.network_address, network.netmask, network.gateway
         )
@@ -147,9 +147,9 @@ class TestNetwork:
     @pytest.mark.asyncio
     async def test_network_context_manager(self):
         network = NetworkFactory(ip="192.168.0.0/24")
-        assert network.state == NetworkStateMachine.ready
+        assert network.state == NetworkState.ready
 
         async with network:
             pass
 
-        assert network.state == NetworkStateMachine.removed
+        assert network.state == NetworkState.removed
