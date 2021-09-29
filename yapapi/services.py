@@ -803,7 +803,7 @@ class Cluster(AsyncContextManager):
                     instance = None
             except Exception:
                 if agreement_id:
-                    self.emit(events.WorkerFinished(agr_id=agreement_id, exc_info=sys.exc_info()))
+                    self.emit(events.WorkerFinished(job_id=self._job.id, agr_id=agreement_id, exc_info=sys.exc_info()))
                 else:
                     # This shouldn't happen, we may log and return as well
                     logger.error("Failed to spawn instance", exc_info=True)
