@@ -96,8 +96,16 @@ class HttpService(Service):
             "-c",
             f"echo {shlex.quote(msg)} > /usr/share/nginx/html/index.html",
         )
+        script.run("/bin/rm", "/var/log/nginx/access.log", "/var/log/nginx/error.log")
         script.run("/usr/sbin/nginx"),
         yield script
+    
+    async def shutdown(self):
+        script = self._ctx.new_script()
+        script.run("/bin/cat", "/var/log/nginx/access.log")
+        script.run("/bin/cat", "/var/log/nginx/error.log")
+        yield script
+
 
     # we don't need to implement `run` since, after the service is started,
     # all communication is performed through the VPN
@@ -110,7 +118,7 @@ class HttpService(Service):
         instance_ws = self.network_node.get_websocket_uri(80)
         app_key = self.cluster._engine._api_config.app_key
 
-        print(f"{TEXT_COLOR_GREEN}sending a remote request to {self}{TEXT_COLOR_DEFAULT}")
+        print(f"{TEXT_COLOR_GREEN}sending a remote request '{query_string}' to {self}{TEXT_COLOR_DEFAULT}")
         ws_session = aiohttp.ClientSession()
         async with ws_session.ws_connect(
             instance_ws, headers={"Authorization": f"Bearer {app_key}"}
