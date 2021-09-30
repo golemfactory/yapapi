@@ -667,8 +667,19 @@ class Cluster(AsyncContextManager):
                 nonlocal batch_task, handler, instance
 
                 if self._change_state(instance, event):
-                    handler = self._get_handler(instance)
-                    logger.debug("%s state changed to %s", instance.service, instance.state.value)
+                    try:
+                        handler = self._get_handler(instance)
+                        logger.debug(
+                            "%s state changed to %s", instance.service, instance.state.value
+                        )
+                    except Exception:
+                        logger.error(
+                            "Error getting '%s' handler for %s: %s",
+                            instance.state.value,
+                            instance.service,
+                            sys.exc_info(),
+                        )
+                        change_state(sys.exc_info())
 
                 if batch_task:
                     batch_task.cancel()
