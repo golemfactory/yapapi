@@ -100,13 +100,12 @@ class HttpService(Service):
         script.run("/bin/rm", "/var/log/nginx/access.log", "/var/log/nginx/error.log")
         script.run("/usr/sbin/nginx"),
         yield script
-    
+
     async def shutdown(self):
         script = self._ctx.new_script()
         script.run("/bin/cat", "/var/log/nginx/access.log")
         script.run("/bin/cat", "/var/log/nginx/error.log")
         yield script
-
 
     # we don't need to implement `run` since, after the service is started,
     # all communication is performed through the VPN
@@ -119,14 +118,16 @@ class HttpService(Service):
         instance_ws = self.network_node.get_websocket_uri(80)
         app_key = self.cluster._engine._api_config.app_key
 
-        print(f"{TEXT_COLOR_GREEN}sending a remote request '{query_string}' to {self}{TEXT_COLOR_DEFAULT}")
+        print(
+            f"{TEXT_COLOR_GREEN}sending a remote request '{query_string}' to {self}{TEXT_COLOR_DEFAULT}"
+        )
         ws_session = aiohttp.ClientSession()
         async with ws_session.ws_connect(
             instance_ws, headers={"Authorization": f"Bearer {app_key}"}
         ) as ws:
             await ws.send_str(f"GET {query_string} HTTP/1.0\n\n")
             headers = await ws.__anext__()
-            status = int(re.match("^HTTP/1.1 (\d+)", headers.data.decode('ascii')).group(1))
+            status = int(re.match("^HTTP/1.1 (\d+)", headers.data.decode("ascii")).group(1))
             print(f"{TEXT_COLOR_GREEN}remote headers: {headers.data} {TEXT_COLOR_DEFAULT}")
 
             if status == 200:
@@ -137,7 +138,9 @@ class HttpService(Service):
                 response_text = data.decode("utf-8")
             else:
                 response_text = None
-            print(f"{TEXT_COLOR_GREEN}local response ({status}): {response_text}{TEXT_COLOR_DEFAULT}")
+            print(
+                f"{TEXT_COLOR_GREEN}local response ({status}): {response_text}{TEXT_COLOR_DEFAULT}"
+            )
 
         await ws_session.close()
         return response_text, status
