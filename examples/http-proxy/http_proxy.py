@@ -102,6 +102,10 @@ class HttpService(Service):
         yield script
 
     async def shutdown(self):
+        # grab the remote HTTP server's logs on shutdown
+        # we don't need to display them in any way since the result of those commands
+        # is written into the example's logfile alongside all other results
+
         script = self._ctx.new_script()
         script.run("/bin/cat", "/var/log/nginx/access.log")
         script.run("/bin/cat", "/var/log/nginx/error.log")
