@@ -642,6 +642,7 @@ class Cluster(AsyncContextManager):
 
         logger.info("%s commissioned", instance.service)
 
+        handler = None
         batch_task: Optional[asyncio.Task] = None
         signal_task: Optional[asyncio.Task] = None
 
