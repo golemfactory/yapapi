@@ -27,6 +27,7 @@ from utils import (
     TEXT_COLOR_RED,
     TEXT_COLOR_YELLOW,
     run_golem_example,
+    print_env_info,
 )
 
 
@@ -78,13 +79,7 @@ async def main(subnet_tag, payment_driver=None, payment_network=None):
         payment_driver=payment_driver,
         payment_network=payment_network,
     ) as golem:
-
-        print(
-            f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n"
-            f"Using subnet: {TEXT_COLOR_YELLOW}{golem.subnet_tag}{TEXT_COLOR_DEFAULT}, "
-            f"payment driver: {TEXT_COLOR_YELLOW}{golem.payment_driver}{TEXT_COLOR_DEFAULT}, "
-            f"and network: {TEXT_COLOR_YELLOW}{golem.payment_network}{TEXT_COLOR_DEFAULT}\n"
-        )
+        print_env_info(golem)
 
         network = await golem.create_network("192.168.0.1/24")
         async with network:

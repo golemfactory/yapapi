@@ -89,9 +89,7 @@ async def test_power_outage(
 
             logger.debug("Stopping provider 1")
             await provider_1.stop()
-            provider_1.container.stop()
             logger.info("Provider 1 stopped.")
-            provider_1.container.restart()
 
             await cmd_monitor.wait_for_pattern(".*Terminated agreement with provider-1")
             logger.info("Agreement properly terminated")
