@@ -125,7 +125,7 @@ class HttpService(Service):
         async with ws_session.ws_connect(
             instance_ws, headers={"Authorization": f"Bearer {app_key}"}
         ) as ws:
-            await ws.send_str(f"GET {query_string} HTTP/1.0\n\n")
+            await ws.send_str(f"GET {query_string} HTTP/1.0\r\n\r\n")
             headers = await ws.__anext__()
             status = int(re.match("^HTTP/1.1 (\d+)", headers.data.decode("ascii")).group(1))
             print(f"{TEXT_COLOR_GREEN}remote headers: {headers.data} {TEXT_COLOR_DEFAULT}")
