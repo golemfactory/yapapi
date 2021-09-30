@@ -35,7 +35,7 @@ from utils import (
     TEXT_COLOR_YELLOW,
     TEXT_COLOR_MAGENTA,
     format_usage,
-    print_env_info
+    print_env_info,
 )
 
 
