@@ -194,9 +194,6 @@ class Golem:
 
     async def _stop_with_exc_info(self, *exc_info) -> Optional[bool]:
         async with self._engine_state_lock:
-            if not self.operative:
-                #   Something stopped us before we got to the locked part
-                return None
             res = await self._engine.stop(*exc_info)
 
         #   Engine that was stopped is not usable anymore, there is no "full" cleanup.
