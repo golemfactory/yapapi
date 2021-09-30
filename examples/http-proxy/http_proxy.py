@@ -9,6 +9,7 @@ from aiohttp import web
 from datetime import datetime, timedelta
 import functools
 import pathlib
+import re
 import shlex
 import sys
 
@@ -49,8 +50,8 @@ async def request_handler(cluster: Cluster, request: web.Request):
 
     instance: HttpService = cluster.instances[request_count % len(cluster.instances)]
     request_count += 1
-    response = await instance.handle_request(request.path_qs)
-    return web.Response(text=response)
+    response, status = await instance.handle_request(request.path_qs)
+    return web.Response(text=response, status=status)
 
 
 async def run_local_server(cluster: Cluster, port: int):
@@ -96,7 +97,18 @@ class HttpService(Service):
             "-c",
             f"echo {shlex.quote(msg)} > /usr/share/nginx/html/index.html",
         )
+        script.run("/bin/rm", "/var/log/nginx/access.log", "/var/log/nginx/error.log")
         script.run("/usr/sbin/nginx"),
+        yield script
+
+    async def shutdown(self):
+        # grab the remote HTTP server's logs on shutdown
+        # we don't need to display them in any way since the result of those commands
+        # is written into the example's logfile alongside all other results
+
+        script = self._ctx.new_script()
+        script.run("/bin/cat", "/var/log/nginx/access.log")
+        script.run("/bin/cat", "/var/log/nginx/error.log")
         yield script
 
     # we don't need to implement `run` since, after the service is started,
@@ -110,23 +122,32 @@ class HttpService(Service):
         instance_ws = self.network_node.get_websocket_uri(80)
         app_key = self.cluster._engine._api_config.app_key
 
-        print(f"{TEXT_COLOR_GREEN}sending a remote request to {self}{TEXT_COLOR_DEFAULT}")
+        print(
+            f"{TEXT_COLOR_GREEN}sending a remote request '{query_string}' to {self}{TEXT_COLOR_DEFAULT}"
+        )
         ws_session = aiohttp.ClientSession()
         async with ws_session.ws_connect(
             instance_ws, headers={"Authorization": f"Bearer {app_key}"}
         ) as ws:
-            await ws.send_str(f"GET {query_string} HTTP/1.0\n\n")
+            await ws.send_str(f"GET {query_string} HTTP/1.0\r\n\r\n")
             headers = await ws.__anext__()
+            status = int(re.match("^HTTP/1.1 (\d+)", headers.data.decode("ascii")).group(1))
             print(f"{TEXT_COLOR_GREEN}remote headers: {headers.data} {TEXT_COLOR_DEFAULT}")
-            content = await ws.__anext__()
-            data: bytes = content.data
-            print(f"{TEXT_COLOR_GREEN}remote content: {data} {TEXT_COLOR_DEFAULT}")
 
-            response_text = data.decode("utf-8")
-            print(f"{TEXT_COLOR_GREEN}local response: {response_text}{TEXT_COLOR_DEFAULT}")
+            if status == 200:
+                content = await ws.__anext__()
+                data: bytes = content.data
+                print(f"{TEXT_COLOR_GREEN}remote content: {data} {TEXT_COLOR_DEFAULT}")
+
+                response_text = data.decode("utf-8")
+            else:
+                response_text = None
+            print(
+                f"{TEXT_COLOR_GREEN}local response ({status}): {response_text}{TEXT_COLOR_DEFAULT}"
+            )
 
         await ws_session.close()
-        return response_text
+        return response_text, status
 
 
 # ######## Main application code which spawns the Golem service and the local HTTP server
