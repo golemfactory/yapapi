@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import json
 import logging
+import re
 from typing import AsyncIterator, List, Optional, Tuple, Type, Any, Dict
 
 from typing_extensions import AsyncContextManager, AsyncIterable
@@ -138,6 +139,28 @@ class CommandExecutionError(BatchError):
         self.stderr = stderr
 
     def __str__(self) -> str:
+        msg = self._generic_msg()
+        if self.message is not None and "State error: Invalid state: StatePair" in self.message:
+            msg = "\n".join((msg, self._invalid_state_msg()))
+        return msg
+
+    def _invalid_state_msg(self) -> str:
+        assert isinstance(self.message, str)
+        match = re.match(r".*StatePair\((\w+), (\w+)\)$", self.message)
+        assert match is not None
+        states = match.groups()
+        assert len(states) == 2
+
+        if states == ("Initialized", "None"):
+            return "Activity is initialized - deploy() command is expected now"
+        if states == ("Deployed", "None"):
+            return "Activity is deployed - start() command is expected now"
+        if states == ("Ready", "None"):
+            command = list(self.command.keys())[0]  # type: ignore # https://github.com/golemfactory/yapapi/issues/701
+            return f"There was already a succesful start() - sending {command}() is not allowed"
+        return f"This command is not allowed when activity is in state {states[0]}"
+
+    def _generic_msg(self) -> str:
         msg = f"Command '{self.command}' failed on provider"
         if self.message:
             msg += f"; message: '{self.message}'"
