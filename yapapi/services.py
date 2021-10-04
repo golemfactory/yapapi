@@ -490,7 +490,7 @@ class Cluster(AsyncContextManager):
 
         self._network: Optional[Network] = network
 
-        self._state = ClusterState()
+        self.__state = ClusterState()
 
     @property
     def expiration(self) -> datetime:
@@ -770,7 +770,7 @@ class Cluster(AsyncContextManager):
                 service=self._service_class(self, work_context, network_node=node, **params)  # type: ignore
             )
             try:
-                if self.state == ClusterState.running:
+                if self._state == ClusterState.running:
                     instance_batches = self._run_instance(instance)
                     try:
                         await self._engine.process_batches(
@@ -791,7 +791,7 @@ class Cluster(AsyncContextManager):
                 await self._engine.accept_payments_for_agreement(self._job.id, agreement.id)
                 await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
 
-        while instance is None and self.state == ClusterState.running:
+        while instance is None and self._state == ClusterState.running:
             agreement_id = None
             await asyncio.sleep(1.0)
             task = await self._engine.start_worker(self._job, _worker)
@@ -894,12 +894,12 @@ class Cluster(AsyncContextManager):
 
     def stop(self):
         """Signal the whole :class:`Cluster` to stop."""
-        self._state.stop()
+        self.__state.stop()
 
         for s in self.instances:
             self.stop_instance(s)
 
     @property
-    def state(self):
+    def _state(self):
         """Current state of the Cluster."""
-        return self._state.current_state
+        return self.__state.current_state
