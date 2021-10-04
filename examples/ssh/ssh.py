@@ -63,7 +63,6 @@ class SshService(Service):
         script.run("/bin/bash", "-c", "/usr/sbin/sshd")
         yield script
 
-    async def run(self):
         connection_uri = self.network_node.get_websocket_uri(22)
         app_key = self.cluster._engine._api_config.app_key
 
@@ -75,10 +74,6 @@ class SshService(Service):
         )
 
         print(f"{TEXT_COLOR_RED}password: {self._password}{TEXT_COLOR_DEFAULT}")
-
-        # await indefinitely...
-        await asyncio.Future()
-        yield
 
 
 async def main(subnet_tag, payment_driver=None, payment_network=None):
