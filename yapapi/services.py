@@ -699,7 +699,7 @@ class Cluster(AsyncContextManager):
                     # work-around an issue preventing nodes from getting correct information about
                     # each other on instance startup by re-sending the information after the service
                     # transitions to the running state
-                    if instance.state == ServiceState.running:
+                    if self.network and instance.state == ServiceState.running:
                         await self.network.refresh_nodes()
 
                 except Exception:
