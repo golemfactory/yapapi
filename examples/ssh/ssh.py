@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
+from datetime import timedelta
 import pathlib
 import random
 import sys
@@ -32,6 +33,8 @@ from utils import (
 
 
 class SshService(Service):
+    _password = None
+
     @staticmethod
     async def get_payload():
         return await vm.repo(
@@ -43,18 +46,26 @@ class SshService(Service):
             capabilities=[vm.VM_CAPS_VPN],
         )
 
+    async def start(self):
+        # perform the initialization of the Service
+        # (which includes sending the network details within the `deploy` command)
+        async for script in super().start():
+            yield script
+
+        self._password = "".join(
+            random.choice(string.ascii_letters + string.digits) for _ in range(8)
+        )
+
+        script = self._ctx.new_script(timeout=timedelta(seconds=10))
+        script.run("/bin/bash", "-c", "syslogd")
+        script.run("/bin/bash", "-c", "ssh-keygen -A")
+        script.run("/bin/bash", "-c", f'echo -e "{self._password}\n{self._password}" | passwd')
+        script.run("/bin/bash", "-c", "/usr/sbin/sshd")
+        yield script
+
     async def run(self):
         connection_uri = self.network_node.get_websocket_uri(22)
         app_key = self.cluster._engine._api_config.app_key
-
-        password = "".join(random.choice(string.ascii_letters + string.digits) for _ in range(8))
-
-        script = self._ctx.new_script()
-        script.run("/bin/bash", "-c", "syslogd")
-        script.run("/bin/bash", "-c", "ssh-keygen -A")
-        script.run("/bin/bash", "-c", f'echo -e "{password}\n{password}" | passwd')
-        script.run("/bin/bash", "-c", "/usr/sbin/sshd")
-        yield script
 
         print(
             "Connect with:\n"
@@ -63,10 +74,11 @@ class SshService(Service):
             f"{TEXT_COLOR_DEFAULT}"
         )
 
-        print(f"{TEXT_COLOR_RED}password: {password}{TEXT_COLOR_DEFAULT}")
+        print(f"{TEXT_COLOR_RED}password: {self._password}{TEXT_COLOR_DEFAULT}")
 
         # await indefinitely...
         await asyncio.Future()
+        yield
 
 
 async def main(subnet_tag, payment_driver=None, payment_network=None):
