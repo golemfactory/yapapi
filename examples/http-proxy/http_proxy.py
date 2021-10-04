@@ -48,7 +48,8 @@ async def request_handler(cluster: Cluster, request: web.Request):
 
     print(f"{TEXT_COLOR_GREEN}local HTTP request: {dict(request.query)}{TEXT_COLOR_DEFAULT}")
 
-    instance: HttpService = cluster.instances[request_count % len(cluster.instances)]
+    instances = [i for i in cluster.instances if i.state == ServiceState.running]
+    instance: HttpService = instances[request_count % len(instances)]
     request_count += 1
     response, status = await instance.handle_request(request.path_qs)
     return web.Response(text=response, status=status)
@@ -88,7 +89,7 @@ class HttpService(Service):
             yield script
 
         # start the remote HTTP server and give it some content to serve in the `index.html`
-        script = self._ctx.new_script()
+        script = self._ctx.new_script(timeout=timedelta(minutes=1))
         script.run("/docker-entrypoint.sh")
         script.run("/bin/chmod", "a+x", "/")
         msg = f"Hello from inside Golem!\n... running on {self.provider_name}"
