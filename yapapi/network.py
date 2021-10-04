@@ -264,6 +264,21 @@ class Network:
 
         return node
 
+    async def refresh_nodes(self):
+        for node in self._nodes.values():
+            try:
+                await self._net_api.add_node(self.network_id, node.node_id, node.ip)
+            except ApiException as e:
+                if e.status == 409:
+                    logger.warning(
+                        "Could not refresh node %s (%s). network_id=%s",
+                        node.node_id,
+                        node.ip,
+                        self.network_id,
+                    )
+                else:
+                    raise
+
     async def remove(self) -> None:
         """Remove this network, terminating any connections it provides."""
         self._state_machine.stop()
