@@ -713,10 +713,7 @@ class Cluster(AsyncContextManager):
                         logger.error("Unhandled engine error", exc_info=True)
                         change_state(sys.exc_info())
                     else:
-                        result = await fut_result
-                        wrapped_results = loop.create_future()
-                        wrapped_results.set_result(result)
-                        batch_task = loop.create_task(handler.asend(wrapped_results))
+                        batch_task = loop.create_task(handler.asend(fut_result))
 
             if signal_task in done:
                 # Process a signal
