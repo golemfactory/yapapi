@@ -655,36 +655,34 @@ class Cluster(AsyncContextManager):
         batch_task: Optional[asyncio.Task] = None
         signal_task: Optional[asyncio.Task] = None
 
-        def log_handler_error() -> None:
-            logger.error(
-                "Error getting '%s' handler for %s: %s",
-                instance.state.value,
-                instance.service,
-                sys.exc_info(),
-            )
+        def get_next_handler(instance: ServiceInstance):
+            nonlocal handler
+
+            try:
+                handler = self._get_handler(instance)
+                logger.debug("%s state changed to %s", instance.service, instance.state.value)
+            except Exception:
+                logger.error(
+                    "Error getting '%s' handler for %s: %s",
+                    instance.state.value,
+                    instance.service,
+                    sys.exc_info(),
+                )
+                change_state(sys.exc_info())
 
         def change_state(event: Union[ControlSignal, ExcInfo] = (None, None, None)) -> None:
             """Initiate state transition, due to a signal, an error, or handler termination."""
             nonlocal batch_task, handler, instance
 
             if self._change_state(instance, event):
-                try:
-                    handler = self._get_handler(instance)
-                    logger.debug("%s state changed to %s", instance.service, instance.state.value)
-                except Exception:
-                    log_handler_error()
-                    change_state(sys.exc_info())
+                get_next_handler(instance)
 
             if batch_task:
                 batch_task.cancel()
                 # TODO: await batch_task here?
             batch_task = None
 
-        try:
-            handler = self._get_handler(instance)
-        except Exception:
-            log_handler_error()
-            change_state(sys.exc_info())
+        get_next_handler(instance)
 
         while handler:
             # Repeatedly wait on one of `(batch_task, signal_task)` to finish.
