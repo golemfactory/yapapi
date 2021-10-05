@@ -261,6 +261,26 @@ class Network:
 
         return node
 
+    async def _refresh_node(self, node: Node):
+        logger.debug("refreshing node %s", node)
+        try:
+            await self._net_api.add_node(self.network_id, node.node_id, node.ip)
+        except ApiException as e:
+            # the `409 Conflict` shouldn't happen with the latest yagna (0.8.0-rc7)
+            # but we're adding the work around as the error is mostly harmless anyway
+            if e.status == 409:
+                logger.warning(
+                    "Could not refresh node %s (%s). network_id=%s",
+                    node.node_id,
+                    node.ip,
+                    self.network_id,
+                )
+            else:
+                raise
+
+    async def refresh_nodes(self):
+        await asyncio.gather(*[self._refresh_node(n) for n in self._nodes.values()])
+
     async def remove(self) -> None:
         """Remove this network, terminating any connections it provides."""
         self._state_machine.stop()
