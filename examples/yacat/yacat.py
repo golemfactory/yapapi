@@ -35,6 +35,7 @@ MASK_ATTACK_TIMEOUT: timedelta = timedelta(minutes=30)
 KEYSPACE_TIMEOUT: timedelta = timedelta(minutes=10)
 
 arg_parser = build_parser("Run a hashcat attack (mask mode) on Golem network.")
+arg_parser.set_defaults(log_file=f"hashcat-yapapi-{datetime.now().strftime('%Y-%m-%d_%H.%M.%S')}.log")
 arg_parser.epilog = (
     "Example invocation: ./yacat.py --mask '?a?a?a' --hash '$P$5ZDzPE45CLLhEx/72qt3NehVzwN2Ry/'"
 )
