@@ -35,16 +35,12 @@ from utils import (
     TEXT_COLOR_YELLOW,
     TEXT_COLOR_MAGENTA,
     format_usage,
+    print_env_info,
 )
 
 
 async def main(golem, show_usage=False):
-    print(
-        f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n"
-        f"Using subnet: {TEXT_COLOR_YELLOW}{golem.subnet_tag}{TEXT_COLOR_DEFAULT}, "
-        f"payment driver: {TEXT_COLOR_YELLOW}{golem.payment_driver}{TEXT_COLOR_DEFAULT}, "
-        f"and network: {TEXT_COLOR_YELLOW}{golem.payment_network}{TEXT_COLOR_DEFAULT}\n"
-    )
+    print_env_info(golem)
 
     package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
@@ -55,12 +51,18 @@ async def main(golem, show_usage=False):
     async def worker(ctx: WorkContext, tasks):
         script_dir = pathlib.Path(__file__).resolve().parent
         scene_path = str(script_dir / "cubes.blend")
-        ctx.send_file(scene_path, "/golem/resource/scene.blend")
+        # Set timeout for the first script executed on the provider. Usually, 30 seconds
+        # should be more than enough for computing a single frame of the provided scene,
+        # however a provider may require more time for the first task if it needs to download
+        # the VM image first. Once downloaded, the VM image will be cached and other tasks that use
+        # that image will be computed faster.
+        script = ctx.new_script(timeout=timedelta(minutes=10))
+        script.upload_file(scene_path, "/golem/resource/scene.blend")
+
         async for task in tasks:
             frame = task.data
             crops = [{"outfilebasename": "out", "borders_x": [0.0, 1.0], "borders_y": [0.0, 1.0]}]
-            ctx.send_json(
-                "/golem/work/params.json",
+            script.upload_json(
                 {
                     "scene_file": "/golem/resource/scene.blend",
                     "resolution": (400, 300),
@@ -73,17 +75,13 @@ async def main(golem, show_usage=False):
                     "WORK_DIR": "/golem/work",
                     "OUTPUT_DIR": "/golem/output",
                 },
+                "/golem/work/params.json",
             )
-            ctx.run("/golem/entrypoints/run-blender.sh")
+            script.run("/golem/entrypoints/run-blender.sh")
             output_file = f"output_{frame}.png"
-            ctx.download_file(f"/golem/output/out{frame:04d}.png", output_file)
+            script.download_file(f"/golem/output/out{frame:04d}.png", output_file)
             try:
-                # Set timeout for executing the script on the provider. Usually, 30 seconds
-                # should be more than enough for computing a single frame, however a provider
-                # may require more time for the first task if it needs to download a VM image
-                # first. Once downloaded, the VM image will be cached and other tasks that use
-                # that image will be computed faster.
-                yield ctx.commit(timeout=timedelta(minutes=10))
+                yield script
                 # TODO: Check if job results are valid
                 # and reject by: task.reject_task(reason = 'invalid file')
                 task.accept_result(result=output_file)
@@ -94,6 +92,9 @@ async def main(golem, show_usage=False):
                     f"{TEXT_COLOR_DEFAULT}"
                 )
                 raise
+
+            # reinitialize the script which we send to the engine to compute subsequent frames
+            script = ctx.new_script(timeout=timedelta(minutes=1))
 
             if show_usage:
                 raw_state = await ctx.get_raw_state()

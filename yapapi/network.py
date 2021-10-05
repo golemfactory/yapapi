@@ -114,6 +114,7 @@ class Network:
         network._network_id = await net_api.create_network(
             network.network_address, network.netmask, network.gateway
         )
+        logger.info("Created network: %s", network)
 
         # add requestor's own address to the network
         await network.add_owner_address(network.owner_ip)
@@ -160,13 +161,9 @@ class Network:
         """an asyncio lock used to synchronize access to the `_nodes` mapping."""
 
     def __str__(self) -> str:
-        return f"""Network {{
-        id: {self._network_id}
-        ip: {self.network_address}
-        mask: {self.netmask}
-        owner_ip: {self._owner_ip}
-        nodes: {self.nodes_dict}
-    }}"""
+        return (
+            f"Network {{ id: {self._network_id}, ip: {self.network_address}, mask: {self.netmask}}}"
+        )
 
     async def __aenter__(self) -> "Network":
         return self
@@ -264,14 +261,35 @@ class Network:
 
         return node
 
+    async def _refresh_node(self, node: Node):
+        logger.debug("refreshing node %s", node)
+        try:
+            await self._net_api.add_node(self.network_id, node.node_id, node.ip)
+        except ApiException as e:
+            # the `409 Conflict` shouldn't happen with the latest yagna (0.8.0-rc7)
+            # but we're adding the work around as the error is mostly harmless anyway
+            if e.status == 409:
+                logger.warning(
+                    "Could not refresh node %s (%s). network_id=%s",
+                    node.node_id,
+                    node.ip,
+                    self.network_id,
+                )
+            else:
+                raise
+
+    async def refresh_nodes(self):
+        await asyncio.gather(*[self._refresh_node(n) for n in self._nodes.values()])
+
     async def remove(self) -> None:
         """Remove this network, terminating any connections it provides."""
         self._state_machine.stop()
         try:
             await self._net_api.remove_network(self.network_id)
+            logger.info("Removed network: %s", self)
         except ApiException as e:
             if e.status == 404:
-                logger.debug(
+                logger.warning(
                     "Tried removing a network which doesn't exist. network_id=%s", self.network_id
                 )
         self._state_machine.remove()
