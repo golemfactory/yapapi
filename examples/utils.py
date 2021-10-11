@@ -35,7 +35,7 @@ def build_parser(description: str) -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
-        "--payment-driver", "--driver", help="Payment driver name, for example `zksync`"
+        "--payment-driver", "--driver", help="Payment driver name, for example `polygon`"
     )
     parser.add_argument(
         "--payment-network", "--network", help="Payment network name, for example `rinkeby`"
