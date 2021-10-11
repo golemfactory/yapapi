@@ -95,11 +95,11 @@ class Golem:
             Uses `YAGNA_SUBNET` environment variable, defaults to `None`
         :param driver: deprecated, please use `payment_driver` instead
         :param payment_driver: name of the payment driver to use. Uses `YAGNA_PAYMENT_DRIVER`
-            environment variable, defaults to `zksync`. Only payment platforms with
+            environment variable, defaults to `erc20`. Only payment platforms with
             the specified driver will be used
         :param network: deprecated, please use `payment_network` instead
         :param payment_network: name of the network to use. Uses `YAGNA_NETWORK` environment
-            variable, defaults to `rinkeby`. Only payment platforms with the specified
+            variable, defaults to `mumbai`. Only payment platforms with the specified
             network will be used
         :param event_consumer: a callable that processes events related to the
             computation; by default it is a function that logs all events

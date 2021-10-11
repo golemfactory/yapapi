@@ -55,8 +55,8 @@ DEBIT_NOTE_MIN_TIMEOUT: Final[int] = 30  # in seconds
 
 DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: Final[str] = "golem.com.payment.debit-notes.accept-timeout?"
 
-DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "zksync").lower()
-DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "rinkeby").lower()
+DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "erc20").lower()
+DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "mumbai").lower()
 DEFAULT_SUBNET: Optional[str] = os.getenv("YAGNA_SUBNET", "devnet-beta")
 
 
@@ -116,10 +116,10 @@ class _Engine:
         :param subnet_tag: use only providers in the subnet with the subnet_tag name.
             Uses `YAGNA_SUBNET` environment variable, defaults to `None`
         :param payment_driver: name of the payment driver to use. Uses `YAGNA_PAYMENT_DRIVER`
-            environment variable, defaults to `zksync`. Only payment platforms with
+            environment variable, defaults to `erc20`. Only payment platforms with
             the specified driver will be used
         :param payment_network: name of the payment network to use. Uses `YAGNA_PAYMENT_NETWORK`
-        environment variable, defaults to `rinkeby`. Only payment platforms with the specified
+        environment variable, defaults to `mumbai`. Only payment platforms with the specified
             network will be used
         :param event_consumer: a callable that processes events related to the
             computation; by default it is a function that logs all events
