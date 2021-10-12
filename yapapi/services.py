@@ -268,15 +268,17 @@ class Service:
 
         **Example**::
 
+
             async def start(self):
+                s = self._ctx.new_script()
                 # deploy the exe-unit
-                self._ctx.deploy()
+                s.deploy(**self.get_deploy_args())
                 # start the exe-unit's container
-                self._ctx.start()
+                s.start()
                 # start some service process within the container
-                self._ctx.run("/golem/run/service_ctl", "--start")
+                s.run("/golem/run/service_ctl", "--start")
                 # send the batch to the provider
-                yield self._ctx.commit()
+                yield s
 
         ### Default implementation
 
@@ -332,10 +334,10 @@ class Service:
 
             async def run(self):
                 while True:
-                    self._ctx.run("/golem/run/report", "--stats")  # index 0
-                    future_results = yield self._ctx.commit()
-                    results = await future_results
-                    stats = results[0].stdout.strip()  # retrieve from index 0
+                    script = self._ctx.new_script()
+                    stats_results = script.run(self.SIMPLE_SERVICE, "--stats")
+                    yield script
+                    stats = (await stats_results).stdout.strip()
                     print(f"stats: {stats}")
 
         **Default implementation**
@@ -436,6 +438,13 @@ class ServiceInstance:
         return ServiceState.running in self.visited_states
 
 
+class ClusterState(statemachine.StateMachine):
+    running = statemachine.State("running", initial=True)
+    stopping = statemachine.State("stopping")
+
+    stop = running.to(stopping)
+
+
 class Cluster(AsyncContextManager):
     """Golem's sub-engine used to spawn and control instances of a single :class:`Service`."""
 
@@ -480,6 +489,8 @@ class Cluster(AsyncContextManager):
         """Set of asyncio tasks that run spawn_service()"""
 
         self._network: Optional[Network] = network
+
+        self.__state = ClusterState()
 
     @property
     def expiration(self) -> datetime:
@@ -684,6 +695,13 @@ class Cluster(AsyncContextManager):
                     batch = batch_task.result()
                 except StopAsyncIteration:
                     change_state()
+
+                    # work-around an issue preventing nodes from getting correct information about
+                    # each other on instance startup by re-sending the information after the service
+                    # transitions to the running state
+                    if self.network and instance.state == ServiceState.running:
+                        await self.network.refresh_nodes()
+
                 except Exception:
                     logger.warning("Unhandled exception in service", exc_info=True)
                     change_state(sys.exc_info())
@@ -759,13 +777,14 @@ class Cluster(AsyncContextManager):
                 service=self._service_class(self, work_context, network_node=node, **params)  # type: ignore
             )
             try:
-                instance_batches = self._run_instance(instance)
-                try:
-                    await self._engine.process_batches(
-                        self._job.id, agreement.id, activity, instance_batches
-                    )
-                except StopAsyncIteration:
-                    pass
+                if self._state == ClusterState.running:
+                    instance_batches = self._run_instance(instance)
+                    try:
+                        await self._engine.process_batches(
+                            self._job.id, agreement.id, activity, instance_batches
+                        )
+                    except StopAsyncIteration:
+                        pass
 
                 self.emit(
                     events.TaskFinished(
@@ -779,7 +798,7 @@ class Cluster(AsyncContextManager):
                 await self._engine.accept_payments_for_agreement(self._job.id, agreement.id)
                 await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
 
-        while instance is None:
+        while instance is None and self._state == ClusterState.running:
             agreement_id = None
             await asyncio.sleep(1.0)
             task = await self._engine.start_worker(self._job, _worker)
@@ -801,7 +820,11 @@ class Cluster(AsyncContextManager):
                     instance = None
             except Exception:
                 if agreement_id:
-                    self.emit(events.WorkerFinished(agr_id=agreement_id, exc_info=sys.exc_info()))
+                    self.emit(
+                        events.WorkerFinished(
+                            job_id=self._job.id, agr_id=agreement_id, exc_info=sys.exc_info()
+                        )
+                    )
                 else:
                     # This shouldn't happen, we may log and return as well
                     logger.error("Failed to spawn instance", exc_info=True)
@@ -878,5 +901,12 @@ class Cluster(AsyncContextManager):
 
     def stop(self):
         """Signal the whole :class:`Cluster` to stop."""
+        self.__state.stop()
+
         for s in self.instances:
             self.stop_instance(s)
+
+    @property
+    def _state(self):
+        """Current state of the Cluster."""
+        return self.__state.current_state

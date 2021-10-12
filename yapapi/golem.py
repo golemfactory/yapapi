@@ -194,9 +194,6 @@ class Golem:
 
     async def _stop_with_exc_info(self, *exc_info) -> Optional[bool]:
         async with self._engine_state_lock:
-            if not self.operative:
-                #   Something stopped us before we got to the locked part
-                return None
             res = await self._engine.stop(*exc_info)
 
         #   Engine that was stopped is not usable anymore, there is no "full" cleanup.
@@ -335,26 +332,32 @@ class Golem:
                     )
 
                 async def start(self):
+                    async for script in super().start():
+                        yield script
+
                     # every `DATE_POLL_INTERVAL` write output of `date` to `DATE_OUTPUT_PATH`
-                    self._ctx.run(
+                    script = self._ctx.new_script()
+                    script.run(
                         "/bin/sh",
                         "-c",
                         f"while true; do date > {DATE_OUTPUT_PATH}; sleep {REFRESH_INTERVAL_SEC}; done &",
                     )
-                    yield self._ctx.commit()
+                    yield script
 
                 async def run(self):
                     while True:
                         await asyncio.sleep(REFRESH_INTERVAL_SEC)
-                        self._ctx.run(
+                        script = self._ctx.new_script()
+                        future_result = script.run(
                             "/bin/sh",
                             "-c",
                             f"cat {DATE_OUTPUT_PATH}",
                         )
 
-                        future_results = yield self._ctx.commit()
-                        results = await future_results
-                        print(results[0].stdout.strip())
+                        yield script
+
+                        result = (await future_result).stdout
+                        print(result.strip() if result else "")
 
 
             async def main():

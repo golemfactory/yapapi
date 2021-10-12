@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
+from datetime import timedelta
 import pathlib
 import random
 import sys
@@ -27,6 +28,7 @@ from utils import (
     TEXT_COLOR_RED,
     TEXT_COLOR_YELLOW,
     run_golem_example,
+    print_env_info,
 )
 
 
@@ -42,18 +44,23 @@ class SshService(Service):
             capabilities=[vm.VM_CAPS_VPN],
         )
 
-    async def run(self):
-        connection_uri = self.network_node.get_websocket_uri(22)
-        app_key = self.cluster._engine._api_config.app_key
+    async def start(self):
+        # perform the initialization of the Service
+        # (which includes sending the network details within the `deploy` command)
+        async for script in super().start():
+            yield script
 
         password = "".join(random.choice(string.ascii_letters + string.digits) for _ in range(8))
 
-        script = self._ctx.new_script()
+        script = self._ctx.new_script(timeout=timedelta(seconds=10))
         script.run("/bin/bash", "-c", "syslogd")
         script.run("/bin/bash", "-c", "ssh-keygen -A")
         script.run("/bin/bash", "-c", f'echo -e "{password}\n{password}" | passwd')
         script.run("/bin/bash", "-c", "/usr/sbin/sshd")
         yield script
+
+        connection_uri = self.network_node.get_websocket_uri(22)
+        app_key = self.cluster._engine._api_config.app_key
 
         print(
             "Connect with:\n"
@@ -63,9 +70,6 @@ class SshService(Service):
         )
 
         print(f"{TEXT_COLOR_RED}password: {password}{TEXT_COLOR_DEFAULT}")
-
-        # await indefinitely...
-        await asyncio.Future()
 
 
 async def main(subnet_tag, payment_driver=None, payment_network=None):
@@ -78,34 +82,29 @@ async def main(subnet_tag, payment_driver=None, payment_network=None):
         payment_driver=payment_driver,
         payment_network=payment_network,
     ) as golem:
-
-        print(
-            f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n"
-            f"Using subnet: {TEXT_COLOR_YELLOW}{golem.subnet_tag}{TEXT_COLOR_DEFAULT}, "
-            f"payment driver: {TEXT_COLOR_YELLOW}{golem.payment_driver}{TEXT_COLOR_DEFAULT}, "
-            f"and network: {TEXT_COLOR_YELLOW}{golem.payment_network}{TEXT_COLOR_DEFAULT}\n"
-        )
+        print_env_info(golem)
 
         network = await golem.create_network("192.168.0.1/24")
-        cluster = await golem.run_service(SshService, network=network, num_instances=2)
+        async with network:
+            cluster = await golem.run_service(SshService, network=network, num_instances=2)
 
-        def instances():
-            return [f"{s.provider_name}: {s.state.value}" for s in cluster.instances]
+            def instances():
+                return [f"{s.provider_name}: {s.state.value}" for s in cluster.instances]
 
-        while True:
-            print(instances())
-            try:
+            while True:
+                print(instances())
+                try:
+                    await asyncio.sleep(5)
+                except (KeyboardInterrupt, asyncio.CancelledError):
+                    break
+
+            cluster.stop()
+
+            cnt = 0
+            while cnt < 3 and any(s.is_available for s in cluster.instances):
+                print(instances())
                 await asyncio.sleep(5)
-            except (KeyboardInterrupt, asyncio.CancelledError):
-                break
-
-        cluster.stop()
-
-        cnt = 0
-        while cnt < 3 and any(s.is_available for s in cluster.instances):
-            print(instances())
-            await asyncio.sleep(5)
-            cnt += 1
+                cnt += 1
 
 
 if __name__ == "__main__":
