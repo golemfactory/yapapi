@@ -655,10 +655,11 @@ class Cluster(AsyncContextManager):
         batch_task: Optional[asyncio.Task] = None
         signal_task: Optional[asyncio.Task] = None
 
-        def get_next_handler(instance: ServiceInstance):
+        def update_handler(instance: ServiceInstance):
             nonlocal handler
 
             try:
+                # if handler cannot be obtained, it's not changed here; state transition changes it
                 handler = self._get_handler(instance)
                 logger.debug("%s state changed to %s", instance.service, instance.state.value)
             except Exception:
@@ -675,14 +676,14 @@ class Cluster(AsyncContextManager):
             nonlocal batch_task, handler, instance
 
             if self._change_state(instance, event):
-                get_next_handler(instance)
+                update_handler(instance)
 
             if batch_task:
                 batch_task.cancel()
                 # TODO: await batch_task here?
             batch_task = None
 
-        get_next_handler(instance)
+        update_handler(instance)
 
         while handler:
             # Repeatedly wait on one of `(batch_task, signal_task)` to finish.
