@@ -659,7 +659,7 @@ class Cluster(AsyncContextManager):
             nonlocal handler
 
             try:
-                # if handler cannot be obtained, it's not changed here; state transition changes it
+                # if handler cannot be obtained, it's not changed here, but in change_state
                 handler = self._get_handler(instance)
                 logger.debug("%s state changed to %s", instance.service, instance.state.value)
             except Exception:
