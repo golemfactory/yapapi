@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "yapapi"
-version = "0.7.0-alpha.1"
+version = "0.8.0-dev"
 description = "High-level Python API for the New Golem"
 authors = ["Przemysław K. Rekucki <przemyslaw.rekucki@golem.network>", "GolemFactory <contact@golem.network>"]
 license = "LGPL-3.0-or-later"
@@ -126,8 +126,12 @@ liccheck = ["_liccheck_export", "_liccheck_verify"]
 check = ["test", "typecheck", "codestyle", "liccheck"]
 clean = "rm -rf .coverage .requirements.txt dist md handbook build"
 clean_blender = "rm -f examples/blender/*.png examples/blender/*.log"
+clean_hello = "rm -f examples/hello-world/*.log"
+clean_http_proxy = "rm -f examples/http-proxy/*.log"
 clean_simple_service = "rm -f examples/simple-service-poc/*.png examples/simple-service-poc/*.log"
-clean_examples = ["clean_blender", "clean_simple_service"]
+clean_ssh = "rm -f examples/ssh/*.log"
+clean_yacat = "rm -f examples/yacat/*.log"
+clean_examples = ["clean_blender", "clean_hello", "clean_http_proxy", "clean_simple_service", "clean_ssh", "clean_yacat"]
 docs = "portray as_html --overwrite"
 pdocs = "pdocs as_markdown yapapi -e -ov -o md"
 pydoc-markdown = "pydoc-markdown --build --site-dir=_"
