@@ -91,15 +91,7 @@ async def main(subnet_tag, payment_driver=None, payment_network=None, show_usage
                 print(
                     f"{TEXT_COLOR_MAGENTA}"
                     f" --- {ctx.provider_name} STATE: {raw_state}"
-                    f"{TEXT_COLOR_DEFAULT}"
-                )
-                print(
-                    f"{TEXT_COLOR_MAGENTA}"
                     f" --- {ctx.provider_name} USAGE: {usage}"
-                    f"{TEXT_COLOR_DEFAULT}"
-                )
-                print(
-                    f"{TEXT_COLOR_MAGENTA}"
                     f" --- {ctx.provider_name}  COST: {cost}"
                     f"{TEXT_COLOR_DEFAULT}"
                 )
