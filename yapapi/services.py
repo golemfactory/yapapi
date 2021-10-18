@@ -651,10 +651,39 @@ class Cluster(AsyncContextManager):
 
         logger.info("%s commissioned", instance.service)
 
-        handler = self._get_handler(instance)
-
+        handler = None
         batch_task: Optional[asyncio.Task] = None
         signal_task: Optional[asyncio.Task] = None
+
+        def update_handler(instance: ServiceInstance):
+            nonlocal handler
+
+            try:
+                # if handler cannot be obtained, it's not changed here, but in change_state
+                handler = self._get_handler(instance)
+                logger.debug("%s state changed to %s", instance.service, instance.state.value)
+            except Exception:
+                logger.error(
+                    "Error getting '%s' handler for %s: %s",
+                    instance.state.value,
+                    instance.service,
+                    sys.exc_info(),
+                )
+                change_state(sys.exc_info())
+
+        def change_state(event: Union[ControlSignal, ExcInfo] = (None, None, None)) -> None:
+            """Initiate state transition, due to a signal, an error, or handler termination."""
+            nonlocal batch_task, handler, instance
+
+            if self._change_state(instance, event):
+                update_handler(instance)
+
+            if batch_task:
+                batch_task.cancel()
+                # TODO: await batch_task here?
+            batch_task = None
+
+        update_handler(instance)
 
         while handler:
             # Repeatedly wait on one of `(batch_task, signal_task)` to finish.
@@ -671,19 +700,6 @@ class Cluster(AsyncContextManager):
                 (batch_task, signal_task), return_when=asyncio.FIRST_COMPLETED
             )
 
-            def change_state(event: Union[ControlSignal, ExcInfo] = (None, None, None)) -> None:
-                """Initiate state transition, due to a signal, an error, or handler termination."""
-                nonlocal batch_task, handler, instance
-
-                if self._change_state(instance, event):
-                    handler = self._get_handler(instance)
-                    logger.debug("%s state changed to %s", instance.service, instance.state.value)
-
-                if batch_task:
-                    batch_task.cancel()
-                    # TODO: await batch_task here?
-                batch_task = None
-
             if batch_task in done:
                 # Process a batch
                 try:
@@ -695,6 +711,13 @@ class Cluster(AsyncContextManager):
                     batch = batch_task.result()
                 except StopAsyncIteration:
                     change_state()
+
+                    # work-around an issue preventing nodes from getting correct information about
+                    # each other on instance startup by re-sending the information after the service
+                    # transitions to the running state
+                    if self.network and instance.state == ServiceState.running:
+                        await self.network.refresh_nodes()
+
                 except Exception:
                     logger.warning("Unhandled exception in service", exc_info=True)
                     change_state(sys.exc_info())
