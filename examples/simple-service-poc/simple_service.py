@@ -94,19 +94,14 @@ class SimpleService(Service):
             yield script
 
             if self._show_usage:
+                raw_state = await self._ctx.get_raw_state()
+                usage = format_usage(await self._ctx.get_usage())
+                cost = await self._ctx.get_cost()
                 print(
                     f"{TEXT_COLOR_MAGENTA}"
-                    f" --- {self.name} STATE: {await self._ctx.get_raw_state()}"
-                    f"{TEXT_COLOR_DEFAULT}"
-                )
-                print(
-                    f"{TEXT_COLOR_MAGENTA}"
-                    f" --- {self.name} USAGE: {format_usage(await self._ctx.get_usage())}"
-                    f"{TEXT_COLOR_DEFAULT}"
-                )
-                print(
-                    f"{TEXT_COLOR_MAGENTA}"
-                    f" --- {self.name}  COST: {await self._ctx.get_cost()}"
+                    f" --- {self.name} STATE: {raw_state}"
+                    f" --- {self.name} USAGE: {usage}"
+                    f" --- {self.name}  COST: {cost}"
                     f"{TEXT_COLOR_DEFAULT}"
                 )
 
@@ -117,11 +112,8 @@ class SimpleService(Service):
         yield script
 
         if self._show_usage:
-            print(
-                f"{TEXT_COLOR_MAGENTA}"
-                f" --- {self.name}  COST: {await self._ctx.get_cost()}"
-                f"{TEXT_COLOR_DEFAULT}"
-            )
+            cost = await self._ctx.get_cost()
+            print(f"{TEXT_COLOR_MAGENTA} --- {self.name}  COST: {cost} {TEXT_COLOR_DEFAULT}")
 
 
 async def main(
