@@ -45,7 +45,8 @@ semantic-version="^2.8"
 # It will be then installable with `poetry install -E integration-tests`.
 # Note that putting `goth` in `poetry.dev-dependencies` instead of `poetry.dependencies`
 # would not work: see https://github.com/python-poetry/poetry/issues/129.
-goth = { version = "^0.7", optional = true, python = "^3.8.0" }
+# goth = { version = "^0.7", optional = true, python = "^3.8.0" }
+goth = { git = "https://github.com/golemfactory/goth.git", branch = "km/polygon-support", optional = true, python = "^3.8.0", develop = true }
 # goth = { git = "https://github.com/golemfactory/goth.git", branch = "your-branch-name", optional = true, python = "^3.8.0", develop = true }
 Deprecated = "^1.2.12"
 python-statemachine = "^0.8.0"
