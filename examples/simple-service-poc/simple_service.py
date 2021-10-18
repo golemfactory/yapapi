@@ -99,8 +99,8 @@ class SimpleService(Service):
                 cost = await self._ctx.get_cost()
                 print(
                     f"{TEXT_COLOR_MAGENTA}"
-                    f" --- {self.name} STATE: {raw_state}"
-                    f" --- {self.name} USAGE: {usage}"
+                    f" --- {self.name} STATE: {raw_state}\n"
+                    f" --- {self.name} USAGE: {usage}\n"
                     f" --- {self.name}  COST: {cost}"
                     f"{TEXT_COLOR_DEFAULT}"
                 )
