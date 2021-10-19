@@ -156,10 +156,10 @@ class HttpService(Service):
 
 async def main(
     subnet_tag,
-    payment_driver=None,
-    payment_network=None,
-    num_instances=1,
-    port=8080,
+    payment_driver,
+    payment_network,
+    num_instances,
+    port,
 ):
     async with Golem(
         budget=1.0,
