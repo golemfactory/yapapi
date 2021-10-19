@@ -40,7 +40,7 @@ from utils import (
 )
 
 
-async def main(golem, show_usage=False):
+async def main(golem, show_usage, min_cpu_threads):
     print_env_info(golem)
 
     package = await vm.repo(
@@ -50,7 +50,7 @@ async def main(golem, show_usage=False):
         # only run on provider nodes that have more than 2gb of storage space available
         min_storage_gib=2.0,
         # only run on provider nodes which have more than one CPU core
-        min_cpu_threads=2,
+        min_cpu_threads=min_cpu_threads,
     )
 
     async def worker(ctx: WorkContext, tasks):
@@ -154,6 +154,12 @@ async def main(golem, show_usage=False):
 if __name__ == "__main__":
     parser = build_parser("Render a Blender scene")
     parser.add_argument("--show-usage", action="store_true", help="show activity usage and cost")
+    parser.add_argument(
+        "--min-cpu-threads",
+        type=int,
+        default=2,
+        help="require the provider nodes this minimum number of available CPU threads",
+    )
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     parser.set_defaults(log_file=f"blender-yapapi-{now}.log")
     args = parser.parse_args()
@@ -169,6 +175,7 @@ if __name__ == "__main__":
         main(
             golem,
             show_usage=args.show_usage,
+            min_cpu_threads=args.min_cpu_threads,
         ),
         log_file=args.log_file,
     )
