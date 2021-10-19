@@ -45,8 +45,12 @@ async def main(golem, show_usage=False):
 
     package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+        # only run on provider nodes that have more than 0.5gb of RAM available
         min_mem_gib=0.5,
+        # only run on provider nodes that have more than 2gb of storage space available
         min_storage_gib=2.0,
+        # only run on provider nodes which have more than one CPU core
+        min_cpu_threads=2,
     )
 
     async def worker(ctx: WorkContext, tasks):
