@@ -49,7 +49,7 @@ async def main(golem, show_usage, min_cpu_threads):
         min_mem_gib=0.5,
         # only run on provider nodes that have more than 2gb of storage space available
         min_storage_gib=2.0,
-        # only run on provider nodes which have more than one CPU core
+        # only run on provider nodes which a certain number of CPU threads available
         min_cpu_threads=min_cpu_threads,
     )
 
@@ -158,7 +158,7 @@ if __name__ == "__main__":
         "--min-cpu-threads",
         type=int,
         default=2,
-        help="require the provider nodes this minimum number of available CPU threads",
+        help="require the provider nodes to have at least this number of available CPU threads",
     )
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     parser.set_defaults(log_file=f"blender-yapapi-{now}.log")

@@ -153,7 +153,7 @@ if __name__ == "__main__":
         "--min-cpu-threads",
         type=int,
         default=2,
-        help="require the provider nodes this minimum number of available CPU threads",
+        help="require the provider nodes to have at least this number of available CPU threads",
     )
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     parser.set_defaults(log_file=f"blender-yapapi-{now}.log")
