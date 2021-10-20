@@ -51,7 +51,7 @@ def build_parser(description: str) -> argparse.ArgumentParser:
 
 def format_usage(usage):
     return {
-        "current_usage": {k.name: v for k, v in usage.current_usage.items()},
+        "current_usage": usage.current_usage,
         "timestamp": usage.timestamp.isoformat(sep=" ") if usage.timestamp else None,
     }
 
