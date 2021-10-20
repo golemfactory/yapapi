@@ -36,6 +36,7 @@ from utils import (
     TEXT_COLOR_MAGENTA,
     format_usage,
     print_env_info,
+    run_golem_example,
 )
 
 
@@ -102,16 +103,8 @@ async def main(golem, show_usage=False):
                 cost = await ctx.get_cost()
                 print(
                     f"{TEXT_COLOR_MAGENTA}"
-                    f" --- {ctx.provider_name} STATE: {raw_state}"
-                    f"{TEXT_COLOR_DEFAULT}"
-                )
-                print(
-                    f"{TEXT_COLOR_MAGENTA}"
-                    f" --- {ctx.provider_name} USAGE: {usage}"
-                    f"{TEXT_COLOR_DEFAULT}"
-                )
-                print(
-                    f"{TEXT_COLOR_MAGENTA}"
+                    f" --- {ctx.provider_name} STATE: {raw_state}\n"
+                    f" --- {ctx.provider_name} USAGE: {usage}\n"
                     f" --- {ctx.provider_name}  COST: {cost}"
                     f"{TEXT_COLOR_DEFAULT}"
                 )
@@ -161,52 +154,17 @@ if __name__ == "__main__":
     parser.set_defaults(log_file=f"blender-yapapi-{now}.log")
     args = parser.parse_args()
 
-    # This is only required when running on Windows with Python prior to 3.8:
-    windows_event_loop_fix()
-
-    enable_default_logger(
-        log_file=args.log_file,
-        debug_activity_api=True,
-        debug_market_api=True,
-        debug_payment_api=True,
-    )
-
-    loop = asyncio.get_event_loop()
-
     golem = Golem(
         budget=10,
         subnet_tag=args.subnet_tag,
         payment_driver=args.payment_driver,
         payment_network=args.payment_network,
     )
-    task = loop.create_task(main(golem, show_usage=args.show_usage))
 
-    try:
-        loop.run_until_complete(task)
-    except NoPaymentAccountError as e:
-        handbook_url = (
-            "https://handbook.golem.network/requestor-tutorials/"
-            "flash-tutorial-of-requestor-development"
-        )
-        print(
-            f"{TEXT_COLOR_RED}"
-            f"No payment account initialized for driver `{e.required_driver}` "
-            f"and network `{e.required_network}`.\n\n"
-            f"See {handbook_url} on how to initialize payment accounts for a requestor node."
-            f"{TEXT_COLOR_DEFAULT}"
-        )
-    except KeyboardInterrupt:
-        print(
-            f"{TEXT_COLOR_YELLOW}"
-            "Shutting down gracefully, please wait a short while "
-            "or press Ctrl+C to exit immediately..."
-            f"{TEXT_COLOR_DEFAULT}"
-        )
-        task.cancel()
-        try:
-            loop.run_until_complete(task)
-            print(
-                f"{TEXT_COLOR_YELLOW}Shutdown completed, thank you for waiting!{TEXT_COLOR_DEFAULT}"
-            )
-        except (asyncio.CancelledError, KeyboardInterrupt):
-            pass
+    run_golem_example(
+        main(
+            golem,
+            show_usage=args.show_usage,
+        ),
+        log_file=args.log_file,
+    )
