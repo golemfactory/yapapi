@@ -110,13 +110,18 @@ async def repo(
     example usage::
 
         package = await vm.repo(
+            # if we provide only the image hash, the image will be automatically pulled from Golem's image repository
             image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
         )
 
-    example usage with an explicit GVMI image URL::
+    example usage with an explicit GVMI image URL (useful to host images outside the Golem repository)::
 
         package = await vm.repo(
+            # we still need to provide the image's hash because the image's integrity is validated by the runtime on the provider node
+            # the hash can be calculated by running `sha3sum -a 224 <image_filename.gvmi>`
             image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
+
+            # the URL can point to any publicly-available location on the web
             image_url="http://girepo.dev.golem.network:8000/docker-golem-hello-world-latest-779758b432.gvmi",
         )
 
