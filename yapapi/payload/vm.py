@@ -106,6 +106,32 @@ async def repo(
     :param min_cpu_threads: minimal available logical CPU cores
     :param capabilities: an optional list of required vm capabilities
     :return: the payload definition for the given VM image
+
+    example usage::
+
+        package = await vm.repo(
+            image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
+        )
+
+    example usage with an explicit GVMI image URL::
+
+        package = await vm.repo(
+            image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
+            image_url="http://girepo.dev.golem.network:8000/docker-golem-hello-world-latest-779758b432.gvmi",
+        )
+
+    example usage with additional constraints::
+
+        package = await vm.repo(
+            image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+            # only run on provider nodes that have more than 0.5gb of RAM available
+            min_mem_gib=0.5,
+            # only run on provider nodes that have more than 2gb of storage space available
+            min_storage_gib=2.0,
+            # only run on provider nodes which a certain number of CPU threads available
+            min_cpu_threads=min_cpu_threads,
+        )
+
     """
     capabilities = capabilities or list()
     return _VmPackage(
