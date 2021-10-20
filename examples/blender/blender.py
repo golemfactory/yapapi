@@ -35,7 +35,7 @@ async def main(
         min_mem_gib=0.5,
         # only run on provider nodes that have more than 2gb of storage space available
         min_storage_gib=2.0,
-        # only run on provider nodes which a certain number of CPU threads available
+        # only run on provider nodes which a certain number of CPU threads (logical CPU cores) available
         min_cpu_threads=min_cpu_threads,
     )
 
