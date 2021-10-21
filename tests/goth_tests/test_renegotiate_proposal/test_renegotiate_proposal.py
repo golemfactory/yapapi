@@ -40,7 +40,7 @@ async def test_renegotiation(
             cmd_monitor,
         ):
 
-            await cmd_monitor.wait_for_pattern(r"\[.+\] Renegotiating", timeout=20)
-            await cmd_monitor.wait_for_pattern(r"agreement.terminate\(\): True", timeout=20)
+            await cmd_monitor.wait_for_pattern(r"\[.+\] Renegotiating", timeout=50)
+            await cmd_monitor.wait_for_pattern(r"agreement.terminate\(\): True", timeout=50)
             # assert not "Main timeout triggered :("
-            await cmd_monitor.wait_for_pattern(r"All done", timeout=20)
+            await cmd_monitor.wait_for_pattern(r"All done", timeout=50)
