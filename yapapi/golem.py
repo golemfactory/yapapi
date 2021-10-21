@@ -114,7 +114,7 @@ class Golem:
             warn_deprecated("network", "payment_network", "0.7.0", Deprecated.parameter)
             payment_network = payment_network if payment_network else network
 
-        self._init_args = {
+        self._engine_args = {
             "budget": budget,
             "strategy": strategy,
             "subnet_tag": subnet_tag,
@@ -202,17 +202,7 @@ class Golem:
         return res
 
     def _get_new_engine(self):
-        args = self._init_args
-        return _Engine(
-            budget=args["budget"],
-            strategy=args["strategy"],
-            subnet_tag=args["subnet_tag"],
-            payment_driver=args["payment_driver"],
-            payment_network=args["payment_network"],
-            event_consumer=args["event_consumer"],
-            stream_output=args["stream_output"],
-            app_key=args["app_key"],
-        )
+        return _Engine(**self._engine_args)
 
     async def execute_tasks(
         self,
