@@ -41,6 +41,24 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         name: Enable extended checks
         id: extended-checks
+
+      # NOTE: following two steps ("Set up cache" and "Ensure cache is healthy") hopefully fix
+      # https://github.com/golemfactory/yapapi/issues/673
+      #
+      # They were copied from poetry workflows:
+      # https://github.com/python-poetry/poetry/blob/527882380fd7aecd7c34922a7bc888226a5737ff/.github/workflows/main.yml#L68-L78
+      - name: Set up cache
+        uses: actions/cache@v2
+        id: cache
+        with:
+          path: .venv
+          key: venv-${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Ensure cache is healthy
+        if: steps.cache.outputs.cache-hit == 'true'
+        shell: bash
+        run: timeout 10s poetry run pip --version || rm -rf .venv
+
       - run: poetry install -E cli
       - run: poetry run poe test
       - run: poetry run poe typecheck
