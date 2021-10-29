@@ -140,7 +140,7 @@ async def main(
         async def wait_until_started(end_time):
             started = False
             while not started and datetime.now() < end_time:
-                print([str(iw) for iw in instance_wrappers])
+                print(instance_wrappers)
                 await asyncio.sleep(5)
                 started = all(iw.status == 'running' for iw in instance_wrappers)
 
@@ -151,7 +151,7 @@ async def main(
 
         async def run_for_a_while(end_time):
             while datetime.now() < end_time:
-                print([str(iw) for iw in instance_wrappers])
+                print(instance_wrappers)
                 await asyncio.sleep(5)
                 all_running = all(iw.status == 'running' for iw in instance_wrappers)
                 if not all_running:
@@ -160,7 +160,7 @@ async def main(
         async def stop(end_time):
             cluster.stop()
             while datetime.now() < end_time:
-                print([str(iw) for iw in instance_wrappers])
+                print(instance_wrappers)
                 await asyncio.sleep(5)
 
             if any(iw.status != 'stopped' for iw in instance_wrappers):
