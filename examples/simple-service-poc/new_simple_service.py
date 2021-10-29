@@ -11,9 +11,8 @@ import sys
 
 
 from yapapi import Golem
-from yapapi.services import Service, ServiceState
+from yapapi.services import Service
 
-from yapapi.log import pluralize
 from yapapi.payload import vm
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
@@ -23,7 +22,6 @@ from utils import (
     build_parser,
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
-    TEXT_COLOR_RED,
     TEXT_COLOR_YELLOW,
     TEXT_COLOR_MAGENTA,
     format_usage,
@@ -32,6 +30,7 @@ from utils import (
 )
 
 STARTING_TIMEOUT = timedelta(minutes=4)
+STOPPING_TIMEOUT = timedelta(seconds=30)
 
 
 class SimpleService(Service):
@@ -128,16 +127,6 @@ async def main(
     ) as golem:
         print_env_info(golem)
 
-        commissioning_time = datetime.now()
-
-        print(
-            f"{TEXT_COLOR_YELLOW}"
-            f"Starting {pluralize(num_instances, 'instance')}..."
-            f"{TEXT_COLOR_DEFAULT}"
-        )
-
-        # start the service
-
         cluster = await golem.run_service(
             SimpleService,
             instance_params=[
@@ -146,48 +135,31 @@ async def main(
             ],
             expiration=datetime.now(timezone.utc) + timedelta(minutes=120),
         )
+        instance_wrappers = cluster.instance_wrappers
 
-        # helper functions to display / filter instances
+        async def wait_for_status(status, timeout):
+            end_time = datetime.now() + timeout
+            while any(iw.status != status for iw in instance_wrappers) and datetime.now() < end_time:
+                print(instance_wrappers)
+                await asyncio.sleep(5)
 
-        def instances():
-            return [f"{s.name}: {s.state.value} on {s.provider_name}" for s in cluster.instances]
+            if any(iw.status != status for iw in instance_wrappers):
+                raise Exception(f"Some instances are still not {status} after {timeout} elapsed :( ...")
+            else:
+                print(f"{TEXT_COLOR_YELLOW}All instances are {status} :){TEXT_COLOR_DEFAULT}")
 
-        def still_starting():
-            return len(cluster.instances) < num_instances or any(
-                s.state == ServiceState.starting for s in cluster.instances
-            )
+        async def run_until(end_time):
+            while datetime.now() < end_time:
+                print(instance_wrappers)
+                await asyncio.sleep(5)
+                all_running = all(iw.status == 'running' for iw in instance_wrappers)
+                if not all_running:
+                    raise Exception("Instance was stopped in an unexpected way")
 
-        # wait until instances are started
-
-        while still_starting() and datetime.now() < commissioning_time + STARTING_TIMEOUT:
-            print(f"instances: {instances()}")
-            await asyncio.sleep(5)
-
-        if still_starting():
-            raise Exception(f"Failed to start instances before {STARTING_TIMEOUT} elapsed :( ...")
-
-        print(f"{TEXT_COLOR_YELLOW}All instances started :){TEXT_COLOR_DEFAULT}")
-
-        # allow the service to run for a short while
-        # (and allowing its requestor-end handlers to interact with it)
-
-        start_time = datetime.now()
-
-        while datetime.now() < start_time + timedelta(seconds=running_time):
-            print(f"instances: {instances()}")
-            await asyncio.sleep(5)
-
-        print(f"{TEXT_COLOR_YELLOW}Stopping instances...{TEXT_COLOR_DEFAULT}")
+        await wait_for_status('running', STARTING_TIMEOUT)
+        await run_until(datetime.now() + timedelta(seconds=running_time))
         cluster.stop()
-
-        # wait for instances to stop
-
-        cnt = 0
-        while cnt < 10 and any(s.is_available for s in cluster.instances):
-            print(f"instances: {instances()}")
-            await asyncio.sleep(5)
-
-    print(f"instances: {instances()}")
+        await wait_for_status('stopped', STOPPING_TIMEOUT)
 
 
 if __name__ == "__main__":
