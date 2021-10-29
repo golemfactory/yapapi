@@ -137,38 +137,29 @@ async def main(
         )
         instance_wrappers = cluster.instance_wrappers
 
-        async def wait_until_started(end_time):
-            started = False
-            while not started and datetime.now() < end_time:
+        async def wait_for_status(status, timeout):
+            end_time = datetime.now() + timeout
+            while any(iw.status != status for iw in instance_wrappers) and datetime.now() < end_time:
                 print(instance_wrappers)
                 await asyncio.sleep(5)
-                started = all(iw.status == 'running' for iw in instance_wrappers)
 
-            if started:
-                print(f"{TEXT_COLOR_YELLOW}All instances started :){TEXT_COLOR_DEFAULT}")
+            if any(iw.status != status for iw in instance_wrappers):
+                raise Exception(f"Some instances are still not {status} after {timeout} elapsed :( ...")
             else:
-                raise Exception(f"Failed to start instances before {STARTING_TIMEOUT} elapsed :( ...")
+                print(f"{TEXT_COLOR_YELLOW}All instances are {status} :){TEXT_COLOR_DEFAULT}")
 
-        async def run_for_a_while(end_time):
+        async def run_until(end_time):
             while datetime.now() < end_time:
                 print(instance_wrappers)
                 await asyncio.sleep(5)
                 all_running = all(iw.status == 'running' for iw in instance_wrappers)
                 if not all_running:
-                    raise Exception("Insance was stopped in an unexpected way")
+                    raise Exception("Instance was stopped in an unexpected way")
 
-        async def stop(end_time):
-            cluster.stop()
-            while datetime.now() < end_time:
-                print(instance_wrappers)
-                await asyncio.sleep(5)
-
-            if any(iw.status != 'stopped' for iw in instance_wrappers):
-                raise Exception("Failed to stop an instance")
-
-        await wait_until_started(datetime.now() + STARTING_TIMEOUT)
-        await run_for_a_while(datetime.now() + timedelta(seconds=running_time))
-        await stop(datetime.now() + STOPPING_TIMEOUT)
+        await wait_for_status('running', STARTING_TIMEOUT)
+        await run_until(datetime.now() + timedelta(seconds=running_time))
+        cluster.stop()
+        await wait_for_status('stopped', STOPPING_TIMEOUT)
 
 
 if __name__ == "__main__":
