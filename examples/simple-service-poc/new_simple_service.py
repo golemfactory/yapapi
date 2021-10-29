@@ -159,7 +159,7 @@ async def main(
         await wait_for_status('running', STARTING_TIMEOUT)
         await run_until(datetime.now() + timedelta(seconds=running_time))
         cluster.stop()
-        await wait_for_status('stopped', STOPPING_TIMEOUT)
+        await wait_for_status('terminated', STOPPING_TIMEOUT)
 
 
 if __name__ == "__main__":

@@ -419,13 +419,19 @@ class ServiceInstance:
     used by the Cluster to hold the complete state of each instance of a service.
     """
 
-    service: Service
+    service: Optional[Service] = None
     control_queue: "asyncio.Queue[ControlSignal]" = field(default_factory=asyncio.Queue)
     service_state: ServiceState = field(default_factory=ServiceState)
     visited_states: List[statemachine.State] = field(default_factory=list)
 
     def __post_init__(self):
         self.service_state.instance = self
+
+    @property
+    def status(self) -> str:
+        if self.service is not None:
+            return self.service.state.value
+        return 'pending'
 
     @property
     def state(self) -> ServiceState:
@@ -436,6 +442,12 @@ class ServiceInstance:
     def started_successfully(self) -> bool:
         """Return `True` if this instance has entered `running` state, `False` otherwise."""
         return ServiceState.running in self.visited_states
+
+    def __repr__(self):
+        if self.status in ('pending', 'terminated'):
+            return f"{self.status} instance"
+        else:
+            return f"{self.service.name}: {self.status} on {self.service.provider_name}"
 
 
 class ClusterState(statemachine.StateMachine):
@@ -491,6 +503,8 @@ class Cluster(AsyncContextManager):
         self._network: Optional[Network] = network
 
         self.__state = ClusterState()
+
+        self.instance_wrappers = self.__instances
 
     @property
     def expiration(self) -> datetime:
@@ -583,7 +597,7 @@ class Cluster(AsyncContextManager):
     @property
     def instances(self) -> List[Service]:
         """Return the list of service instances in this :class:`Cluster`."""
-        return [i.service for i in self.__instances]
+        return [i.service for i in self.__instances if i.service is not None]
 
     def __get_service_instance(self, service: Service) -> ServiceInstance:
         for i in self.__instances:
@@ -647,7 +661,6 @@ class Cluster(AsyncContextManager):
 
     async def _run_instance(self, instance: ServiceInstance):
         loop = asyncio.get_event_loop()
-        self.__instances.append(instance)
 
         logger.info("%s commissioned", instance.service)
 
@@ -759,17 +772,21 @@ class Cluster(AsyncContextManager):
 
         logger.info("%s decommissioned", instance.service)
 
-    async def spawn_instance(self, params: Dict, network_address: Optional[str] = None) -> None:
+    async def spawn_instance(
+        self,
+        instance: ServiceInstance,
+        params: Dict,
+        network_address: Optional[str] = None
+    ) -> None:
         """Spawn a new service instance within this :class:`Cluster`."""
 
         logger.debug("spawning instance within %s", self)
-        instance: Optional[ServiceInstance] = None
         agreement_id: Optional[str]  # set in start_worker
 
         async def _worker(
             agreement: rest.market.Agreement, activity: Activity, work_context: WorkContext
         ) -> None:
-            nonlocal agreement_id, instance
+            nonlocal agreement_id
             agreement_id = agreement.id
 
             task_id = f"{self.id}:{next(self._task_ids)}"
@@ -786,9 +803,7 @@ class Cluster(AsyncContextManager):
             if self.network:
                 node = await self.network.add_node(work_context.provider_id, network_address)
 
-            instance = ServiceInstance(
-                service=self._service_class(self, work_context, network_node=node, **params)  # type: ignore
-            )
+            instance.service = self._service_class(self, work_context, network_node=node, **params)  # type: ignore
             try:
                 if self._state == ClusterState.running:
                     instance_batches = self._run_instance(instance)
@@ -811,7 +826,7 @@ class Cluster(AsyncContextManager):
                 await self._engine.accept_payments_for_agreement(self._job.id, agreement.id)
                 await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
 
-        while instance is None and self._state == ClusterState.running:
+        while instance.service is None and self._state == ClusterState.running:
             agreement_id = None
             await asyncio.sleep(1.0)
             task = await self._engine.start_worker(self._job, _worker)
@@ -902,7 +917,9 @@ class Cluster(AsyncContextManager):
             try:
                 params = next(instance_params)
                 network_address = next(network_addresses_generator)
-                task = loop.create_task(self.spawn_instance(params, network_address))
+                instance = ServiceInstance()
+                self.__instances.append(instance)
+                task = loop.create_task(self.spawn_instance(instance, params, network_address))
                 self._instance_tasks.add(task)
                 spawned_instances += 1
             except StopIteration:
