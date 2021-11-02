@@ -26,7 +26,7 @@ class ChainlinkService(Service):
         while True:
             await asyncio.sleep(3)
             script = self._ctx.new_script()
-            future_result = script.run("/bin/bash", "-c", "chainlink local status 2>&1 || true")
+            future_result = script.run("/bin/bash", "-c", "sleep 1 ; echo $(timeout 5 chainlink local status 2>&1)")
             yield script
             result = (await future_result).stdout
             print(
