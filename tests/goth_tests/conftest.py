@@ -43,16 +43,27 @@ def docker_compose_down_remove_orphans(monkeypatch):
     https://github.com/golemfactory/yapapi/runs/3672786561
 
     If this helps in `yapapi`, we'll consider putting this inside goth"""
+
     async def stop_network(self, compose_containers=None):
         for name, monitor in self._log_monitors.items():
             await monitor.stop()
 
         self._disconnect_containers(compose_containers or [])
 
-        await run_command(["docker-compose", "-f", str(self.config.file_path), "down",
-                           "--remove-orphans", "-t", "0"])
+        await run_command(
+            [
+                "docker-compose",
+                "-f",
+                str(self.config.file_path),
+                "down",
+                "--remove-orphans",
+                "-t",
+                "0",
+            ]
+        )
 
     monkeypatch.setattr(ComposeNetworkManager, "stop_network", stop_network)
+
 
 def pytest_addoption(parser):
     """Add optional parameters to pytest CLI invocations."""
