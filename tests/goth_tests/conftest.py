@@ -6,6 +6,8 @@ from typing import cast, List
 import pytest
 
 from goth.configuration import Override
+from goth.runner.container.compose import ComposeNetworkManager
+from goth.runner.process import run_command
 from yapapi.package import vm
 
 
@@ -34,6 +36,23 @@ def event_loop():
     yield loop
     loop.close()
 
+
+@pytest.fixture(autouse=True)
+def docker_compose_down_remove_orphans(monkeypatch):
+    """Add --remove-orphans, hoping this will end flaky CI errors like
+    https://github.com/golemfactory/yapapi/runs/3672786561
+
+    If this helps in `yapapi`, we'll consider putting this inside goth"""
+    async def stop_network(self, compose_containers=None):
+        for name, monitor in self._log_monitors.items():
+            await monitor.stop()
+
+        self._disconnect_containers(compose_containers or [])
+
+        await run_command(["docker-compose", "-f", str(self.config.file_path), "down",
+                           "--remove-orphans", "-t", "0"])
+
+    monkeypatch.setattr(ComposeNetworkManager, "stop_network", stop_network)
 
 def pytest_addoption(parser):
     """Add optional parameters to pytest CLI invocations."""
