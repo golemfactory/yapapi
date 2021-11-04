@@ -30,13 +30,15 @@ class ChainlinkService(Service):
             "/chainlink/input/job.txt",
         )
         script.run("/bin/bash", "-c", "chainlink admin login --file /chainlink/api")
-        address = script.run("/bin/bash", "-c", "chainlink keys eth list | grep ^Address: | grep -o 0x.*")
+        address = script.run(
+            "/bin/bash", "-c", "chainlink keys eth list | grep ^Address: | grep -o 0x.*"
+        )
         script.run("/bin/bash", "-c", "chainlink jobs create /chainlink/input/job.txt")
         yield script
         print(
             f"\033[33;1mAddress for provider '{self.provider_name}'\033[0m:",
             (await address).stdout,
-            end='',
+            end="",
         )
         while True:
             await asyncio.sleep(3)
