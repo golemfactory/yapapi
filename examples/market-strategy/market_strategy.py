@@ -14,8 +14,8 @@ sys.path.append(str(examples_dir))
 
 from utils import build_parser, run_golem_example, print_env_info  # noqa
 
-#   TODO
-IMAGE_HASH = "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"
+#   Image based on pure python:3.8-alpine
+IMAGE_HASH = "5c385688be6ed4e339a43d8a68bfb674d60951b4970448ba20d1934d"
 
 
 async def main(subnet_tag, payment_driver, payment_network):
