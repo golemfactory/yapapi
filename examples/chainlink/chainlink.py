@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
+import pathlib
 from datetime import datetime, timedelta
 
 from yapapi import Golem
