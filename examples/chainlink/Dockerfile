@@ -1,10 +1,12 @@
 FROM smartcontract/chainlink:1.0.0
 
+VOLUME /chainlink/input
+
 RUN apt-get update && apt-get install -y postgresql postgresql-contrib sudo
 
 RUN sed -i "s/local .*all .*all .*peer/local all all md5/" /etc/postgresql/*/main/pg_hba.conf
 
-RUN mkdir /chainlink && echo 'export ROOT=/chainlink\n\
+RUN mkdir -p /chainlink && echo 'export ROOT=/chainlink\n\
 export LOG_LEVEL=debug\n\
 export ETH_CHAIN_ID=42\n\
 export MIN_OUTGOING_CONFIRMATIONS=2\n\
