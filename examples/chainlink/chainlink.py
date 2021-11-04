@@ -12,14 +12,14 @@ class ChainlinkService(Service):
     @staticmethod
     async def get_payload():
         return await vm.repo(
-            image_hash="a0ae0ded4cd75cf4a58814711704bf46ef8b154225acdd67568f0974",
+            image_hash="77ae0570f437ee923f8fd7cea47553b2f4bcc3de70b8ae492a5abe8c",
         )
 
     async def start(self):
         async for script in super().start():
             yield script
         script = self._ctx.new_script(timeout=timedelta(minutes=2))
-        script.run("/bin/bash", "-c", "/chainlink/run.sh &")
+        script.run("/bin/bash", "-c", "/chainlink/run.sh")
         yield script
 
     async def run(self):
@@ -38,7 +38,7 @@ class ChainlinkService(Service):
 
 
 async def main():
-    async with Golem(budget=1.0, subnet_tag="devnet-beta") as golem:
+    async with Golem(budget=1.0, subnet_tag="chainlink") as golem:
         cluster = await golem.run_service(ChainlinkService, num_instances=3)
         while True:
             await asyncio.sleep(3)
