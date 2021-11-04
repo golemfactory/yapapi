@@ -21,9 +21,7 @@ echo dummy@email.invalid >api && echo dummy!!!!!PASS123 >>api && echo dummy!!!!!
 chmod 755 /\n\
 pg_ctlcluster $(ls /usr/lib/postgresql/ | sort -n | tail -n 1) main start\n\
 chainlink local n --api api --password password $@ 2>/dev/null 1>/dev/null &\n\
-while ! chainlink local status 2>/dev/null 1>/dev/null ; do echo "waiting for chainlink..." ; sleep 1 ; done\n\
-chainlink admin login --file api\n\
-chainlink keys eth list | grep ^Address: | grep -o 0x.*' >/chainlink/run.sh && chmod u+x /chainlink/run.sh
+while ! chainlink local status 2>/dev/null 1>/dev/null ; do echo "waiting for chainlink..." ; sleep 1 ; done' >/chainlink/run.sh && chmod u+x /chainlink/run.sh
 
 RUN /etc/init.d/postgresql start \
     && sudo -u postgres psql -c "CREATE USER chainlink WITH PASSWORD 'pass';" \
