@@ -13,7 +13,7 @@ class ChainlinkService(Service):
     @staticmethod
     async def get_payload():
         return await vm.repo(
-            image_hash="f3c68262470fa785db518f340e95b9968fffb5828dc57ce5f0d17ffd",
+            image_hash="cd42318c0a6508691501dae951eec401f795bf9a9c09bc9f5b0969a3",
         )
 
     async def start(self):
@@ -24,17 +24,22 @@ class ChainlinkService(Service):
         yield script
 
     async def run(self):
+        scr_dir = pathlib.Path(__file__).resolve().parent
         script = self._ctx.new_script()
-        script.upload_file(
-            str(pathlib.Path(__file__).resolve().parent / "job.txt"),
-            "/chainlink/input/job.txt",
-        )
+        script.upload_file(str(scr_dir / "job.txt"), "/chainlink/data/job.txt")
         script.run("/bin/bash", "-c", "chainlink admin login --file /chainlink/api")
         address = script.run(
             "/bin/bash", "-c", "chainlink keys eth list | grep ^Address: | grep -o 0x.*"
         )
         jobs_create_output = script.run(
-            "/bin/bash", "-c", "chainlink jobs create /chainlink/input/job.txt"
+            "/bin/bash", "-c", "chainlink jobs create /chainlink/data/job.txt"
+        )
+        script.run(
+            "/usr/bin/wget",
+            "--save-cookies /chainlink/c.txt",
+            "--keep-session-cookies",
+            "--post-data '{\"email\": \"dummy@email.invalid\", \"password\": \"dummy!!!!!PASS123\"}'",
+            "localhost:6688/sessions",
         )
         yield script
         print(
@@ -53,6 +58,18 @@ class ChainlinkService(Service):
             future_result = script.run(
                 "/bin/bash", "-c", "sleep 1 ; echo $(timeout 5 chainlink local status 2>&1)"
             )
+            script.run(
+                "/bin/bash",
+                "-c",
+                "/usr/bin/wget -v --load-cookies /chainlink/c.txt localhost:6688/health -O - 2>&1 >/chainlink/data/health.txt",
+            )
+            script.download_file(f"/chainlink/data/health.txt", str(scr_dir / "health.txt"))
+            script.run(
+                "/bin/bash",
+                "-c",
+                "/usr/bin/wget -v --load-cookies /chainlink/c.txt localhost:6688/v2/pipeline/runs -O - 2>&1 >/chainlink/data/runs.txt",
+            )
+            script.download_file(f"/chainlink/data/runs.txt", str(scr_dir / "runs.txt"))
             yield script
             result = (await future_result).stdout
             print(

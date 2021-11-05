@@ -1,6 +1,6 @@
 FROM smartcontract/chainlink:1.0.0
 
-VOLUME /chainlink/input
+VOLUME /chainlink/data
 
 RUN apt-get update && apt-get install -y postgresql postgresql-contrib sudo
 
