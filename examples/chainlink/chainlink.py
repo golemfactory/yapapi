@@ -25,6 +25,7 @@ class ChainlinkService(Service):
 
     async def run(self):
         scr_dir = pathlib.Path(__file__).resolve().parent
+        node_id = self._ctx.provider_id
         script = self._ctx.new_script()
         script.upload_file(str(scr_dir / "job.txt"), "/chainlink/data/job.txt")
         script.run("/bin/bash", "-c", "chainlink admin login --file /chainlink/api")
@@ -65,15 +66,21 @@ class ChainlinkService(Service):
                 "-c",
                 "/usr/bin/wget -v --load-cookies /chainlink/c.txt localhost:6688/health -O - 2>&1 >/chainlink/data/health.txt || true",
             )
-            script.download_file(f"/chainlink/data/health.txt", str(scr_dir / "health.txt"))
+            script.download_file(
+                "/chainlink/data/health.txt", str(scr_dir / f"health-{node_id}.txt")
+            )
             script.run(
                 "/bin/bash",
                 "-c",
                 "/usr/bin/wget --load-cookies /chainlink/c.txt localhost:6688/v2/pipeline/runs -v -S -O /chainlink/data/runs.txt -o /chainlink/data/runs-err.txt || true",
             )
-            script.download_file("/chainlink/data/runs.txt", str(scr_dir / "runs.txt"))
-            script.download_file("/chainlink/data/runs-err.txt", str(scr_dir / "runs-err.txt"))
-            script.download_file("/chainlink/data/chainlink.log", str(scr_dir / "chainlink.log"))
+            script.download_file("/chainlink/data/runs.txt", str(scr_dir / f"runs-{node_id}.txt"))
+            script.download_file(
+                "/chainlink/data/runs-err.txt", str(scr_dir / f"runs-err-{node_id}.txt")
+            )
+            script.download_file(
+                "/chainlink/data/chainlink.log", str(scr_dir / f"chainlink-{node_id}.log")
+            )
             yield script
             result = (await future_result).stdout
             print(
@@ -84,7 +91,7 @@ class ChainlinkService(Service):
 
 async def main():
     async with Golem(budget=1.0, subnet_tag="chainlink") as golem:
-        cluster = await golem.run_service(ChainlinkService, num_instances=1)
+        cluster = await golem.run_service(ChainlinkService, num_instances=3)
         while True:
             await asyncio.sleep(3)
 
