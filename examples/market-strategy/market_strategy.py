@@ -16,6 +16,7 @@ from utils import build_parser, run_golem_example, print_env_info  # noqa
 
 #   Image based on pure python:3.8-alpine
 IMAGE_HASH = "5c385688be6ed4e339a43d8a68bfb674d60951b4970448ba20d1934d"
+TASK_CMD = ['/usr/local/bin/python', '-c', 'for i in range(10000000): i * 7']
 
 
 async def main(subnet_tag, payment_driver, payment_network):
@@ -24,8 +25,13 @@ async def main(subnet_tag, payment_driver, payment_network):
     async def worker(ctx: WorkContext, tasks):
         async for task in tasks:
             script = ctx.new_script()
-            script.run('/bin/sleep', '7')
+            result = script.run('/usr/bin/time', '-p', *TASK_CMD)
             yield script
+
+            real_time_str = result.result().stderr.split()[1]
+            real_time = float(real_time_str)
+            print("RESULT", ctx.provider_name, ctx.provider_id, real_time)
+
             task.accept_result()
 
     async with Golem(
@@ -36,10 +42,10 @@ async def main(subnet_tag, payment_driver, payment_network):
     ) as golem:
         print_env_info(golem)
 
-        tasks = [Task(data=None) for _ in range(3)]
+        tasks = [Task(data=None) for _ in range(100)]
 
-        async for task in golem.execute_tasks(worker, tasks, payload, max_workers=1):
-            print("EXECUTED TASK", task)
+        async for task in golem.execute_tasks(worker, tasks, payload, max_workers=10):
+            pass
 
 
 if __name__ == "__main__":
