@@ -84,7 +84,7 @@ class ChainlinkService(Service):
 
 async def main():
     async with Golem(budget=1.0, subnet_tag="chainlink") as golem:
-        cluster = await golem.run_service(ChainlinkService, num_instances=3)
+        cluster = await golem.run_service(ChainlinkService, num_instances=1)
         while True:
             await asyncio.sleep(3)
 
