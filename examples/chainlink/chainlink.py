@@ -13,7 +13,7 @@ class ChainlinkService(Service):
     @staticmethod
     async def get_payload():
         return await vm.repo(
-            image_hash="cd42318c0a6508691501dae951eec401f795bf9a9c09bc9f5b0969a3",
+            image_hash="bdcd10f2cc95e296174975d9a1a170ee0d0efd01b5ff8316aa9a65fa",
         )
 
     async def start(self):
@@ -71,8 +71,9 @@ class ChainlinkService(Service):
                 "-c",
                 "/usr/bin/wget --load-cookies /chainlink/c.txt localhost:6688/v2/pipeline/runs -v -S -O /chainlink/data/runs.txt -o /chainlink/data/runs-err.txt || true",
             )
-            script.download_file(f"/chainlink/data/runs.txt", str(scr_dir / "runs.txt"))
-            script.download_file(f"/chainlink/data/runs-err.txt", str(scr_dir / "runs-err.txt"))
+            script.download_file("/chainlink/data/runs.txt", str(scr_dir / "runs.txt"))
+            script.download_file("/chainlink/data/runs-err.txt", str(scr_dir / "runs-err.txt"))
+            script.download_file("/chainlink/data/chainlink.log", str(scr_dir / "chainlink.log"))
             yield script
             result = (await future_result).stdout
             print(
