@@ -40,7 +40,7 @@ class ChainlinkService(Service):
             "/chainlink/c.txt",
             "--keep-session-cookies",
             "--post-data",
-            "{\"email\": \"dummy@email.invalid\", \"password\": \"dummy!!!!!PASS123\"}",
+            '{"email": "dummy@email.invalid", "password": "dummy!!!!!PASS123"}',
             "localhost:6688/sessions",
         )
         yield script
