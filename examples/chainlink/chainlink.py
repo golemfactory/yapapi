@@ -69,7 +69,7 @@ class ChainlinkService(Service):
             script.run(
                 "/bin/bash",
                 "-c",
-                "/usr/bin/wget -v --load-cookies /chainlink/c.txt localhost:6688/v2/pipeline/runs -O - 2>&1 >/chainlink/data/runs.txt && true",
+                "/usr/bin/wget -v --load-cookies /chainlink/c.txt localhost:6688/v2/pipeline/runs -O - 2>&1 >/chainlink/data/runs.txt || true",
             )
             script.download_file(f"/chainlink/data/runs.txt", str(scr_dir / "runs.txt"))
             yield script
