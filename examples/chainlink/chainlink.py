@@ -36,9 +36,11 @@ class ChainlinkService(Service):
         )
         script.run(
             "/usr/bin/wget",
-            "--save-cookies /chainlink/c.txt",
+            "--save-cookies",
+            "/chainlink/c.txt",
             "--keep-session-cookies",
-            "--post-data '{\"email\": \"dummy@email.invalid\", \"password\": \"dummy!!!!!PASS123\"}'",
+            "--post-data",
+            "{\"email\": \"dummy@email.invalid\", \"password\": \"dummy!!!!!PASS123\"}",
             "localhost:6688/sessions",
         )
         yield script
@@ -67,7 +69,7 @@ class ChainlinkService(Service):
             script.run(
                 "/bin/bash",
                 "-c",
-                "/usr/bin/wget -v --load-cookies /chainlink/c.txt localhost:6688/v2/pipeline/runs -O - 2>&1 >/chainlink/data/runs.txt",
+                "/usr/bin/wget -v --load-cookies /chainlink/c.txt localhost:6688/v2/pipeline/runs -O - 2>&1 >/chainlink/data/runs.txt && true",
             )
             script.download_file(f"/chainlink/data/runs.txt", str(scr_dir / "runs.txt"))
             yield script
