@@ -138,7 +138,7 @@ class _Engine:
             )
             # The factor 0.5 below means that an offer for a provider that failed to confirm
             # the last agreement proposed to them will have it's score multiplied by 0.5.
-            strategy = DecreaseScoreForUnconfirmedAgreement(strategy, 0.5)
+            strategy = DecreaseScoreForUnconfirmedAgreement(strategy, self, 0.5)
         self._strategy = strategy
 
         self._subnet: Optional[str] = subnet_tag or DEFAULT_SUBNET
@@ -729,7 +729,7 @@ class Job:
             await proposal.reject(reason)
             return events.ProposalRejected(job_id=self.id, prop_id=proposal.id, reason=reason)
 
-        score = await self.engine._strategy.score_offer(proposal, self.agreements_pool)
+        score = await self.engine._strategy.score_offer(proposal)
         logger.debug(
             "Scored offer %s, provider: %s, strategy: %s, score: %f",
             proposal.id,
