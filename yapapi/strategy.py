@@ -186,4 +186,9 @@ class DecreaseScoreForUnconfirmedAgreement(MarketStrategy):
         return score
 
     def rejected_last_agreement(self, provider_id: str) -> bool:
-        return False
+        """Current implementation checks only if provider rejected last agreement during the job with
+        highest id (that's usually the newest one). There's no real reason behind this except that
+        other solutions are harder to implement."""
+        last_job = sorted(self.engine._jobs, key=lambda job: job.id)[-1]
+        print("LAST JOB", last_job.id)
+        return last_job.agreements_pool.rejected_last_agreement(provider_id)
