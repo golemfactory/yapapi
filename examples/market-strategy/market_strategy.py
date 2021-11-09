@@ -91,7 +91,7 @@ async def main(subnet_tag, payment_driver, payment_network):
 
 
 if __name__ == "__main__":
-    parser = build_parser("Render a Blender scene")
+    parser = build_parser("Select fastest provider using a simple reputation-based market strategy")
     parser.set_defaults(log_file="market-strategy-example.log")
     args = parser.parse_args()
 
