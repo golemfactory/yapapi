@@ -314,7 +314,7 @@ class Executor:
 
             self.emit(events.ComputationFinished(job.id))
 
-        except (Exception, CancelledError, KeyboardInterrupt):
+        except (Exception, KeyboardInterrupt):
             self.emit(events.ComputationFinished(job.id, exc_info=sys.exc_info()))  # type: ignore
             cancelled = True
 
