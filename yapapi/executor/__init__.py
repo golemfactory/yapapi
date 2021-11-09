@@ -270,7 +270,6 @@ class Executor:
             }
         )
         cancelled = False
-        cancelled_by = None
 
         try:
             while wait_until_done in services or not done_queue.empty():
@@ -315,10 +314,9 @@ class Executor:
 
             self.emit(events.ComputationFinished(job.id))
 
-        except (Exception, CancelledError, KeyboardInterrupt) as e:
+        except (Exception, CancelledError, KeyboardInterrupt):
             self.emit(events.ComputationFinished(job.id, exc_info=sys.exc_info()))  # type: ignore
             cancelled = True
-            cancelled_by = e
 
         finally:
 
@@ -373,9 +371,6 @@ class Executor:
                 logger.debug(
                     "Got error when waiting for services to finish", exc_info=True, job_id=job.id
                 )
-
-        if cancelled:
-            raise cast(BaseException, cancelled_by)
 
     async def _perform_implicit_init(self, ctx, job_id, agreement_id, activity):
         async def implicit_init():
