@@ -40,13 +40,19 @@ class FastestProviderStrategy(MarketStrategy):
 
         if not previous_runs:
             score = SCORE_TRUSTED
-            print(f"Found new provider: {provider_id}, default score {SCORE_TRUSTED}")
         else:
             avg_time = sum(previous_runs) / len(previous_runs)
             score = SCORE_TRUSTED - avg_time
-            print(
-                f"Scored known provider: {provider_id}: {score} ({len(previous_runs)} runs, avg time {avg_time})"
-            )
+
+        if offer.is_draft:
+            #   Non-draft offers are not shown to limit the number of lines printed
+            if previous_runs:
+                print(
+                    f"Scored known provider: {provider_id}: {score} ({len(previous_runs)} runs, avg time {avg_time})"
+                )
+            else:
+                print(f"Found new provider: {provider_id}, default score {SCORE_TRUSTED}")
+
         return score
 
     def save_execution_time(self, provider_id: str, time: float):
