@@ -154,7 +154,7 @@ class _Engine:
 
         # Add buffering to the provided event emitter to make sure
         # that emitting events will not block
-        self._wrapped_consumer = AsyncWrapper(event_consumer)
+        self._wrapped_consumers = [AsyncWrapper(event_consumer)]
 
         self._stream_output = stream_output
 
@@ -221,8 +221,14 @@ class _Engine:
 
     def emit(self, event: events.Event) -> None:
         """Emit an event to be consumed by this engine's event consumer."""
-        if self._wrapped_consumer:
-            self._wrapped_consumer.async_call(event)
+        for consumer in self._wrapped_consumers:
+            if consumer._task is not None:
+                consumer.async_call(event)
+
+    async def add_event_consumer(self, consumer: Callable[[events.Event], None]):
+        async_consumer = AsyncWrapper(consumer)
+        await self._stack.enter_async_context(async_consumer)
+        self._wrapped_consumers.append(async_consumer)
 
     async def stop(self, *exc_info) -> Optional[bool]:
         """Stop the engine.
@@ -240,7 +246,8 @@ class _Engine:
 
         stack = self._stack
 
-        await stack.enter_async_context(self._wrapped_consumer)
+        for consumer in self._wrapped_consumers:
+            await stack.enter_async_context(consumer)
 
         def report_shutdown(*exc_info):
             if any(item for item in exc_info):

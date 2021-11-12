@@ -7,9 +7,11 @@ from yapapi import (
     Golem,
     Task,
     WorkContext,
+    events
 )
 from yapapi.payload import vm
 from yapapi.rest.activity import BatchTimeoutError
+from yapapi.strategy import MarketStrategy
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
@@ -24,6 +26,14 @@ from utils import (
     run_golem_example,
     print_env_info,
 )
+
+
+class EventConsumingStrategy(MarketStrategy):
+    def on_event(self, event: events.Event):
+        if isinstance(event, events.AgreementRejected):
+            print("PROVIDER AGREEMENT")
+        elif isinstance(event, events.AgreementConfirmed):
+            print("PROVIDER CONFIRMED")
 
 
 async def main(
@@ -123,6 +133,9 @@ async def main(
 
         num_tasks = 0
         start_time = datetime.now()
+        
+        strategy = EventConsumingStrategy()
+        await golem._engine.add_event_consumer(strategy.on_event)
 
         completed_tasks = golem.execute_tasks(
             worker,
