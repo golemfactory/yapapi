@@ -190,5 +190,4 @@ class DecreaseScoreForUnconfirmedAgreement(MarketStrategy):
         highest id (that's usually the newest one). There's no real reason behind this except that
         other solutions are harder to implement."""
         last_job = sorted(self.engine._jobs, key=lambda job: job.id)[-1]
-        print("LAST JOB", last_job.id)
         return last_job.agreements_pool.rejected_last_agreement(provider_id)
