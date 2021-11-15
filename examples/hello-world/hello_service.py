@@ -3,6 +3,7 @@ import asyncio
 from datetime import datetime, timedelta
 
 from yapapi import Golem
+from yapapi.engine import DEFAULT_SUBNET
 from yapapi.services import Service
 from yapapi.log import enable_default_logger
 from yapapi.payload import vm
@@ -48,7 +49,7 @@ class DateService(Service):
 
 
 async def main():
-    async with Golem(budget=1.0, subnet_tag="devnet-beta") as golem:
+    async with Golem(budget=1.0, subnet_tag=DEFAULT_SUBNET) as golem:
         cluster = await golem.run_service(DateService, num_instances=1)
         start_time = datetime.now()
 
