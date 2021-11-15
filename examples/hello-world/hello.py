@@ -3,6 +3,7 @@ import asyncio
 from typing import AsyncIterable
 
 from yapapi import Golem, Task, WorkContext
+from yapapi.engine import DEFAULT_SUBNET
 from yapapi.log import enable_default_logger
 from yapapi.payload import vm
 
@@ -24,7 +25,7 @@ async def main():
 
     tasks = [Task(data=None)]
 
-    async with Golem(budget=1.0, subnet_tag="devnet-beta") as golem:
+    async with Golem(budget=1.0, subnet_tag=DEFAULT_SUBNET) as golem:
         async for completed in golem.execute_tasks(worker, tasks, payload=package):
             print(completed.result.stdout)
 
