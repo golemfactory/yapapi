@@ -280,6 +280,11 @@ class ShutdownFinished(HasExcInfo):
 
 
 @dataclass
+class ExecutionInterrupted(HasExcInfo):
+    """Emitted when Golem was stopped by an unhandled exception in code not managed by yapapi"""
+
+
+@dataclass
 class CommandEventContext:
     evt_cls: Type[CommandEvent]
     kwargs: dict
