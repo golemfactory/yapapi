@@ -314,9 +314,15 @@ class Executor:
 
             self.emit(events.ComputationFinished(job.id))
 
-        except (Exception, CancelledError, KeyboardInterrupt):
+        except (Exception, CancelledError, KeyboardInterrupt) as e:
+            #   TODO: why do we catch KeyboardInterrupt? How can we get one here?
             self.emit(events.ComputationFinished(job.id, exc_info=sys.exc_info()))  # type: ignore
             cancelled = True
+
+            if isinstance(e, CancelledError):
+                #   CancelledError is an "external" error, not caused by the Executor internals ->
+                #   we don't want to suppress it here
+                raise
 
         finally:
 
