@@ -112,16 +112,10 @@ class Service:
     Service specifications.
     """
 
-    def __init__(self, cluster: "Cluster", ctx: WorkContext, network_node: Optional[Node] = None):
-        """Initialize the service instance for a specific Cluster and a specific WorkContext.
-
-        :param cluster: a cluster to which this service instance of this service belongs
-        :param ctx: a work context object for executing commands on a provider that runs this
-            service instance.
-        """
-        self._cluster: "Cluster" = cluster
-        self._ctx: WorkContext = ctx
-        self._network_node: Optional[Node] = network_node
+    def __init__(self):
+        self._cluster: Optional["Cluster"] = None
+        self._ctx: Optional["WorkContext"] = None
+        self._network_node: Optional[Node] = None
 
         self.__inqueue: asyncio.Queue[ServiceSignal] = asyncio.Queue()
         self.__outqueue: asyncio.Queue[ServiceSignal] = asyncio.Queue()
@@ -136,26 +130,32 @@ class Service:
         # (e.g., via returning from `Service.run()`).
 
     @property
-    def cluster(self) -> "Cluster":
+    def cluster(self) -> Optional["Cluster"]:
         """Return the Cluster to which this service instance belongs."""
         return self._cluster
 
     @property
-    def id(self) -> str:
+    def id(self) -> Optional[str]:
         """Return the id of this service instance.
 
         Guaranteed to be unique within a :class:`~yapapi.services.Cluster`.
         """
+        if self._ctx is None:
+            return None
         return self._ctx.id
 
     @property
     def provider_name(self) -> Optional[str]:
         """Return the name of the provider that runs this service instance."""
+        if self._ctx is None:
+            return None
         return self._ctx.provider_name
 
     @property
-    def provider_id(self) -> str:
+    def provider_id(self) -> Optional[str]:
         """Return the id of the provider that runs this service instance."""
+        if self._ctx is None:
+            return None
         return self._ctx.provider_id
 
     @property
@@ -167,6 +167,15 @@ class Service:
     def network_node(self) -> Optional[Node]:
         """Return the network :class:`~yapapi.network.Node` record associated with this instance."""
         return self._network_node
+
+    def _set_cluster(self, cluster: "Cluster") -> None:
+        self._cluster = cluster
+
+    def _set_ctx(self, ctx: WorkContext) -> None:
+        self._ctx = ctx
+
+    def _set_network_node(self, node: Node) -> None:
+        self._network_node = node
 
     def __repr__(self):
         return f"<{self.__class__.__name__} on {self.provider_name} [ {self.provider_id} ]>"
@@ -302,6 +311,7 @@ class Service:
         specific `Service` implementation that uses such a payload to adjust this method accordingly
         based on the requirements for the given runtime/exe-unit type.
         """
+        assert self._ctx is not None
 
         s = self._ctx.new_script()
         s.deploy(**self.get_deploy_args())
@@ -347,6 +357,7 @@ class Service:
         after the service has been started, the default is to just wait indefinitely without
         producing any batches.
         """
+        assert self._ctx is not None
 
         await asyncio.Future()
         yield  # type: ignore # unreachable because of the indefinite wait above
@@ -389,6 +400,7 @@ class Service:
         required or not, again, depends on the implementation of the given runtime.
 
         """
+        assert self._ctx is not None
 
         self._ctx.terminate()
         yield self._ctx.commit()
@@ -762,7 +774,10 @@ class Cluster(AsyncContextManager):
         """Spawn a new service instance within this :class:`Cluster`."""
 
         logger.debug("spawning instance within %s", self)
-        instance: Optional[ServiceInstance] = None
+
+        service = self._service_class(**params)  # type: ignore
+        instance = ServiceInstance(service=service)
+
         agreement_id: Optional[str]  # set in start_worker
 
         async def _worker(
@@ -780,14 +795,12 @@ class Cluster(AsyncContextManager):
                     task_data=f"Service: {self._service_class.__name__}",
                 )
             )
-            # prepare the Node entry for this instance, if the cluster is attached to a VPN
-            node: Optional[Node] = None
+            service._set_cluster(self)
+            service._set_ctx(work_context)
             if self.network:
-                node = await self.network.add_node(work_context.provider_id, network_address)
-
-            instance = ServiceInstance(
-                service=self._service_class(self, work_context, network_node=node, **params)  # type: ignore
-            )
+                service._set_network_node(
+                    await self.network.add_node(work_context.provider_id, network_address)
+                )
             try:
                 if self._state == ClusterState.running:
                     instance_batches = self._run_instance(instance)
@@ -810,7 +823,7 @@ class Cluster(AsyncContextManager):
                 await self._engine.accept_payments_for_agreement(self._job.id, agreement.id)
                 await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
 
-        while instance is None and self._state == ClusterState.running:
+        while self._state == ClusterState.running:
             agreement_id = None
             await asyncio.sleep(1.0)
             task = await self._engine.start_worker(self._job, _worker)
@@ -819,17 +832,14 @@ class Cluster(AsyncContextManager):
             try:
                 await task
                 if (
-                    # if the instance was created ...
-                    instance
-                    # but failed to start ...
-                    and not instance.started_successfully
-                    # due to an error (and not a `STOP` signal) ...
-                    and instance.service.exc_info() != (None, None, None)
-                    # and re-spawning instances is enabled for this cluster
-                    and self._respawn_unstarted_instances
+                    instance.started_successfully
+                    or not self._respawn_unstarted_instances
+                    # There was no error, but rather e.g. `STOP` signal -> do not restart
+                    or instance.service.exc_info() == (None, None, None)
                 ):
+                    break
+                else:
                     logger.warning("Instance failed when starting, trying to create another one...")
-                    instance = None
             except Exception:
                 if agreement_id:
                     self.emit(

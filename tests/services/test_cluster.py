@@ -104,8 +104,8 @@ async def test_spawn_instances(kwargs, calls, error, monkeypatch):
 @pytest.mark.parametrize(
     "service, error",
     (
-        (_TestService(Mock(), Mock()), None),
-        (_BrokenService(Mock(), Mock()), "must be an asynchronous generator"),
+        (_TestService(), None),
+        (_BrokenService(), "must be an asynchronous generator"),
     ),
 )
 def test_get_handler(service, error):
