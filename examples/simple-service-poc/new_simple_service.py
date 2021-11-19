@@ -111,6 +111,27 @@ class SimpleService(Service):
             print(f"{TEXT_COLOR_MAGENTA} --- {self.name}  COST: {cost} {TEXT_COLOR_DEFAULT}")
 
 
+async def wait_for_status(instance_wrappers, status, timeout):
+    end_time = datetime.now() + timeout
+    while any(iw.status != status for iw in instance_wrappers) and datetime.now() < end_time:
+        print(instance_wrappers)
+        await asyncio.sleep(5)
+
+    if any(iw.status != status for iw in instance_wrappers):
+        raise Exception(f"Some instances are still not {status} after {timeout} elapsed :( ...")
+    else:
+        print(f"{TEXT_COLOR_YELLOW}All instances are {status} :){TEXT_COLOR_DEFAULT}")
+
+
+async def run_until(instance_wrappers, end_time):
+    while datetime.now() < end_time:
+        print(instance_wrappers)
+        await asyncio.sleep(5)
+        all_running = all(iw.status == 'running' for iw in instance_wrappers)
+        if not all_running:
+            raise Exception("Instance was stopped in an unexpected way")
+
+
 async def main(
     subnet_tag,
     running_time,
@@ -137,29 +158,10 @@ async def main(
         )
         instance_wrappers = cluster.instance_wrappers
 
-        async def wait_for_status(status, timeout):
-            end_time = datetime.now() + timeout
-            while any(iw.status != status for iw in instance_wrappers) and datetime.now() < end_time:
-                print(instance_wrappers)
-                await asyncio.sleep(5)
-
-            if any(iw.status != status for iw in instance_wrappers):
-                raise Exception(f"Some instances are still not {status} after {timeout} elapsed :( ...")
-            else:
-                print(f"{TEXT_COLOR_YELLOW}All instances are {status} :){TEXT_COLOR_DEFAULT}")
-
-        async def run_until(end_time):
-            while datetime.now() < end_time:
-                print(instance_wrappers)
-                await asyncio.sleep(5)
-                all_running = all(iw.status == 'running' for iw in instance_wrappers)
-                if not all_running:
-                    raise Exception("Instance was stopped in an unexpected way")
-
-        await wait_for_status('running', STARTING_TIMEOUT)
-        await run_until(datetime.now() + timedelta(seconds=running_time))
+        await wait_for_status(instance_wrappers, 'running', STARTING_TIMEOUT)
+        await run_until(instance_wrappers, datetime.now() + timedelta(seconds=running_time))
         cluster.stop()
-        await wait_for_status('terminated', STOPPING_TIMEOUT)
+        await wait_for_status(instance_wrappers, 'terminated', STOPPING_TIMEOUT)
 
 
 if __name__ == "__main__":
