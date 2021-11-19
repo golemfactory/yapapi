@@ -388,7 +388,9 @@ class Golem:
             network_address = None
             if network_addresses is not None and len(network_addresses) > ix:
                 network_address = network_addresses[ix]
-            cluster.create_instance(single_instance_params, network_address)
+
+            service = service_class(**single_instance_params)  # type: ignore
+            cluster.add_instance(service, network_address)
 
         return cluster
 

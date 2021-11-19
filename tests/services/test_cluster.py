@@ -3,13 +3,15 @@ import itertools
 import sys
 import pytest
 from yapapi.services import Cluster, Service, ServiceInstance
-from unittest.mock import Mock, patch, call
+from unittest.mock import Mock, patch
 from unittest import mock
 from yapapi import Golem
 
 
 class _TestService(Service):
-    pass
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.init_kwargs = kwargs
 
 
 class _BrokenService(Service):
@@ -18,44 +20,44 @@ class _BrokenService(Service):
 
 
 @pytest.mark.parametrize(
-    "kwargs, calls, error",
+    "kwargs, args, error",
     [
         (
             {"num_instances": 1},
-            [call({}, None)],
+            [({}, None)],
             None,
         ),
         (
             {"num_instances": 3},
-            [call({}, None) for _ in range(3)],
+            [({}, None) for _ in range(3)],
             None,
         ),
         (
             {"instance_params": [{}]},
-            [call({}, None)],
+            [({}, None)],
             None,
         ),
         (
             {"instance_params": [{"n": 1}, {"n": 2}]},
-            [call({"n": 1}, None), call({"n": 2}, None)],
+            [({"n": 1}, None), ({"n": 2}, None)],
             None,
         ),
         (
             # num_instances takes precedence
             {"num_instances": 2, "instance_params": [{} for _ in range(3)]},
-            [call({}, None), call({}, None)],
+            [({}, None), ({}, None)],
             None,
         ),
         (
             # num_instances takes precedence
             {"num_instances": 3, "instance_params": ({"n": i} for i in itertools.count(1))},
-            [call({"n": 1}, None), call({"n": 2}, None), call({"n": 3}, None)],
+            [({"n": 1}, None), ({"n": 2}, None), ({"n": 3}, None)],
             None,
         ),
         (
             # num_instances takes precedence
             {"num_instances": 4, "instance_params": [{} for _ in range(3)]},
-            [call({}, None) for _ in range(3)],
+            [({}, None) for _ in range(3)],
             "`instance_params` iterable depleted after 3 spawned instances.",
         ),
         (
@@ -71,14 +73,14 @@ class _BrokenService(Service):
                     "10.0.0.2",
                 ],
             },
-            [call({}, "10.0.0.1"), call({}, "10.0.0.2"), call({}, None)],
+            [({}, "10.0.0.1"), ({}, "10.0.0.2"), ({}, None)],
             None,
         ),
     ],
 )
 @pytest.mark.asyncio
 @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
-async def test_spawn_instances(kwargs, calls, error, monkeypatch):
+async def test_spawn_instances(kwargs, args, error, monkeypatch):
     def _get_new_engine(self):
         return mock.AsyncMock()
 
@@ -98,7 +100,11 @@ async def test_spawn_instances(kwargs, calls, error, monkeypatch):
         else:
             assert error is None, f"Expected ServiceError: {error}"
 
-    assert spawn_instance.mock_calls == calls
+    assert len(spawn_instance.mock_calls) == len(args)
+    for call_args, args in zip(spawn_instance.call_args_list, args):
+        service, network_address = call_args[0]
+        assert service.init_kwargs == args[0]
+        assert network_address == args[1]
 
 
 @pytest.mark.parametrize(

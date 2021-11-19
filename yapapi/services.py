@@ -770,14 +770,11 @@ class Cluster(AsyncContextManager):
 
         logger.info("%s decommissioned", instance.service)
 
-    async def spawn_instance(self, params: Dict, network_address: Optional[str] = None) -> None:
+    async def spawn_instance(self, service: Service, network_address: Optional[str] = None) -> None:
         """Spawn a new service instance within this :class:`Cluster`."""
 
         logger.debug("spawning instance within %s", self)
-
-        service = self._service_class(**params)  # type: ignore
         instance = ServiceInstance(service=service)
-
         agreement_id: Optional[str]  # set in start_worker
 
         async def _worker(
@@ -795,7 +792,6 @@ class Cluster(AsyncContextManager):
                     task_data=f"Service: {self._service_class.__name__}",
                 )
             )
-            service._set_cluster(self)
             service._set_ctx(work_context)
             if self.network:
                 service._set_network_node(
@@ -858,16 +854,10 @@ class Cluster(AsyncContextManager):
         instance = self.__get_service_instance(service)
         instance.control_queue.put_nowait(ControlSignal.stop)
 
-    def create_instance(
-        self,
-        params: Optional[Dict] = None,
-        network_address: Optional[str] = None,
-    ) -> None:
-        if params is None:
-            params = {}
-
+    def add_instance(self, service: Service, network_address: Optional[str] = None) -> None:
+        service._set_cluster(self)
         loop = asyncio.get_event_loop()
-        task = loop.create_task(self.spawn_instance(params, network_address))
+        task = loop.create_task(self.spawn_instance(service, network_address))
         self._instance_tasks.add(task)
 
     def stop(self):
