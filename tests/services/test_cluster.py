@@ -2,8 +2,10 @@ import asyncio
 import itertools
 import sys
 import pytest
-from unittest.mock import Mock, patch, call
 from yapapi.services import Cluster, Service, ServiceError, ServiceInstance
+from unittest.mock import Mock, patch, call
+from unittest import mock
+from yapapi import Golem
 
 
 class _TestService(Service):
@@ -13,10 +15,6 @@ class _TestService(Service):
 class _BrokenService(Service):
     async def start(self):
         await asyncio.Future()
-
-
-def _get_cluster() -> Cluster:
-    return Cluster(engine=Mock(), service_class=_TestService, payload=Mock())
 
 
 @pytest.mark.parametrize(
@@ -80,11 +78,18 @@ def _get_cluster() -> Cluster:
 )
 @pytest.mark.asyncio
 @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
-async def test_spawn_instances(kwargs, calls, error):
+async def test_spawn_instances(kwargs, calls, error, monkeypatch):
+    def _get_new_engine(self):
+        return mock.AsyncMock()
+
+    monkeypatch.setattr(Golem, "_get_new_engine", _get_new_engine)
+
     with patch("yapapi.services.Cluster.spawn_instance") as spawn_instance:
-        cluster = _get_cluster()
+        golem = Golem(budget=1)
         try:
-            cluster.spawn_instances(**kwargs)
+            await golem.run_service(
+                service_class=_TestService, payload=Mock(), network=Mock(), **kwargs
+            )
         except ServiceError as e:
             if error is not None:
                 assert str(e) == error
