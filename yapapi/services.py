@@ -462,7 +462,6 @@ class Cluster(AsyncContextManager):
     def __init__(
         self,
         engine: "_Engine",
-        service_class: Type[Service],
         payload: Payload,
         expiration: Optional[datetime] = None,
         respawn_unstarted_instances: bool = True,
@@ -471,7 +470,6 @@ class Cluster(AsyncContextManager):
         """Initialize this Cluster.
 
         :param engine: an engine for running service instance
-        :param service_class: service specification
         :param payload: definition of service runtime for this Cluster
         :param expiration: a date before which all agreements related to running services
             in this Cluster should be terminated
@@ -484,7 +482,6 @@ class Cluster(AsyncContextManager):
         self.id = str(next(cluster_ids))
 
         self._engine = engine
-        self._service_class = service_class
         self._payload = payload
         self._expiration: datetime = (
             expiration or datetime.now(timezone.utc) + DEFAULT_SERVICE_EXPIRATION
@@ -514,18 +511,16 @@ class Cluster(AsyncContextManager):
         return self._payload
 
     @property
-    def service_class(self) -> Type[Service]:
-        """Return the class instantiated by all service instances in this :class:`Cluster`."""
-        return self._service_class
-
-    @property
     def network(self) -> Optional[Network]:
         """Return the :class:`~yapapi.network.Network` record associated with the VPN used by this :class:`Cluster`."""
         return self._network
 
     def __repr__(self):
+        #   TODO: prettier print (cnt: service_class for every service_class)
+        service_classes = set(type(service).__name__ for service in self.instances)
+        service_classes = sorted(service_classes)
         return (
-            f"Cluster {self.id}: {len(self.__instances)}x[Service: {self._service_class.__name__}, "
+            f"Cluster {self.id}: {len(self.__instances)}x[Services: {service_classes}, "
             f"Payload: {self._payload}]"
         )
 
@@ -789,7 +784,7 @@ class Cluster(AsyncContextManager):
                     job_id=self._job.id,
                     agr_id=agreement.id,
                     task_id=task_id,
-                    task_data=f"Service: {self._service_class.__name__}",
+                    task_data=f"Service: {type(service).__name__}",
                 )
             )
             service._set_ctx(work_context)

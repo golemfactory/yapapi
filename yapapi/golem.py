@@ -375,7 +375,6 @@ class Golem:
 
         cluster = Cluster(
             engine=self._engine,
-            service_class=service_class,
             payload=payload,
             expiration=expiration,
             respawn_unstarted_instances=respawn_unstarted_instances,
