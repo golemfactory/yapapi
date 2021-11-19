@@ -2,7 +2,7 @@ import asyncio
 import itertools
 import sys
 import pytest
-from yapapi.services import Cluster, Service, ServiceError, ServiceInstance
+from yapapi.services import Cluster, Service, ServiceInstance
 from unittest.mock import Mock, patch, call
 from unittest import mock
 from yapapi import Golem
@@ -90,7 +90,7 @@ async def test_spawn_instances(kwargs, calls, error, monkeypatch):
             await golem.run_service(
                 service_class=_TestService, payload=Mock(), network=Mock(), **kwargs
             )
-        except ServiceError as e:
+        except ValueError as e:
             if error is not None:
                 assert str(e) == error
             else:

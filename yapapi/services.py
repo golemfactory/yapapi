@@ -20,7 +20,6 @@ from typing import (
     Tuple,
     Type,
     Union,
-    Iterable,
     Dict,
 )
 
@@ -849,68 +848,17 @@ class Cluster(AsyncContextManager):
         instance = self.__get_service_instance(service)
         instance.control_queue.put_nowait(ControlSignal.stop)
 
-    def spawn_instances(
+    def create_instance(
         self,
-        num_instances: Optional[int] = None,
-        instance_params: Optional[Iterable[Dict]] = None,
-        network_addresses: Optional[List[str]] = None,
+        params: Optional[Dict] = None,
+        network_address: Optional[str] = None,
     ) -> None:
-        """Spawn new instances within this :class:`Cluster`.
-
-        :param num_instances: optional number of service instances to run. Defaults to a single
-            instance, unless `instance_params` is given, in which case, the :class:`Cluster` will spawn
-            as many instances as there are elements in the `instance_params` iterable.
-            if `num_instances` is not None and < 1, the method will immediately return and log a warning.
-        :param instance_params: optional list of dictionaries of keyword arguments that will be passed
-            to consecutive, spawned instances. The number of elements in the iterable determines the
-            number of instances spawned, unless `num_instances` is given, in which case the latter takes
-            precedence.
-            In other words, if both `num_instances` and `instance_params` are provided,
-            the number of instances spawned will be equal to `num_instances` and if there are
-            too few elements in the `instance_params` iterable, it will results in an error.
-        :param network_addresses: optional list of network addresses in case the :class:`Cluster` is
-            attached to VPN. If the list is not provided (or if the number of elements is less
-            than the number of spawned instances), any instances for which the addresses have not
-            been given, will be assigned an address automatically.
-
-        """
-        # just a sanity check
-        if num_instances is not None and num_instances < 1:
-            logger.warning(
-                "Trying to spawn less than one instance. num_instances: %s", num_instances
-            )
-            return
-
-        # if the parameters iterable was not given, assume a default of a single instance
-        if not num_instances and not instance_params:
-            num_instances = 1
-
-        # convert the parameters iterable to an iterator
-        # if not provided, make a default iterator consisting of empty dictionaries
-        instance_params = iter(instance_params or (dict() for _ in range(num_instances)))  # type: ignore
-
-        # supply network_addresses as long as there are any still left
-        if network_addresses is None:
-            network_addresses = []
-        network_addresses_generator = (
-            network_addresses[i] if i < len(network_addresses) else None for i in itertools.count()
-        )
+        if params is None:
+            params = {}
 
         loop = asyncio.get_event_loop()
-        spawned_instances = 0
-        while not num_instances or spawned_instances < num_instances:
-            try:
-                params = next(instance_params)
-                network_address = next(network_addresses_generator)
-                task = loop.create_task(self.spawn_instance(params, network_address))
-                self._instance_tasks.add(task)
-                spawned_instances += 1
-            except StopIteration:
-                if num_instances and spawned_instances < num_instances:
-                    raise ServiceError(
-                        f"`instance_params` iterable depleted after {spawned_instances} spawned instances."
-                    )
-                break
+        task = loop.create_task(self.spawn_instance(params, network_address))
+        self._instance_tasks.add(task)
 
     def stop(self):
         """Signal the whole :class:`Cluster` to stop."""
