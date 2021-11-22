@@ -183,7 +183,12 @@ class Service:
         self._network_node = node
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} on {self.provider_name} [ {self.provider_id} ]>"
+        class_name = type(self).__name__
+        state = self.state.value
+        if state == "pending":
+            return f"<{class_name} pending>"
+        else:
+            return f"<{class_name} {state} on {self.provider_name} [ {self.provider_id} ]>"
 
     def exc_info(self) -> ExcInfo:
         """Return exception info for an exception that caused the last state transition.

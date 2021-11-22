@@ -38,9 +38,6 @@ class SimpleService(Service):
     SIMPLE_SERVICE = "/golem/run/simple_service.py"
     SIMPLE_SERVICE_CTL = "/golem/run/simulate_observations_ctl.py"
 
-    def __repr__(self):
-        return f"<{self.__class__.__name__}: {self.name}>"
-
     def __init__(self, *args, instance_name: str, show_usage: bool = False, **kwargs):
         super().__init__(*args, **kwargs)
         self.name = instance_name
@@ -146,21 +143,15 @@ async def main(
             ],
             expiration=datetime.now(timezone.utc) + timedelta(minutes=120),
         )
-
-        # helper functions to display / filter instances
-
-        def instances():
-            return [f"{s.name}: {s.state.value} on {s.provider_name}" for s in cluster.instances]
+        instances = cluster.instances
 
         def still_starting():
-            return len(cluster.instances) < num_instances or any(
-                s.state == ServiceState.starting for s in cluster.instances
-            )
+            return any(i.state in (ServiceState.pending, ServiceState.running) for i in instances)
 
         # wait until instances are started
 
         while still_starting() and datetime.now() < commissioning_time + STARTING_TIMEOUT:
-            print(f"instances: {instances()}")
+            print(f"instances: {instances}")
             await asyncio.sleep(5)
 
         if still_starting():
@@ -174,7 +165,7 @@ async def main(
         start_time = datetime.now()
 
         while datetime.now() < start_time + timedelta(seconds=running_time):
-            print(f"instances: {instances()}")
+            print(f"instances: {instances}")
             await asyncio.sleep(5)
 
         print(f"{TEXT_COLOR_YELLOW}Stopping instances...{TEXT_COLOR_DEFAULT}")
@@ -184,10 +175,10 @@ async def main(
 
         cnt = 0
         while cnt < 10 and any(s.is_available for s in cluster.instances):
-            print(f"instances: {instances()}")
+            print(f"instances: {instances}")
             await asyncio.sleep(5)
 
-    print(f"instances: {instances()}")
+    print(f"instances: {instances}")
 
 
 if __name__ == "__main__":
