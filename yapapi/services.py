@@ -61,21 +61,24 @@ class ServiceState(statemachine.StateMachine):
     """State machine describing the state and lifecycle of a :class:`Service` instance."""
 
     # states
-    starting = statemachine.State("starting", initial=True)
+    pending = statemachine.State("pending", initial=True)
+    starting = statemachine.State("starting")
     running = statemachine.State("running")
     stopping = statemachine.State("stopping")
     terminated = statemachine.State("terminated")
     unresponsive = statemachine.State("unresponsive")
 
     # transitions
+    start = pending.to(starting)
     ready = starting.to(running)
     stop = running.to(stopping)
     terminate = terminated.from_(starting, running, stopping, terminated)
     mark_unresponsive = unresponsive.from_(starting, running, stopping, terminated)
+    restart = pending.from_(pending, starting, running, stopping, terminated, unresponsive)
 
     # transition performed when handler for the current state terminates normally,
     # that is, not due to an error or `ControlSignal.stop`
-    lifecycle = ready | stop | terminate
+    lifecycle = start | ready | stop | terminate
 
     # transition performed on error or `ControlSignal.stop`
     error_or_stop = stop | terminate
@@ -124,6 +127,8 @@ class Service:
         # as returned by `sys.exc_info()`.
         # Tuple of `None`'s means that the transition was not caused by an exception.
         self._exc_info: ExcInfo = (None, None, None)
+
+        self.__service_instance = ServiceInstance(self)
 
         # TODO: maybe transition due to a control signal should also set this? To distinguish
         # stopping the service externally (e.g., via `cluster.stop()`) from internal transition
@@ -408,12 +413,16 @@ class Service:
     @property
     def is_available(self):
         """Return `True` iff this instance is available (that is, starting, running or stopping)."""
-        return self._cluster.get_state(self) in ServiceState.AVAILABLE
+        return self.__service_instance.state in ServiceState.AVAILABLE
 
     @property
     def state(self):
         """Return the current state of this instance."""
-        return self._cluster.get_state(self)
+        return self.__service_instance.state
+
+    @property
+    def service_instance(self):
+        return self.__service_instance
 
 
 class ControlSignal(enum.Enum):
@@ -653,7 +662,6 @@ class Cluster(AsyncContextManager):
 
     async def _run_instance(self, instance: ServiceInstance):
         loop = asyncio.get_event_loop()
-        self.__instances.append(instance)
 
         logger.info("%s commissioned", instance.service)
 
@@ -769,8 +777,9 @@ class Cluster(AsyncContextManager):
         """Spawn a new service instance within this :class:`Cluster`."""
 
         logger.debug("spawning instance within %s", self)
-        instance = ServiceInstance(service=service)
         agreement_id: Optional[str]  # set in start_worker
+
+        instance = service.service_instance
 
         async def _worker(
             agreement: rest.market.Agreement, activity: Activity, work_context: WorkContext
@@ -787,6 +796,7 @@ class Cluster(AsyncContextManager):
                     task_data=f"Service: {type(service).__name__}",
                 )
             )
+            self._change_state(instance)  # pending -> starting
             service._set_ctx(work_context)
             if self.network:
                 service._set_network_node(
@@ -826,11 +836,12 @@ class Cluster(AsyncContextManager):
                     instance.started_successfully
                     or not self._respawn_unstarted_instances
                     # There was no error, but rather e.g. `STOP` signal -> do not restart
-                    or instance.service.exc_info() == (None, None, None)
+                    or service.exc_info() == (None, None, None)
                 ):
                     break
                 else:
                     logger.warning("Instance failed when starting, trying to create another one...")
+                    instance.service_state.restart()
             except Exception:
                 if agreement_id:
                     self.emit(
@@ -850,7 +861,9 @@ class Cluster(AsyncContextManager):
         instance.control_queue.put_nowait(ControlSignal.stop)
 
     def add_instance(self, service: Service, network_address: Optional[str] = None) -> None:
+        self.__instances.append(service.service_instance)
         service._set_cluster(self)
+
         loop = asyncio.get_event_loop()
         task = loop.create_task(self.spawn_instance(service, network_address))
         self._instance_tasks.add(task)

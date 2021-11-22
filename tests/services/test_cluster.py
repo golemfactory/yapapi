@@ -115,9 +115,9 @@ async def test_spawn_instances(kwargs, args, error, monkeypatch):
     ),
 )
 def test_get_handler(service, error):
-    service_instance = ServiceInstance(service=service)
+    service.service_instance.service_state.lifecycle()  # pending -> starting
     try:
-        handler = Cluster._get_handler(service_instance)
+        handler = Cluster._get_handler(service.service_instance)
         assert handler
     except TypeError as e:
         if error is not None:
