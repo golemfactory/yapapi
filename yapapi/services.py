@@ -22,6 +22,7 @@ from typing import (
     Union,
     Dict,
 )
+import uuid
 
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
@@ -115,10 +116,12 @@ class Service:
     Service specifications.
     """
 
+    _cluster: Optional["Cluster"] = None
+    _ctx: Optional["WorkContext"] = None
+    _network_node: Optional[Node] = None
+
     def __init__(self):
-        self._cluster: Optional["Cluster"] = None
-        self._ctx: Optional["WorkContext"] = None
-        self._network_node: Optional[Node] = None
+        self.__id = uuid.uuid4()
 
         self.__inqueue: asyncio.Queue[ServiceSignal] = asyncio.Queue()
         self.__outqueue: asyncio.Queue[ServiceSignal] = asyncio.Queue()
@@ -140,14 +143,9 @@ class Service:
         return self._cluster
 
     @property
-    def id(self) -> Optional[str]:
-        """Return the id of this service instance.
-
-        Guaranteed to be unique within a :class:`~yapapi.services.Cluster`.
-        """
-        if self._ctx is None:
-            return None
-        return self._ctx.id
+    def id(self) -> str:
+        """Return the unique id of this service instance."""
+        return self.__id
 
     @property
     def provider_name(self) -> Optional[str]:

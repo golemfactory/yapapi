@@ -146,7 +146,7 @@ async def main(
         instances = cluster.instances
 
         def still_starting():
-            return any(i.state in (ServiceState.pending, ServiceState.running) for i in instances)
+            return any(i.state in (ServiceState.pending, ServiceState.starting) for i in instances)
 
         # wait until instances are started
 
