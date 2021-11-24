@@ -49,4 +49,7 @@ async def test_emit_event():
             golem._engine.emit(event)
     assert got_events_1 == sample_events + [shutdown_finished]
     assert got_events_2 == sample_events + [shutdown_finished]
-    assert got_events_3 == sample_events
+
+    #   NOTE: This time we get the ShutdownFinished, because event_consumer_3 was
+    #         added before (second) `async with golem`
+    assert got_events_3 == sample_events + [shutdown_finished]
