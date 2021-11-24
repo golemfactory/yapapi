@@ -80,6 +80,11 @@ class AsyncWrapper(AsyncContextManager):
             raise RuntimeError("AsyncWrapper is closed")
         self._args_buffer.put_nowait((args, kwargs))
 
+    @property
+    def accepts_calls(self) -> bool:
+        """Returns True if `async_call` is available"""
+        return self._task is not None
+
 
 class Deprecated(enum.Enum):
     module = "module"

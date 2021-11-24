@@ -221,7 +221,15 @@ class _Engine:
     def emit(self, event: events.Event) -> None:
         """Emit an event to be consumed by this engine's event consumer."""
         for wrapped_consumer in self._wrapped_consumers:
-            wrapped_consumer.async_call(event)
+            if wrapped_consumer.accepts_calls:
+                #   Only known scenario when a wrapped_consumer doesn't accept calls is when:
+                #   *   there was add_event_consumer call on an already started Engine
+                #   *   and we're shutting down and ShutdownFinished is emited
+                #   (this is because ShutdownFinished is emited after these other consumers stopped)
+                #
+                #   This seems not very elegant, but in fact makes a lot of sense: if we want to have
+                #   "everything finished" reported, we should initialize reporting before anything started
+                wrapped_consumer.async_call(event)
 
     async def stop(self, *exc_info) -> Optional[bool]:
         """Stop the engine.
