@@ -128,6 +128,10 @@ class Golem:
         self._engine: _Engine = self._get_new_engine()
         self._engine_state_lock = asyncio.Lock()
 
+    async def add_event_consumer(self, event_consumer: Callable[[events.Event], None]) -> None:
+        """Initialize another `event_consumer`, working just like `event_consumer` passed in `__init__`"""
+        pass
+
     @property
     def driver(self) -> str:
         """Name of the payment driver.
