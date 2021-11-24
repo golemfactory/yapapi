@@ -120,11 +120,11 @@ class Golem:
             "subnet_tag": subnet_tag,
             "payment_driver": payment_driver,
             "payment_network": payment_network,
-            "event_consumer": event_consumer,
             "stream_output": stream_output,
             "app_key": app_key,
         }
 
+        self._main_event_consumer = event_consumer or self._default_event_consumer()
         self._engine: _Engine = self._get_new_engine()
         self._engine_state_lock = asyncio.Lock()
 
@@ -181,6 +181,7 @@ class Golem:
                 if self.operative:
                     #   Something started us before we got to the locked part
                     return
+                await self._engine.add_event_consumer(self._main_event_consumer)
                 await self._engine.start()
         except:
             await self._stop_with_exc_info(*sys.exc_info())
@@ -415,3 +416,9 @@ class Golem:
         return await Network.create(
             self._engine._net_api, ip, identity, owner_ip, mask=mask, gateway=gateway
         )
+
+    @staticmethod
+    def _default_event_consumer():
+        from yapapi.log import log_event_repr, log_summary
+
+        return log_summary(log_event_repr)

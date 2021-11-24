@@ -104,7 +104,6 @@ class _Engine:
         subnet_tag: Optional[str] = None,
         payment_driver: Optional[str] = None,
         payment_network: Optional[str] = None,
-        event_consumer: Optional[Callable[[events.Event], None]] = None,
         stream_output: bool = False,
         app_key: Optional[str] = None,
     ):
@@ -130,6 +129,7 @@ class _Engine:
         self._api_config = rest.Configuration(app_key)
         self._budget_amount = Decimal(budget)
         self._budget_allocations: List[rest.payment.Allocation] = []
+        self._wrapped_consumers: List[AsyncWrapper] = []
 
         if not strategy:
             strategy = LeastExpensiveLinearPayuMS(
@@ -144,18 +144,6 @@ class _Engine:
         self._subnet: Optional[str] = subnet_tag or DEFAULT_SUBNET
         self._payment_driver: str = payment_driver.lower() if payment_driver else DEFAULT_DRIVER
         self._payment_network: str = payment_network.lower() if payment_network else DEFAULT_NETWORK
-
-        if not event_consumer:
-            # Use local import to avoid cyclic imports when yapapi.log
-            # is imported by client code
-            from yapapi.log import log_event_repr, log_summary
-
-            event_consumer = log_summary(log_event_repr)
-
-        # Add buffering to the provided event emitter to make sure
-        # that emitting events will not block
-        self._wrapped_consumer = AsyncWrapper(event_consumer)
-
         self._stream_output = stream_output
 
         # a set of `Job` instances used to track jobs - computations or services - started
@@ -219,10 +207,21 @@ class _Engine:
         """Return `True` if this instance is initialized, `False` otherwise."""
         return self._started
 
+    async def add_event_consumer(self, event_consumer: Callable[[events.Event], None]) -> None:
+        """All events emited via `self.emit` will be passed to this callable"""
+        # Add buffering to the provided event emitter to make sure
+        # that emitting events will not block
+        wrapped_consumer = AsyncWrapper(event_consumer)
+
+        if self.started:
+            await self._stack.enter_async_context(wrapped_consumer)
+
+        self._wrapped_consumers.append(wrapped_consumer)
+
     def emit(self, event: events.Event) -> None:
         """Emit an event to be consumed by this engine's event consumer."""
-        if self._wrapped_consumer:
-            self._wrapped_consumer.async_call(event)
+        for wrapped_consumer in self._wrapped_consumers:
+            wrapped_consumer.async_call(event)
 
     async def stop(self, *exc_info) -> Optional[bool]:
         """Stop the engine.
@@ -242,7 +241,8 @@ class _Engine:
 
         stack = self._stack
 
-        await stack.enter_async_context(self._wrapped_consumer)
+        for wrapped_consumer in self._wrapped_consumers:
+            await stack.enter_async_context(wrapped_consumer)
 
         def report_shutdown(*exc_info):
             if any(item for item in exc_info):
