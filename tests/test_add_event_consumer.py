@@ -11,7 +11,7 @@ emitted_events = sample_events + [events.ShutdownFinished(exc_info=None)]
 
 
 @pytest.mark.asyncio
-async def test_emit_event():
+async def test_emit_event(engine_starts_without_yagna):
     got_events_1 = []
     got_events_2 = []
     got_events_3 = []
@@ -28,7 +28,7 @@ async def test_emit_event():
         #   Event consumer passed to working Golem
         got_events_3.append(event)
 
-    golem = Golem(budget=1, event_consumer=event_consumer_1)
+    golem = Golem(budget=1, event_consumer=event_consumer_1, app_key="NOT_A_REAL_APPKEY")
     await golem.add_event_consumer(event_consumer_2)
     async with golem:
         await golem.add_event_consumer(event_consumer_3)
