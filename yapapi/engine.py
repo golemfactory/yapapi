@@ -120,8 +120,6 @@ class _Engine:
         :param payment_network: name of the payment network to use. Uses `YAGNA_PAYMENT_NETWORK`
         environment variable, defaults to `rinkeby`. Only payment platforms with the specified
             network will be used
-        :param event_consumer: a callable that processes events related to the
-            computation; by default it is a function that logs all events
         :param stream_output: stream computation output from providers
         :param app_key: optional Yagna application key. If not provided, the default is to
                         get the value from `YAGNA_APPKEY` environment variable
