@@ -14,7 +14,8 @@ from yapapi.rest.market import OfferProposal
 from examples import utils
 
 DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: Final[str] = "golem.com.payment.debit-notes.accept-timeout?"
-PROPOSALS_LIMIT: Final[int] = 4
+# TODO: Investigate number of offers per provider (https://github.com/golemfactory/yapapi/issues/754)
+PROPOSALS_LIMIT: Final[int] = 6
 
 
 async def _respond(proposal: OfferProposal, dbuild) -> str:
