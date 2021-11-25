@@ -124,25 +124,16 @@ class Golem:
             "app_key": app_key,
         }
 
-        #   TODO: There is no "real" reason to have separate main_event_consumer and
-        #         secondary_event_consumers, but currently
-        #         * we must create Engine in __init__
-        #         * we can't call add_even_consumer in __init__ because it's async
-        #         so TL;DR I think it has to be done like this (or maybe there's a way?).
-        #         This is a TODO because first point is not necessary - Engine shouldn't be created
-        #         in __init__, and now is only because there was no refactoring regarding properties
-        #         (payment_driver, payment_network etc. - they should be stored on Golem).
-        self._main_event_consumer = event_consumer or self._default_event_consumer()
-        self._secondary_event_consumers: List[Callable[[events.Event], None]] = []
-
+        self._event_consumers = [event_consumer or self._default_event_consumer()]
         self._engine: _Engine = self._get_new_engine()
         self._engine_state_lock = asyncio.Lock()
 
     async def add_event_consumer(self, event_consumer: Callable[[events.Event], None]) -> None:
         """Initialize another `event_consumer`, working just like `event_consumer` passed in `__init__`"""
-        await self._engine.add_event_consumer(event_consumer)
+        if self._engine.started:
+            await self._engine.add_event_consumer(event_consumer)
 
-        self._secondary_event_consumers.append(event_consumer)
+        self._event_consumers.append(event_consumer)
 
     @property
     def driver(self) -> str:
@@ -193,7 +184,11 @@ class Golem:
                 if self.operative:
                     #   Something started us before we got to the locked part
                     return
-                await self._engine.add_event_consumer(self._main_event_consumer)
+
+                #   NOTE: we add consumers to the not-yet-started Engine, because this is the only
+                #   way to capture ShutdownFinished event with current Engine implementation
+                for event_consumer in self._event_consumers:
+                    await self._engine.add_event_consumer(event_consumer)
                 await self._engine.start()
         except:
             await self._stop_with_exc_info(*sys.exc_info())
@@ -213,14 +208,9 @@ class Golem:
         async with self._engine_state_lock:
             res = await self._engine.stop(*exc_info)
 
-            #   Engine that was stopped is not usable anymore, there is no "full" cleanup.
-            #   That's why here we replace it with a fresh one.
-            self._engine = self._get_new_engine()
-
-            #   Pass all event_consumers added to the old engine to the new one
-            #   (except the main consumer that is added in start())
-            for event_consumer in self._secondary_event_consumers:
-                await self._engine.add_event_consumer(event_consumer)
+        #   Engine that was stopped is not usable anymore, there is no "full" cleanup.
+        #   That's why here we replace it with a fresh one.
+        self._engine = self._get_new_engine()
 
         return res
 
