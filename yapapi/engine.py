@@ -206,13 +206,16 @@ class _Engine:
         return self._started
 
     async def add_event_consumer(self, event_consumer: Callable[[events.Event], None]) -> None:
-        """All events emited via `self.emit` will be passed to this callable"""
+        """All events emited via `self.emit` will be passed to this callable
+
+        NOTE: after this method was called (either on an already started Engine or not),
+              stop() is required for a clean shutdown.
+        """
         # Add buffering to the provided event emitter to make sure
         # that emitting events will not block
         wrapped_consumer = AsyncWrapper(event_consumer)
 
-        if self.started:
-            await self._stack.enter_async_context(wrapped_consumer)
+        await self._stack.enter_async_context(wrapped_consumer)
 
         self._wrapped_consumers.append(wrapped_consumer)
 
@@ -246,9 +249,6 @@ class _Engine:
         """
 
         stack = self._stack
-
-        for wrapped_consumer in self._wrapped_consumers:
-            await stack.enter_async_context(wrapped_consumer)
 
         def report_shutdown(*exc_info):
             if any(item for item in exc_info):
