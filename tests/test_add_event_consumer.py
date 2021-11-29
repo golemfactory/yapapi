@@ -11,7 +11,7 @@ emitted_events = sample_events + [events.ShutdownFinished(exc_info=None)]
 
 
 @pytest.mark.asyncio
-async def test_emit_event(engine_starts_without_yagna):
+async def test_emit_event(dummy_yagna_engine):
     got_events_1 = []
     got_events_2 = []
     got_events_3 = []

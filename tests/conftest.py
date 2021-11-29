@@ -7,7 +7,7 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture
-def engine_starts_without_yagna(monkeypatch):
+def dummy_yagna_engine(monkeypatch):
     """Use this fixture to call `_Engine.start()` in unit tests, without yagna/gftp.
 
     So also e.g. `async with Golem(..., APP_KEY='FAKE_APP_KEY')`, or Golem.start().
