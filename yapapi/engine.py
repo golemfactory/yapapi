@@ -524,11 +524,12 @@ class _Engine:
     def add_job(self, job: "Job"):
         """Register a job with this engine."""
         self._jobs.add(job)
+        self.emit(events.ComputationStarted(job.id, job.expiration_time))
 
-    @staticmethod
-    def finalize_job(job: "Job"):
+    def finalize_job(self, job: "Job"):
         """Mark a job as finished."""
         job.finished.set()
+        self.emit(events.ComputationFinished(job.id, exc_info=job._exc_info))  # type: ignore
 
     def register_generator(self, generator: AsyncGenerator) -> None:
         """Register a generator with this engine."""
@@ -716,6 +717,13 @@ class Job:
 
         self.agreements_pool = AgreementsPool(self.id, self.engine.emit)
         self.finished = asyncio.Event()
+
+        #   Exception that ended the job
+        self._exc_info = None
+
+    def set_exc_info(self, exc_info):
+        assert self._exc_info is None, "We can't have more than one exc_info ending a job"
+        self._exc_info = exc_info
 
     async def _handle_proposal(
         self,

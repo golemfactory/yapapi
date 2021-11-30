@@ -163,8 +163,6 @@ class Executor:
         job: Job,
     ) -> AsyncGenerator[Task[D, R], None]:
 
-        self.emit(events.ComputationStarted(job.id, job.expiration_time))
-
         done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
 
         def on_task_done(task: Task[D, R], status: TaskStatus) -> None:
@@ -312,11 +310,9 @@ class Executor:
                     assert get_done_task not in services
                     get_done_task = None
 
-            self.emit(events.ComputationFinished(job.id))
-
         except (Exception, CancelledError, KeyboardInterrupt) as e:
             #   TODO: why do we catch KeyboardInterrupt? How can we get one here?
-            self.emit(events.ComputationFinished(job.id, exc_info=sys.exc_info()))  # type: ignore
+            job.set_exc_info(sys.exc_info())
             cancelled = True
 
             if isinstance(e, CancelledError):
