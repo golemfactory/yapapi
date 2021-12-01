@@ -1,4 +1,22 @@
-"""Representing events in Golem computation."""
+"""Objects representing events in Golem computation.
+
+Everytime something important happens, an event is emitted.
+Emitted events are passed to all current event consumers, set
+either in :func:`yapapi.Golem.__init__` or via :func:`yapapi.Golem.add_event_consumer`.
+
+Every event has a set of attributes that describe it. Set of attributes shared by various events:
+
+* exc_info - either `None`, or tuple returned by :func:`sys.exc_info()`
+* job - :class:`yapapi.engine.Job` - [TODO]
+* script - :class:`yapapi.script.Script` - [TODO]
+* agreement - :class:`yapapi.rest.market.Agreement` - [TODO]
+* [TODO]
+
+Events should be consumed in strict `read_only` mode: event objects are shared between all event consumers,
+and their attributes are used internally by the Golem engine, so any change might have unexpected
+side effects.
+
+"""
 import dataclasses
 from datetime import datetime, timedelta
 from dataclasses import dataclass

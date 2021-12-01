@@ -129,7 +129,7 @@ class Golem:
         self._engine_state_lock = asyncio.Lock()
 
     async def add_event_consumer(self, event_consumer: Callable[[events.Event], None]) -> None:
-        """Initialize another `event_consumer`, working just like `event_consumer` passed in `__init__`"""
+        """Initialize another `event_consumer`, working just like `event_consumer` passed to :func:`Golem.__init__`"""
         if self._engine.started:
             await self._engine.add_event_consumer(event_consumer)
 
