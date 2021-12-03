@@ -586,10 +586,9 @@ class _Engine:
                 )
                 await run_worker(agreement, activity, work_context)
 
-        def use_agreement(agreement, details):
-            return loop.create_task(worker_task(agreement, details))
-
-        return await job.agreements_pool.use_agreement(use_agreement, self._recycle_offer)
+        return await job.agreements_pool.use_agreement(
+            lambda agreement, details: loop.create_task(worker_task(agreement, details))
+        )
 
     async def process_batches(
         self,
@@ -668,7 +667,7 @@ class _Engine:
                 future_results = loop.create_task(get_batch_results())
                 script = await batch_generator.asend(future_results)
 
-    def _recycle_offer(self, offer: OfferProposal) -> None:
+    def recycle_offer(self, offer: OfferProposal) -> None:
         """This offer was already processed, but something happened and we should treat it as a fresh one.
 
         Currently this "something" is always "we couldn't confirm the agreement with the provider",
@@ -677,7 +676,7 @@ class _Engine:
         Purpose:
         *   we want to rescore the offer (score might change because of the event that caused recycling)
         *   if this is a draft offer (and in the current usecase it always is), we want to return to the
-            negotiations and get new draft - e.g. because this draft already has an Agreement
+            negotiations and get a new draft - e.g. because this draft already has an Agreement
 
         We don't care which Job initiated recycling - it should be recycled by all unfinished Jobs.
         """
@@ -737,7 +736,7 @@ class Job:
         self.expiration_time: datetime = expiration_time
         self.payload: Payload = payload
 
-        self.agreements_pool = AgreementsPool(self.id, self.engine.emit)
+        self.agreements_pool = AgreementsPool(self.id, self.engine.emit, self.engine.recycle_offer)
         self.finished = asyncio.Event()
 
         self._demand_builder: Optional[DemandBuilder] = None

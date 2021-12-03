@@ -24,13 +24,6 @@ def mock_agreement(**properties):
     return create_agreement
 
 
-def recycle_offer_cb(offer):
-    """AgreementsPool.use_agreement() sometimes initiates recycling of offers.
-
-    This has nothing to do with the things we test here, but is required by the interface"""
-    pass
-
-
 @pytest.mark.asyncio
 async def test_use_agreement_chooses_max_score():
     """Test that a proposal with the largest score is chosen in AgreementsPool.use_agreement()."""
@@ -43,7 +36,7 @@ async def test_use_agreement_chooses_max_score():
         mock_score = random.random()
         proposals[n] = (mock_score, mock_proposal)
 
-    pool = agreements_pool.AgreementsPool("job", lambda _event: None)
+    pool = agreements_pool.AgreementsPool("job", lambda _event: None, lambda _offer: None)
 
     for score, proposal in proposals.values():
         await pool.add_proposal(score, proposal)
@@ -55,7 +48,7 @@ async def test_use_agreement_chooses_max_score():
         return True
 
     for _ in proposals.items():
-        await pool.use_agreement(use_agreement_cb, recycle_offer_cb)
+        await pool.use_agreement(use_agreement_cb)
 
     # Make sure that proposals are chosen according to the decreasing ordering of the scores
     sorted_scores = sorted((score for score, _ in proposals.values()), reverse=True)
@@ -80,7 +73,7 @@ async def test_use_agreement_shuffles_proposals():
             mock_score = 42.0 if n != 0 else 41.0
             proposals.append((mock_score, mock_proposal))
 
-        pool = agreements_pool.AgreementsPool("job", lambda _event: None)
+        pool = agreements_pool.AgreementsPool("job", lambda _event: None, lambda _offer: None)
 
         for score, proposal in proposals:
             await pool.add_proposal(score, proposal)
@@ -89,7 +82,7 @@ async def test_use_agreement_shuffles_proposals():
             chosen_proposal_ids.add(agreement.proposal_id)
             return True
 
-        await pool.use_agreement(use_agreement_cb, recycle_offer_cb)
+        await pool.use_agreement(use_agreement_cb)
 
     # Make sure that each proposal id with the highest score has been chosen
     assert chosen_proposal_ids == {n for n in all_proposal_ids if n != 0}
@@ -99,10 +92,10 @@ async def test_use_agreement_shuffles_proposals():
 async def test_use_agreement_no_proposals():
     """Test that `AgreementPool.use_agreement()` returns `None` when there are no proposals."""
 
-    pool = agreements_pool.AgreementsPool("job", lambda _event: None)
+    pool = agreements_pool.AgreementsPool("job", lambda _event: None, lambda _offer: None)
 
     def use_agreement_cb(_agreement):
         assert False, "use_agreement callback called"
 
-    result = await pool.use_agreement(use_agreement_cb, recycle_offer_cb)
+    result = await pool.use_agreement(use_agreement_cb)
     assert result is None

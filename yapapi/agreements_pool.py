@@ -38,9 +38,15 @@ class BufferedAgreement:
 class AgreementsPool:
     """Manages proposals and agreements pool"""
 
-    def __init__(self, job_id: str, emitter: Callable[[events.Event], None]):
+    def __init__(
+        self,
+        job_id: str,
+        emitter: Callable[[events.Event], None],
+        offer_recycler: Callable[[OfferProposal], None],
+    ):
         self.job_id = job_id
         self.emitter = emitter
+        self.offer_recycler = offer_recycler
         self._offer_buffer: Dict[str, _BufferedProposal] = {}  # provider_id -> Proposal
         self._agreements: Dict[str, BufferedAgreement] = {}  # agreement_id -> Agreement
         self._lock = asyncio.Lock()
@@ -72,17 +78,15 @@ class AgreementsPool:
             )
 
     async def use_agreement(
-        self,
-        agreement_cbk: Callable[[Agreement, AgreementDetails], asyncio.Task],
-        recycle_offer_cbk: Callable[[OfferProposal], None],
+        self, cbk: Callable[[Agreement, AgreementDetails], asyncio.Task]
     ) -> Optional[asyncio.Task]:
-        """Get an agreement and start the `agreement_cbk()` task within it."""
+        """Get an agreement and start the `cbk()` task within it."""
         async with self._lock:
-            agreement_with_info = await self._get_agreement(recycle_offer_cbk)
+            agreement_with_info = await self._get_agreement()
             if agreement_with_info is None:
                 return None
             agreement, agreement_details = agreement_with_info
-            task = agreement_cbk(agreement, agreement_details)
+            task = cbk(agreement, agreement_details)
             await self._set_worker(agreement.id, task)
             return task
 
@@ -94,15 +98,11 @@ class AgreementsPool:
         assert buffered_agreement.worker_task is None
         buffered_agreement.worker_task = task
 
-    async def _get_agreement(
-        self, recycle_offer_cbk: Callable[[OfferProposal], None]
-    ) -> Optional[Tuple[Agreement, AgreementDetails]]:
+    async def _get_agreement(self) -> Optional[Tuple[Agreement, AgreementDetails]]:
         """Returns an Agreement
 
         Firstly it tries to reuse agreement from a pool of available agreements
         (no active worker_task). If that fails it tries to convert offer into agreement.
-
-        If agreement confirmation failed, selected offer is recycled via recycle_offer_cbk.
         """
         emit = self.emitter
 
@@ -153,12 +153,12 @@ class AgreementsPool:
         except (ApiException, asyncio.TimeoutError, aiohttp.ClientOSError):
             logger.debug("Cannot get agreement details. id: %s", agreement.id, exc_info=True)
             emit(events.AgreementRejected(job_id=self.job_id, agr_id=agreement.id))
-            recycle_offer_cbk(offer.proposal)
+            self.offer_recycler(offer.proposal)
             return None
         if not await agreement.confirm():
             emit(events.AgreementRejected(job_id=self.job_id, agr_id=agreement.id))
             self._rejecting_providers.add(provider_id)
-            recycle_offer_cbk(offer.proposal)
+            self.offer_recycler(offer.proposal)
             return None
         self._rejecting_providers.discard(provider_id)
         self._agreements[agreement.id] = BufferedAgreement(
