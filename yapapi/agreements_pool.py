@@ -72,15 +72,17 @@ class AgreementsPool:
             )
 
     async def use_agreement(
-        self, cbk: Callable[[Agreement, AgreementDetails], asyncio.Task]
+        self,
+        agreement_cbk: Callable[[Agreement, AgreementDetails], asyncio.Task],
+        rescore_offer_cbk: Callable[[OfferProposal], None]
     ) -> Optional[asyncio.Task]:
         """Get an agreement and start the `cbk()` task within it."""
         async with self._lock:
-            agreement_with_info = await self._get_agreement()
+            agreement_with_info = await self._get_agreement(rescore_offer_cbk)
             if agreement_with_info is None:
                 return None
             agreement, agreement_details = agreement_with_info
-            task = cbk(agreement, agreement_details)
+            task = agreement_cbk(agreement, agreement_details)
             await self._set_worker(agreement.id, task)
             return task
 
@@ -92,11 +94,16 @@ class AgreementsPool:
         assert buffered_agreement.worker_task is None
         buffered_agreement.worker_task = task
 
-    async def _get_agreement(self) -> Optional[Tuple[Agreement, AgreementDetails]]:
+    async def _get_agreement(
+        self,
+        rescore_offer_cbk: Callable[[OfferProposal], None]
+    ) -> Optional[Tuple[Agreement, AgreementDetails]]:
         """Returns an Agreement
 
         Firstly it tries to reuse agreement from a pool of available agreements
         (no active worker_task). If that fails it tries to convert offer into agreement.
+
+        If agreement confirmation failed, selected offer is rescored via rescore_offer_cbk.
         """
         emit = self.emitter
 
@@ -147,12 +154,12 @@ class AgreementsPool:
         except (ApiException, asyncio.TimeoutError, aiohttp.ClientOSError):
             logger.debug("Cannot get agreement details. id: %s", agreement.id, exc_info=True)
             emit(events.AgreementRejected(job_id=self.job_id, agr_id=agreement.id))
-            await self._recycle_offer(offer)
+            rescore_offer_cbk(offer.proposal)
             return None
         if not await agreement.confirm():
             emit(events.AgreementRejected(job_id=self.job_id, agr_id=agreement.id))
             self._rejecting_providers.add(provider_id)
-            await self._recycle_offer(offer)
+            rescore_offer_cbk(offer.proposal)
             return None
         self._rejecting_providers.discard(provider_id)
         self._agreements[agreement.id] = BufferedAgreement(
@@ -256,12 +263,3 @@ class AgreementsPool:
     def rejected_last_agreement(self, provider_id: str) -> bool:
         """Return `True` iff the last agreement proposed to `provider_id` has been rejected."""
         return provider_id in self._rejecting_providers
-
-    async def _recycle_offer(self, offer: _BufferedProposal) -> None:
-        """We tried to make an agreement using this offer and failed - but maybe next time we'll succeed?"""
-        #   TODO how to do this?
-        #   1.  We can't just call self.add_proposal, because we're already in self.lock
-        #   2.  We **don't want** to call self.add_proposal, because this offer should be scored again - the fact
-        #       that agreement was rejected might influence our score (and it should, unless we want to be forever
-        #       proposing agreements to the same provider that always rejects them).
-        raise NotImplementedError

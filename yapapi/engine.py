@@ -586,9 +586,10 @@ class _Engine:
                 )
                 await run_worker(agreement, activity, work_context)
 
-        return await job.agreements_pool.use_agreement(
-            lambda agreement, details: loop.create_task(worker_task(agreement, details))
-        )
+        def use_agreement(agreement, details):
+            return loop.create_task(worker_task(agreement, details))
+
+        return await job.agreements_pool.use_agreement(use_agreement, self._rescore_offer)
 
     async def process_batches(
         self,
@@ -666,6 +667,15 @@ class _Engine:
                 # Schedule the coroutine in a separate asyncio task
                 future_results = loop.create_task(get_batch_results())
                 script = await batch_generator.asend(future_results)
+
+    def _rescore_offer(self, offer: OfferProposal) -> None:
+        """This offer was already scored once, but something happened and we should score it again.
+
+        Currently this "something" is always "we couldn't confirm the agreement with the provider",
+        but someday this might be useful also in other scenarios.
+        """
+        print("RESCORE OFFER")
+        raise NotImplementedError
 
 
 class Job:
