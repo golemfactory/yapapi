@@ -589,7 +589,7 @@ class _Engine:
         def use_agreement(agreement, details):
             return loop.create_task(worker_task(agreement, details))
 
-        return await job.agreements_pool.use_agreement(use_agreement, self._rescore_offer)
+        return await job.agreements_pool.use_agreement(use_agreement, self._recycle_offer)
 
     async def process_batches(
         self,
@@ -668,22 +668,26 @@ class _Engine:
                 future_results = loop.create_task(get_batch_results())
                 script = await batch_generator.asend(future_results)
 
-    def _rescore_offer(self, offer: OfferProposal) -> None:
-        """This offer was already scored once, but something happened and we should score it again.
+    def _recycle_offer(self, offer: OfferProposal) -> None:
+        """This offer was already processed, but something happened and we should treat it as a fresh one.
 
         Currently this "something" is always "we couldn't confirm the agreement with the provider",
         but someday this might be useful also in other scenarios.
 
-        NOTE: with some effort we could have here information about the Job that caused rescoring of the offer,
-              but we don't really care - it should be rescored for all Jobs there are.
+        Purpose:
+        *   we want to rescore the offer (score might change because of the event that caused recycling)
+        *   if this is a draft offer (and in the current usecase it always is), we want to return to the
+            negotiations and get new draft - e.g. because this draft already has an Agreement
+
+        We don't care which Job initiated recycling - it should be recycled by all unfinished Jobs.
         """
-        async def handle_proposal_emit_event(job):
+        async def handle_proposal(job):
             event = await job._handle_proposal(offer, ignore_draft=True)
             self.emit(event)
 
         unfinished_jobs = (job for job in self._jobs if not job.finished.is_set())
         for job in unfinished_jobs:
-            asyncio.get_event_loop().create_task(handle_proposal_emit_event(job))
+            asyncio.get_event_loop().create_task(handle_proposal(job))
 
 
 class Job:

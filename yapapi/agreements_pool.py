@@ -74,11 +74,11 @@ class AgreementsPool:
     async def use_agreement(
         self,
         agreement_cbk: Callable[[Agreement, AgreementDetails], asyncio.Task],
-        rescore_offer_cbk: Callable[[OfferProposal], None]
+        recycle_offer_cbk: Callable[[OfferProposal], None]
     ) -> Optional[asyncio.Task]:
         """Get an agreement and start the `cbk()` task within it."""
         async with self._lock:
-            agreement_with_info = await self._get_agreement(rescore_offer_cbk)
+            agreement_with_info = await self._get_agreement(recycle_offer_cbk)
             if agreement_with_info is None:
                 return None
             agreement, agreement_details = agreement_with_info
@@ -96,14 +96,14 @@ class AgreementsPool:
 
     async def _get_agreement(
         self,
-        rescore_offer_cbk: Callable[[OfferProposal], None]
+        recycle_offer_cbk: Callable[[OfferProposal], None]
     ) -> Optional[Tuple[Agreement, AgreementDetails]]:
         """Returns an Agreement
 
         Firstly it tries to reuse agreement from a pool of available agreements
         (no active worker_task). If that fails it tries to convert offer into agreement.
 
-        If agreement confirmation failed, selected offer is rescored via rescore_offer_cbk.
+        If agreement confirmation failed, selected offer is recycled via recycle_offer_cbk.
         """
         emit = self.emitter
 
@@ -154,12 +154,12 @@ class AgreementsPool:
         except (ApiException, asyncio.TimeoutError, aiohttp.ClientOSError):
             logger.debug("Cannot get agreement details. id: %s", agreement.id, exc_info=True)
             emit(events.AgreementRejected(job_id=self.job_id, agr_id=agreement.id))
-            rescore_offer_cbk(offer.proposal)
+            recycle_offer_cbk(offer.proposal)
             return None
         if not await agreement.confirm():
             emit(events.AgreementRejected(job_id=self.job_id, agr_id=agreement.id))
             self._rejecting_providers.add(provider_id)
-            rescore_offer_cbk(offer.proposal)
+            recycle_offer_cbk(offer.proposal)
             return None
         self._rejecting_providers.discard(provider_id)
         self._agreements[agreement.id] = BufferedAgreement(
