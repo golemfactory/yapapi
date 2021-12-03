@@ -678,10 +678,11 @@ class _Engine:
               but we don't really care - it should be rescored for all Jobs there are.
         """
         async def handle_proposal_emit_event(job):
-            event = await job._handle_proposal(offer)
+            event = await job._handle_proposal(offer, ignore_draft=True)
             self.emit(event)
 
-        for job in self._jobs:
+        unfinished_jobs = (job for job in self._jobs if not job.finished.is_set())
+        for job in unfinished_jobs:
             asyncio.get_event_loop().create_task(handle_proposal_emit_event(job))
 
 
@@ -739,12 +740,16 @@ class Job:
     async def _handle_proposal(
         self,
         proposal: OfferProposal,
+        ignore_draft: bool = False,
     ) -> events.Event:
         """Handle a single `OfferProposal`.
 
         A `proposal` is scored and then can be rejected, responded with
         a counter-proposal or stored in an agreements pool to be used
         for negotiating an agreement.
+
+        If `ignore_draft` is True, we either reject, or respond with a counter-proposal,
+        but never pass the proposal to the agreements pool.
         """
 
         async def reject_proposal(reason: str) -> events.ProposalRejected:
@@ -764,11 +769,9 @@ class Job:
         if score < SCORE_NEUTRAL:
             return await reject_proposal("Score too low")
 
-        if not proposal.is_draft:
+        if ignore_draft or not proposal.is_draft:
             demand_builder = self._demand_builder
             assert demand_builder is not None
-
-            # Proposal is not yet a draft of an agreement
 
             # Check if any of the supported payment platforms matches the proposal
             common_platforms = self._get_common_payment_platforms(proposal)
@@ -792,7 +795,6 @@ class Job:
             return events.ProposalResponded(job_id=self.id, prop_id=proposal.id)
 
         else:
-            # It's a draft agreement
             await self.agreements_pool.add_proposal(score, proposal)
             return events.ProposalConfirmed(job_id=self.id, prop_id=proposal.id)
 
