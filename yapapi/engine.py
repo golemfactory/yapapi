@@ -673,9 +673,16 @@ class _Engine:
 
         Currently this "something" is always "we couldn't confirm the agreement with the provider",
         but someday this might be useful also in other scenarios.
+
+        NOTE: with some effort we could have here information about the Job that caused rescoring of the offer,
+              but we don't really care - it should be rescored for all Jobs there are.
         """
-        print("RESCORE OFFER")
-        raise NotImplementedError
+        async def handle_proposal_emit_event(job):
+            event = await job._handle_proposal(offer)
+            self.emit(event)
+
+        for job in self._jobs:
+            asyncio.get_event_loop().create_task(handle_proposal_emit_event(job))
 
 
 class Job:
@@ -727,10 +734,11 @@ class Job:
         self.agreements_pool = AgreementsPool(self.id, self.engine.emit)
         self.finished = asyncio.Event()
 
+        self._demand_builder: Optional[DemandBuilder] = None
+
     async def _handle_proposal(
         self,
         proposal: OfferProposal,
-        demand_builder: DemandBuilder,
     ) -> events.Event:
         """Handle a single `OfferProposal`.
 
@@ -757,6 +765,9 @@ class Job:
             return await reject_proposal("Score too low")
 
         if not proposal.is_draft:
+            demand_builder = self._demand_builder
+            assert demand_builder is not None
+
             # Proposal is not yet a draft of an agreement
 
             # Check if any of the supported payment platforms matches the proposal
@@ -788,7 +799,6 @@ class Job:
     async def _find_offers_for_subscription(
         self,
         subscription: Subscription,
-        demand_builder: DemandBuilder,
     ) -> None:
         """Create a market subscription and repeatedly collect offer proposals for it.
 
@@ -820,7 +830,7 @@ class Job:
             async def handler(proposal_):
                 """Wrap `_handle_proposal()` method with error handling."""
                 try:
-                    event = await self._handle_proposal(proposal_, demand_builder)
+                    event = await self._handle_proposal(proposal_)
                     assert isinstance(event, events.ProposalEvent)
                     self.engine.emit(event)
                     if isinstance(event, events.ProposalConfirmed):
@@ -846,18 +856,20 @@ class Job:
 
         When the subscription expires, create a new one. And so on...
         """
-
-        builder = await self.engine.create_demand_builder(self.expiration_time, self.payload)
+        if self._demand_builder is None:
+            self._demand_builder = await self.engine.create_demand_builder(
+                self.expiration_time, self.payload
+            )
 
         while True:
             try:
-                subscription = await builder.subscribe(self.engine._market_api)
+                subscription = await self._demand_builder.subscribe(self.engine._market_api)
                 self.engine.emit(events.SubscriptionCreated(job_id=self.id, sub_id=subscription.id))
             except Exception as ex:
                 self.engine.emit(events.SubscriptionFailed(job_id=self.id, reason=str(ex)))
                 raise
             async with subscription:
-                await self._find_offers_for_subscription(subscription, builder)
+                await self._find_offers_for_subscription(subscription)
 
     # TODO: move to Golem
     def _get_common_payment_platforms(self, proposal: rest.market.OfferProposal) -> Set[str]:
