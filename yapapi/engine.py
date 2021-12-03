@@ -681,6 +681,7 @@ class _Engine:
 
         We don't care which Job initiated recycling - it should be recycled by all unfinished Jobs.
         """
+
         async def handle_proposal(job):
             event = await job._handle_proposal(offer, ignore_draft=True)
             self.emit(event)

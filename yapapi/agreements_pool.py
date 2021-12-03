@@ -74,9 +74,9 @@ class AgreementsPool:
     async def use_agreement(
         self,
         agreement_cbk: Callable[[Agreement, AgreementDetails], asyncio.Task],
-        recycle_offer_cbk: Callable[[OfferProposal], None]
+        recycle_offer_cbk: Callable[[OfferProposal], None],
     ) -> Optional[asyncio.Task]:
-        """Get an agreement and start the `cbk()` task within it."""
+        """Get an agreement and start the `agreement_cbk()` task within it."""
         async with self._lock:
             agreement_with_info = await self._get_agreement(recycle_offer_cbk)
             if agreement_with_info is None:
@@ -95,8 +95,7 @@ class AgreementsPool:
         buffered_agreement.worker_task = task
 
     async def _get_agreement(
-        self,
-        recycle_offer_cbk: Callable[[OfferProposal], None]
+        self, recycle_offer_cbk: Callable[[OfferProposal], None]
     ) -> Optional[Tuple[Agreement, AgreementDetails]]:
         """Returns an Agreement
 
