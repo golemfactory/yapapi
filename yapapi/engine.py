@@ -104,7 +104,6 @@ class _Engine:
         subnet_tag: Optional[str] = None,
         payment_driver: Optional[str] = None,
         payment_network: Optional[str] = None,
-        event_consumer: Optional[Callable[[events.Event], None]] = None,
         stream_output: bool = False,
         app_key: Optional[str] = None,
     ):
@@ -121,8 +120,6 @@ class _Engine:
         :param payment_network: name of the payment network to use. Uses `YAGNA_PAYMENT_NETWORK`
         environment variable, defaults to `rinkeby`. Only payment platforms with the specified
             network will be used
-        :param event_consumer: a callable that processes events related to the
-            computation; by default it is a function that logs all events
         :param stream_output: stream computation output from providers
         :param app_key: optional Yagna application key. If not provided, the default is to
                         get the value from `YAGNA_APPKEY` environment variable
@@ -130,6 +127,7 @@ class _Engine:
         self._api_config = rest.Configuration(app_key)
         self._budget_amount = Decimal(budget)
         self._budget_allocations: List[rest.payment.Allocation] = []
+        self._wrapped_consumers: List[AsyncWrapper] = []
 
         if not strategy:
             strategy = LeastExpensiveLinearPayuMS(
@@ -144,18 +142,6 @@ class _Engine:
         self._subnet: Optional[str] = subnet_tag or DEFAULT_SUBNET
         self._payment_driver: str = payment_driver.lower() if payment_driver else DEFAULT_DRIVER
         self._payment_network: str = payment_network.lower() if payment_network else DEFAULT_NETWORK
-
-        if not event_consumer:
-            # Use local import to avoid cyclic imports when yapapi.log
-            # is imported by client code
-            from yapapi.log import log_event_repr, log_summary
-
-            event_consumer = log_summary(log_event_repr)
-
-        # Add buffering to the provided event emitter to make sure
-        # that emitting events will not block
-        self._wrapped_consumer = AsyncWrapper(event_consumer)
-
         self._stream_output = stream_output
 
         # a set of `Job` instances used to track jobs - computations or services - started
@@ -174,6 +160,11 @@ class _Engine:
         self._generators: Set[AsyncGenerator] = set()
         self._services: Set[asyncio.Task] = set()
         self._stack = AsyncExitStack()
+
+        #   Separate stack for event consumers - because we want to ensure that they are the last
+        #   thing to exit no matter when add_event_consumer was called.
+        self._wrapped_consumer_stack = AsyncExitStack()
+        self._stack.push_async_exit(self._wrapped_consumer_stack.__aexit__)
 
         self._started = False
 
@@ -219,10 +210,24 @@ class _Engine:
         """Return `True` if this instance is initialized, `False` otherwise."""
         return self._started
 
+    async def add_event_consumer(self, event_consumer: Callable[[events.Event], None]) -> None:
+        """All events emited via `self.emit` will be passed to this callable
+
+        NOTE: after this method was called (either on an already started Engine or not),
+              stop() is required for a clean shutdown.
+        """
+        # Add buffering to the provided event emitter to make sure
+        # that emitting events will not block
+        wrapped_consumer = AsyncWrapper(event_consumer)
+
+        await self._wrapped_consumer_stack.enter_async_context(wrapped_consumer)
+
+        self._wrapped_consumers.append(wrapped_consumer)
+
     def emit(self, event: events.Event) -> None:
         """Emit an event to be consumed by this engine's event consumer."""
-        if self._wrapped_consumer:
-            self._wrapped_consumer.async_call(event)
+        for wrapped_consumer in self._wrapped_consumers:
+            wrapped_consumer.async_call(event)
 
     async def stop(self, *exc_info) -> Optional[bool]:
         """Stop the engine.
@@ -241,8 +246,6 @@ class _Engine:
         """
 
         stack = self._stack
-
-        await stack.enter_async_context(self._wrapped_consumer)
 
         def report_shutdown(*exc_info):
             if any(item for item in exc_info):
