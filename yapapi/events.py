@@ -4,9 +4,17 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass
 import logging
 from types import TracebackType
-from typing import Any, Optional, Type, Tuple, List
+from typing import Any, Optional, Type, Tuple, List, TYPE_CHECKING
 
-from yapapi.props import NodeInfo
+
+if TYPE_CHECKING:
+    from yapapi.engine import Job
+    from yapapi.rest.market import Subscription, OfferProposal, Agreement
+    from yapapi.rest.payment import DebitNote, Invoice
+    from yapapi.rest.activity import Activity
+    from yapapi.executor.task import Task
+    from yapapi.script import Script
+    from yapapi.script.command import Command
 
 ExcInfo = Tuple[Type[BaseException], BaseException, Optional[TracebackType]]
 
@@ -14,9 +22,17 @@ ExcInfo = Tuple[Type[BaseException], BaseException, Optional[TracebackType]]
 logger = logging.getLogger(__name__)
 
 
+#   GENERAL TODO
+#   *   Abstract dataclassess - how to? Is (init=False) enough?
+#   *   exc_info & related interface
+
 @dataclass(init=False)
 class Event:
     """An abstract base class for types of events emitted by `Executor.submit()`."""
+    timestamp: dataclasses.field(init=False)
+
+    def __post_init__(self):
+        self.timestamp = datetime.now()
 
     def __init__(self):
         raise NotImplementedError()
@@ -46,7 +62,7 @@ class HasExcInfo(Event):
 
 @dataclass(init=False)
 class JobEvent(Event):
-    job_id: str
+    job: 'Job'
 
 
 @dataclass
@@ -61,7 +77,7 @@ class ComputationFinished(HasExcInfo, JobEvent):
 
 @dataclass
 class SubscriptionCreated(JobEvent):
-    sub_id: str
+    subscription: 'Subscription'
 
 
 @dataclass
@@ -71,23 +87,22 @@ class SubscriptionFailed(JobEvent):
 
 @dataclass
 class CollectFailed(Event):
-    sub_id: str
     reason: str
 
 
 @dataclass(init=False)
 class ProposalEvent(JobEvent):
-    prop_id: str
+    proposal: 'OfferProposal'
 
 
 @dataclass
 class ProposalReceived(ProposalEvent):
-    provider_id: str
+    pass
 
 
 @dataclass
 class ProposalRejected(ProposalEvent):
-    reason: Optional[str] = None
+    reason: str
 
 
 @dataclass
@@ -113,13 +128,12 @@ class NoProposalsConfirmed(Event):
 
 @dataclass(init=False)
 class AgreementEvent(JobEvent):
-    agr_id: str
+    agreement: 'Agreement'
 
 
 @dataclass
 class AgreementCreated(AgreementEvent):
-    provider_id: str
-    provider_info: NodeInfo
+    pass
 
 
 @dataclass
@@ -139,14 +153,14 @@ class AgreementTerminated(AgreementEvent):
 
 @dataclass
 class DebitNoteReceived(AgreementEvent):
-    note_id: str
-    amount: str
+    debit_note: 'DebitNote'
 
 
 @dataclass
 class PaymentAccepted(AgreementEvent):
-    inv_id: str
-    amount: str
+    #   TODO: split to DebitNoteAccepted and InvoiceAccepted
+    #   with DebitNote/Invoice
+    pass
 
 
 @dataclass
@@ -166,8 +180,7 @@ class PaymentFailed(HasExcInfo, AgreementEvent):
 
 @dataclass
 class InvoiceReceived(AgreementEvent):
-    inv_id: str
-    amount: str
+    invoice: 'Invoice'
 
 
 @dataclass
@@ -177,7 +190,7 @@ class WorkerStarted(AgreementEvent):
 
 @dataclass
 class ActivityCreated(AgreementEvent):
-    act_id: str
+    activity: 'Activity'
 
 
 @dataclass
@@ -186,17 +199,17 @@ class ActivityCreateFailed(HasExcInfo, AgreementEvent):
 
 
 @dataclass(init=False)
-class TaskEvent(Event):
-    task_id: str
+class TaskEvent(AgreementEvent):
+    task: 'Task'
 
 
 @dataclass
-class TaskStarted(AgreementEvent, TaskEvent):
+class TaskStarted(TaskEvent):
     task_data: Any
 
 
 @dataclass
-class TaskFinished(AgreementEvent, TaskEvent):
+class TaskFinished(TaskEvent):
     pass
 
 
@@ -207,12 +220,12 @@ class WorkerFinished(HasExcInfo, AgreementEvent):
 
 @dataclass(init=False)
 class ScriptEvent(AgreementEvent):
-    script_id: Optional[str]
+    script: 'Script'
 
 
 @dataclass
 class ScriptSent(ScriptEvent):
-    cmds: Any
+    pass
 
 
 @dataclass
@@ -227,12 +240,11 @@ class ScriptFinished(ScriptEvent):
 
 @dataclass
 class CommandEvent(ScriptEvent):
-    cmd_idx: int
+    command: 'Command'
 
 
 @dataclass
 class CommandExecuted(CommandEvent):
-    command: Any
     success: bool = dataclasses.field(default=True)
     message: Optional[str] = dataclasses.field(default=None)
     stdout: Optional[str] = dataclasses.field(default=None)
@@ -241,7 +253,7 @@ class CommandExecuted(CommandEvent):
 
 @dataclass
 class CommandStarted(CommandEvent):
-    command: str
+    pass
 
 
 @dataclass
@@ -261,16 +273,16 @@ class TaskAccepted(TaskEvent):
 
 @dataclass
 class TaskRejected(TaskEvent):
-    reason: Optional[str]
+    reason: str
 
 
 @dataclass
-class DownloadStarted(Event):
+class DownloadStarted(CommandEvent):
     path: str
 
 
 @dataclass
-class DownloadFinished(Event):
+class DownloadFinished(CommandEvent):
     path: str
 
 
