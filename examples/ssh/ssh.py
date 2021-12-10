@@ -60,7 +60,7 @@ class SshService(Service):
         yield script
 
         connection_uri = self.network_node.get_websocket_uri(22)
-        app_key = self.cluster._engine._api_config.app_key
+        app_key = self.cluster.service_runner._job.engine._api_config.app_key
 
         print(
             "Connect with:\n"
@@ -87,12 +87,10 @@ async def main(subnet_tag, payment_driver=None, payment_network=None):
         network = await golem.create_network("192.168.0.1/24")
         async with network:
             cluster = await golem.run_service(SshService, network=network, num_instances=2)
-
-            def instances():
-                return [f"{s.provider_name}: {s.state.value}" for s in cluster.instances]
+            instances = cluster.instances
 
             while True:
-                print(instances())
+                print(instances)
                 try:
                     await asyncio.sleep(5)
                 except (KeyboardInterrupt, asyncio.CancelledError):
@@ -101,8 +99,8 @@ async def main(subnet_tag, payment_driver=None, payment_network=None):
             cluster.stop()
 
             cnt = 0
-            while cnt < 3 and any(s.is_available for s in cluster.instances):
-                print(instances())
+            while cnt < 3 and any(s.is_available for s in instances):
+                print(instances)
                 await asyncio.sleep(5)
                 cnt += 1
 
