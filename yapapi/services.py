@@ -183,7 +183,9 @@ class Service:
     def __repr__(self):
         class_name = type(self).__name__
         state = self.state.value
-        provider_description = " on {self.provider_name} [ {self.provider_id} ]>" if self.provider_id else ""
+        provider_description = (
+            " on {self.provider_name} [ {self.provider_id} ]>" if self.provider_id else ""
+        )
         return f"<{class_name} {state}{provider_description}"
 
     def exc_info(self) -> ExcInfo:
