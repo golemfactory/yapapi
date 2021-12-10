@@ -16,7 +16,6 @@ from typing import (
     TypeVar,
     Union,
     TYPE_CHECKING,
-    Generator,
 )
 from typing_extensions import AsyncGenerator
 
@@ -375,45 +374,17 @@ class Golem:
 
         cluster = Cluster(
             engine=self._engine,
+            service_class=service_class,
             payload=payload,
             expiration=expiration,
             respawn_unstarted_instances=respawn_unstarted_instances,
             network=network,
         )
+
         await self._engine.add_to_async_context(cluster)
-
-        instance_param_gen = self._resolve_instance_params(num_instances, instance_params)
-        for ix, single_instance_params in enumerate(instance_param_gen):
-            network_address = None
-            if network_addresses is not None and len(network_addresses) > ix:
-                network_address = network_addresses[ix]
-
-            service = service_class(**single_instance_params)  # type: ignore
-            cluster.add_instance(service, network_address)
+        cluster.spawn_instances(num_instances, instance_params, network_addresses)
 
         return cluster
-
-    def _resolve_instance_params(
-        self,
-        num_instances: Optional[int],
-        instance_params: Optional[Iterable[Dict]],
-    ) -> Generator[Dict, None, None]:
-        if instance_params is None:
-            if num_instances is None:
-                num_instances = 1
-            yield from ({} for _ in range(num_instances))
-        else:
-            instance_params = iter(instance_params)
-            if num_instances is None:
-                yield from instance_params
-            else:
-                for i in range(num_instances):
-                    try:
-                        yield next(instance_params)
-                    except StopIteration:
-                        raise ValueError(
-                            f"`instance_params` iterable depleted after {i} spawned instances."
-                        )
 
     async def create_network(
         self,

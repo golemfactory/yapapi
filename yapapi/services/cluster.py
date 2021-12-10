@@ -10,6 +10,9 @@ import sys
 from types import TracebackType
 from typing import (
     AsyncContextManager,
+    Dict,
+    Generator,
+    Iterable,
     List,
     Optional,
     Set,
@@ -79,6 +82,7 @@ class Cluster(AsyncContextManager):
     def __init__(
         self,
         engine: "_Engine",
+        service_class: Type[Service],
         payload: Payload,
         expiration: Optional[datetime] = None,
         respawn_unstarted_instances: bool = True,
@@ -99,6 +103,7 @@ class Cluster(AsyncContextManager):
         self.id = str(next(cluster_ids))
 
         self._engine = engine
+        self._service_class = service_class
         self._payload = payload
         self._expiration: datetime = (
             expiration or datetime.now(timezone.utc) + DEFAULT_SERVICE_EXPIRATION
@@ -128,16 +133,18 @@ class Cluster(AsyncContextManager):
         return self._payload
 
     @property
+    def service_class(self) -> Type[Service]:
+        """Return the class instantiated by all service instances in this :class:`Cluster`."""
+        return self._service_class
+
+    @property
     def network(self) -> Optional[Network]:
         """Return the :class:`~yapapi.network.Network` record associated with the VPN used by this :class:`Cluster`."""
         return self._network
 
     def __repr__(self):
-        #   TODO: prettier print (cnt: service_class for every service_class)
-        service_classes = set(type(service).__name__ for service in self.instances)
-        service_classes = sorted(service_classes)
         return (
-            f"Cluster {self.id}: {len(self.__instances)}x[Services: {service_classes}, "
+            f"Cluster {self.id}: {len(self.__instances)}x[Service: {self._service_class.__name__}, "
             f"Payload: {self._payload}]"
         )
 
@@ -476,6 +483,39 @@ class Cluster(AsyncContextManager):
         task = loop.create_task(self.spawn_instance(service, network_address))
         self._instance_tasks.add(task)
 
+    def spawn_instances(
+        self,
+        num_instances: Optional[int] = None,
+        instance_params: Optional[Iterable[Dict]] = None,
+        network_addresses: Optional[List[str]] = None,
+    ) -> None:
+        """Spawn new instances within this :class:`Cluster`.
+        :param num_instances: optional number of service instances to run. Defaults to a single
+            instance, unless `instance_params` is given, in which case, the :class:`Cluster` will spawn
+            as many instances as there are elements in the `instance_params` iterable.
+            if `num_instances` is not None and < 1, the method will immediately return and log a warning.
+        :param instance_params: optional list of dictionaries of keyword arguments that will be passed
+            to consecutive, spawned instances. The number of elements in the iterable determines the
+            number of instances spawned, unless `num_instances` is given, in which case the latter takes
+            precedence.
+            In other words, if both `num_instances` and `instance_params` are provided,
+            the number of instances spawned will be equal to `num_instances` and if there are
+            too few elements in the `instance_params` iterable, it will results in an error.
+        :param network_addresses: optional list of network addresses in case the :class:`Cluster` is
+            attached to VPN. If the list is not provided (or if the number of elements is less
+            than the number of spawned instances), any instances for which the addresses have not
+            been given, will be assigned an address automatically.
+        """
+
+        instance_param_gen = self._resolve_instance_params(num_instances, instance_params)
+        for ix, single_instance_params in enumerate(instance_param_gen):
+            network_address = None
+            if network_addresses is not None and len(network_addresses) > ix:
+                network_address = network_addresses[ix]
+
+            service = self.service_class(**single_instance_params)  # type: ignore
+            self.add_instance(service, network_address)
+
     def stop(self):
         """Signal the whole :class:`Cluster` to stop."""
         self.__state.stop()
@@ -487,3 +527,25 @@ class Cluster(AsyncContextManager):
     def _state(self):
         """Current state of the Cluster."""
         return self.__state.current_state
+
+    def _resolve_instance_params(
+        self,
+        num_instances: Optional[int],
+        instance_params: Optional[Iterable[Dict]],
+    ) -> Generator[Dict, None, None]:
+        if instance_params is None:
+            if num_instances is None:
+                num_instances = 1
+            yield from ({} for _ in range(num_instances))
+        else:
+            instance_params = iter(instance_params)
+            if num_instances is None:
+                yield from instance_params
+            else:
+                for i in range(num_instances):
+                    try:
+                        yield next(instance_params)
+                    except StopIteration:
+                        raise ValueError(
+                            f"`instance_params` iterable depleted after {i} spawned instances."
+                        )
