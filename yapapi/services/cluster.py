@@ -3,7 +3,6 @@ import itertools
 from datetime import timedelta, datetime
 import sys
 from typing import (
-    AsyncContextManager,
     Dict,
     Generator,
     Iterable,
@@ -28,10 +27,8 @@ from .service_runner import ServiceRunner
 MIN_AGREEMENT_EXPIRATION: Final[timedelta] = timedelta(minutes=5)
 MAX_AGREEMENT_EXPIRATION: Final[timedelta] = timedelta(minutes=180)
 
-cluster_ids = itertools.count(1)
 
-
-class Cluster(AsyncContextManager):
+class Cluster:
     """Golem's sub-engine used to spawn and control instances of a single :class:`Service`."""
 
     def __init__(
@@ -51,23 +48,25 @@ class Cluster(AsyncContextManager):
             be attached to.
         """
 
-        self.id = str(next(cluster_ids))
-
-        self._service_runner = service_runner
+        self.service_runner = service_runner
         self._service_class = service_class
         self._task_ids = itertools.count(1)
         self._respawn_unstarted_instances = respawn_unstarted_instances
         self._network: Optional[Network] = network
 
     @property
+    def id(self) -> str:
+        return self.service_runner.id
+
+    @property
     def expiration(self) -> datetime:
         """Return the expiration datetime for agreements related to services in this :class:`Cluster`."""
-        return self._service_runner._job.expiration_time
+        return self.service_runner._job.expiration_time
 
     @property
     def payload(self) -> Payload:
         """Return the service runtime definition for this :class:`Cluster`."""
-        return self._service_runner._job.payload
+        return self.service_runner._job.payload
 
     @property
     def service_class(self) -> Type[Service]:
@@ -88,11 +87,11 @@ class Cluster(AsyncContextManager):
     @property
     def instances(self) -> List[Service]:
         """Return the list of service instances in this :class:`Cluster`."""
-        return self._service_runner.instances.copy()
+        return self.service_runner.instances.copy()
 
     def stop_instance(self, service: Service):
         """Stop the specific :class:`Service` instance belonging to this :class:`Cluster`."""
-        self._service_runner.stop_instance(service)
+        self.service_runner.stop_instance(service)
 
     def spawn_instances(
         self,
@@ -125,11 +124,12 @@ class Cluster(AsyncContextManager):
                 network_address = network_addresses[ix]
 
             service = self.service_class(**single_instance_params)  # type: ignore
-            self.service_runner.add_instance(service, network_address)
+            self.service_runner.add_instance(service, self.network, network_address)
+            service._set_cluster(self)
 
     def stop(self):
         """Signal the whole :class:`Cluster` and the underlying ServiceRunner to stop."""
-        self._service_runner.stop()
+        self.service_runner.stop()
 
     def _resolve_instance_params(
         self,

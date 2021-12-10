@@ -1,10 +1,30 @@
 import asyncio
+import enum
+import inspect
 import logging
-from typing import Set, TYPE_CHECKING
+import sys
+from types import TracebackType
+from typing import AsyncContextManager, List, Optional, Set, Union, Tuple, Type, TYPE_CHECKING
+
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from yapapi.engine import Job
+
+#   TODO: import Agreement, not whole rest
+from yapapi import rest, events
+
+from .service import Service, ServiceInstance
+from .service_state import ServiceState
+from yapapi.ctx import WorkContext
+from yapapi.rest.activity import Activity, BatchError
+from yapapi.network import Network
+
+# Return type for `sys.exc_info()`
+ExcInfo = Union[
+    Tuple[Type[BaseException], BaseException, TracebackType],
+    Tuple[None, None, None],
+]
 
 
 class ControlSignal(enum.Enum):
@@ -12,15 +32,46 @@ class ControlSignal(enum.Enum):
 
     stop = "stop"
 
-class ServiceRunner():
+
+class ServiceRunner(AsyncContextManager):
     def __init__(self, job: "Job"):
         self._job = job
+        self._instances: List[Service] = []
+        self._instance_tasks: List[asyncio.Task] = []
+        self._operative = False
+
+    @property
+    def id(self) -> str:
+        return self._job.id
+
+    @property
+    def operative(self):
+        return self._operative
+
+    @property
+    def instances(self):
+        return self._instances.copy()
+
+    def stop(self):
+        for instance in self.instances:
+            self.stop_instance(instance)
+        self._operative = False
+
+    def stop_instance(self, service: Service):
+        """Stop the specific :class:`Service` instance belonging to this :class:`Cluster`."""
+        service.service_instance.control_queue.put_nowait(ControlSignal.stop)
+
+    def emit(self, event: events.Event):
+        #   TODO: this will change in #760
+        return self._job.engine.emit(event)
 
     async def __aenter__(self):
         """Post a Demand and start collecting provider Offers for running service instances."""
 
         self.__services: Set[asyncio.Task] = set()
         """Asyncio tasks running within this cluster"""
+
+        self._job.engine.add_job(self._job)
 
         logger.debug("Starting new %s", self)
 
@@ -34,9 +85,11 @@ class ServiceRunner():
                 await self._job.agreements_pool.cycle()
 
         self.__services.add(loop.create_task(agreements_pool_cycler()))
+        self._operative = True
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Release resources used by this Cluster."""
+        self._operative = False
 
         logger.debug("%s is shutting down...", self)
 
@@ -69,7 +122,7 @@ class ServiceRunner():
                 task.cancel()
         await asyncio.gather(*self.__services, return_exceptions=True)
 
-        self._engine.finalize_job(self._job)
+        self._job.engine.finalize_job(self._job)
 
     @staticmethod
     def _get_handler(instance: ServiceInstance):
@@ -189,8 +242,8 @@ class ServiceRunner():
                     # work-around an issue preventing nodes from getting correct information about
                     # each other on instance startup by re-sending the information after the service
                     # transitions to the running state
-                    if self.network and instance.state == ServiceState.running:
-                        await self.network.refresh_nodes()
+                    if instance.service.network and instance.state == ServiceState.running:
+                        await instance.service.network.refresh_nodes()
 
                 except Exception:
                     logger.warning("Unhandled exception in service", exc_info=True)
@@ -233,7 +286,12 @@ class ServiceRunner():
 
         logger.info("%s decommissioned", instance.service)
 
-    async def spawn_instance(self, service: Service, network_address: Optional[str] = None) -> None:
+    async def spawn_instance(
+        self,
+        service: Service,
+        network: Optional[Network] = None,
+        network_address: Optional[str] = None,
+    ) -> None:
         """Spawn a new service instance within this :class:`Cluster`."""
 
         logger.debug("spawning instance within %s", self)
@@ -247,7 +305,7 @@ class ServiceRunner():
             nonlocal agreement_id, instance
             agreement_id = agreement.id
 
-            task_id = f"{self.id}:{next(self._task_ids)}"
+            task_id = service.id  # TODO -> after #759 there will be no events.Task*
             self.emit(
                 events.TaskStarted(
                     job_id=self._job.id,
@@ -258,15 +316,15 @@ class ServiceRunner():
             )
             self._change_state(instance)  # pending -> starting
             service._set_ctx(work_context)
-            if self.network:
+            if network:
                 service._set_network_node(
-                    await self.network.add_node(work_context.provider_id, network_address)
+                    await network.add_node(work_context.provider_id, network_address)
                 )
             try:
-                if self._state == ClusterState.running:
+                if self.operative:
                     instance_batches = self._run_instance(instance)
                     try:
-                        await self._engine.process_batches(
+                        await self._job.engine.process_batches(
                             self._job.id, agreement.id, activity, instance_batches
                         )
                     except StopAsyncIteration:
@@ -281,20 +339,21 @@ class ServiceRunner():
                 )
                 self.emit(events.WorkerFinished(job_id=self._job.id, agr_id=agreement.id))
             finally:
-                await self._engine.accept_payments_for_agreement(self._job.id, agreement.id)
+                await self._job.engine.accept_payments_for_agreement(self._job.id, agreement.id)
                 await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
 
-        while self._state == ClusterState.running:
+        while self.operative:
             agreement_id = None
             await asyncio.sleep(1.0)
-            task = await self._engine.start_worker(self._job, _worker)
+            task = await self._job.engine.start_worker(self._job, _worker)
             if not task:
                 continue
             try:
                 await task
                 if (
                     instance.started_successfully
-                    or not self._respawn_unstarted_instances
+                    # TODO: implement respawning unstarted instances in Cluster
+                    # or not self._respawn_unstarted_instances
                     # There was no error, but rather e.g. `STOP` signal -> do not restart
                     or service.exc_info() == (None, None, None)
                 ):
@@ -314,16 +373,14 @@ class ServiceRunner():
                     logger.error("Failed to spawn instance", exc_info=True)
                     return
 
-    def stop_instance(self, service: Service):
-        """Stop the specific :class:`Service` instance belonging to this :class:`Cluster`."""
-
-        instance = self.__get_service_instance(service)
-        instance.control_queue.put_nowait(ControlSignal.stop)
-
-    def add_instance(self, service: Service, network_address: Optional[str] = None) -> None:
-        self.__instances.append(service.service_instance)
-        service._set_cluster(self)
+    def add_instance(
+        self,
+        service: Service,
+        network: Optional[Network] = None,
+        network_address: Optional[str] = None,
+    ) -> None:
+        self._instances.append(service)
 
         loop = asyncio.get_event_loop()
-        task = loop.create_task(self.spawn_instance(service, network_address))
-        self._instance_tasks.add(task)
+        task = loop.create_task(self.spawn_instance(service, network, network_address))
+        self._instance_tasks.append(task)

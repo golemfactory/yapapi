@@ -25,7 +25,8 @@ from yapapi import events
 from .service_state import ServiceState
 
 if TYPE_CHECKING:
-    from .cluster import Cluster, ControlSignal
+    from .cluster import Cluster
+    from .service_runner import ControlSignal
 
 # Return type for `sys.exc_info()`
 ExcInfo = Union[
@@ -73,6 +74,9 @@ class Service:
     @property
     def cluster(self) -> Optional["Cluster"]:
         """Return the Cluster to which this service instance belongs."""
+        #   TODO: is this necessary? This is ugly, because there is no reason for `Service` to know
+        #         that anything like Cluster exists.
+        #         Maybe `ServiceRunner`? This makes more sense.
         return self._cluster
 
     @property

@@ -411,6 +411,6 @@ class Golem:
             self._engine._net_api, ip, identity, owner_ip, mask=mask, gateway=gateway
         )
 
-    async def _default_service_expiration(self):
+    def _default_service_expiration(self):
         default_service_expiration = MAX_AGREEMENT_EXPIRATION - timedelta(minutes=5)
         return datetime.now(timezone.utc) + default_service_expiration

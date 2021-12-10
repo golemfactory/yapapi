@@ -179,11 +179,9 @@ class _Engine:
         self._started = False
 
     async def create_service_runner(
-        self, expiration_time: datetime, payload: Payload,
+        self, payload: Payload, expiration_time: datetime
     ) -> ServiceRunner:
         job = Job(self, expiration_time, payload)
-        self.add_job(job)
-
         runner = ServiceRunner(job)
         await self.add_to_async_context(runner)
 
