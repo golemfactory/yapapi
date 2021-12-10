@@ -183,10 +183,8 @@ class Service:
     def __repr__(self):
         class_name = type(self).__name__
         state = self.state.value
-        if state == "pending":
-            return f"<{class_name} pending>"
-        else:
-            return f"<{class_name} {state} on {self.provider_name} [ {self.provider_id} ]>"
+        provider_description = " on {self.provider_name} [ {self.provider_id} ]>" if self.provider_id else ""
+        return f"<{class_name} {state}{provider_description}"
 
     def exc_info(self) -> ExcInfo:
         """Return exception info for an exception that caused the last state transition.
