@@ -38,9 +38,15 @@ class BufferedAgreement:
 class AgreementsPool:
     """Manages proposals and agreements pool"""
 
-    def __init__(self, job_id: str, emitter: Callable[[events.Event], None]):
+    def __init__(
+        self,
+        job_id: str,
+        emitter: Callable[[events.Event], None],
+        offer_recycler: Callable[[OfferProposal], None],
+    ):
         self.job_id = job_id
         self.emitter = emitter
+        self.offer_recycler = offer_recycler
         self._offer_buffer: Dict[str, _BufferedProposal] = {}  # provider_id -> Proposal
         self._agreements: Dict[str, BufferedAgreement] = {}  # agreement_id -> Agreement
         self._lock = asyncio.Lock()
@@ -147,10 +153,12 @@ class AgreementsPool:
         except (ApiException, asyncio.TimeoutError, aiohttp.ClientOSError):
             logger.debug("Cannot get agreement details. id: %s", agreement.id, exc_info=True)
             emit(events.AgreementRejected(job_id=self.job_id, agr_id=agreement.id))
+            self.offer_recycler(offer.proposal)
             return None
         if not await agreement.confirm():
             emit(events.AgreementRejected(job_id=self.job_id, agr_id=agreement.id))
             self._rejecting_providers.add(provider_id)
+            self.offer_recycler(offer.proposal)
             return None
         self._rejecting_providers.discard(provider_id)
         self._agreements[agreement.id] = BufferedAgreement(
