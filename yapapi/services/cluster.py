@@ -1,5 +1,4 @@
 """Implementation of high-level services API."""
-import asyncio
 import itertools
 from datetime import timedelta, datetime
 import sys
@@ -47,8 +46,11 @@ class Cluster(AsyncContextManager):
     ):
         """Initialize this Cluster.
 
-        :param service_runner: ServiceRunner that will manage instances of this Cluster
+        :param engine: an engine for running service instance
         :param service_class: a subclass of :class:`~yapapi.services.Service` that represents the service to be run
+        :param payload: definition of service runtime for this Cluster
+        :param expiration: a date before which all agreements related to running services
+            in this Cluster should be terminated
         :param respawn_unstarted_instances: if an instance fails in the `starting` state,
             should this Cluster try to spawn another instance
         :param network: optional Network representing the VPN that this Cluster's instances will
@@ -70,18 +72,18 @@ class Cluster(AsyncContextManager):
         await self._terminate(exc_type, exc_val, exc_tb)
 
     async def terminate(self):
-        """Signal the whole :class:`Cluster` and the underlying ServiceRunner to stop."""
+        """Signal the whole :class:`Cluster` and the underlying :class:`~yapapi.service.ServiceRunner` to stop."""
         await self._terminate(None, None, None)
 
     def stop(self):
-        """Signal the whole :class:`Cluster` and the underlying ServiceRunner to stop."""
-        #   TODO: deprecate this?
-        asyncio.ensure_future(self.terminate())
-
-    async def _terminate(self, exc_type, exc_val, exc_tb):
-        #   TODO: check if not terminated already, if yes - skip this.
+        """Stop all services in this :class:`Cluster`"""
         for instance in self.instances:
             self.stop_instance(instance)
+
+    async def _terminate(self, exc_type, exc_val, exc_tb):
+        #   NOTE: this might be called more then once (e.g. by `terminate()` followed by `__aexit__`),
+        #   but it's harmless, so we don't care
+        self.stop()
         await self._stack.__aexit__(exc_type, exc_val, exc_tb)
 
     @property
