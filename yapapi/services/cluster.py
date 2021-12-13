@@ -124,12 +124,18 @@ class Cluster:
                 network_address = network_addresses[ix]
 
             service = self.service_class(**single_instance_params)  # type: ignore
-            self.service_runner.add_instance(service, self.network, network_address)
+            respawn_condition = self._instance_not_started if self._respawn_unstarted_instances else None
+            self.service_runner.add_instance(service, self.network, network_address, respawn_condition)
             service._set_cluster(self)
 
     def stop(self):
         """Signal the whole :class:`Cluster` and the underlying ServiceRunner to stop."""
         self.service_runner.stop()
+
+    @staticmethod
+    def _instance_not_started(service: Service) -> bool:
+        return service.exc_info() != (None, None, None) and \
+            not service.service_instance.started_successfully
 
     def _resolve_instance_params(
         self,

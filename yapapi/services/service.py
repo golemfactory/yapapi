@@ -121,7 +121,7 @@ class Service:
         class_name = type(self).__name__
         state = self.state.value
         provider_description = (
-            f" on {self.provider_name} [ {self.provider_id} ]>" if self.provider_id else ""
+            f" on {self.provider_name} [ {self.provider_id} ]" if self.provider_id else ""
         )
         return f"<{class_name} {state}{provider_description}>"
 

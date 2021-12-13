@@ -4,7 +4,7 @@ import inspect
 import logging
 import sys
 from types import TracebackType
-from typing import AsyncContextManager, List, Optional, Set, Union, Tuple, Type, TYPE_CHECKING
+from typing import AsyncContextManager, Callable, List, Optional, Set, Union, Tuple, Type, TYPE_CHECKING
 
 logger = logging.getLogger(__name__)
 
@@ -291,6 +291,7 @@ class ServiceRunner(AsyncContextManager):
         service: Service,
         network: Optional[Network] = None,
         network_address: Optional[str] = None,
+        respawn_condition: Optional[Callable[[Service], bool]] = None,
     ) -> None:
         """Spawn a new service instance within this :class:`Cluster`."""
 
@@ -350,17 +351,12 @@ class ServiceRunner(AsyncContextManager):
                 continue
             try:
                 await task
-                if (
-                    instance.started_successfully
-                    # TODO: implement respawning unstarted instances in Cluster
-                    # or not self._respawn_unstarted_instances
-                    # There was no error, but rather e.g. `STOP` signal -> do not restart
-                    or service.exc_info() == (None, None, None)
-                ):
-                    break
-                else:
-                    logger.warning("Instance failed when starting, trying to create another one...")
+                if respawn_condition is not None and respawn_condition(service):
+                    logger.info(f"Restarting service {service}")
+                    #   TODO: await service.restart() or something like this goes here
                     instance.service_state.restart()
+                else:
+                    break
             except Exception:
                 if agreement_id:
                     self.emit(
@@ -378,9 +374,10 @@ class ServiceRunner(AsyncContextManager):
         service: Service,
         network: Optional[Network] = None,
         network_address: Optional[str] = None,
+        respawn_condition: Optional[Callable[[Service], bool]] = None,
     ) -> None:
         self._instances.append(service)
 
         loop = asyncio.get_event_loop()
-        task = loop.create_task(self.spawn_instance(service, network, network_address))
+        task = loop.create_task(self.spawn_instance(service, network, network_address, respawn_condition))
         self._instance_tasks.append(task)
