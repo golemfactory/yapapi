@@ -668,6 +668,28 @@ class _Engine:
                 future_results = loop.create_task(get_batch_results())
                 script = await batch_generator.asend(future_results)
 
+    def recycle_offer(self, offer: OfferProposal) -> None:
+        """This offer was already processed, but something happened and we should treat it as a fresh one.
+
+        Currently this "something" is always "we couldn't confirm the agreement with the provider",
+        but someday this might be useful also in other scenarios.
+
+        Purpose:
+        *   we want to rescore the offer (score might change because of the event that caused recycling)
+        *   if this is a draft offer (and in the current usecase it always is), we want to return to the
+            negotiations and get a new draft - e.g. because this draft already has an Agreement
+
+        We don't care which Job initiated recycling - it should be recycled by all unfinished Jobs.
+        """
+
+        async def handle_proposal(job):
+            event = await job._handle_proposal(offer, ignore_draft=True)
+            self.emit(event)
+
+        unfinished_jobs = (job for job in self._jobs if not job.finished.is_set())
+        for job in unfinished_jobs:
+            asyncio.get_event_loop().create_task(handle_proposal(job))
+
 
 class Job:
     """Functionality related to a single job.
@@ -715,8 +737,10 @@ class Job:
         self.expiration_time: datetime = expiration_time
         self.payload: Payload = payload
 
-        self.agreements_pool = AgreementsPool(self.id, self.engine.emit)
+        self.agreements_pool = AgreementsPool(self.id, self.engine.emit, self.engine.recycle_offer)
         self.finished = asyncio.Event()
+
+        self._demand_builder: Optional[DemandBuilder] = None
 
         #   Exception that ended the job
         self._exc_info = None
@@ -728,13 +752,16 @@ class Job:
     async def _handle_proposal(
         self,
         proposal: OfferProposal,
-        demand_builder: DemandBuilder,
+        ignore_draft: bool = False,
     ) -> events.Event:
         """Handle a single `OfferProposal`.
 
         A `proposal` is scored and then can be rejected, responded with
         a counter-proposal or stored in an agreements pool to be used
         for negotiating an agreement.
+
+        If `ignore_draft` is True, we either reject, or respond with a counter-proposal,
+        but never pass the proposal to the agreements pool.
         """
 
         async def reject_proposal(reason: str) -> events.ProposalRejected:
@@ -754,8 +781,9 @@ class Job:
         if score < SCORE_NEUTRAL:
             return await reject_proposal("Score too low")
 
-        if not proposal.is_draft:
-            # Proposal is not yet a draft of an agreement
+        if ignore_draft or not proposal.is_draft:
+            demand_builder = self._demand_builder
+            assert demand_builder is not None
 
             # Check if any of the supported payment platforms matches the proposal
             common_platforms = self._get_common_payment_platforms(proposal)
@@ -779,14 +807,12 @@ class Job:
             return events.ProposalResponded(job_id=self.id, prop_id=proposal.id)
 
         else:
-            # It's a draft agreement
             await self.agreements_pool.add_proposal(score, proposal)
             return events.ProposalConfirmed(job_id=self.id, prop_id=proposal.id)
 
     async def _find_offers_for_subscription(
         self,
         subscription: Subscription,
-        demand_builder: DemandBuilder,
     ) -> None:
         """Create a market subscription and repeatedly collect offer proposals for it.
 
@@ -818,7 +844,7 @@ class Job:
             async def handler(proposal_):
                 """Wrap `_handle_proposal()` method with error handling."""
                 try:
-                    event = await self._handle_proposal(proposal_, demand_builder)
+                    event = await self._handle_proposal(proposal_)
                     assert isinstance(event, events.ProposalEvent)
                     self.engine.emit(event)
                     if isinstance(event, events.ProposalConfirmed):
@@ -844,18 +870,20 @@ class Job:
 
         When the subscription expires, create a new one. And so on...
         """
-
-        builder = await self.engine.create_demand_builder(self.expiration_time, self.payload)
+        if self._demand_builder is None:
+            self._demand_builder = await self.engine.create_demand_builder(
+                self.expiration_time, self.payload
+            )
 
         while True:
             try:
-                subscription = await builder.subscribe(self.engine._market_api)
+                subscription = await self._demand_builder.subscribe(self.engine._market_api)
                 self.engine.emit(events.SubscriptionCreated(job_id=self.id, sub_id=subscription.id))
             except Exception as ex:
                 self.engine.emit(events.SubscriptionFailed(job_id=self.id, reason=str(ex)))
                 raise
             async with subscription:
-                await self._find_offers_for_subscription(subscription, builder)
+                await self._find_offers_for_subscription(subscription)
 
     # TODO: move to Golem
     def _get_common_payment_platforms(self, proposal: rest.market.OfferProposal) -> Set[str]:
