@@ -48,6 +48,23 @@ class ServiceRunner(AsyncContextManager):
     def instances(self):
         return self._instances.copy()
 
+    def add_instance(
+        self,
+        service: Service,
+        network: Optional[Network] = None,
+        network_address: Optional[str] = None,
+        respawn_condition: Optional[Callable[[Service], bool]] = None,
+    ) -> None:
+        """Add service the the collection of services managed by this ServiceRunner.
+
+        The same object should never be managed by more than one ServiceRunner.
+        """
+        self._instances.append(service)
+
+        loop = asyncio.get_event_loop()
+        task = loop.create_task(self.spawn_instance(service, network, network_address, respawn_condition))
+        self._instance_tasks.append(task)
+
     def stop_instance(self, service: Service):
         """Stop the specific :class:`Service` instance belonging to this :class:`Cluster`."""
         service.service_instance.control_queue.put_nowait(ControlSignal.stop)
@@ -360,19 +377,6 @@ class ServiceRunner(AsyncContextManager):
                     # This shouldn't happen, we may log and return as well
                     logger.error("Failed to spawn instance", exc_info=True)
                     return
-
-    def add_instance(
-        self,
-        service: Service,
-        network: Optional[Network] = None,
-        network_address: Optional[str] = None,
-        respawn_condition: Optional[Callable[[Service], bool]] = None,
-    ) -> None:
-        self._instances.append(service)
-
-        loop = asyncio.get_event_loop()
-        task = loop.create_task(self.spawn_instance(service, network, network_address, respawn_condition))
-        self._instance_tasks.append(task)
 
     async def _ensure_payload_matches(self, service):
         #   Possible improvement: maybe we should accept services with lower demands then our payload?
