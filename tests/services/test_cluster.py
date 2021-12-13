@@ -2,7 +2,7 @@ import asyncio
 import itertools
 import sys
 import pytest
-from yapapi.services import Cluster, Service, ServiceInstance
+from yapapi.services import Service, ServiceRunner
 from unittest.mock import Mock, patch
 from unittest import mock
 from yapapi import Golem
@@ -86,7 +86,7 @@ async def test_spawn_instances(kwargs, args, error, monkeypatch):
 
     monkeypatch.setattr(Golem, "_get_new_engine", _get_new_engine)
 
-    with patch("yapapi.services.Cluster.spawn_instance") as spawn_instance:
+    with patch("yapapi.services.ServiceRunner.spawn_instance") as spawn_instance:
         golem = Golem(budget=1)
         try:
             await golem.run_service(
@@ -102,7 +102,7 @@ async def test_spawn_instances(kwargs, args, error, monkeypatch):
 
     assert len(spawn_instance.mock_calls) == len(args)
     for call_args, args in zip(spawn_instance.call_args_list, args):
-        service, network_address = call_args[0]
+        service, network, network_address, restart_condition = call_args[0]
         assert service.init_kwargs == args[0]
         assert network_address == args[1]
 
@@ -117,7 +117,7 @@ async def test_spawn_instances(kwargs, args, error, monkeypatch):
 def test_get_handler(service, error):
     service.service_instance.service_state.lifecycle()  # pending -> starting
     try:
-        handler = Cluster._get_handler(service.service_instance)
+        handler = ServiceRunner._get_handler(service.service_instance)
         assert handler
     except TypeError as e:
         if error is not None:
