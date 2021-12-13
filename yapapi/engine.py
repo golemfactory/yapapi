@@ -105,7 +105,6 @@ class _Engine:
         subnet_tag: Optional[str] = None,
         payment_driver: Optional[str] = None,
         payment_network: Optional[str] = None,
-        event_consumer: Optional[Callable[[events.Event], None]] = None,
         stream_output: bool = False,
         app_key: Optional[str] = None,
     ):
@@ -122,8 +121,6 @@ class _Engine:
         :param payment_network: name of the payment network to use. Uses `YAGNA_PAYMENT_NETWORK`
         environment variable, defaults to `rinkeby`. Only payment platforms with the specified
             network will be used
-        :param event_consumer: a callable that processes events related to the
-            computation; by default it is a function that logs all events
         :param stream_output: stream computation output from providers
         :param app_key: optional Yagna application key. If not provided, the default is to
                         get the value from `YAGNA_APPKEY` environment variable
@@ -131,6 +128,7 @@ class _Engine:
         self._api_config = rest.Configuration(app_key)
         self._budget_amount = Decimal(budget)
         self._budget_allocations: List[rest.payment.Allocation] = []
+        self._wrapped_consumers: List[AsyncWrapper] = []
 
         if not strategy:
             strategy = LeastExpensiveLinearPayuMS(
@@ -145,18 +143,6 @@ class _Engine:
         self._subnet: Optional[str] = subnet_tag or DEFAULT_SUBNET
         self._payment_driver: str = payment_driver.lower() if payment_driver else DEFAULT_DRIVER
         self._payment_network: str = payment_network.lower() if payment_network else DEFAULT_NETWORK
-
-        if not event_consumer:
-            # Use local import to avoid cyclic imports when yapapi.log
-            # is imported by client code
-            from yapapi.log import log_event_repr, log_summary
-
-            event_consumer = log_summary(log_event_repr)
-
-        # Add buffering to the provided event emitter to make sure
-        # that emitting events will not block
-        self._wrapped_consumer = AsyncWrapper(event_consumer)
-
         self._stream_output = stream_output
 
         # a set of `Job` instances used to track jobs - computations or services - started
@@ -175,6 +161,11 @@ class _Engine:
         self._generators: Set[AsyncGenerator] = set()
         self._services: Set[asyncio.Task] = set()
         self._stack = AsyncExitStack()
+
+        #   Separate stack for event consumers - because we want to ensure that they are the last
+        #   thing to exit no matter when add_event_consumer was called.
+        self._wrapped_consumer_stack = AsyncExitStack()
+        self._stack.push_async_exit(self._wrapped_consumer_stack.__aexit__)
 
         self._started = False
 
@@ -229,10 +220,24 @@ class _Engine:
         """Return `True` if this instance is initialized, `False` otherwise."""
         return self._started
 
+    async def add_event_consumer(self, event_consumer: Callable[[events.Event], None]) -> None:
+        """All events emited via `self.emit` will be passed to this callable
+
+        NOTE: after this method was called (either on an already started Engine or not),
+              stop() is required for a clean shutdown.
+        """
+        # Add buffering to the provided event emitter to make sure
+        # that emitting events will not block
+        wrapped_consumer = AsyncWrapper(event_consumer)
+
+        await self._wrapped_consumer_stack.enter_async_context(wrapped_consumer)
+
+        self._wrapped_consumers.append(wrapped_consumer)
+
     def emit(self, event: events.Event) -> None:
         """Emit an event to be consumed by this engine's event consumer."""
-        if self._wrapped_consumer:
-            self._wrapped_consumer.async_call(event)
+        for wrapped_consumer in self._wrapped_consumers:
+            wrapped_consumer.async_call(event)
 
     async def stop(self, *exc_info) -> Optional[bool]:
         """Stop the engine.
@@ -251,8 +256,6 @@ class _Engine:
         """
 
         stack = self._stack
-
-        await stack.enter_async_context(self._wrapped_consumer)
 
         def report_shutdown(*exc_info):
             if any(item for item in exc_info):
@@ -674,6 +677,28 @@ class _Engine:
                 future_results = loop.create_task(get_batch_results())
                 script = await batch_generator.asend(future_results)
 
+    def recycle_offer(self, offer: OfferProposal) -> None:
+        """This offer was already processed, but something happened and we should treat it as a fresh one.
+
+        Currently this "something" is always "we couldn't confirm the agreement with the provider",
+        but someday this might be useful also in other scenarios.
+
+        Purpose:
+        *   we want to rescore the offer (score might change because of the event that caused recycling)
+        *   if this is a draft offer (and in the current usecase it always is), we want to return to the
+            negotiations and get a new draft - e.g. because this draft already has an Agreement
+
+        We don't care which Job initiated recycling - it should be recycled by all unfinished Jobs.
+        """
+
+        async def handle_proposal(job):
+            event = await job._handle_proposal(offer, ignore_draft=True)
+            self.emit(event)
+
+        unfinished_jobs = (job for job in self._jobs if not job.finished.is_set())
+        for job in unfinished_jobs:
+            asyncio.get_event_loop().create_task(handle_proposal(job))
+
 
 class Job:
     """Functionality related to a single job.
@@ -721,19 +746,24 @@ class Job:
         self.expiration_time: datetime = expiration_time
         self.payload: Payload = payload
 
-        self.agreements_pool = AgreementsPool(self.id, self.engine.emit)
+        self.agreements_pool = AgreementsPool(self.id, self.engine.emit, self.engine.recycle_offer)
         self.finished = asyncio.Event()
+
+        self._demand_builder: Optional[DemandBuilder] = None
 
     async def _handle_proposal(
         self,
         proposal: OfferProposal,
-        demand_builder: DemandBuilder,
+        ignore_draft: bool = False,
     ) -> events.Event:
         """Handle a single `OfferProposal`.
 
         A `proposal` is scored and then can be rejected, responded with
         a counter-proposal or stored in an agreements pool to be used
         for negotiating an agreement.
+
+        If `ignore_draft` is True, we either reject, or respond with a counter-proposal,
+        but never pass the proposal to the agreements pool.
         """
 
         async def reject_proposal(reason: str) -> events.ProposalRejected:
@@ -753,8 +783,9 @@ class Job:
         if score < SCORE_NEUTRAL:
             return await reject_proposal("Score too low")
 
-        if not proposal.is_draft:
-            # Proposal is not yet a draft of an agreement
+        if ignore_draft or not proposal.is_draft:
+            demand_builder = self._demand_builder
+            assert demand_builder is not None
 
             # Check if any of the supported payment platforms matches the proposal
             common_platforms = self._get_common_payment_platforms(proposal)
@@ -778,14 +809,12 @@ class Job:
             return events.ProposalResponded(job_id=self.id, prop_id=proposal.id)
 
         else:
-            # It's a draft agreement
             await self.agreements_pool.add_proposal(score, proposal)
             return events.ProposalConfirmed(job_id=self.id, prop_id=proposal.id)
 
     async def _find_offers_for_subscription(
         self,
         subscription: Subscription,
-        demand_builder: DemandBuilder,
     ) -> None:
         """Create a market subscription and repeatedly collect offer proposals for it.
 
@@ -817,7 +846,7 @@ class Job:
             async def handler(proposal_):
                 """Wrap `_handle_proposal()` method with error handling."""
                 try:
-                    event = await self._handle_proposal(proposal_, demand_builder)
+                    event = await self._handle_proposal(proposal_)
                     assert isinstance(event, events.ProposalEvent)
                     self.engine.emit(event)
                     if isinstance(event, events.ProposalConfirmed):
@@ -843,18 +872,20 @@ class Job:
 
         When the subscription expires, create a new one. And so on...
         """
-
-        builder = await self.engine.create_demand_builder(self.expiration_time, self.payload)
+        if self._demand_builder is None:
+            self._demand_builder = await self.engine.create_demand_builder(
+                self.expiration_time, self.payload
+            )
 
         while True:
             try:
-                subscription = await builder.subscribe(self.engine._market_api)
+                subscription = await self._demand_builder.subscribe(self.engine._market_api)
                 self.engine.emit(events.SubscriptionCreated(job_id=self.id, sub_id=subscription.id))
             except Exception as ex:
                 self.engine.emit(events.SubscriptionFailed(job_id=self.id, reason=str(ex)))
                 raise
             async with subscription:
-                await self._find_offers_for_subscription(subscription, builder)
+                await self._find_offers_for_subscription(subscription)
 
     # TODO: move to Golem
     def _get_common_payment_platforms(self, proposal: rest.market.OfferProposal) -> Set[str]:

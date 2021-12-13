@@ -120,13 +120,20 @@ class Golem:
             "subnet_tag": subnet_tag,
             "payment_driver": payment_driver,
             "payment_network": payment_network,
-            "event_consumer": event_consumer,
             "stream_output": stream_output,
             "app_key": app_key,
         }
 
+        self._event_consumers = [event_consumer or self._default_event_consumer()]
         self._engine: _Engine = self._get_new_engine()
         self._engine_state_lock = asyncio.Lock()
+
+    async def add_event_consumer(self, event_consumer: Callable[[events.Event], None]) -> None:
+        """Initialize another `event_consumer`, working just like `event_consumer` passed in `__init__`"""
+        if self._engine.started:
+            await self._engine.add_event_consumer(event_consumer)
+
+        self._event_consumers.append(event_consumer)
 
     @property
     def driver(self) -> str:
@@ -177,6 +184,11 @@ class Golem:
                 if self.operative:
                     #   Something started us before we got to the locked part
                     return
+
+                #   NOTE: we add consumers to the not-yet-started Engine, because this is the only
+                #   way to capture ShutdownFinished event with current Engine implementation
+                for event_consumer in self._event_consumers:
+                    await self._engine.add_event_consumer(event_consumer)
                 await self._engine.start()
         except:
             await self._stop_with_exc_info(*sys.exc_info())
@@ -199,6 +211,7 @@ class Golem:
         #   Engine that was stopped is not usable anymore, there is no "full" cleanup.
         #   That's why here we replace it with a fresh one.
         self._engine = self._get_new_engine()
+
         return res
 
     def _get_new_engine(self):
@@ -414,3 +427,9 @@ class Golem:
     def _default_service_expiration(self):
         default_service_expiration = MAX_AGREEMENT_EXPIRATION - timedelta(minutes=5)
         return datetime.now(timezone.utc) + default_service_expiration
+
+    @staticmethod
+    def _default_event_consumer() -> Callable[[events.Event], None]:
+        from yapapi.log import log_event_repr, log_summary
+
+        return log_summary(log_event_repr)
