@@ -71,6 +71,9 @@ class SshService(Service):
 
         print(f"{TEXT_COLOR_RED}password: {password}{TEXT_COLOR_DEFAULT}")
 
+    async def reset(self):
+        """Do nothing when the service is restarted"""
+
 
 async def main(subnet_tag, payment_driver=None, payment_network=None):
     # By passing `event_consumer=log_summary()` we enable summary logging.

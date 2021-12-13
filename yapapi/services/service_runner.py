@@ -377,7 +377,7 @@ class ServiceRunner(AsyncContextManager):
                 await task
                 if respawn_condition is not None and respawn_condition(service):
                     logger.info(f"Restarting service {service}")
-                    #   TODO: await service.restart() or something like this goes here
+                    await service.reset()
                     instance.service_state.restart()
                 else:
                     break

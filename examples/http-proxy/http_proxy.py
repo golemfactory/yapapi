@@ -150,6 +150,9 @@ class HttpService(Service):
         await ws_session.close()
         return response_text, status
 
+    async def reset(self):
+        """Do nothing when the service is restarted"""
+
 
 # ######## Main application code which spawns the Golem service and the local HTTP server
 

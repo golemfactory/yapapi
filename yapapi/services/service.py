@@ -21,6 +21,7 @@ from yapapi.network import Network, Node
 from yapapi.payload import Payload
 from yapapi.script import Script
 from yapapi import events
+from yapapi.utils import warn_deprecated_msg
 
 from .service_state import ServiceState
 
@@ -349,6 +350,27 @@ class Service:
 
         self._ctx.terminate()
         yield self._ctx.commit()
+
+    async def reset(self) -> None:
+        """Reset the service to the initial state.
+
+        This method is called internally when the service is restarted in :class:`yapapi.services.ServiceRunner`,
+        so it is not necessary for services that are never restarted (note that :func:`~yapapi.Golem.run_service()` by
+        default restarts services that didn't start properly).
+
+        Handlers of a restarted service are called more then once - all of the cleanup necessary between calls
+        should be implemented here. E.g. if we initialize a counter in :func:`Service.__init__` and increment it
+        in :func:`Service.start()`, we might want to reset it here to the initial value.
+
+        Target implementation (0.10.0 and up) will raise NotImplementedError. Current implementation only warns about
+        this future change.
+        """
+
+        msg = (
+            "Default implementation of Service.reset will raise NotImplementedError starting from 0.10.0. "
+            f"You should implement this method on {type(self)}"
+        )
+        warn_deprecated_msg(msg)
 
     @property
     def is_available(self):
