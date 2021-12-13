@@ -38,24 +38,15 @@ class ServiceRunner(AsyncContextManager):
         self._job = job
         self._instances: List[Service] = []
         self._instance_tasks: List[asyncio.Task] = []
-        self._operative = False
+        self._stopped = False
 
     @property
     def id(self) -> str:
         return self._job.id
 
     @property
-    def operative(self):
-        return self._operative
-
-    @property
     def instances(self):
         return self._instances.copy()
-
-    def stop(self):
-        for instance in self.instances:
-            self.stop_instance(instance)
-        self._operative = False
 
     def stop_instance(self, service: Service):
         """Stop the specific :class:`Service` instance belonging to this :class:`Cluster`."""
@@ -85,11 +76,10 @@ class ServiceRunner(AsyncContextManager):
                 await self._job.agreements_pool.cycle()
 
         self.__services.add(loop.create_task(agreements_pool_cycler()))
-        self._operative = True
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Release resources used by this Cluster."""
-        self._operative = False
+        self._stopped = True
 
         logger.debug("%s is shutting down...", self)
 
@@ -322,7 +312,7 @@ class ServiceRunner(AsyncContextManager):
                     await network.add_node(work_context.provider_id, network_address)
                 )
             try:
-                if self.operative:
+                if not self._stopped:
                     instance_batches = self._run_instance(instance)
                     try:
                         await self._job.engine.process_batches(
@@ -343,7 +333,7 @@ class ServiceRunner(AsyncContextManager):
                 await self._job.engine.accept_payments_for_agreement(self._job.id, agreement.id)
                 await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
 
-        while self.operative:
+        while not self._stopped:
             agreement_id = None
             await asyncio.sleep(1.0)
             task = await self._job.engine.start_worker(self._job, _worker)

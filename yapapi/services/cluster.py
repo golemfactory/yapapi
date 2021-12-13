@@ -1,8 +1,10 @@
 """Implementation of high-level services API."""
+import asyncio
 import itertools
 from datetime import timedelta, datetime
 import sys
 from typing import (
+    AsyncContextManager,
     Dict,
     Generator,
     Iterable,
@@ -13,11 +15,14 @@ from typing import (
 
 if sys.version_info >= (3, 8):
     from typing import Final
+    from contextlib import AsyncExitStack
 else:
     from typing_extensions import Final
+    from async_exit_stack import AsyncExitStack  # type: ignore
 
 from yapapi.network import Network
 from yapapi.payload import Payload
+from yapapi.engine import _Engine, Job
 
 from .service import Service
 from .service_runner import ServiceRunner
@@ -28,13 +33,15 @@ MIN_AGREEMENT_EXPIRATION: Final[timedelta] = timedelta(minutes=5)
 MAX_AGREEMENT_EXPIRATION: Final[timedelta] = timedelta(minutes=180)
 
 
-class Cluster:
+class Cluster(AsyncContextManager):
     """Golem's sub-engine used to spawn and control instances of a single :class:`Service`."""
 
     def __init__(
         self,
-        service_runner: ServiceRunner,
+        engine: _Engine,
         service_class: Type[Service],
+        payload: Payload,
+        expiration: datetime,
         respawn_unstarted_instances: bool = True,
         network: Optional[Network] = None,
     ):
@@ -47,12 +54,35 @@ class Cluster:
         :param network: optional Network representing the VPN that this Cluster's instances will
             be attached to.
         """
-
-        self.service_runner = service_runner
+        job = Job(engine, expiration, payload)
+        self.service_runner = ServiceRunner(job)
         self._service_class = service_class
-        self._task_ids = itertools.count(1)
         self._respawn_unstarted_instances = respawn_unstarted_instances
         self._network: Optional[Network] = network
+
+        self._task_ids = itertools.count(1)
+        self._stack = AsyncExitStack()
+
+    async def __aenter__(self):
+        await self._stack.enter_async_context(self.service_runner)
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self._terminate(exc_type, exc_val, exc_tb)
+
+    async def terminate(self):
+        """Signal the whole :class:`Cluster` and the underlying ServiceRunner to stop."""
+        await self._terminate(None, None, None)
+
+    def stop(self):
+        """Signal the whole :class:`Cluster` and the underlying ServiceRunner to stop."""
+        #   TODO: deprecate this?
+        asyncio.ensure_future(self.terminate())
+
+    async def _terminate(self, exc_type, exc_val, exc_tb):
+        #   TODO: check if not terminated already, if yes - skip this.
+        for instance in self.instances:
+            self.stop_instance(instance)
+        await self._stack.__aexit__(exc_type, exc_val, exc_tb)
 
     @property
     def id(self) -> str:
@@ -127,10 +157,6 @@ class Cluster:
             respawn_condition = self._instance_not_started if self._respawn_unstarted_instances else None
             self.service_runner.add_instance(service, self.network, network_address, respawn_condition)
             service._set_cluster(self)
-
-    def stop(self):
-        """Signal the whole :class:`Cluster` and the underlying ServiceRunner to stop."""
-        self.service_runner.stop()
 
     @staticmethod
     def _instance_not_started(service: Service) -> bool:

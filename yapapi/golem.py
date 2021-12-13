@@ -387,15 +387,18 @@ class Golem:
 
         expiration = expiration or self._default_service_expiration()
 
-        service_runner = await self._engine.create_service_runner(payload, expiration)
-
         cluster = Cluster(
-            service_runner=service_runner,
+            engine=self._engine,
             service_class=service_class,
+            payload=payload,
+            expiration=expiration,
             respawn_unstarted_instances=respawn_unstarted_instances,
             network=network,
         )
+
+        await self._engine.add_to_async_context(cluster)
         cluster.spawn_instances(num_instances, instance_params, network_addresses)
+
         return cluster
 
     async def create_network(

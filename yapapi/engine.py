@@ -48,7 +48,6 @@ from yapapi.strategy import (
     SCORE_NEUTRAL,
 )
 from yapapi.utils import AsyncWrapper
-from yapapi.services.service_runner import ServiceRunner
 
 
 DEBIT_NOTE_MIN_TIMEOUT: Final[int] = 30  # in seconds
@@ -168,15 +167,6 @@ class _Engine:
         self._stack.push_async_exit(self._wrapped_consumer_stack.__aexit__)
 
         self._started = False
-
-    async def create_service_runner(
-        self, payload: Payload, expiration_time: datetime
-    ) -> ServiceRunner:
-        job = Job(self, expiration_time, payload)
-        runner = ServiceRunner(job)
-        await self.add_to_async_context(runner)
-
-        return runner
 
     async def create_demand_builder(
         self, expiration_time: datetime, payload: Payload
