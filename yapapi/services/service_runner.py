@@ -4,7 +4,17 @@ import inspect
 import logging
 import sys
 from types import TracebackType
-from typing import AsyncContextManager, Callable, List, Optional, Set, Union, Tuple, Type, TYPE_CHECKING
+from typing import (
+    AsyncContextManager,
+    Callable,
+    List,
+    Optional,
+    Set,
+    Union,
+    Tuple,
+    Type,
+    TYPE_CHECKING,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +72,9 @@ class ServiceRunner(AsyncContextManager):
         self._instances.append(service)
 
         loop = asyncio.get_event_loop()
-        task = loop.create_task(self.spawn_instance(service, network, network_address, respawn_condition))
+        task = loop.create_task(
+            self.spawn_instance(service, network, network_address, respawn_condition)
+        )
         self._instance_tasks.append(task)
 
     def stop_instance(self, service: Service):
@@ -385,5 +397,9 @@ class ServiceRunner(AsyncContextManager):
         service_payload = await service.get_payload()
         our_payload = self._job.payload
         if service_payload is not None and service_payload != our_payload:
-            logger.error("Payload mismatch: service with {service_payload} was added to runner with {our_payload}")
-            raise ValueError(f"Only payload accepted by this service runner is {our_payload}, got {service_payload}")
+            logger.error(
+                "Payload mismatch: service with {service_payload} was added to runner with {our_payload}"
+            )
+            raise ValueError(
+                f"Only payload accepted by this service runner is {our_payload}, got {service_payload}"
+            )
