@@ -112,6 +112,9 @@ class ServiceRunner(AsyncContextManager):
 
         logger.debug("%s is shutting down...", self)
 
+        if exc_type is not None:
+            self.job.set_exc_info((exc_type, exc_val, exc_tb))
+
         # Give the instance tasks some time to terminate gracefully.
         # Then cancel them without mercy!
         if self._instance_tasks:
