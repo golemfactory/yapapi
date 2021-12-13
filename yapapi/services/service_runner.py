@@ -285,6 +285,8 @@ class ServiceRunner(AsyncContextManager):
     ) -> None:
         """Spawn a new service instance within this :class:`Cluster`."""
 
+        await self._ensure_payload_matches(service)
+
         logger.debug("spawning instance within %s", self)
         agreement_id: Optional[str]  # set in start_worker
 
@@ -371,3 +373,13 @@ class ServiceRunner(AsyncContextManager):
         loop = asyncio.get_event_loop()
         task = loop.create_task(self.spawn_instance(service, network, network_address, respawn_condition))
         self._instance_tasks.append(task)
+
+    async def _ensure_payload_matches(self, service):
+        #   Possible improvement: maybe we should accept services with lower demands then our payload?
+        #   E.g. if service expects 2GB and we have 4GB in our payload, then this seems fine.
+        #   (Not sure how much effort this requires)
+        service_payload = await service.get_payload()
+        our_payload = self._job.payload
+        if service_payload is not None and service_payload != our_payload:
+            logger.error("Payload mismatch: service with {service_payload} was added to runner with {our_payload}")
+            raise ValueError(f"Only payload accepted by this service runner is {our_payload}, got {service_payload}")
