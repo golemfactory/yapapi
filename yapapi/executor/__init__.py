@@ -191,14 +191,10 @@ class Executor:
 
                     async def task_generator() -> AsyncIterator[Task[D, R]]:
                         async for handle in consumer:
-                            task = Task.for_handle(handle, work_queue, self.emit)
-                            work_context.emit(
-                                events.TaskStarted,
-                                task_id=task.id,
-                                task_data=task.data,
-                            )
+                            task = Task.for_handle(handle, work_queue, work_context.emit)
+                            task.emit(events.TaskStarted)
                             yield task
-                            work_context.emit(events.TaskFinished, task_id=task.id)
+                            task.emit(events.TaskFinished)
 
                     batch_generator = worker(work_context, task_generator())
 

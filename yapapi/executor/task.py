@@ -50,6 +50,11 @@ class Task(Generic[TaskData, TaskResult]):
         self._data = data
         self._status: TaskStatus = TaskStatus.WAITING
 
+    def emit(self, event_class, **kwargs):
+        if self._emit is None:
+            raise RuntimeError("Task {self} haven't started yet, so it can't emit")
+        self._emit(event_class, task=self, **kwargs)
+
     def _add_callback(
         self, callback: Callable[["Task[TaskData, TaskResult]", TaskStatus], None]
     ) -> None:
@@ -78,7 +83,7 @@ class Task(Generic[TaskData, TaskResult]):
     def for_handle(
         handle: Handle["Task[TaskData, TaskResult]"],
         queue: SmartQueue["Task[TaskData, TaskResult]"],
-        emitter: Callable[[events.Event], None],
+        emitter: Callable[..., None],
     ) -> "Task[TaskData, TaskResult]":
         task = handle.data
         task._handle = (handle, queue)

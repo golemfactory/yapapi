@@ -259,6 +259,14 @@ class _Engine:
             if "command" in kwargs and "command" not in event_class_fields:
                 del kwargs["command"]
 
+            #   Task is different because we sometimes need also task.data
+            if "task" in kwargs:
+                if "task_id" in event_class_fields:
+                    kwargs["task_id"] = kwargs["task"].id
+                if "task_data" in event_class_fields:
+                    kwargs["task_data"] = kwargs["task"].data
+                del kwargs["task"]
+
             return event_or_event_class(**kwargs)  # type: ignore
 
     async def stop(self, *exc_info) -> Optional[bool]:
