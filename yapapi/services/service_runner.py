@@ -21,13 +21,13 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from yapapi.engine import Job
 
-#   TODO: import Agreement, not whole rest
-from yapapi import rest, events
+from yapapi import events
 
 from .service import Service, ServiceInstance
 from .service_state import ServiceState
 from yapapi.ctx import WorkContext
 from yapapi.rest.activity import Activity, BatchError
+from yapapi.rest.market import Agreement
 from yapapi.network import Network
 
 # Return type for `sys.exc_info()`
@@ -38,7 +38,7 @@ ExcInfo = Union[
 
 
 class ControlSignal(enum.Enum):
-    """Control signal, used to request an instance's state change from the controlling Cluster."""
+    """Control signal, used to request an instance's state change from the controlling SeviceRunner."""
 
     stop = "stop"
 
@@ -78,7 +78,7 @@ class ServiceRunner(AsyncContextManager):
         self._instance_tasks.append(task)
 
     def stop_instance(self, service: Service):
-        """Stop the specific :class:`Service` instance belonging to this :class:`Cluster`."""
+        """Stop the specific :class:`Service` instance belonging to this :class:`ServiceRunner`."""
         service.service_instance.control_queue.put_nowait(ControlSignal.stop)
 
     def emit(self, event: events.Event):
@@ -107,7 +107,7 @@ class ServiceRunner(AsyncContextManager):
         self.__services.add(loop.create_task(agreements_pool_cycler()))
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Release resources used by this Cluster."""
+        """Release resources used by this ServiceRunner."""
         self._stopped = True
 
         logger.debug("%s is shutting down...", self)
@@ -315,7 +315,14 @@ class ServiceRunner(AsyncContextManager):
         network_address: Optional[str] = None,
         respawn_condition: Optional[Callable[[Service], bool]] = None,
     ) -> None:
-        """Spawn a new service instance within this :class:`Cluster`."""
+        """Lifecycle the service within this :class:`ServiceRunner`.
+
+        :param service: instance of the service class, expected to be in a pending state
+        :param network: a :class:`~yapapi.network.Network` this service should be attached to
+        :param network_address: the address withing the network, ignored if network is None
+        :param respawn_condition: a bool-returning function called when a single lifecycle of the instance finished,
+            determining whether service should be reset and lifecycle should restart
+        """
 
         await self._ensure_payload_matches(service)
 
@@ -325,7 +332,7 @@ class ServiceRunner(AsyncContextManager):
         instance = service.service_instance
 
         async def _worker(
-            agreement: rest.market.Agreement, activity: Activity, work_context: WorkContext
+            agreement: Agreement, activity: Activity, work_context: WorkContext
         ) -> None:
             nonlocal agreement_id, instance
             agreement_id = agreement.id

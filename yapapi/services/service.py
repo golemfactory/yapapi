@@ -389,10 +389,10 @@ class Service:
 
 @dataclass
 class ServiceInstance:
-    """Cluster's service instance.
+    """ServiceRunner's service instance.
 
     A binding between the instance of the Service, its control queue and its state,
-    used by the Cluster to hold the complete state of each instance of a service.
+    used by the ServiceRunner to hold the complete state of each instance of a service.
     """
 
     service: Service
