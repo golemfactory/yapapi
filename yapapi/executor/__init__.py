@@ -192,20 +192,14 @@ class Executor:
                     async def task_generator() -> AsyncIterator[Task[D, R]]:
                         async for handle in consumer:
                             task = Task.for_handle(handle, work_queue, self.emit)
-                            self._engine.emit(
-                                events.TaskStarted(
-                                    job_id=job.id,
-                                    agr_id=agreement.id,
-                                    task_id=task.id,
-                                    task_data=task.data,
-                                )
+                            job.emit(
+                                events.TaskStarted,
+                                agr_id=agreement.id,
+                                task_id=task.id,
+                                task_data=task.data,
                             )
                             yield task
-                            self._engine.emit(
-                                events.TaskFinished(
-                                    job_id=job.id, agr_id=agreement.id, task_id=task.id
-                                )
-                            )
+                            job.emit(events.TaskFinished, agr_id=agreement.id, task_id=task.id)
 
                     batch_generator = worker(work_context, task_generator())
 
@@ -220,13 +214,9 @@ class Executor:
                         )
                     except StopAsyncIteration:
                         pass
-                    self.emit(events.WorkerFinished(job_id=job.id, agr_id=agreement.id))
+                    job.emit(events.WorkerFinished, agr_id=agreement.id)
                 except Exception:
-                    self.emit(
-                        events.WorkerFinished(
-                            job_id=job.id, agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
-                        )
-                    )
+                    job.emit(events.WorkerFinished, agr_id=agreement.id, exc_info=sys.exc_info())  # type: ignore
                     raise
                 finally:
                     await self._engine.accept_payments_for_agreement(job.id, agreement.id)

@@ -20,6 +20,7 @@ from typing import (
     List,
     Optional,
     Set,
+    Type,
     Union,
 )
 from typing_extensions import Final, AsyncGenerator
@@ -224,10 +225,30 @@ class _Engine:
 
         self._wrapped_consumers.append(wrapped_consumer)
 
-    def emit(self, event: events.Event) -> None:
+    def emit(self, event_or_event_class: Union[events.Event, Type[events.Event]], **kwargs) -> None:
         """Emit an event to be consumed by this engine's event consumer."""
+        event = self._resolve_emit_args(event_or_event_class, **kwargs)
+
         for wrapped_consumer in self._wrapped_consumers:
             wrapped_consumer.async_call(event)
+
+    def _resolve_emit_args(self, event_or_event_class, **kwargs) -> events.Event:
+        #   NOTE: This is a temporary function that will disappear once the new events are ready.
+        #         Purpose of all these ugly hacks here is to allow gradual changes of
+        #         events interface (so that everything works as before after only some parts changed).
+        #         IOW, to have a dual old-new interface while the new interface is replacing the old one.
+        if isinstance(event_or_event_class, events.Event):
+            return event_or_event_class
+        else:
+            import dataclasses
+
+            event_class = event_or_event_class
+            event_class_fields = [f.name for f in dataclasses.fields(event_class)]
+            if "job" in kwargs:
+                if "job_id" in event_class_fields:
+                    kwargs["job_id"] = kwargs["job"].id
+                del kwargs["job"]
+            return event_or_event_class(**kwargs)  # type: ignore
 
     async def stop(self, *exc_info) -> Optional[bool]:
         """Stop the engine.
@@ -420,13 +441,12 @@ class _Engine:
                 None,
             )
             if job_id is not None:
-                self.emit(
-                    events.InvoiceReceived(
-                        job_id=job_id,
-                        agr_id=invoice.agreement_id,
-                        inv_id=invoice.invoice_id,
-                        amount=invoice.amount,
-                    )
+                job = self._get_job_by_id(job_id)
+                job.emit(
+                    events.InvoiceReceived,
+                    agr_id=invoice.agreement_id,
+                    inv_id=invoice.invoice_id,
+                    amount=invoice.amount,
                 )
                 try:
                     allocation = self._get_allocation(invoice)
@@ -434,24 +454,20 @@ class _Engine:
                 except CancelledError:
                     raise
                 except Exception:
-                    self.emit(
-                        events.PaymentFailed(
-                            job_id=job_id,
-                            agr_id=invoice.agreement_id,
-                            exc_info=sys.exc_info(),  # type: ignore
-                        )
+                    job.emit(
+                        events.PaymentFailed,
+                        agr_id=invoice.agreement_id,
+                        exc_info=sys.exc_info(),  # type: ignore
                     )
                 else:
                     self._agreements_to_pay[job_id].remove(invoice.agreement_id)
                     assert invoice.agreement_id in self._agreements_accepting_debit_notes[job_id]
                     self._agreements_accepting_debit_notes[job_id].remove(invoice.agreement_id)
-                    self.emit(
-                        events.PaymentAccepted(
-                            job_id=job_id,
-                            agr_id=invoice.agreement_id,
-                            inv_id=invoice.invoice_id,
-                            amount=invoice.amount,
-                        )
+                    job.emit(
+                        events.PaymentAccepted,
+                        agr_id=invoice.agreement_id,
+                        inv_id=invoice.invoice_id,
+                        amount=invoice.amount,
                     )
             else:
                 self._invoices[invoice.agreement_id] = invoice
@@ -473,13 +489,12 @@ class _Engine:
                 None,
             )
             if job_id is not None:
-                self.emit(
-                    events.DebitNoteReceived(
-                        job_id=job_id,
-                        agr_id=debit_note.agreement_id,
-                        amount=debit_note.total_amount_due,
-                        note_id=debit_note.debit_note_id,
-                    )
+                job = self._get_job_by_id(job_id)
+                job.emit(
+                    events.DebitNoteReceived,
+                    agr_id=debit_note.agreement_id,
+                    amount=debit_note.total_amount_due,
+                    note_id=debit_note.debit_note_id,
                 )
                 try:
                     allocation = self._get_allocation(debit_note)
@@ -489,10 +504,8 @@ class _Engine:
                 except CancelledError:
                     raise
                 except Exception:
-                    self.emit(
-                        events.PaymentFailed(
-                            job_id=job_id, agr_id=debit_note.agreement_id, exc_info=sys.exc_info()  # type: ignore
-                        )
+                    job.emit(
+                        events.PaymentFailed, agr_id=debit_note.agreement_id, exc_info=sys.exc_info()  # type: ignore
                     )
             if self._payment_closing and not self._agreements_to_pay:
                 break
@@ -501,20 +514,18 @@ class _Engine:
         self, job_id: str, agreement_id: str, *, partial: bool = False
     ) -> None:
         """Add given agreement to the set of agreements for which invoices should be accepted."""
-
-        self.emit(events.PaymentPrepared(job_id=job_id, agr_id=agreement_id))
+        job = self._get_job_by_id(job_id)
+        job.emit(events.PaymentPrepared, agr_id=agreement_id)
         inv = self._invoices.get(agreement_id)
         if inv is None:
             self._agreements_to_pay[job_id].add(agreement_id)
-            self.emit(events.PaymentQueued(job_id=job_id, agr_id=agreement_id))
+            job.emit(events.PaymentQueued, agr_id=agreement_id)
             return
         del self._invoices[agreement_id]
         allocation = self._get_allocation(inv)
         await inv.accept(amount=inv.amount, allocation=allocation)
-        self.emit(
-            events.PaymentAccepted(
-                job_id=job_id, agr_id=agreement_id, inv_id=inv.invoice_id, amount=inv.amount
-            )
+        job.emit(
+            events.PaymentAccepted, agr_id=agreement_id, inv_id=inv.invoice_id, amount=inv.amount
         )
 
     def accept_debit_notes_for_agreement(self, job_id: str, agreement_id: str) -> None:
@@ -524,12 +535,12 @@ class _Engine:
     def add_job(self, job: "Job"):
         """Register a job with this engine."""
         self._jobs.add(job)
-        self.emit(events.ComputationStarted(job.id, job.expiration_time))
+        job.emit(events.ComputationStarted, expires=job.expiration_time)
 
     def finalize_job(self, job: "Job"):
         """Mark a job as finished."""
         job.finished.set()
-        self.emit(events.ComputationFinished(job.id, exc_info=job._exc_info))  # type: ignore
+        job.emit(events.ComputationFinished, exc_info=job._exc_info)  # type: ignore
 
     def register_generator(self, generator: AsyncGenerator) -> None:
         """Register a generator with this engine."""
@@ -565,19 +576,13 @@ class _Engine:
             and then executes `run_worker` with this WorkContext.
             """
 
-            self.emit(events.WorkerStarted(job_id=job.id, agr_id=agreement.id))
+            job.emit(events.WorkerStarted, agr_id=agreement.id)
 
             try:
                 activity = await self.create_activity(agreement.id)
-                self.emit(
-                    events.ActivityCreated(job_id=job.id, act_id=activity.id, agr_id=agreement.id)
-                )
+                job.emit(events.ActivityCreated, act_id=activity.id, agr_id=agreement.id)
             except Exception:
-                self.emit(
-                    events.ActivityCreateFailed(
-                        job_id=job.id, agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
-                    )
-                )
+                job.emit(events.ActivityCreateFailed, agr_id=agreement.id, exc_info=sys.exc_info())  # type: ignore
                 raise
 
             async with activity:
@@ -599,6 +604,7 @@ class _Engine:
         batch_generator: AsyncGenerator[Script, Awaitable[List[events.CommandEvent]]],
     ) -> None:
         """Send command batches produced by `batch_generator` to `activity`."""
+        job = self._get_job_by_id(job_id)
 
         script: Script = await batch_generator.__anext__()
 
@@ -617,11 +623,7 @@ class _Engine:
                 script = await batch_generator.athrow(*sys.exc_info())
                 continue
 
-            self.emit(
-                events.ScriptSent(
-                    job_id=job_id, agr_id=agreement_id, script_id=script_id, cmds=batch
-                )
-            )
+            job.emit(events.ScriptSent, agr_id=agreement_id, script_id=script_id, cmds=batch)
 
             async def get_batch_results() -> List[events.CommandEvent]:
                 results = []
@@ -637,13 +639,9 @@ class _Engine:
                         else:
                             raise CommandExecutionError(evt.command, evt.message, evt.stderr)
 
-                self.emit(
-                    events.GettingResults(job_id=job_id, agr_id=agreement_id, script_id=script_id)
-                )
+                job.emit(events.GettingResults, agr_id=agreement_id, script_id=script_id)
                 await script._after()
-                self.emit(
-                    events.ScriptFinished(job_id=job_id, agr_id=agreement_id, script_id=script_id)
-                )
+                job.emit(events.ScriptFinished, agr_id=agreement_id, script_id=script_id)
                 await self.accept_payments_for_agreement(job_id, agreement_id, partial=True)
                 return results
 
@@ -689,6 +687,12 @@ class _Engine:
         unfinished_jobs = (job for job in self._jobs if not job.finished.is_set())
         for job in unfinished_jobs:
             asyncio.get_event_loop().create_task(handle_proposal(job))
+
+    def _get_job_by_id(self, job_id) -> "Job":
+        try:
+            return next(job for job in self._jobs if job.id == job_id)
+        except StopIteration:
+            raise KeyError(f"This _Engine doesn't know job with id {job_id}")
 
 
 class Job:
@@ -737,13 +741,16 @@ class Job:
         self.expiration_time: datetime = expiration_time
         self.payload: Payload = payload
 
-        self.agreements_pool = AgreementsPool(self.id, self.engine.emit, self.engine.recycle_offer)
+        self.agreements_pool = AgreementsPool(self.id, self.emit, self.engine.recycle_offer)
         self.finished = asyncio.Event()
 
         self._demand_builder: Optional[DemandBuilder] = None
 
         #   Exception that ended the job
         self._exc_info = None
+
+    def emit(self, event_class: Type[events.Event], **kwargs):
+        self.engine.emit(event_class, job=self, **kwargs)
 
     def set_exc_info(self, exc_info):
         assert self._exc_info is None, "We can't have more than one exc_info ending a job"
@@ -834,11 +841,7 @@ class Job:
 
         async for proposal in proposals:
 
-            self.engine.emit(
-                events.ProposalReceived(
-                    job_id=self.id, prop_id=proposal.id, provider_id=proposal.issuer
-                )
-            )
+            self.emit(events.ProposalReceived, prop_id=proposal.id, provider_id=proposal.issuer)
             self.offers_collected += 1
 
             async def handler(proposal_):
@@ -853,11 +856,7 @@ class Job:
                     raise
                 except Exception:
                     with contextlib.suppress(Exception):
-                        self.engine.emit(
-                            events.ProposalFailed(
-                                job_id=self.id, prop_id=proposal_.id, exc_info=sys.exc_info()  # type: ignore
-                            )
-                        )
+                        self.emit(events.ProposalFailed, prop_id=proposal_.id, exc_info=sys.exc_info())  # type: ignore
                 finally:
                     semaphore.release()
 
@@ -878,9 +877,9 @@ class Job:
         while True:
             try:
                 subscription = await self._demand_builder.subscribe(self.engine._market_api)
-                self.engine.emit(events.SubscriptionCreated(job_id=self.id, sub_id=subscription.id))
+                self.emit(events.SubscriptionCreated, sub_id=subscription.id)
             except Exception as ex:
-                self.engine.emit(events.SubscriptionFailed(job_id=self.id, reason=str(ex)))
+                self.emit(events.SubscriptionFailed, reason=str(ex))
                 raise
             async with subscription:
                 await self._find_offers_for_subscription(subscription)
