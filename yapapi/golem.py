@@ -1,6 +1,6 @@
 import asyncio
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 import json
 from decimal import Decimal
 from typing import (
@@ -28,7 +28,7 @@ from yapapi.executor.task import Task
 from yapapi.network import Network
 from yapapi.payload import Payload
 from yapapi.script import Script
-from yapapi.services import Cluster, Service, MAX_AGREEMENT_EXPIRATION
+from yapapi.services import Cluster, Service
 from yapapi.utils import warn_deprecated, Deprecated
 
 if TYPE_CHECKING:
@@ -385,8 +385,6 @@ class Golem:
         if network_addresses and not network:
             raise ValueError("`network_addresses` provided without a `network`.")
 
-        expiration = expiration or self._default_service_expiration()
-
         cluster = Cluster(
             engine=self._engine,
             service_class=service_class,
@@ -426,10 +424,6 @@ class Golem:
         return await Network.create(
             self._engine._net_api, ip, identity, owner_ip, mask=mask, gateway=gateway
         )
-
-    def _default_service_expiration(self):
-        default_service_expiration = MAX_AGREEMENT_EXPIRATION - timedelta(minutes=5)
-        return datetime.now(timezone.utc) + default_service_expiration
 
     @staticmethod
     def _default_event_consumer() -> Callable[[events.Event], None]:

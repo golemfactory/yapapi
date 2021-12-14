@@ -1,6 +1,6 @@
 """Implementation of high-level services API."""
 import itertools
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 import sys
 from typing import (
     AsyncContextManager,
@@ -30,6 +30,7 @@ from .service_runner import ServiceRunner
 # https://github.com/golemfactory/yagna/blob/c37dbd1a2bc918a511eed12f2399eb9fd5bbf2a2/agent/provider/src/market/negotiator/factory.rs#L20
 MIN_AGREEMENT_EXPIRATION: Final[timedelta] = timedelta(minutes=5)
 MAX_AGREEMENT_EXPIRATION: Final[timedelta] = timedelta(minutes=180)
+DEFAULT_SERVICE_EXPIRATION: Final[timedelta] = MAX_AGREEMENT_EXPIRATION - timedelta(minutes=5)
 
 
 class Cluster(AsyncContextManager):
@@ -40,7 +41,7 @@ class Cluster(AsyncContextManager):
         engine: _Engine,
         service_class: Type[Service],
         payload: Payload,
-        expiration: datetime,
+        expiration: Optional[datetime] = None,
         respawn_unstarted_instances: bool = True,
         network: Optional[Network] = None,
     ):
@@ -56,6 +57,8 @@ class Cluster(AsyncContextManager):
         :param network: optional Network representing the VPN that this Cluster's instances will
             be attached to.
         """
+        expiration = expiration or self._default_expiration()
+
         job = Job(engine, expiration, payload)
         self.service_runner = ServiceRunner(job)
         self._service_class = service_class
@@ -192,3 +195,6 @@ class Cluster(AsyncContextManager):
                         raise ValueError(
                             f"`instance_params` iterable depleted after {i} spawned instances."
                         )
+
+    def _default_expiration(self):
+        return datetime.now(timezone.utc) + DEFAULT_SERVICE_EXPIRATION
