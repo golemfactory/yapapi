@@ -11,3 +11,4 @@ class WorkContextFactory(factory.Factory):
     activity = mock.MagicMock()
     agreement = mock.MagicMock()
     storage = mock.AsyncMock()
+    emitter = mock.MagicMock()

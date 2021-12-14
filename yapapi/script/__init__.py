@@ -1,9 +1,9 @@
 from datetime import timedelta
 import itertools
-from typing import Any, Awaitable, Callable, Dict, Iterator, Optional, List, TYPE_CHECKING
+from typing import Any, Awaitable, Callable, Dict, Iterator, Optional, List, Type, TYPE_CHECKING
 
 import yapapi
-from yapapi.events import CommandExecuted
+from yapapi.events import CommandExecuted, Event
 from yapapi.script.capture import CaptureContext
 from yapapi.script.command import (
     BatchCommand,
@@ -59,6 +59,9 @@ class Script:
         self._commands: List[Command] = []
         self._id: int = next(script_ids)
 
+    def emit(self, event_class: Type[Event], **kwargs):
+        self._ctx.emit(event_class, script=self, **kwargs)
+
     @property
     def id(self) -> int:
         """Return the ID of this :class:`Script` instance.
@@ -92,6 +95,7 @@ class Script:
     def add(self, cmd: Command) -> Awaitable[CommandExecuted]:
         """Add a :class:`yapapi.script.command.Command` to the :class:`Script`"""
         self._commands.append(cmd)
+        cmd._set_script(self)
         return cmd._result
 
     def deploy(self, **kwargs: dict) -> Awaitable[CommandExecuted]:

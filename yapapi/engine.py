@@ -248,11 +248,16 @@ class _Engine:
                 ("job", "job_id"),
                 ("agreement", "agr_id"),
                 ("activity", "act_id"),
+                ("script", "script_id"),
             ):
                 if name in kwargs:
                     if id_name in event_class_fields:
                         kwargs[id_name] = kwargs[name].id
                     del kwargs[name]
+
+            #   Command is different because we sometimes have "command" and never "command_id"
+            if "command" in kwargs and "command" not in event_class_fields:
+                del kwargs["command"]
 
             return event_or_event_class(**kwargs)  # type: ignore
 
@@ -609,7 +614,6 @@ class _Engine:
         batch_generator: AsyncGenerator[Script, Awaitable[List[events.CommandEvent]]],
     ) -> None:
         """Send command batches produced by `batch_generator` to `activity`."""
-        job = self._get_job_by_id(job_id)
 
         script: Script = await batch_generator.__anext__()
 
@@ -628,7 +632,7 @@ class _Engine:
                 script = await batch_generator.athrow(*sys.exc_info())
                 continue
 
-            job.emit(events.ScriptSent, agr_id=agreement_id, script_id=script_id, cmds=batch)
+            script.emit(events.ScriptSent, cmds=batch)
 
             async def get_batch_results() -> List[events.CommandEvent]:
                 results = []
@@ -644,9 +648,9 @@ class _Engine:
                         else:
                             raise CommandExecutionError(evt.command, evt.message, evt.stderr)
 
-                job.emit(events.GettingResults, agr_id=agreement_id, script_id=script_id)
+                script.emit(events.GettingResults)
                 await script._after()
-                job.emit(events.ScriptFinished, agr_id=agreement_id, script_id=script_id)
+                script.emit(events.ScriptFinished)
                 await self.accept_payments_for_agreement(job_id, agreement_id, partial=True)
                 return results
 
