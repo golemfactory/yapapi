@@ -37,7 +37,7 @@ from yapapi import props
 from yapapi.props import com
 from yapapi.props.builder import DemandBuilder, DemandDecorator
 from yapapi.rest.activity import CommandExecutionError, Activity
-from yapapi.rest.market import Agreement, AgreementDetails, OfferProposal, Subscription
+from yapapi.rest.market import Agreement, OfferProposal, Subscription
 from yapapi.script import Script
 from yapapi.script.command import BatchCommand
 from yapapi.storage import gftp
@@ -558,7 +558,7 @@ class _Engine:
     ) -> Optional[asyncio.Task]:
         loop = asyncio.get_event_loop()
 
-        async def worker_task(agreement: Agreement, agreement_details: AgreementDetails):
+        async def worker_task(agreement: Agreement):
             """A coroutine run by every worker task.
 
             It creates an Activity and WorkContext for given Agreement
@@ -582,13 +582,14 @@ class _Engine:
 
             async with activity:
                 self.accept_debit_notes_for_agreement(job.id, agreement.id)
+                agreement_details = await agreement.details()
                 work_context = WorkContext(
                     activity, agreement_details, self.storage_manager, emitter=self.emit
                 )
                 await run_worker(agreement, activity, work_context)
 
         return await job.agreements_pool.use_agreement(
-            lambda agreement, details: loop.create_task(worker_task(agreement, details))
+            lambda agreement: loop.create_task(worker_task(agreement))
         )
 
     async def process_batches(

@@ -4,7 +4,7 @@ import datetime
 import logging
 import random
 import sys
-from typing import Dict, NamedTuple, Optional, Set, Tuple, Callable
+from typing import Dict, NamedTuple, Optional, Set, Callable
 
 import aiohttp
 
@@ -78,15 +78,14 @@ class AgreementsPool:
             )
 
     async def use_agreement(
-        self, cbk: Callable[[Agreement, AgreementDetails], asyncio.Task]
+        self, cbk: Callable[[Agreement], asyncio.Task]
     ) -> Optional[asyncio.Task]:
         """Get an agreement and start the `cbk()` task within it."""
         async with self._lock:
-            agreement_with_info = await self._get_agreement()
-            if agreement_with_info is None:
+            agreement = await self._get_agreement()
+            if agreement is None:
                 return None
-            agreement, agreement_details = agreement_with_info
-            task = cbk(agreement, agreement_details)
+            task = cbk(agreement)
             await self._set_worker(agreement.id, task)
             return task
 
@@ -98,7 +97,7 @@ class AgreementsPool:
         assert buffered_agreement.worker_task is None
         buffered_agreement.worker_task = task
 
-    async def _get_agreement(self) -> Optional[Tuple[Agreement, AgreementDetails]]:
+    async def _get_agreement(self) -> Optional[Agreement]:
         """Returns an Agreement
 
         Firstly it tries to reuse agreement from a pool of available agreements
@@ -111,7 +110,7 @@ class AgreementsPool:
                 [ba for ba in self._agreements.values() if ba.worker_task is None]
             )
             logger.debug("Reusing agreement. id: %s", buffered_agreement.agreement.id)
-            return buffered_agreement.agreement, buffered_agreement.agreement_details
+            return buffered_agreement.agreement
         except IndexError:  # empty pool
             pass
 
@@ -171,7 +170,7 @@ class AgreementsPool:
         )
         emit(events.AgreementConfirmed(job_id=self.job_id, agr_id=agreement.id))
         self.confirmed += 1
-        return agreement, agreement_details
+        return agreement
 
     async def release_agreement(self, agreement_id: str, allow_reuse: bool = True) -> None:
         """Marks agreement as unused.
