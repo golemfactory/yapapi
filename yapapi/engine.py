@@ -582,9 +582,8 @@ class _Engine:
 
             async with activity:
                 self.accept_debit_notes_for_agreement(job.id, agreement.id)
-                agreement_details = await agreement.details()
                 work_context = WorkContext(
-                    activity, agreement_details, self.storage_manager, emitter=self.emit
+                    activity, agreement, self.storage_manager, emitter=self.emit
                 )
                 await run_worker(agreement, activity, work_context)
 

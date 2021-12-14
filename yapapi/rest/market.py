@@ -77,6 +77,17 @@ class Agreement(object):
             self._details = AgreementDetails(_ref=await self._api.get_agreement(self._id))
         return self._details
 
+    @property
+    def cached_details(self) -> AgreementDetails:
+        """Return cached details after prior call to `await self.details()` or raise RuntimeError.
+
+        The only purpose is to provide a sync interface to the details."""
+        if not self._details:
+            raise RuntimeError(
+                "Method cached_details() can be called only after prior `await details()`"
+            )
+        return self._details
+
     async def confirm(self) -> bool:
         """Sign and send the agreement to the provider and then wait for it to be approved.
 
