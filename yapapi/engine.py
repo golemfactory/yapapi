@@ -244,10 +244,16 @@ class _Engine:
 
             event_class = event_or_event_class
             event_class_fields = [f.name for f in dataclasses.fields(event_class)]
-            if "job" in kwargs:
-                if "job_id" in event_class_fields:
-                    kwargs["job_id"] = kwargs["job"].id
-                del kwargs["job"]
+            for name, id_name in (
+                ("job", "job_id"),
+                ("agreement", "agr_id"),
+                ("activity", "act_id"),
+            ):
+                if name in kwargs:
+                    if id_name in event_class_fields:
+                        kwargs[id_name] = kwargs[name].id
+                    del kwargs[name]
+
             return event_or_event_class(**kwargs)  # type: ignore
 
     async def stop(self, *exc_info) -> Optional[bool]:
@@ -580,16 +586,15 @@ class _Engine:
 
             try:
                 activity = await self.create_activity(agreement.id)
-                job.emit(events.ActivityCreated, act_id=activity.id, agr_id=agreement.id)
             except Exception:
                 job.emit(events.ActivityCreateFailed, agr_id=agreement.id, exc_info=sys.exc_info())  # type: ignore
                 raise
 
+            work_context = WorkContext(activity, agreement, self.storage_manager, emitter=job.emit)
+            work_context.emit(events.ActivityCreated)
+
             async with activity:
                 self.accept_debit_notes_for_agreement(job.id, agreement.id)
-                work_context = WorkContext(
-                    activity, agreement, self.storage_manager, emitter=self.emit
-                )
                 await run_worker(work_context)
 
         return await job.agreements_pool.use_agreement(

@@ -192,14 +192,13 @@ class Executor:
                     async def task_generator() -> AsyncIterator[Task[D, R]]:
                         async for handle in consumer:
                             task = Task.for_handle(handle, work_queue, self.emit)
-                            job.emit(
+                            work_context.emit(
                                 events.TaskStarted,
-                                agr_id=agreement.id,
                                 task_id=task.id,
                                 task_data=task.data,
                             )
                             yield task
-                            job.emit(events.TaskFinished, agr_id=agreement.id, task_id=task.id)
+                            work_context.emit(events.TaskFinished, task_id=task.id)
 
                     batch_generator = worker(work_context, task_generator())
 
@@ -214,9 +213,9 @@ class Executor:
                         )
                     except StopAsyncIteration:
                         pass
-                    job.emit(events.WorkerFinished, agr_id=agreement.id)
+                    work_context.emit(events.WorkerFinished)
                 except Exception:
-                    job.emit(events.WorkerFinished, agr_id=agreement.id, exc_info=sys.exc_info())  # type: ignore
+                    work_context.emit(events.WorkerFinished, exc_info=sys.exc_info())  # type: ignore
                     raise
                 finally:
                     await self._engine.accept_payments_for_agreement(job.id, agreement.id)
