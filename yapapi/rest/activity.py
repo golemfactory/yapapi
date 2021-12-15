@@ -150,7 +150,7 @@ class BatchTimeoutError(BatchError):
     """An exception that indicates that an execution of a batch of commands timed out."""
 
 
-class Batch(abc.ABC, AsyncIterable[events.CommandEventContext]):
+class Batch(abc.ABC, AsyncIterable[Tuple[Type[events.CommandEvent], Dict[str, Any]]]):
     """Abstract base class for iterating over events related to a batch running on provider."""
 
     _activity: Activity
@@ -248,7 +248,7 @@ class PollingBatch(Batch):
 
         return []
 
-    async def __aiter__(self) -> AsyncIterator[events.CommandEventContext]:
+    async def __aiter__(self) -> AsyncIterator[Tuple[Type[events.CommandEvent], Dict[str, Any]]]:
         last_idx = 0
 
         while last_idx < self._size:
@@ -273,7 +273,7 @@ class PollingBatch(Batch):
                     stderr=result.stderr,
                     success=(result.result.lower() == "ok"),
                 )
-                yield events.CommandEventContext(evt_cls=events.CommandExecuted, kwargs=kwargs)
+                yield events.CommandExecuted, kwargs
 
                 last_idx = result.index + 1
                 if result.is_batch_finished:
@@ -286,7 +286,7 @@ class PollingBatch(Batch):
 class StreamingBatch(Batch):
     """A `Batch` implementation that uses event streaming to return command status."""
 
-    async def __aiter__(self) -> AsyncIterator[events.CommandEventContext]:
+    async def __aiter__(self) -> AsyncIterator[Tuple[Type[events.CommandEvent], Dict[str, Any]]]:
         from aiohttp_sse_client import client as sse_client  # type: ignore
 
         api_client = self._activity._api.api_client
@@ -309,13 +309,17 @@ class StreamingBatch(Batch):
             try:
                 async for msg_event in event_source:
                     try:
-                        evt_ctx = _command_event_ctx(msg_event)
+                        event_class, kwargs = _message_event_to_event_data(msg_event)
                     except Exception as exc:  # noqa
                         _log.error(f"Event stream exception (batch {batch_id}): {exc}")
                     else:
-                        yield evt_ctx
-                        if evt_ctx.computation_finished(last_idx):
+                        yield event_class, kwargs
+
+                        if event_class is events.CommandExecuted and (
+                            kwargs["cmd_idx"] >= last_idx or not kwargs["success"]
+                        ):
                             break
+
             except ClientPayloadError as exc:
                 _log.error(f"Event payload error (batch {batch_id}): {exc}")
             except ConnectionError:
@@ -324,8 +328,10 @@ class StreamingBatch(Batch):
                 raise BatchTimeoutError()
 
 
-def _command_event_ctx(msg_event: MessageEvent) -> events.CommandEventContext:
-    """Convert a `MessageEvent` to a `CommandEventContext` that emits an appropriate event."""
+def _message_event_to_event_data(
+    msg_event: MessageEvent,
+) -> Tuple[Type[events.CommandEvent], Dict[str, Any]]:
+    """Convert a `MessageEvent` to a matching events.Event subclass and it's kwargs"""
 
     if msg_event.type != "runtime":
         raise RuntimeError(f"Unsupported event: {msg_event.type}")
@@ -361,4 +367,4 @@ def _command_event_ctx(msg_event: MessageEvent) -> events.CommandEventContext:
     else:
         raise RuntimeError(f"Unsupported runtime event: {evt_kind}")
 
-    return events.CommandEventContext(evt_cls=evt_cls, kwargs=kwargs)
+    return evt_cls, kwargs

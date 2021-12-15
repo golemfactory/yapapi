@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass
 import logging
 from types import TracebackType
-from typing import Any, Optional, Type, Tuple, List
+from typing import Any, Optional, Type, Tuple
 
 from yapapi.props import NodeInfo
 
@@ -282,20 +282,3 @@ class ShutdownFinished(HasExcInfo):
 @dataclass
 class ExecutionInterrupted(HasExcInfo):
     """Emitted when Golem was stopped by an unhandled exception in code not managed by yapapi"""
-
-
-@dataclass
-class CommandEventContext:
-    evt_cls: Type[CommandEvent]
-    kwargs: dict
-
-    def computation_finished(self, last_idx: int) -> bool:
-        return self.evt_cls is CommandExecuted and (
-            self.kwargs["cmd_idx"] >= last_idx or not self.kwargs["success"]
-        )
-
-    def event(self, job_id: str, agr_id: str, script_id: str, cmds: List) -> CommandEvent:
-        kwargs = dict(job_id=job_id, agr_id=agr_id, script_id=script_id, **self.kwargs)
-        if self.evt_cls is CommandExecuted:
-            kwargs["command"] = cmds[self.kwargs["cmd_idx"]]
-        return self.evt_cls(**kwargs)

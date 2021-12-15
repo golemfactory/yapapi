@@ -37,7 +37,7 @@ from yapapi.payload import Payload
 from yapapi import props
 from yapapi.props import com
 from yapapi.props.builder import DemandBuilder, DemandDecorator
-from yapapi.rest.activity import CommandExecutionError, Activity
+from yapapi.rest.activity import Activity
 from yapapi.rest.market import Agreement, OfferProposal, Subscription
 from yapapi.script import Script
 from yapapi.script.command import BatchCommand
@@ -630,8 +630,6 @@ class _Engine:
         script: Script = await batch_generator.__anext__()
 
         while True:
-            script_id = str(script.id)
-
             batch_deadline = (
                 datetime.now(timezone.utc) + script.timeout if script.timeout is not None else None
             )
@@ -648,17 +646,9 @@ class _Engine:
 
             async def get_batch_results() -> List[events.CommandEvent]:
                 results = []
-                async for evt_ctx in remote:
-                    evt = evt_ctx.event(
-                        job_id=job_id, agr_id=agreement_id, script_id=script_id, cmds=batch
-                    )
-                    self.emit(evt)
-                    results.append(evt)
-                    if isinstance(evt, events.CommandExecuted):
-                        if evt.success:
-                            script._set_cmd_result(evt)
-                        else:
-                            raise CommandExecutionError(evt.command, evt.message, evt.stderr)
+                async for event_class, event_kwargs in remote:
+                    event = script.process_batch_event(event_class, event_kwargs, batch)
+                    results.append(event)
 
                 script.emit(events.GettingResults)
                 await script._after()

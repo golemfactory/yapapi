@@ -3,7 +3,7 @@ import itertools
 from typing import Any, Awaitable, Callable, Dict, Iterator, Optional, List, Type, TYPE_CHECKING
 
 import yapapi
-from yapapi.events import CommandExecuted, Event
+from yapapi.events import CommandEvent, CommandExecuted, Event
 from yapapi.script.capture import CaptureContext
 from yapapi.script.command import (
     BatchCommand,
@@ -20,6 +20,7 @@ from yapapi.script.command import (
     Terminate,
 )
 from yapapi.storage import DOWNLOAD_BYTES_LIMIT_DEFAULT
+from yapapi.rest.activity import CommandExecutionError
 
 if TYPE_CHECKING:
     from yapapi.ctx import WorkContext
@@ -61,6 +62,27 @@ class Script:
 
     def emit(self, event_class: Type[Event], **kwargs) -> Event:
         return self._ctx.emit(event_class, script=self, **kwargs)
+
+    def process_batch_event(
+        self,
+        event_class: Type[CommandEvent],
+        event_kwargs: Dict[str, Any],
+        # TODO: this is useless & will disappear, but I keep it for a while to maintain
+        # the full backwards compatibility.
+        commands: List[Dict[str, Any]],
+    ) -> CommandEvent:
+        """Event emiting and special events.CommandExecuted logic"""
+        if event_class is CommandExecuted:
+            command = commands[event_kwargs["cmd_idx"]]
+            event_kwargs = {**event_kwargs, "command": command}
+
+        event = self.emit(event_class, **event_kwargs)
+        if isinstance(event, CommandExecuted):
+            if event.success:
+                self._set_cmd_result(event)
+            else:
+                raise CommandExecutionError(event.command, event.message, event.stderr)
+        return event  # type: ignore # -> TODO #786
 
     @property
     def id(self) -> int:
