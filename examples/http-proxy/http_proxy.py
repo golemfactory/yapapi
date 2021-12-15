@@ -151,7 +151,8 @@ class HttpService(Service):
         return response_text, status
 
     async def reset(self):
-        """Do nothing when the service is restarted"""
+        # We don't have to do anything when the service is restarted
+        pass
 
 
 # ######## Main application code which spawns the Golem service and the local HTTP server

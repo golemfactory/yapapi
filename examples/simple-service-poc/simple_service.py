@@ -109,7 +109,8 @@ class SimpleService(Service):
             print(f"{TEXT_COLOR_MAGENTA} --- {self.name}  COST: {cost} {TEXT_COLOR_DEFAULT}")
 
     async def reset(self):
-        """Do nothing when the service is restarted"""
+        # We don't have to do anything when the service is restarted
+        pass
 
 
 async def main(

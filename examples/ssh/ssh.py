@@ -72,7 +72,8 @@ class SshService(Service):
         print(f"{TEXT_COLOR_RED}password: {password}{TEXT_COLOR_DEFAULT}")
 
     async def reset(self):
-        """Do nothing when the service is restarted"""
+        # We don't have to do anything when the service is restarted
+        pass
 
 
 async def main(subnet_tag, payment_driver=None, payment_network=None):
