@@ -37,7 +37,7 @@ from yapapi import props
 from yapapi.props import com
 from yapapi.props.builder import DemandBuilder, DemandDecorator
 from yapapi.rest.activity import CommandExecutionError, Activity
-from yapapi.rest.market import Agreement, AgreementDetails, OfferProposal, Subscription
+from yapapi.rest.market import Agreement, OfferProposal, Subscription
 from yapapi.script import Script
 from yapapi.script.command import BatchCommand
 from yapapi.storage import gftp
@@ -554,15 +554,15 @@ class _Engine:
         )
 
     async def start_worker(
-        self, job: "Job", run_worker: Callable[[Agreement, Activity, WorkContext], Awaitable]
+        self, job: "Job", run_worker: Callable[[WorkContext], Awaitable]
     ) -> Optional[asyncio.Task]:
         loop = asyncio.get_event_loop()
 
-        async def worker_task(agreement: Agreement, agreement_details: AgreementDetails):
+        async def worker_task(agreement: Agreement):
             """A coroutine run by every worker task.
 
-            It creates an Activity and WorkContext for given Agreement
-            and then passes them to `run_worker`.
+            It creates an Activity for a given Agreement, then creates a WorkContext for this Activity
+            and then executes `run_worker` with this WorkContext.
             """
 
             self.emit(events.WorkerStarted(job_id=job.id, agr_id=agreement.id))
@@ -583,12 +583,12 @@ class _Engine:
             async with activity:
                 self.accept_debit_notes_for_agreement(job.id, agreement.id)
                 work_context = WorkContext(
-                    activity, agreement_details, self.storage_manager, emitter=self.emit
+                    activity, agreement, self.storage_manager, emitter=self.emit
                 )
-                await run_worker(agreement, activity, work_context)
+                await run_worker(work_context)
 
         return await job.agreements_pool.use_agreement(
-            lambda agreement, details: loop.create_task(worker_task(agreement, details))
+            lambda agreement: loop.create_task(worker_task(agreement))
         )
 
     async def process_batches(

@@ -43,7 +43,7 @@ async def test_use_agreement_chooses_max_score():
 
     chosen_proposal_ids = []
 
-    def use_agreement_cb(agreement, _node_info):
+    def use_agreement_cb(agreement):
         chosen_proposal_ids.append(agreement.proposal_id)
         return True
 
@@ -78,7 +78,7 @@ async def test_use_agreement_shuffles_proposals():
         for score, proposal in proposals:
             await pool.add_proposal(score, proposal)
 
-        def use_agreement_cb(agreement, _node_info):
+        def use_agreement_cb(agreement):
             chosen_proposal_ids.add(agreement.proposal_id)
             return True
 

@@ -34,12 +34,12 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Final
 
-from yapapi import rest, events
+from yapapi import events
 from yapapi.ctx import WorkContext
 from yapapi.engine import _Engine, Job
 from yapapi.network import Network, Node
 from yapapi.payload import Payload
-from yapapi.rest.activity import Activity, BatchError
+from yapapi.rest.activity import BatchError
 from yapapi.script import Script
 
 
@@ -769,10 +769,12 @@ class Cluster(AsyncContextManager):
         instance: Optional[ServiceInstance] = None
         agreement_id: Optional[str]  # set in start_worker
 
-        async def _worker(
-            agreement: rest.market.Agreement, activity: Activity, work_context: WorkContext
-        ) -> None:
+        async def _worker(work_context: WorkContext) -> None:
             nonlocal agreement_id, instance
+
+            agreement = work_context._agreement
+            activity = work_context._activity
+
             agreement_id = agreement.id
 
             task_id = f"{self.id}:{next(self._task_ids)}"
