@@ -17,10 +17,9 @@ from typing import (
 )
 from typing_extensions import Final, AsyncGenerator
 
-from yapapi import rest, events
+from yapapi import events
 from yapapi.ctx import WorkContext
 from yapapi.payload import Payload
-from yapapi.rest.activity import Activity
 from yapapi.script import Script
 from yapapi.engine import _Engine, Job
 from yapapi.script.command import Deploy, Start
@@ -182,10 +181,10 @@ class Executor:
 
         work_queue = SmartQueue(input_tasks())
 
-        async def run_worker(
-            agreement: rest.market.Agreement, activity: Activity, work_context: WorkContext
-        ) -> None:
-            """Run an instance of `worker` for the particular activity and work context."""
+        async def run_worker(work_context: WorkContext) -> None:
+            """Run an instance of `worker` for the particular work context."""
+            agreement = work_context._agreement
+            activity = work_context._activity
 
             with work_queue.new_consumer() as consumer:
                 try:

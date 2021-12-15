@@ -26,8 +26,7 @@ from yapapi import events
 from .service import Service, ServiceInstance
 from .service_state import ServiceState
 from yapapi.ctx import WorkContext
-from yapapi.rest.activity import Activity, BatchError
-from yapapi.rest.market import Agreement
+from yapapi.rest.activity import BatchError
 from yapapi.network import Network
 
 # Return type for `sys.exc_info()`
@@ -331,10 +330,11 @@ class ServiceRunner(AsyncContextManager):
 
         instance = service.service_instance
 
-        async def _worker(
-            agreement: Agreement, activity: Activity, work_context: WorkContext
-        ) -> None:
+        async def _worker(work_context: WorkContext) -> None:
             nonlocal agreement_id, instance
+
+            agreement = work_context._agreement
+            activity = work_context._activity
             agreement_id = agreement.id
 
             task_id = service.id  # TODO -> after #759 there will be no events.Task*
