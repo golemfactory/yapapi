@@ -4,14 +4,14 @@ from datetime import timedelta, datetime
 from deprecated import deprecated  # type: ignore
 import enum
 import logging
-from typing import Callable, Optional, Dict, List, Any, Awaitable
+from typing import Callable, Optional, Dict, List, Any, Awaitable, Type
 
 from ya_activity.models import (
     ActivityUsage as yaa_ActivityUsage,
     ActivityState as yaa_ActivityState,
 )
 
-from yapapi.events import CommandExecuted
+from yapapi.events import Event, CommandExecuted
 from yapapi.props.com import ComLinear
 from yapapi.script import Script
 from yapapi.storage import StorageProvider, DOWNLOAD_BYTES_LIMIT_DEFAULT
@@ -84,7 +84,7 @@ class WorkContext:
         activity: Activity,
         agreement: Agreement,
         storage: StorageProvider,
-        emitter: Optional[Callable[..., None]] = None,
+        emitter: Optional[Callable[..., Event]] = None,
     ):
         self._activity = activity
         self._agreement = agreement
@@ -96,11 +96,13 @@ class WorkContext:
         self.__payment_model: Optional[ComLinear] = None
         self.__script: Script = self.new_script()
 
-    def emit(self, event_class, **kwargs) -> None:
+    def emit(self, event_class: Type[Event], **kwargs) -> Event:
         if not self._emitter:
             #   TODO - why is this possible?
             raise RuntimeError("This is a WorkContext without emitter, so it won't emit")
-        self._emitter(event_class, activity=self._activity, agreement=self._agreement, **kwargs)
+        return self._emitter(
+            event_class, activity=self._activity, agreement=self._agreement, **kwargs
+        )
 
     @property
     def id(self) -> str:

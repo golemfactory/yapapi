@@ -59,8 +59,8 @@ class Script:
         self._commands: List[Command] = []
         self._id: int = next(script_ids)
 
-    def emit(self, event_class: Type[Event], **kwargs):
-        self._ctx.emit(event_class, script=self, **kwargs)
+    def emit(self, event_class: Type[Event], **kwargs) -> Event:
+        return self._ctx.emit(event_class, script=self, **kwargs)
 
     @property
     def id(self) -> int:

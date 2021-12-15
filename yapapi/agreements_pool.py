@@ -41,7 +41,7 @@ class AgreementsPool:
     def __init__(
         self,
         job_id: str,
-        emitter: Callable[..., None],
+        emitter: Callable[..., events.Event],
         offer_recycler: Callable[[OfferProposal], None],
     ):
         self.job_id = job_id

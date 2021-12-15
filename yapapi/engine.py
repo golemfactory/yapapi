@@ -225,12 +225,16 @@ class _Engine:
 
         self._wrapped_consumers.append(wrapped_consumer)
 
-    def emit(self, event_or_event_class: Union[events.Event, Type[events.Event]], **kwargs) -> None:
+    def emit(
+        self, event_or_event_class: Union[events.Event, Type[events.Event]], **kwargs
+    ) -> events.Event:
         """Emit an event to be consumed by this engine's event consumer."""
         event = self._resolve_emit_args(event_or_event_class, **kwargs)
 
         for wrapped_consumer in self._wrapped_consumers:
             wrapped_consumer.async_call(event)
+
+        return event
 
     def _resolve_emit_args(self, event_or_event_class, **kwargs) -> events.Event:
         #   NOTE: This is a temporary function that will disappear once the new events are ready.
@@ -766,8 +770,8 @@ class Job:
         #   Exception that ended the job
         self._exc_info = None
 
-    def emit(self, event_class: Type[events.Event], **kwargs):
-        self.engine.emit(event_class, job=self, **kwargs)
+    def emit(self, event_class: Type[events.Event], **kwargs) -> events.Event:
+        return self.engine.emit(event_class, job=self, **kwargs)
 
     def set_exc_info(self, exc_info):
         assert self._exc_info is None, "We can't have more than one exc_info ending a job"

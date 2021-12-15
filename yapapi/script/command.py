@@ -4,10 +4,10 @@ from functools import partial
 import json
 from os import PathLike
 from pathlib import Path
-from typing import Callable, List, Optional, Dict, Union, Any, Awaitable, TYPE_CHECKING
+from typing import Callable, List, Optional, Dict, Union, Any, Awaitable, Type, TYPE_CHECKING
 
 
-from yapapi.events import DownloadStarted, DownloadFinished
+from yapapi.events import DownloadStarted, DownloadFinished, Event
 from yapapi.script.capture import CaptureContext
 from yapapi.storage import StorageProvider, Source, Destination, DOWNLOAD_BYTES_LIMIT_DEFAULT
 
@@ -46,10 +46,10 @@ class Command(abc.ABC):
         assert self._script is None, f"Command {self} already belongs to a script {self._script}"
         self._script = script
 
-    def emit(self, event_class, **kwargs):
+    def emit(self, event_class: Type[Event], **kwargs) -> Event:
         if self._script is None:
             raise RuntimeError("Only commands attached to a Script can emit")
-        self._script.emit(event_class, command=self, **kwargs)
+        return self._script.emit(event_class, command=self, **kwargs)
 
 
 class Deploy(Command):
