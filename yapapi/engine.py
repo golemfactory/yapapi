@@ -700,14 +700,9 @@ class _Engine:
 
         We don't care which Job initiated recycling - it should be recycled by all unfinished Jobs.
         """
-
-        async def handle_proposal(job):
-            event = await job._handle_proposal(offer, ignore_draft=True)
-            self.emit(event)
-
         unfinished_jobs = (job for job in self._jobs if not job.finished.is_set())
         for job in unfinished_jobs:
-            asyncio.get_event_loop().create_task(handle_proposal(job))
+            asyncio.get_event_loop().create_task(job._handle_proposal(offer, ignore_draft=True))
 
     def _get_job_by_id(self, job_id) -> "Job":
         try:
@@ -792,10 +787,10 @@ class Job:
         but never pass the proposal to the agreements pool.
         """
 
-        async def reject_proposal(reason: str) -> events.ProposalRejected:
+        async def reject_proposal(reason: str) -> events.Event:
             """Reject `proposal` due to given `reason`."""
             await proposal.reject(reason)
-            return events.ProposalRejected(job_id=self.id, prop_id=proposal.id, reason=reason)
+            return self.emit(events.ProposalRejected, prop_id=proposal.id, reason=reason)
 
         score = await self.engine._strategy.score_offer(proposal, self.agreements_pool)
         logger.debug(
@@ -832,11 +827,11 @@ class Job:
                     demand_builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
 
             await proposal.respond(demand_builder.properties, demand_builder.constraints)
-            return events.ProposalResponded(job_id=self.id, prop_id=proposal.id)
+            return self.emit(events.ProposalResponded, prop_id=proposal.id)
 
         else:
             await self.agreements_pool.add_proposal(score, proposal)
-            return events.ProposalConfirmed(job_id=self.id, prop_id=proposal.id)
+            return self.emit(events.ProposalConfirmed, prop_id=proposal.id)
 
     async def _find_offers_for_subscription(
         self,
