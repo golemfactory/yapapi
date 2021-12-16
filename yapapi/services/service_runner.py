@@ -337,13 +337,11 @@ class ServiceRunner(AsyncContextManager):
             activity = work_context._activity
             agreement_id = agreement.id
 
-            task_id = service.id  # TODO -> after #759 there will be no events.Task*
             self.emit(
-                events.TaskStarted(
+                events.ServiceStarted(
                     job_id=self._job.id,
                     agr_id=agreement.id,
-                    task_id=task_id,
-                    task_data=f"Service: {type(service).__name__}",
+                    service=service,
                 )
             )
             self._change_state(instance)  # pending -> starting
@@ -363,10 +361,10 @@ class ServiceRunner(AsyncContextManager):
                         pass
 
                 self.emit(
-                    events.TaskFinished(
+                    events.ServiceFinished(
                         job_id=self._job.id,
                         agr_id=agreement.id,
-                        task_id=task_id,
+                        service=service,
                     )
                 )
                 self.emit(events.WorkerFinished(job_id=self._job.id, agr_id=agreement.id))
