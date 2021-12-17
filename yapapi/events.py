@@ -148,8 +148,8 @@ class DebitNoteReceived(AgreementEvent):
 
 
 @dataclass
-class PaymentAccepted(AgreementEvent):
-    inv_id: str
+class DebitNoteAccepted(AgreementEvent):
+    note_id: str
     amount: str
 
 
@@ -170,6 +170,12 @@ class PaymentFailed(HasExcInfo, AgreementEvent):
 
 @dataclass
 class InvoiceReceived(AgreementEvent):
+    inv_id: str
+    amount: str
+
+
+@dataclass
+class InvoiceAccepted(AgreementEvent):
     inv_id: str
     amount: str
 
