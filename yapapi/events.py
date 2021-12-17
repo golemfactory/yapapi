@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass
 import logging
 from types import TracebackType
-from typing import Any, Optional, Type, Tuple
+from typing import Any, Optional, Type, Tuple, TYPE_CHECKING
 
 from yapapi.props import NodeInfo
 
@@ -12,6 +12,9 @@ ExcInfo = Tuple[Type[BaseException], BaseException, Optional[TracebackType]]
 
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from yapapi.services import Service
 
 
 @dataclass(init=False)
@@ -198,6 +201,21 @@ class TaskStarted(AgreementEvent, TaskEvent):
 @dataclass
 class TaskFinished(AgreementEvent, TaskEvent):
     pass
+
+
+@dataclass(init=False)
+class ServiceEvent(AgreementEvent):
+    service: "Service"
+
+
+@dataclass
+class ServiceStarted(ServiceEvent):
+    """Work started for the given service object"""
+
+
+@dataclass
+class ServiceFinished(ServiceEvent):
+    """Work finished for the given service object"""
 
 
 @dataclass

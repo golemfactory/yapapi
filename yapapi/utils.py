@@ -99,6 +99,10 @@ def warn_deprecated(old_name: str, new_name: str, since_version: str, entity: De
         f"{entity.value.capitalize()} `{old_name}` is deprecated since version {since_version}, "
         f"please use {entity.value} `{new_name}` instead."
     )
+    return warn_deprecated_msg(warning_msg)
+
+
+def warn_deprecated_msg(warning_msg) -> None:
     warnings.filterwarnings("default", category=DeprecationWarning, message=warning_msg)
     warnings.warn(
         warning_msg,
