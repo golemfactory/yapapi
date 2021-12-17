@@ -225,11 +225,9 @@ class _Engine:
 
         self._wrapped_consumers.append(wrapped_consumer)
 
-    def emit(
-        self, event_or_event_class: Union[events.Event, Type[events.Event]], **kwargs
-    ) -> events.Event:
+    def emit(self, event_class: Type[events.Event], **kwargs) -> events.Event:
         """Emit an event to be consumed by this engine's event consumer."""
-        event = self._resolve_emit_args(event_or_event_class, **kwargs)
+        event = self._resolve_emit_args(event_class, **kwargs)
 
         for wrapped_consumer in self._wrapped_consumers:
             wrapped_consumer.async_call(event)
@@ -237,42 +235,38 @@ class _Engine:
         return event
 
     @staticmethod
-    def _resolve_emit_args(event_or_event_class, **kwargs) -> events.Event:
+    def _resolve_emit_args(event_class, **kwargs) -> events.Event:
         #   NOTE: This is a temporary function that will disappear once the new events are ready.
         #         Purpose of all these ugly hacks here is to allow gradual changes of
         #         events interface (so that everything works as before after only some parts changed).
         #         IOW, to have a dual old-new interface while the new interface is replacing the old one.
-        if isinstance(event_or_event_class, events.Event):
-            return event_or_event_class
-        else:
-            import dataclasses
+        import dataclasses
 
-            event_class = event_or_event_class
-            event_class_fields = [f.name for f in dataclasses.fields(event_class)]
-            for name, id_name in (
-                ("job", "job_id"),
-                ("agreement", "agr_id"),
-                ("activity", "act_id"),
-                ("script", "script_id"),
-            ):
-                if name in kwargs:
-                    if id_name in event_class_fields:
-                        kwargs[id_name] = kwargs[name].id
-                    del kwargs[name]
+        event_class_fields = [f.name for f in dataclasses.fields(event_class)]
+        for name, id_name in (
+            ("job", "job_id"),
+            ("agreement", "agr_id"),
+            ("activity", "act_id"),
+            ("script", "script_id"),
+        ):
+            if name in kwargs:
+                if id_name in event_class_fields:
+                    kwargs[id_name] = kwargs[name].id
+                del kwargs[name]
 
-            #   Command is different because we sometimes have "command" and never "command_id"
-            if "command" in kwargs and "command" not in event_class_fields:
-                del kwargs["command"]
+        #   Command is different because we sometimes have "command" and never "command_id"
+        if "command" in kwargs and "command" not in event_class_fields:
+            del kwargs["command"]
 
-            #   Task is different because we sometimes need also task.data
-            if "task" in kwargs:
-                if "task_id" in event_class_fields:
-                    kwargs["task_id"] = kwargs["task"].id
-                if "task_data" in event_class_fields:
-                    kwargs["task_data"] = kwargs["task"].data
-                del kwargs["task"]
+        #   Task is different because we sometimes need also task.data
+        if "task" in kwargs:
+            if "task_id" in event_class_fields:
+                kwargs["task_id"] = kwargs["task"].id
+            if "task_data" in event_class_fields:
+                kwargs["task_data"] = kwargs["task"].data
+            del kwargs["task"]
 
-            return event_or_event_class(**kwargs)  # type: ignore
+        return event_class(**kwargs)  # type: ignore
 
     async def stop(self, *exc_info) -> Optional[bool]:
         """Stop the engine.

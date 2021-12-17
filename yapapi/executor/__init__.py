@@ -78,10 +78,6 @@ class Executor:
         """Return the payment network used for this `Executor`'s engine."""
         return self._engine.payment_network
 
-    def emit(self, event: events.Event) -> None:
-        """Emit a computation event using this `Executor`'s engine."""
-        self._engine.emit(event)
-
     def submit(
         self,
         worker: Callable[
