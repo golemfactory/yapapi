@@ -152,11 +152,12 @@ event_type_to_string = {
     events.AgreementConfirmed: "Agreement approved by provider",
     events.AgreementRejected: "Agreement rejected by provider",
     events.AgreementTerminated: "Agreement terminated",
+    events.DebitNoteAccepted: "Debit note accepted",
     events.DebitNoteReceived: "Debit note received",
-    events.PaymentAccepted: "Payment accepted",
     events.PaymentFailed: "Payment failed",
     events.PaymentPrepared: "Payment prepared",
     events.PaymentQueued: "Payment queued",
+    events.InvoiceAccepted: "Invoice accepted",
     events.InvoiceReceived: "Invoice received",
     events.WorkerStarted: "Worker started for agreement",
     events.ActivityCreated: "Activity created on provider",
@@ -530,7 +531,7 @@ class SummaryLogger:
                 job_id=event.job_id,
             )
 
-        elif isinstance(event, events.PaymentAccepted):
+        elif isinstance(event, events.InvoiceAccepted):
             provider_info = self.agreement_provider_info[event.agr_id]
             cost = self.provider_cost.get(provider_info, Decimal(0))
             cost += Decimal(event.amount)

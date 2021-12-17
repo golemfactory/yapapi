@@ -431,6 +431,14 @@ class _Engine:
                 try:
                     allocation = self._get_allocation(invoice)
                     await invoice.accept(amount=invoice.amount, allocation=allocation)
+                    self.emit(
+                        events.InvoiceAccepted(
+                            job_id=job_id,
+                            agr_id=invoice.agreement_id,
+                            inv_id=invoice.invoice_id,
+                            amount=invoice.amount,
+                        )
+                    )
                 except CancelledError:
                     raise
                 except Exception:
@@ -445,14 +453,6 @@ class _Engine:
                     self._agreements_to_pay[job_id].remove(invoice.agreement_id)
                     assert invoice.agreement_id in self._agreements_accepting_debit_notes[job_id]
                     self._agreements_accepting_debit_notes[job_id].remove(invoice.agreement_id)
-                    self.emit(
-                        events.PaymentAccepted(
-                            job_id=job_id,
-                            agr_id=invoice.agreement_id,
-                            inv_id=invoice.invoice_id,
-                            amount=invoice.amount,
-                        )
-                    )
             else:
                 self._invoices[invoice.agreement_id] = invoice
             if self._payment_closing and not any(
@@ -477,14 +477,22 @@ class _Engine:
                     events.DebitNoteReceived(
                         job_id=job_id,
                         agr_id=debit_note.agreement_id,
-                        amount=debit_note.total_amount_due,
                         note_id=debit_note.debit_note_id,
+                        amount=debit_note.total_amount_due,
                     )
                 )
                 try:
                     allocation = self._get_allocation(debit_note)
                     await debit_note.accept(
                         amount=debit_note.total_amount_due, allocation=allocation
+                    )
+                    self.emit(
+                        events.DebitNoteAccepted(
+                            job_id=job_id,
+                            agr_id=debit_note.agreement_id,
+                            note_id=debit_note.debit_note_id,
+                            amount=debit_note.total_amount_due,
+                        )
                     )
                 except CancelledError:
                     raise
@@ -512,8 +520,11 @@ class _Engine:
         allocation = self._get_allocation(inv)
         await inv.accept(amount=inv.amount, allocation=allocation)
         self.emit(
-            events.PaymentAccepted(
-                job_id=job_id, agr_id=agreement_id, inv_id=inv.invoice_id, amount=inv.amount
+            events.InvoiceAccepted(
+                job_id=job_id,
+                agr_id=agreement_id,
+                inv_id=inv.invoice_id,
+                amount=inv.amount,
             )
         )
 
