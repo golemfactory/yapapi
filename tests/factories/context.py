@@ -9,5 +9,5 @@ class WorkContextFactory(factory.Factory):
         model = WorkContext
 
     activity = mock.MagicMock()
-    agreement_details = mock.MagicMock()
+    agreement = mock.MagicMock()
     storage = mock.AsyncMock()

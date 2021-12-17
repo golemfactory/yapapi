@@ -17,10 +17,9 @@ from typing import (
 )
 from typing_extensions import Final, AsyncGenerator
 
-from yapapi import rest, events
+from yapapi import events
 from yapapi.ctx import WorkContext
 from yapapi.payload import Payload
-from yapapi.rest.activity import Activity
 from yapapi.script import Script
 from yapapi.engine import _Engine, Job
 from yapapi.script.command import Deploy, Start
@@ -163,8 +162,6 @@ class Executor:
         job: Job,
     ) -> AsyncGenerator[Task[D, R], None]:
 
-        self.emit(events.ComputationStarted(job.id, job.expiration_time))
-
         done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
 
         def on_task_done(task: Task[D, R], status: TaskStatus) -> None:
@@ -184,10 +181,10 @@ class Executor:
 
         work_queue = SmartQueue(input_tasks())
 
-        async def run_worker(
-            agreement: rest.market.Agreement, activity: Activity, work_context: WorkContext
-        ) -> None:
-            """Run an instance of `worker` for the particular activity and work context."""
+        async def run_worker(work_context: WorkContext) -> None:
+            """Run an instance of `worker` for the particular work context."""
+            agreement = work_context._agreement
+            activity = work_context._activity
 
             with work_queue.new_consumer() as consumer:
                 try:
@@ -312,11 +309,15 @@ class Executor:
                     assert get_done_task not in services
                     get_done_task = None
 
-            self.emit(events.ComputationFinished(job.id))
-
-        except (Exception, CancelledError, KeyboardInterrupt):
-            self.emit(events.ComputationFinished(job.id, exc_info=sys.exc_info()))  # type: ignore
+        except (Exception, CancelledError, KeyboardInterrupt) as e:
+            #   TODO: why do we catch KeyboardInterrupt? How can we get one here?
+            job.set_exc_info(sys.exc_info())
             cancelled = True
+
+            if isinstance(e, CancelledError):
+                #   CancelledError is an "external" error, not caused by the Executor internals ->
+                #   we don't want to suppress it here
+                raise
 
         finally:
 

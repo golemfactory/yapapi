@@ -19,7 +19,6 @@ from utils import (
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_RED,
-    TEXT_COLOR_YELLOW,
     TEXT_COLOR_MAGENTA,
     format_usage,
     run_golem_example,
@@ -27,11 +26,17 @@ from utils import (
 )
 
 
-async def main(subnet_tag, payment_driver=None, payment_network=None, show_usage=False):
+async def main(
+    subnet_tag, min_cpu_threads, payment_driver=None, payment_network=None, show_usage=False
+):
     package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+        # only run on provider nodes that have more than 0.5gb of RAM available
         min_mem_gib=0.5,
+        # only run on provider nodes that have more than 2gb of storage space available
         min_storage_gib=2.0,
+        # only run on provider nodes which a certain number of CPU threads (logical CPU cores) available
+        min_cpu_threads=min_cpu_threads,
     )
 
     async def worker(ctx: WorkContext, tasks):
@@ -90,16 +95,8 @@ async def main(subnet_tag, payment_driver=None, payment_network=None, show_usage
                 cost = await ctx.get_cost()
                 print(
                     f"{TEXT_COLOR_MAGENTA}"
-                    f" --- {ctx.provider_name} STATE: {raw_state}"
-                    f"{TEXT_COLOR_DEFAULT}"
-                )
-                print(
-                    f"{TEXT_COLOR_MAGENTA}"
-                    f" --- {ctx.provider_name} USAGE: {usage}"
-                    f"{TEXT_COLOR_DEFAULT}"
-                )
-                print(
-                    f"{TEXT_COLOR_MAGENTA}"
+                    f" --- {ctx.provider_name} STATE: {raw_state}\n"
+                    f" --- {ctx.provider_name} USAGE: {usage}\n"
                     f" --- {ctx.provider_name}  COST: {cost}"
                     f"{TEXT_COLOR_DEFAULT}"
                 )
@@ -152,6 +149,12 @@ async def main(subnet_tag, payment_driver=None, payment_network=None, show_usage
 if __name__ == "__main__":
     parser = build_parser("Render a Blender scene")
     parser.add_argument("--show-usage", action="store_true", help="show activity usage and cost")
+    parser.add_argument(
+        "--min-cpu-threads",
+        type=int,
+        default=1,
+        help="require the provider nodes to have at least this number of available CPU threads",
+    )
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     parser.set_defaults(log_file=f"blender-yapapi-{now}.log")
     args = parser.parse_args()
@@ -159,6 +162,7 @@ if __name__ == "__main__":
     run_golem_example(
         main(
             subnet_tag=args.subnet_tag,
+            min_cpu_threads=args.min_cpu_threads,
             payment_driver=args.payment_driver,
             payment_network=args.payment_network,
             show_usage=args.show_usage,

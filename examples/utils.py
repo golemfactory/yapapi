@@ -35,7 +35,7 @@ def build_parser(description: str) -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
-        "--payment-driver", "--driver", help="Payment driver name, for example `zksync`"
+        "--payment-driver", "--driver", help="Payment driver name, for example `erc20`"
     )
     parser.add_argument(
         "--payment-network", "--network", help="Payment network name, for example `rinkeby`"
@@ -51,7 +51,7 @@ def build_parser(description: str) -> argparse.ArgumentParser:
 
 def format_usage(usage):
     return {
-        "current_usage": {k.name: v for k, v in usage.current_usage.items()},
+        "current_usage": usage.current_usage,
         "timestamp": usage.timestamp.isoformat(sep=" ") if usage.timestamp else None,
     }
 

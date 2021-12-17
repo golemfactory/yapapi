@@ -121,7 +121,7 @@ class HttpService(Service):
         by passing it to the instance through the VPN
         """
         instance_ws = self.network_node.get_websocket_uri(80)
-        app_key = self.cluster._engine._api_config.app_key
+        app_key = self.cluster.service_runner._job.engine._api_config.app_key
 
         print(
             f"{TEXT_COLOR_GREEN}sending a remote request '{query_string}' to {self}{TEXT_COLOR_DEFAULT}"
@@ -150,16 +150,20 @@ class HttpService(Service):
         await ws_session.close()
         return response_text, status
 
+    async def reset(self):
+        # We don't have to do anything when the service is restarted
+        pass
+
 
 # ######## Main application code which spawns the Golem service and the local HTTP server
 
 
 async def main(
     subnet_tag,
-    payment_driver=None,
-    payment_network=None,
-    num_instances=1,
-    port=8080,
+    payment_driver,
+    payment_network,
+    num_instances,
+    port,
 ):
     async with Golem(
         budget=1.0,
@@ -173,19 +177,15 @@ async def main(
 
         network = await golem.create_network("192.168.0.1/24")
         cluster = await golem.run_service(HttpService, network=network, num_instances=num_instances)
-
-        def instances():
-            return [f"{s.provider_name}: {s.state.value}" for s in cluster.instances]
+        instances = cluster.instances
 
         def still_starting():
-            return len(cluster.instances) < num_instances or any(
-                s.state == ServiceState.starting for s in cluster.instances
-            )
+            return any(i.state in (ServiceState.pending, ServiceState.starting) for i in instances)
 
         # wait until all remote http instances are started
 
         while still_starting() and datetime.now() < commissioning_time + STARTING_TIMEOUT:
-            print(f"instances: {instances()}")
+            print(f"instances: {instances}")
             await asyncio.sleep(5)
 
         if still_starting():
@@ -204,7 +204,7 @@ async def main(
         # wait until Ctrl-C
 
         while True:
-            print(instances())
+            print(instances)
             try:
                 await asyncio.sleep(10)
             except (KeyboardInterrupt, asyncio.CancelledError):
@@ -218,8 +218,8 @@ async def main(
         cluster.stop()
 
         cnt = 0
-        while cnt < 3 and any(s.is_available for s in cluster.instances):
-            print(instances())
+        while cnt < 3 and any(s.is_available for s in instances):
+            print(instances)
             await asyncio.sleep(5)
             cnt += 1
 

@@ -163,6 +163,8 @@ event_type_to_string = {
     events.ActivityCreateFailed: "Failed to create activity",
     events.TaskStarted: "Task started",
     events.TaskFinished: "Task finished",
+    events.ServiceStarted: "Work on a service started",
+    events.ServiceFinished: "Work on a service started",
     events.ScriptSent: "Script sent to provider",
     events.CommandStarted: "Command started",
     events.CommandStdOut: "Command stdout",
@@ -176,6 +178,7 @@ event_type_to_string = {
     events.DownloadStarted: "Download started",
     events.DownloadFinished: "Download finished",
     events.ShutdownFinished: "Shutdown finished",
+    events.ExecutionInterrupted: "Execution interrupted",
 }
 
 
@@ -606,6 +609,11 @@ class SummaryLogger:
             else:
                 prov_info = self.agreement_provider_info[event.agr_id]
                 self.logger.info(f"Terminated agreement with {prov_info.name}", job_id=event.job_id)
+
+        elif isinstance(event, events.ExecutionInterrupted):
+            assert event.exc_info
+            exc_type = event.exc_info[0]
+            self.logger.warning(f"Execution interrupted by {exc_type.__name__}")
 
 
 def log_summary(wrapped_emitter: Optional[Callable[[events.Event], None]] = None):

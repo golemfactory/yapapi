@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "yapapi"
-version = "0.7.0-alpha.1"
+version = "0.8.0"
 description = "High-level Python API for the New Golem"
 authors = ["Przemysław K. Rekucki <przemyslaw.rekucki@golem.network>", "GolemFactory <contact@golem.network>"]
 license = "LGPL-3.0-or-later"
@@ -15,7 +15,7 @@ classifiers = [
     "Topic :: System :: Distributed Computing"
 ]
 repository = "https://github.com/golemfactory/yapapi"
-documentation = "https://handbook.golem.network/yapapi/"
+documentation = "https://yapapi.readthedocs.io/en/stable/api.html"
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -43,7 +43,7 @@ semantic-version="^2.8"
 # It will be then installable with `poetry install -E integration-tests`.
 # Note that putting `goth` in `poetry.dev-dependencies` instead of `poetry.dependencies`
 # would not work: see https://github.com/python-poetry/poetry/issues/129.
-goth = { version = "^0.7", optional = true, python = "^3.8.0" }
+goth = { version = "^0.9", optional = true, python = "^3.8.0" }
 # goth = { git = "https://github.com/golemfactory/goth.git", branch = "your-branch-name", optional = true, python = "^3.8.0", develop = true }
 Deprecated = "^1.2.12"
 python-statemachine = "^0.8.0"
@@ -61,23 +61,12 @@ docs = ['sphinx', 'sphinx-autodoc-typehints', 'sphinx-rtd-theme']
 black = "^21.7b0"
 pytest = "^6.2"
 pytest-rerunfailures = "^10.1"
-portray = "^1"
 pytest-asyncio = "^0.14"
 mypy = "^0.782"
 liccheck = "^0.4.7"
 poethepoet = "^0.8.0"
 pytest-cov = "^2.11"
-pydoc-markdown = "3.9"
 factory-boy = "^3.2.0"
-
-[tool.portray]
-
-[tool.portray.mkdocs.theme]
-name = "material"
-palette = {primary = "blue grey", accent = "pink"}
-
-[tool.portray.pdocs]
-exclude_source = true
 
 [tool.black]
 line-length = 100
@@ -122,20 +111,10 @@ liccheck = ["_liccheck_export", "_liccheck_verify"]
 check = ["test", "typecheck", "codestyle", "liccheck"]
 clean = "rm -rf .coverage .requirements.txt dist md handbook build"
 clean_blender = "rm -f examples/blender/*.png examples/blender/*.log"
+clean_hello = "rm -f examples/hello-world/*.log"
+clean_http_proxy = "rm -f examples/http-proxy/*.log"
 clean_simple_service = "rm -f examples/simple-service-poc/*.png examples/simple-service-poc/*.log"
-clean_examples = ["clean_blender", "clean_simple_service"]
-docs = "portray as_html --overwrite"
-pdocs = "pdocs as_markdown yapapi -e -ov -o md"
-pydoc-markdown = "pydoc-markdown --build --site-dir=_"
+clean_ssh = "rm -f examples/ssh/*.log"
+clean_yacat = "rm -f examples/yacat/*.log"
+clean_examples = ["clean_blender", "clean_hello", "clean_http_proxy", "clean_simple_service", "clean_ssh", "clean_yacat"]
 sphinx = "sphinx-build docs/sphinx/ build -E"
-_handbook_gen = "python handbook_gen/handbook_gen.py --overwrite"
-handbook = ['pydoc-markdown', '_handbook_gen']
-
-[[tool.portray.mkdocs.nav]]
-"Introduction to Golem's high-level Python API" = "README.md"
-
-[[tool.portray.mkdocs.nav]]
-"VM Tutorial" = "docs/VM-Tutorial.md"
-
-[[tool.portray.mkdocs.nav]]
-Low-Level = "docs/Low-Level-Api.md"

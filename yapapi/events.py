@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass
 import logging
 from types import TracebackType
-from typing import Any, Optional, Type, Tuple, List
+from typing import Any, Optional, Type, Tuple, List, TYPE_CHECKING
 
 from yapapi.props import NodeInfo
 
@@ -12,6 +12,9 @@ ExcInfo = Tuple[Type[BaseException], BaseException, Optional[TracebackType]]
 
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from yapapi.services import Service
 
 
 @dataclass(init=False)
@@ -200,6 +203,21 @@ class TaskFinished(AgreementEvent, TaskEvent):
     pass
 
 
+@dataclass(init=False)
+class ServiceEvent(AgreementEvent):
+    service: "Service"
+
+
+@dataclass
+class ServiceStarted(ServiceEvent):
+    """Work started for the given service object"""
+
+
+@dataclass
+class ServiceFinished(ServiceEvent):
+    """Work finished for the given service object"""
+
+
 @dataclass
 class WorkerFinished(HasExcInfo, AgreementEvent):
     """Indicates successful completion if `exc_info` is `None` and a failure otherwise."""
@@ -277,6 +295,11 @@ class DownloadFinished(Event):
 @dataclass
 class ShutdownFinished(HasExcInfo):
     """Indicates the completion of Executor shutdown sequence"""
+
+
+@dataclass
+class ExecutionInterrupted(HasExcInfo):
+    """Emitted when Golem was stopped by an unhandled exception in code not managed by yapapi"""
 
 
 @dataclass

@@ -10,15 +10,10 @@ import string
 import sys
 
 
-from yapapi import (
-    NoPaymentAccountError,
-    __version__ as yapapi_version,
-    windows_event_loop_fix,
-)
 from yapapi import Golem
 from yapapi.services import Service, ServiceState
 
-from yapapi.log import enable_default_logger, pluralize
+from yapapi.log import pluralize
 from yapapi.payload import vm
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
@@ -33,6 +28,7 @@ from utils import (
     TEXT_COLOR_MAGENTA,
     format_usage,
     print_env_info,
+    run_golem_example,
 )
 
 STARTING_TIMEOUT = timedelta(minutes=4)
@@ -41,9 +37,6 @@ STARTING_TIMEOUT = timedelta(minutes=4)
 class SimpleService(Service):
     SIMPLE_SERVICE = "/golem/run/simple_service.py"
     SIMPLE_SERVICE_CTL = "/golem/run/simulate_observations_ctl.py"
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__}: {self.name}>"
 
     def __init__(self, *args, instance_name: str, show_usage: bool = False, **kwargs):
         super().__init__(*args, **kwargs)
@@ -94,19 +87,14 @@ class SimpleService(Service):
             yield script
 
             if self._show_usage:
+                raw_state = await self._ctx.get_raw_state()
+                usage = format_usage(await self._ctx.get_usage())
+                cost = await self._ctx.get_cost()
                 print(
                     f"{TEXT_COLOR_MAGENTA}"
-                    f" --- {self.name} STATE: {await self._ctx.get_raw_state()}"
-                    f"{TEXT_COLOR_DEFAULT}"
-                )
-                print(
-                    f"{TEXT_COLOR_MAGENTA}"
-                    f" --- {self.name} USAGE: {format_usage(await self._ctx.get_usage())}"
-                    f"{TEXT_COLOR_DEFAULT}"
-                )
-                print(
-                    f"{TEXT_COLOR_MAGENTA}"
-                    f" --- {self.name}  COST: {await self._ctx.get_cost()}"
+                    f" --- {self.name} STATE: {raw_state}\n"
+                    f" --- {self.name} USAGE: {usage}\n"
+                    f" --- {self.name}  COST: {cost}"
                     f"{TEXT_COLOR_DEFAULT}"
                 )
 
@@ -117,11 +105,12 @@ class SimpleService(Service):
         yield script
 
         if self._show_usage:
-            print(
-                f"{TEXT_COLOR_MAGENTA}"
-                f" --- {self.name}  COST: {await self._ctx.get_cost()}"
-                f"{TEXT_COLOR_DEFAULT}"
-            )
+            cost = await self._ctx.get_cost()
+            print(f"{TEXT_COLOR_MAGENTA} --- {self.name}  COST: {cost} {TEXT_COLOR_DEFAULT}")
+
+    async def reset(self):
+        # We don't have to do anything when the service is restarted
+        pass
 
 
 async def main(
@@ -158,21 +147,15 @@ async def main(
             ],
             expiration=datetime.now(timezone.utc) + timedelta(minutes=120),
         )
-
-        # helper functions to display / filter instances
-
-        def instances():
-            return [f"{s.name}: {s.state.value} on {s.provider_name}" for s in cluster.instances]
+        instances = cluster.instances
 
         def still_starting():
-            return len(cluster.instances) < num_instances or any(
-                s.state == ServiceState.starting for s in cluster.instances
-            )
+            return any(i.state in (ServiceState.pending, ServiceState.starting) for i in instances)
 
         # wait until instances are started
 
         while still_starting() and datetime.now() < commissioning_time + STARTING_TIMEOUT:
-            print(f"instances: {instances()}")
+            print(f"instances: {instances}")
             await asyncio.sleep(5)
 
         if still_starting():
@@ -186,7 +169,7 @@ async def main(
         start_time = datetime.now()
 
         while datetime.now() < start_time + timedelta(seconds=running_time):
-            print(f"instances: {instances()}")
+            print(f"instances: {instances}")
             await asyncio.sleep(5)
 
         print(f"{TEXT_COLOR_YELLOW}Stopping instances...{TEXT_COLOR_DEFAULT}")
@@ -196,10 +179,10 @@ async def main(
 
         cnt = 0
         while cnt < 10 and any(s.is_available for s in cluster.instances):
-            print(f"instances: {instances()}")
+            print(f"instances: {instances}")
             await asyncio.sleep(5)
 
-    print(f"instances: {instances()}")
+    print(f"instances: {instances}")
 
 
 if __name__ == "__main__":
@@ -230,18 +213,7 @@ if __name__ == "__main__":
     parser.set_defaults(log_file=f"simple-service-yapapi-{now}.log")
     args = parser.parse_args()
 
-    # This is only required when running on Windows with Python prior to 3.8:
-    windows_event_loop_fix()
-
-    enable_default_logger(
-        log_file=args.log_file,
-        debug_activity_api=True,
-        debug_market_api=True,
-        debug_payment_api=True,
-    )
-
-    loop = asyncio.get_event_loop()
-    task = loop.create_task(
+    run_golem_example(
         main(
             subnet_tag=args.subnet_tag,
             running_time=args.running_time,
@@ -249,35 +221,6 @@ if __name__ == "__main__":
             payment_network=args.payment_network,
             num_instances=args.num_instances,
             show_usage=args.show_usage,
-        )
+        ),
+        log_file=args.log_file,
     )
-
-    try:
-        loop.run_until_complete(task)
-    except NoPaymentAccountError as e:
-        handbook_url = (
-            "https://handbook.golem.network/requestor-tutorials/"
-            "flash-tutorial-of-requestor-development"
-        )
-        print(
-            f"{TEXT_COLOR_RED}"
-            f"No payment account initialized for driver `{e.required_driver}` "
-            f"and network `{e.required_network}`.\n\n"
-            f"See {handbook_url} on how to initialize payment accounts for a requestor node."
-            f"{TEXT_COLOR_DEFAULT}"
-        )
-    except KeyboardInterrupt:
-        print(
-            f"{TEXT_COLOR_YELLOW}"
-            "Shutting down gracefully, please wait a short while "
-            "or press Ctrl+C to exit immediately..."
-            f"{TEXT_COLOR_DEFAULT}"
-        )
-        task.cancel()
-        try:
-            loop.run_until_complete(task)
-            print(
-                f"{TEXT_COLOR_YELLOW}Shutdown completed, thank you for waiting!{TEXT_COLOR_DEFAULT}"
-            )
-        except (asyncio.CancelledError, KeyboardInterrupt):
-            pass

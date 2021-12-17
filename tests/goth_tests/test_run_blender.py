@@ -57,7 +57,7 @@ async def test_run_blender(
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
-            f"{blender_path} --subnet-tag goth",
+            f"{blender_path} --subnet-tag goth --min-cpu-threads 1",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor):
 

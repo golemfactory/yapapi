@@ -15,7 +15,7 @@ from yapapi.events import CommandExecuted
 from yapapi.props.com import ComLinear
 from yapapi.script import Script
 from yapapi.storage import StorageProvider, DOWNLOAD_BYTES_LIMIT_DEFAULT
-from yapapi.rest.market import AgreementDetails
+from yapapi.rest.market import Agreement, AgreementDetails
 from yapapi.rest.activity import Activity
 from yapapi.script.command import StorageEvent
 from yapapi.utils import get_local_timezone
@@ -83,12 +83,12 @@ class WorkContext:
     def __init__(
         self,
         activity: Activity,
-        agreement_details: AgreementDetails,
+        agreement: Agreement,
         storage: StorageProvider,
         emitter: Optional[Callable[[StorageEvent], None]] = None,
     ):
         self._activity = activity
-        self._agreement_details = agreement_details
+        self._agreement = agreement
         self._storage: StorageProvider = storage
         self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
 
@@ -128,6 +128,10 @@ class WorkContext:
             self.__payment_model = self._agreement_details.provider_view.extract(ComLinear)
 
         return self.__payment_model
+
+    @property
+    def _agreement_details(self) -> AgreementDetails:
+        return self._agreement.cached_details
 
     def new_script(
         self, timeout: Optional[timedelta] = None, wait_for_results: bool = True
