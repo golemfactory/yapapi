@@ -236,7 +236,8 @@ class _Engine:
 
         return event
 
-    def _resolve_emit_args(self, event_or_event_class, **kwargs) -> events.Event:
+    @staticmethod
+    def _resolve_emit_args(event_or_event_class, **kwargs) -> events.Event:
         #   NOTE: This is a temporary function that will disappear once the new events are ready.
         #         Purpose of all these ugly hacks here is to allow gradual changes of
         #         events interface (so that everything works as before after only some parts changed).
@@ -647,7 +648,7 @@ class _Engine:
             async def get_batch_results() -> List[events.CommandEvent]:
                 results = []
                 async for event_class, event_kwargs in remote:
-                    event = script.process_batch_event(event_class, event_kwargs, batch)
+                    event = script.process_batch_event(event_class, event_kwargs)
                     results.append(event)
 
                 script.emit(events.GettingResults)

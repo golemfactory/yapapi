@@ -64,24 +64,18 @@ class Script:
         return self._ctx.emit(event_class, script=self, **kwargs)
 
     def process_batch_event(
-        self,
-        event_class: Type[CommandEvent],
-        event_kwargs: Dict[str, Any],
-        # TODO: this is useless & will disappear, but I keep it for a while to maintain
-        # the full backwards compatibility.
-        commands: List[Dict[str, Any]],
+        self, event_class: Type[CommandEvent], event_kwargs: Dict[str, Any]
     ) -> CommandEvent:
         """Event emiting and special events.CommandExecuted logic"""
-        if event_class is CommandExecuted:
-            command = commands[event_kwargs["cmd_idx"]]
-            event_kwargs = {**event_kwargs, "command": command}
+        command = self._commands[event_kwargs["cmd_idx"]]
+        event = command.emit(event_class, **event_kwargs)
 
-        event = self.emit(event_class, **event_kwargs)
         if isinstance(event, CommandExecuted):
             if event.success:
-                self._set_cmd_result(event)
+                command._result.set_result(event)
             else:
-                raise CommandExecutionError(event.command, event.message, event.stderr)
+                command_str = str(command.evaluate(self._ctx))  # TODO -> Command.`__repr__`
+                raise CommandExecutionError(command_str, event.message, event.stderr)
         return event  # type: ignore # -> TODO #786
 
     @property
@@ -109,10 +103,6 @@ class Script:
         """Hook which is executed before the script is evaluated and sent to the provider."""
         for cmd in self._commands:
             await cmd.before(self._ctx)
-
-    def _set_cmd_result(self, cmd_event: CommandExecuted) -> None:
-        cmd = self._commands[cmd_event.cmd_idx]
-        cmd._result.set_result(cmd_event)
 
     def add(self, cmd: Command) -> Awaitable[CommandExecuted]:
         """Add a :class:`yapapi.script.command.Command` to the :class:`Script`"""

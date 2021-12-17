@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from yapapi.services import Service
+    from yapapi.script import Command
 
 
 @dataclass(init=False)
@@ -250,7 +251,7 @@ class CommandEvent(ScriptEvent):
 
 @dataclass
 class CommandExecuted(CommandEvent):
-    command: Any
+    command: "Command"
     success: bool = dataclasses.field(default=True)
     message: Optional[str] = dataclasses.field(default=None)
     stdout: Optional[str] = dataclasses.field(default=None)
