@@ -260,10 +260,10 @@ class Executor:
                 if now > job.expiration_time:
                     raise TimeoutError(f"Computation timed out after {self._timeout}")
                 if now > get_offers_deadline and job.proposals_confirmed == 0:
-                    self.emit(
-                        events.NoProposalsConfirmed(
-                            num_offers=job.offers_collected, timeout=DEFAULT_GET_OFFERS_TIMEOUT
-                        )
+                    job.emit(
+                        events.NoProposalsConfirmed,
+                        num_offers=job.offers_collected,  # TODO: remove
+                        timeout=DEFAULT_GET_OFFERS_TIMEOUT,
                     )
                     get_offers_deadline += DEFAULT_GET_OFFERS_TIMEOUT
 

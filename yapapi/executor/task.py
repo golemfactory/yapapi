@@ -116,8 +116,7 @@ class Task(Generic[TaskData, TaskResult]):
 
         :param result: task computation result (optional)
         """
-        if self._emit:
-            self._emit(events.TaskAccepted(task_id=self.id, result=result))
+        self.emit(events.TaskAccepted, result=result)
         assert self._status == TaskStatus.RUNNING, "Accepted task not running"
         self._status = TaskStatus.ACCEPTED
         self._result = result
@@ -133,8 +132,7 @@ class Task(Generic[TaskData, TaskResult]):
 
         :param reason: task rejection description (optional)
         """
-        if self._emit:
-            self._emit(events.TaskRejected(task_id=self.id, reason=reason))
+        self.emit(events.TaskRejected, reason=reason)
         assert self._status == TaskStatus.RUNNING, "Rejected task not running"
         self._status = TaskStatus.REJECTED
         self._stop(retry)

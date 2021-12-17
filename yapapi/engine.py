@@ -280,7 +280,7 @@ class _Engine:
         This *must* be called at the end of the work, by the Engine user.
         """
         if exc_info[0] is not None:
-            self.emit(events.ExecutionInterrupted(exc_info))  # type: ignore
+            self.emit(events.ExecutionInterrupted, exc_info=exc_info)  # type: ignore
         return await self._stack.__aexit__(None, None, None)
 
     async def start(self):
@@ -294,9 +294,9 @@ class _Engine:
 
         def report_shutdown(*exc_info):
             if any(item for item in exc_info):
-                self.emit(events.ShutdownFinished(exc_info=exc_info))  # noqa
+                self.emit(events.ShutdownFinished, exc_info=exc_info)  # noqa
             else:
-                self.emit(events.ShutdownFinished())
+                self.emit(events.ShutdownFinished)
 
         stack.push(report_shutdown)
 
@@ -846,7 +846,7 @@ class Job:
         try:
             proposals = subscription.events()
         except Exception as ex:
-            self.engine.emit(events.CollectFailed(sub_id=subscription.id, reason=str(ex)))
+            self.emit(events.CollectFailed, sub_id=subscription.id, reason=str(ex))
             raise
 
         # A semaphore is used to limit the number of handler tasks
@@ -862,7 +862,6 @@ class Job:
                 try:
                     event = await self._handle_proposal(proposal_)
                     assert isinstance(event, events.ProposalEvent)
-                    self.engine.emit(event)
                     if isinstance(event, events.ProposalConfirmed):
                         self.proposals_confirmed += 1
                 except CancelledError:
