@@ -80,10 +80,6 @@ class ServiceRunner(AsyncContextManager):
         """Stop the specific :class:`Service` instance belonging to this :class:`ServiceRunner`."""
         service.service_instance.control_queue.put_nowait(ControlSignal.stop)
 
-    def emit(self, event: events.Event):
-        #   TODO: this will change in #760
-        return self._job.engine.emit(event)
-
     async def __aenter__(self):
         """Post a Demand and start collecting provider Offers for running service instances."""
 
@@ -337,13 +333,7 @@ class ServiceRunner(AsyncContextManager):
             activity = work_context._activity
             agreement_id = agreement.id
 
-            self.emit(
-                events.ServiceStarted(
-                    job_id=self._job.id,
-                    agr_id=agreement.id,
-                    service=service,
-                )
-            )
+            work_context.emit(events.ServiceStarted, service=service)
             self._change_state(instance)  # pending -> starting
             service._set_ctx(work_context)
             if network:
@@ -360,14 +350,8 @@ class ServiceRunner(AsyncContextManager):
                     except StopAsyncIteration:
                         pass
 
-                self.emit(
-                    events.ServiceFinished(
-                        job_id=self._job.id,
-                        agr_id=agreement.id,
-                        service=service,
-                    )
-                )
-                self.emit(events.WorkerFinished(job_id=self._job.id, agr_id=agreement.id))
+                work_context.emit(events.ServiceFinished, service=service)
+                work_context.emit(events.WorkerFinished)
             finally:
                 await self._job.engine.accept_payments_for_agreement(self._job.id, agreement.id)
                 await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
@@ -388,10 +372,8 @@ class ServiceRunner(AsyncContextManager):
                     break
             except Exception:
                 if agreement_id:
-                    self.emit(
-                        events.WorkerFinished(
-                            job_id=self._job.id, agr_id=agreement_id, exc_info=sys.exc_info()
-                        )
+                    self._job.emit(
+                        events.WorkerFinished, agr_id=agreement_id, exc_info=sys.exc_info()
                     )
                 else:
                     # This shouldn't happen, we may log and return as well
