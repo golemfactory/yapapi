@@ -131,12 +131,6 @@ async def main(
 
         commissioning_time = datetime.now()
 
-        print(
-            f"{TEXT_COLOR_YELLOW}"
-            f"Starting {pluralize(num_instances, 'instance')}..."
-            f"{TEXT_COLOR_DEFAULT}"
-        )
-
         # start the service
 
         cluster = await golem.run_service(
@@ -147,15 +141,24 @@ async def main(
             ],
             expiration=datetime.now(timezone.utc) + timedelta(minutes=120),
         )
-        instances = cluster.instances
+
+        print(f"{TEXT_COLOR_YELLOW}" f"Starting {cluster}..." f"{TEXT_COLOR_DEFAULT}")
+
+        def instances():
+            return [
+                f"{s.name}: {s.state.value}" + (f" on {s.provider_name}" if s.provider_id else "")
+                for s in cluster.instances
+            ]
 
         def still_starting():
-            return any(i.state in (ServiceState.pending, ServiceState.starting) for i in instances)
+            return any(
+                i.state in (ServiceState.pending, ServiceState.starting) for i in cluster.instances
+            )
 
         # wait until instances are started
 
         while still_starting() and datetime.now() < commissioning_time + STARTING_TIMEOUT:
-            print(f"instances: {instances}")
+            print(f"instances: {instances()}")
             await asyncio.sleep(5)
 
         if still_starting():
@@ -169,20 +172,20 @@ async def main(
         start_time = datetime.now()
 
         while datetime.now() < start_time + timedelta(seconds=running_time):
-            print(f"instances: {instances}")
+            print(f"instances: {instances()}")
             await asyncio.sleep(5)
 
-        print(f"{TEXT_COLOR_YELLOW}Stopping instances...{TEXT_COLOR_DEFAULT}")
+        print(f"{TEXT_COLOR_YELLOW}Stopping {cluster}...{TEXT_COLOR_DEFAULT}")
         cluster.stop()
 
         # wait for instances to stop
 
         cnt = 0
         while cnt < 10 and any(s.is_available for s in cluster.instances):
-            print(f"instances: {instances}")
+            print(f"instances: {instances()}")
             await asyncio.sleep(5)
 
-    print(f"instances: {instances}")
+    print(f"instances: {instances()}")
 
 
 if __name__ == "__main__":

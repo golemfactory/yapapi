@@ -28,7 +28,7 @@ from yapapi.executor.task import Task
 from yapapi.network import Network
 from yapapi.payload import Payload
 from yapapi.script import Script
-from yapapi.services import Cluster, Service
+from yapapi.services import Cluster, Service, ServiceType
 from yapapi.utils import warn_deprecated, Deprecated
 
 if TYPE_CHECKING:
@@ -283,7 +283,7 @@ class Golem:
 
     async def run_service(
         self,
-        service_class: Type[Service],
+        service_class: Type[ServiceType],
         num_instances: Optional[int] = None,
         instance_params: Optional[Iterable[Dict]] = None,
         payload: Optional[Payload] = None,
@@ -291,7 +291,7 @@ class Golem:
         respawn_unstarted_instances=True,
         network: Optional[Network] = None,
         network_addresses: Optional[List[str]] = None,
-    ) -> Cluster:
+    ) -> Cluster[ServiceType]:
         """Run a number of instances of a service represented by a given :class:`~yapapi.services.Service` subclass.
 
         :param service_class: a subclass of :class:`~yapapi.services.Service` that represents the service to be run
