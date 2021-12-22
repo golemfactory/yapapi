@@ -261,13 +261,29 @@ class _Engine:
         if "command" in kwargs and "command" not in event_class_fields:
             del kwargs["command"]
 
-        #   Task is different because we sometimes need also task.data
+        #   Task -> task_id and (sometimes) task.data
         if "task" in kwargs:
             if "task_id" in event_class_fields:
                 kwargs["task_id"] = kwargs["task"].id
             if "task_data" in event_class_fields:
                 kwargs["task_data"] = kwargs["task"].data
             del kwargs["task"]
+
+        #   Invoice -> invoice_id and amount
+        if "invoice" in kwargs:
+            if "inv_id" in event_class_fields:
+                kwargs["inv_id"] = kwargs["invoice"].invoice_id
+            if "amount" in event_class_fields:
+                kwargs["amount"] = kwargs["invoice"].amount
+            del kwargs["invoice"]
+
+        #   Debit note -> debit_note_id and amount
+        if "debit_note" in kwargs:
+            if "note_id" in event_class_fields:
+                kwargs["note_id"] = kwargs["debit_note"].debit_note_id
+            if "amount" in event_class_fields:
+                kwargs["amount"] = kwargs["debit_note"].total_amount_due
+            del kwargs["debit_note"]
 
         return event_class(**kwargs)  # type: ignore
 
@@ -467,8 +483,7 @@ class _Engine:
                 job.emit(
                     events.InvoiceReceived,
                     agreement=agreement,
-                    inv_id=invoice.invoice_id,
-                    amount=invoice.amount,
+                    invoice=invoice,
                 )
                 try:
                     allocation = self._get_allocation(invoice)
@@ -476,8 +491,7 @@ class _Engine:
                     job.emit(
                         events.InvoiceAccepted,
                         agreement=agreement,
-                        inv_id=invoice.invoice_id,
-                        amount=invoice.amount,
+                        invoice=invoice,
                     )
                 except CancelledError:
                     raise
@@ -516,8 +530,7 @@ class _Engine:
                 job.emit(
                     events.DebitNoteReceived,
                     agreement=agreement,
-                    note_id=debit_note.debit_note_id,
-                    amount=debit_note.total_amount_due,
+                    debit_note=debit_note,
                 )
                 try:
                     allocation = self._get_allocation(debit_note)
@@ -527,8 +540,7 @@ class _Engine:
                     job.emit(
                         events.DebitNoteAccepted,
                         agreement=agreement,
-                        note_id=debit_note.debit_note_id,
-                        amount=debit_note.total_amount_due,
+                        debit_note=debit_note,
                     )
                 except CancelledError:
                     raise
@@ -554,9 +566,7 @@ class _Engine:
         del self._invoices[agreement_id]
         allocation = self._get_allocation(inv)
         await inv.accept(amount=inv.amount, allocation=allocation)
-        job.emit(
-            events.InvoiceAccepted, agreement=agreement, inv_id=inv.invoice_id, amount=inv.amount
-        )
+        job.emit(events.InvoiceAccepted, agreement=agreement, invoice=inv)
 
     def accept_debit_notes_for_agreement(self, job_id: str, agreement_id: str) -> None:
         """Add given agreement to the set of agreements for which debit notes should be accepted."""
