@@ -246,46 +246,40 @@ class _Engine:
         import dataclasses
 
         event_class_fields = [f.name for f in dataclasses.fields(event_class)]
-        for name, id_name in (
+
+        #   Set non-id fields
+        if "task" in kwargs and "task_data" in event_class_fields:
+            kwargs["task_data"] = kwargs["task"].data
+
+        if "invoice" in kwargs and "amount" in event_class_fields:
+            kwargs["amount"] = kwargs["invoice"].amount
+
+        if "debit_note" in kwargs and "amount" in event_class_fields:
+            kwargs["amount"] = kwargs["debit_note"].total_amount_due
+
+        #   Set id fields and remove old objects
+        for row in (
             ("job", "job_id"),
             ("agreement", "agr_id"),
             ("activity", "act_id"),
             ("script", "script_id"),
             ("proposal", "prop_id"),
             ("subscription", "sub_id"),
+            ("task", "task_id"),
+            ("invoice", "inv_id", "invoice_id"),
+            ("debit_note", "debit_note_id", "debit_note_id"),
         ):
-            if name in kwargs:
-                if id_name in event_class_fields:
-                    kwargs[id_name] = kwargs[name].id
-                del kwargs[name]
+            object_name = row[0]
+            event_field_name = row[1]
+            object_id_field_name = "id" if len(row) < 3 else row[2]
+
+            obj = kwargs.pop(object_name, None)
+            if obj is not None and event_field_name in event_class_fields:
+                kwargs[event_field_name] = getattr(obj, object_id_field_name)
 
         #   Command is different because we sometimes have "command" and never "command_id"
         if "command" in kwargs and "command" not in event_class_fields:
             del kwargs["command"]
-
-        #   Task -> task_id and (sometimes) task.data
-        if "task" in kwargs:
-            if "task_id" in event_class_fields:
-                kwargs["task_id"] = kwargs["task"].id
-            if "task_data" in event_class_fields:
-                kwargs["task_data"] = kwargs["task"].data
-            del kwargs["task"]
-
-        #   Invoice -> invoice_id and amount
-        if "invoice" in kwargs:
-            if "inv_id" in event_class_fields:
-                kwargs["inv_id"] = kwargs["invoice"].invoice_id
-            if "amount" in event_class_fields:
-                kwargs["amount"] = kwargs["invoice"].amount
-            del kwargs["invoice"]
-
-        #   Debit note -> debit_note_id and amount
-        if "debit_note" in kwargs:
-            if "note_id" in event_class_fields:
-                kwargs["note_id"] = kwargs["debit_note"].debit_note_id
-            if "amount" in event_class_fields:
-                kwargs["amount"] = kwargs["debit_note"].total_amount_due
-            del kwargs["debit_note"]
 
         return event_class(**kwargs)  # type: ignore
 
