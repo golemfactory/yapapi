@@ -251,6 +251,8 @@ class _Engine:
             ("agreement", "agr_id"),
             ("activity", "act_id"),
             ("script", "script_id"),
+            ("proposal", "prop_id"),
+            ("subscription", "sub_id"),
         ):
             if name in kwargs:
                 if id_name in event_class_fields:
@@ -804,7 +806,7 @@ class Job:
         async def reject_proposal(reason: str) -> events.Event:
             """Reject `proposal` due to given `reason`."""
             await proposal.reject(reason)
-            return self.emit(events.ProposalRejected, prop_id=proposal.id, reason=reason)
+            return self.emit(events.ProposalRejected, proposal=proposal, reason=reason)
 
         score = await self.engine._strategy.score_offer(proposal, self.agreements_pool)
         logger.debug(
@@ -841,11 +843,11 @@ class Job:
                     demand_builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
 
             await proposal.respond(demand_builder.properties, demand_builder.constraints)
-            return self.emit(events.ProposalResponded, prop_id=proposal.id)
+            return self.emit(events.ProposalResponded, proposal=proposal)
 
         else:
             await self.agreements_pool.add_proposal(score, proposal)
-            return self.emit(events.ProposalConfirmed, prop_id=proposal.id)
+            return self.emit(events.ProposalConfirmed, proposal=proposal)
 
     async def _find_offers_for_subscription(
         self,
@@ -863,7 +865,7 @@ class Job:
         try:
             proposals = subscription.events()
         except Exception as ex:
-            self.emit(events.CollectFailed, sub_id=subscription.id, reason=str(ex))
+            self.emit(events.CollectFailed, subscription=subscription, reason=str(ex))
             raise
 
         # A semaphore is used to limit the number of handler tasks
@@ -871,7 +873,7 @@ class Job:
 
         async for proposal in proposals:
 
-            self.emit(events.ProposalReceived, prop_id=proposal.id, provider_id=proposal.issuer)
+            self.emit(events.ProposalReceived, proposal=proposal, provider_id=proposal.issuer)
             self.offers_collected += 1
 
             async def handler(proposal_):
@@ -885,7 +887,7 @@ class Job:
                     raise
                 except Exception:
                     with contextlib.suppress(Exception):
-                        self.emit(events.ProposalFailed, prop_id=proposal_.id, exc_info=sys.exc_info())  # type: ignore
+                        self.emit(events.ProposalFailed, proposal=proposal_, exc_info=sys.exc_info())  # type: ignore
                 finally:
                     semaphore.release()
 
@@ -906,7 +908,7 @@ class Job:
         while True:
             try:
                 subscription = await self._demand_builder.subscribe(self.engine._market_api)
-                self.emit(events.SubscriptionCreated, sub_id=subscription.id)
+                self.emit(events.SubscriptionCreated, subscription=subscription)
             except Exception as ex:
                 self.emit(events.SubscriptionFailed, reason=str(ex))
                 raise

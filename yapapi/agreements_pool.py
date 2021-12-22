@@ -129,7 +129,7 @@ class AgreementsPool:
             raise
         except Exception as e:
             exc_info = (type(e), e, sys.exc_info()[2])
-            emit(events.ProposalFailed, prop_id=offer.proposal.id, exc_info=exc_info)
+            emit(events.ProposalFailed, proposal=offer.proposal, exc_info=exc_info)
             raise
         try:
             agreement_details = await agreement.details()
