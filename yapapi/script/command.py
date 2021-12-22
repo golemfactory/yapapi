@@ -215,10 +215,10 @@ class _ReceiveContent(Command, abc.ABC):
 
     def _emit_download_start(self):
         assert self._dst_slot, f"{self.__class__} after without before"
-        self.emit(DownloadStarted, path=self._src_path)
+        self.emit(DownloadStarted)
 
     def _emit_download_end(self):
-        self.emit(DownloadFinished, path=str(self._dst_path))
+        self.emit(DownloadFinished)
 
 
 class DownloadFile(_ReceiveContent):

@@ -116,10 +116,10 @@ class Task(Generic[TaskData, TaskResult]):
 
         :param result: task computation result (optional)
         """
-        self.emit(events.TaskAccepted, result=result)
         assert self._status == TaskStatus.RUNNING, "Accepted task not running"
         self._status = TaskStatus.ACCEPTED
         self._result = result
+        self.emit(events.TaskAccepted)
         self._stop()
         for cb in self._callbacks:
             cb(self, TaskStatus.ACCEPTED)

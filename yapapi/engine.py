@@ -247,15 +247,44 @@ class _Engine:
 
         event_class_fields = [f.name for f in dataclasses.fields(event_class)]
 
-        #   Set non-id fields
+        #   Set all fields that are not just ids of the passed objects
         if "task" in kwargs and "task_data" in event_class_fields:
             kwargs["task_data"] = kwargs["task"].data
+
+        if "task" in kwargs and "result" in event_class_fields:
+            kwargs["result"] = kwargs["task"]._result
 
         if "invoice" in kwargs and "amount" in event_class_fields:
             kwargs["amount"] = kwargs["invoice"].amount
 
         if "debit_note" in kwargs and "amount" in event_class_fields:
             kwargs["amount"] = kwargs["debit_note"].total_amount_due
+
+        if "agreement" in kwargs and "provider_id" in event_class_fields:
+            kwargs["provider_id"] = kwargs["agreement"].cached_details.raw_details.offer.provider_id
+
+        if "agreement" in kwargs and "provider_info" in event_class_fields:
+            kwargs["provider_info"] = kwargs["agreement"].cached_details.provider_node_info
+
+        if "job" in kwargs and "expires" in event_class_fields:
+            kwargs["expires"] = kwargs["job"].expiration_time
+
+        if "job" in kwargs and "num_offers" in event_class_fields:
+            kwargs["num_offers"] = kwargs["job"].offers_collected
+
+        if "script" in kwargs and "cmds" in event_class_fields:
+            kwargs["cmds"] = kwargs["script"]._evaluate()
+
+        if "proposal" in kwargs and "provider_id" in event_class_fields:
+            kwargs["provider_id"] = kwargs["proposal"].issuer
+
+        if "command" in kwargs and "path" in event_class_fields:
+            if event_class.__name__ == "DownloadStarted":
+                path = kwargs["command"]._src_path
+            else:
+                assert event_class.__name__ == "DownloadFinished"
+                path = str(kwargs["command"]._dst_path)
+            kwargs["path"] = path
 
         #   Set id fields and remove old objects
         for row in (
@@ -571,7 +600,7 @@ class _Engine:
     def add_job(self, job: "Job"):
         """Register a job with this engine."""
         self._jobs.add(job)
-        job.emit(events.ComputationStarted, expires=job.expiration_time)
+        job.emit(events.ComputationStarted)
 
     def finalize_job(self, job: "Job"):
         """Mark a job as finished."""
@@ -656,7 +685,7 @@ class _Engine:
                 script = await batch_generator.athrow(*sys.exc_info())
                 continue
 
-            script.emit(events.ScriptSent, cmds=batch)
+            script.emit(events.ScriptSent)
 
             async def get_batch_results() -> List[events.CommandEvent]:
                 results = []
@@ -867,7 +896,7 @@ class Job:
 
         async for proposal in proposals:
 
-            self.emit(events.ProposalReceived, proposal=proposal, provider_id=proposal.issuer)
+            self.emit(events.ProposalReceived, proposal=proposal)
             self.offers_collected += 1
 
             async def handler(proposal_):

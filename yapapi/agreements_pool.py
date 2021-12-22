@@ -137,12 +137,7 @@ class AgreementsPool:
             requestor_activity = agreement_details.requestor_view.extract(Activity)
             node_info = agreement_details.provider_view.extract(NodeInfo)
             logger.debug("New agreement. id: %s, provider: %s", agreement.id, node_info)
-            emit(
-                events.AgreementCreated,
-                agreement=agreement,
-                provider_id=provider_id,
-                provider_info=node_info,
-            )
+            emit(events.AgreementCreated, agreement=agreement)
         except (ApiException, asyncio.TimeoutError, aiohttp.ClientOSError):
             logger.debug("Cannot get agreement details. id: %s", agreement.id, exc_info=True)
             emit(events.AgreementRejected, agreement=agreement)
