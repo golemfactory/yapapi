@@ -169,6 +169,9 @@ class _Engine:
 
         self._started = False
 
+        #   All agreements ever used within this Engine will be stored here
+        self._all_agreements: Dict[str, Agreement] = {}
+
     async def create_demand_builder(
         self, expiration_time: datetime, payload: Payload
     ) -> DemandBuilder:
@@ -460,9 +463,10 @@ class _Engine:
             )
             if job_id is not None:
                 job = self._get_job_by_id(job_id)
+                agreement = self._get_agreement_by_id(invoice.agreement_id)
                 job.emit(
                     events.InvoiceReceived,
-                    agr_id=invoice.agreement_id,
+                    agreement=agreement,
                     inv_id=invoice.invoice_id,
                     amount=invoice.amount,
                 )
@@ -471,7 +475,7 @@ class _Engine:
                     await invoice.accept(amount=invoice.amount, allocation=allocation)
                     job.emit(
                         events.InvoiceAccepted,
-                        agr_id=invoice.agreement_id,
+                        agreement=agreement,
                         inv_id=invoice.invoice_id,
                         amount=invoice.amount,
                     )
@@ -480,7 +484,7 @@ class _Engine:
                 except Exception:
                     job.emit(
                         events.PaymentFailed,
-                        agr_id=invoice.agreement_id,
+                        agreement=agreement,
                         exc_info=sys.exc_info(),  # type: ignore
                     )
                 else:
@@ -508,9 +512,10 @@ class _Engine:
             )
             if job_id is not None:
                 job = self._get_job_by_id(job_id)
+                agreement = self._get_agreement_by_id(debit_note.agreement_id)
                 job.emit(
                     events.DebitNoteReceived,
-                    agr_id=debit_note.agreement_id,
+                    agreement=agreement,
                     note_id=debit_note.debit_note_id,
                     amount=debit_note.total_amount_due,
                 )
@@ -521,7 +526,7 @@ class _Engine:
                     )
                     job.emit(
                         events.DebitNoteAccepted,
-                        agr_id=debit_note.agreement_id,
+                        agreement=agreement,
                         note_id=debit_note.debit_note_id,
                         amount=debit_note.total_amount_due,
                     )
@@ -529,7 +534,7 @@ class _Engine:
                     raise
                 except Exception:
                     job.emit(
-                        events.PaymentFailed, agr_id=debit_note.agreement_id, exc_info=sys.exc_info()  # type: ignore
+                        events.PaymentFailed, agreement=agreement, exc_info=sys.exc_info()  # type: ignore
                     )
             if self._payment_closing and not self._agreements_to_pay:
                 break
@@ -539,17 +544,18 @@ class _Engine:
     ) -> None:
         """Add given agreement to the set of agreements for which invoices should be accepted."""
         job = self._get_job_by_id(job_id)
-        job.emit(events.PaymentPrepared, agr_id=agreement_id)
+        agreement = self._get_agreement_by_id(agreement_id)
+        job.emit(events.PaymentPrepared, agreement=agreement)
         inv = self._invoices.get(agreement_id)
         if inv is None:
             self._agreements_to_pay[job_id].add(agreement_id)
-            job.emit(events.PaymentQueued, agr_id=agreement_id)
+            job.emit(events.PaymentQueued, agreement=agreement)
             return
         del self._invoices[agreement_id]
         allocation = self._get_allocation(inv)
         await inv.accept(amount=inv.amount, allocation=allocation)
         job.emit(
-            events.InvoiceAccepted, agr_id=agreement_id, inv_id=inv.invoice_id, amount=inv.amount
+            events.InvoiceAccepted, agreement=agreement, inv_id=inv.invoice_id, amount=inv.amount
         )
 
     def accept_debit_notes_for_agreement(self, job_id: str, agreement_id: str) -> None:
@@ -599,13 +605,14 @@ class _Engine:
             It creates an Activity for a given Agreement, then creates a WorkContext for this Activity
             and then executes `run_worker` with this WorkContext.
             """
+            self._all_agreements[agreement.id] = agreement
 
-            job.emit(events.WorkerStarted, agr_id=agreement.id)
+            job.emit(events.WorkerStarted, agreement=agreement)
 
             try:
                 activity = await self.create_activity(agreement.id)
             except Exception:
-                job.emit(events.ActivityCreateFailed, agr_id=agreement.id, exc_info=sys.exc_info())  # type: ignore
+                job.emit(events.ActivityCreateFailed, agreement=agreement, exc_info=sys.exc_info())  # type: ignore
                 raise
 
             work_context = WorkContext(activity, agreement, self.storage_manager, emitter=job.emit)
@@ -700,6 +707,12 @@ class _Engine:
             return next(job for job in self._jobs if job.id == job_id)
         except StopIteration:
             raise KeyError(f"This _Engine doesn't know job with id {job_id}")
+
+    def _get_agreement_by_id(self, agreement_id) -> Agreement:
+        try:
+            return self._all_agreements[agreement_id]
+        except KeyError:
+            raise KeyError(f"This _Engine never used agreement with id {agreement_id}")
 
 
 class Job:

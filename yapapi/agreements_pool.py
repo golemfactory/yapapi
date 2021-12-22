@@ -139,17 +139,17 @@ class AgreementsPool:
             logger.debug("New agreement. id: %s, provider: %s", agreement.id, node_info)
             emit(
                 events.AgreementCreated,
-                agr_id=agreement.id,
+                agreement=agreement,
                 provider_id=provider_id,
                 provider_info=node_info,
             )
         except (ApiException, asyncio.TimeoutError, aiohttp.ClientOSError):
             logger.debug("Cannot get agreement details. id: %s", agreement.id, exc_info=True)
-            emit(events.AgreementRejected, agr_id=agreement.id)
+            emit(events.AgreementRejected, agreement=agreement)
             self.offer_recycler(offer.proposal)
             return None
         if not await agreement.confirm():
-            emit(events.AgreementRejected, agr_id=agreement.id)
+            emit(events.AgreementRejected, agreement=agreement)
             self._rejecting_providers.add(provider_id)
             self.offer_recycler(offer.proposal)
             return None
@@ -162,7 +162,7 @@ class AgreementsPool:
                 provider_activity.multi_activity and requestor_activity.multi_activity
             ),
         )
-        emit(events.AgreementConfirmed, agr_id=agreement.id)
+        emit(events.AgreementConfirmed, agreement=agreement)
         self.confirmed += 1
         return agreement
 
@@ -224,7 +224,9 @@ class AgreementsPool:
                 )
 
         del self._agreements[agreement_id]
-        self.emitter(events.AgreementTerminated, agr_id=agreement_id, reason=reason)
+        self.emitter(
+            events.AgreementTerminated, agreement=buffered_agreement.agreement, reason=reason
+        )
 
     async def terminate_all(self, reason: dict) -> None:
         """Terminate all agreements."""
@@ -246,7 +248,9 @@ class AgreementsPool:
                 return
             buffered_agreement.worker_task and buffered_agreement.worker_task.cancel()
             del self._agreements[agr_id]
-            self.emitter(events.AgreementTerminated, agr_id=agr_id, reason=reason)
+            self.emitter(
+                events.AgreementTerminated, agreement=buffered_agreement.agreement, reason=reason
+            )
 
     def rejected_last_agreement(self, provider_id: str) -> bool:
         """Return `True` iff the last agreement proposed to `provider_id` has been rejected."""

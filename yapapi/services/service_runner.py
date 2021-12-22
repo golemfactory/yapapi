@@ -27,6 +27,7 @@ from .service import Service, ServiceInstance
 from .service_state import ServiceState
 from yapapi.ctx import WorkContext
 from yapapi.rest.activity import BatchError
+from yapapi.rest.market import Agreement
 from yapapi.network import Network
 
 # Return type for `sys.exc_info()`
@@ -322,16 +323,15 @@ class ServiceRunner(AsyncContextManager):
         await self._ensure_payload_matches(service)
 
         logger.debug("spawning instance within %s", self)
-        agreement_id: Optional[str]  # set in start_worker
+        agreement: Optional[Agreement]  # set in start_worker
 
         instance = service.service_instance
 
         async def _worker(work_context: WorkContext) -> None:
-            nonlocal agreement_id, instance
+            nonlocal agreement, instance
 
             agreement = work_context._agreement
             activity = work_context._activity
-            agreement_id = agreement.id
 
             work_context.emit(events.ServiceStarted, service=service)
             self._change_state(instance)  # pending -> starting
@@ -357,7 +357,7 @@ class ServiceRunner(AsyncContextManager):
                 await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
 
         while not self._stopped:
-            agreement_id = None
+            agreement = None
             await asyncio.sleep(1.0)
             task = await self._job.engine.start_worker(self._job, _worker)
             if not task:
@@ -371,9 +371,9 @@ class ServiceRunner(AsyncContextManager):
                 else:
                     break
             except Exception:
-                if agreement_id:
+                if agreement:
                     self._job.emit(
-                        events.WorkerFinished, agr_id=agreement_id, exc_info=sys.exc_info()
+                        events.WorkerFinished, agreement=agreement, exc_info=sys.exc_info()
                     )
                 else:
                     # This shouldn't happen, we may log and return as well
