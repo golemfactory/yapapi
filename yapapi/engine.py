@@ -235,7 +235,7 @@ class _Engine:
         This *must* be called at the end of the work, by the Engine user.
         """
         if exc_info[0] is not None:
-            self.emit(events.ExecutionInterrupted())
+            self.emit(events.ExecutionInterrupted(exc_info=exc_info))  # type: ignore
         return await self._stack.__aexit__(None, None, None)
 
     async def start(self):
