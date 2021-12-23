@@ -266,7 +266,7 @@ class CommandExecuted(CommandEvent):
 
 @dataclass
 class CommandStarted(CommandEvent):
-    command: str
+    command: "Command"
 
 
 @dataclass

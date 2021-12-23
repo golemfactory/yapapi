@@ -347,7 +347,6 @@ def _message_event_to_event_data(
         if not (isinstance(evt_data, dict) and evt_data["command"]):
             raise RuntimeError("Invalid CommandStarted event: missing 'command'")
         evt_cls = events.CommandStarted
-        kwargs["command"] = evt_data["command"]
 
     elif evt_kind == "finished":
         if not (isinstance(evt_data, dict) and isinstance(evt_data["return_code"], int)):
