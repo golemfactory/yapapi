@@ -24,7 +24,7 @@ from yapapi.network import Network
 from yapapi.payload import Payload
 from yapapi.engine import _Engine, Job
 
-from .service import Service, ServiceType
+from .service import ServiceType
 from .service_runner import ServiceRunner
 
 # current defaults for yagna providers as of yagna 0.6.x, see
@@ -169,7 +169,7 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
             service._set_cluster(self)
 
     @staticmethod
-    def _instance_not_started(service: Service) -> bool:
+    def _instance_not_started(service: ServiceType) -> bool:
         return (
             service.exc_info() != (None, None, None)
             and not service.service_instance.started_successfully

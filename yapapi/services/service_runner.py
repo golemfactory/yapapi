@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 from yapapi import events
 
-from .service import Service, ServiceInstance
+from .service import Service, ServiceType, ServiceInstance
 from .service_state import ServiceState
 from yapapi.ctx import WorkContext
 from yapapi.rest.activity import BatchError
@@ -59,10 +59,10 @@ class ServiceRunner(AsyncContextManager):
 
     def add_instance(
         self,
-        service: Service,
+        service: ServiceType,
         network: Optional[Network] = None,
         network_address: Optional[str] = None,
-        respawn_condition: Optional[Callable[[Service], bool]] = None,
+        respawn_condition: Optional[Callable[[ServiceType], bool]] = None,
     ) -> None:
         """Add service the the collection of services managed by this ServiceRunner.
 
@@ -309,10 +309,10 @@ class ServiceRunner(AsyncContextManager):
 
     async def spawn_instance(
         self,
-        service: Service,
+        service: ServiceType,
         network: Optional[Network] = None,
         network_address: Optional[str] = None,
-        respawn_condition: Optional[Callable[[Service], bool]] = None,
+        respawn_condition: Optional[Callable[[ServiceType], bool]] = None,
     ) -> None:
         """Lifecycle the service within this :class:`ServiceRunner`.
 
@@ -398,7 +398,7 @@ class ServiceRunner(AsyncContextManager):
                     logger.error("Failed to spawn instance", exc_info=True)
                     return
 
-    async def _ensure_payload_matches(self, service):
+    async def _ensure_payload_matches(self, service: Service):
         #   Possible improvement: maybe we should accept services with lower demands then our payload?
         #   E.g. if service expects 2GB and we have 4GB in our payload, then this seems fine.
         #   (Not sure how much effort this requires)
