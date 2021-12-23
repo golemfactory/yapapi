@@ -84,7 +84,7 @@ async def test_power_outage(
             logger.info("Agreement confirmed")
 
             await cmd_monitor.wait_for_pattern(
-                ".*Task started on provider 'provider-1'.*", timeout=10
+                ".*Task started on provider 'provider-1'.*", timeout=20
             )
 
             logger.debug("Stopping provider 1")

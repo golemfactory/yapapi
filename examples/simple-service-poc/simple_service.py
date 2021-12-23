@@ -144,11 +144,17 @@ async def main(
 
         print(f"{TEXT_COLOR_YELLOW}" f"Starting {cluster}..." f"{TEXT_COLOR_DEFAULT}")
 
-        def instances():
-            return [
-                f"{s.name}: {s.state.value}" + (f" on {s.provider_name}" if s.provider_id else "")
-                for s in cluster.instances
-            ]
+        def print_instances():
+            print(
+                f"instances: "
+                + str(
+                    [
+                        f"{s.name}: {s.state.value}"
+                        + (f" on {s.provider_name}" if s.provider_id else "")
+                        for s in cluster.instances
+                    ]
+                )
+            )
 
         def still_starting():
             return any(
@@ -158,7 +164,7 @@ async def main(
         # wait until instances are started
 
         while still_starting() and datetime.now() < commissioning_time + STARTING_TIMEOUT:
-            print(f"instances: {instances()}")
+            print_instances()
             await asyncio.sleep(5)
 
         if still_starting():
@@ -172,7 +178,7 @@ async def main(
         start_time = datetime.now()
 
         while datetime.now() < start_time + timedelta(seconds=running_time):
-            print(f"instances: {instances()}")
+            print_instances()
             await asyncio.sleep(5)
 
         print(f"{TEXT_COLOR_YELLOW}Stopping {cluster}...{TEXT_COLOR_DEFAULT}")
@@ -182,10 +188,10 @@ async def main(
 
         cnt = 0
         while cnt < 10 and any(s.is_available for s in cluster.instances):
-            print(f"instances: {instances()}")
+            print_instances()
             await asyncio.sleep(5)
 
-    print(f"instances: {instances()}")
+    print_instances()
 
 
 if __name__ == "__main__":
