@@ -47,6 +47,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import itertools
+import inspect
 import logging
 import os
 import sys
@@ -186,21 +187,21 @@ event_type_to_string = {
 def _check_event_type_to_string():
     # This is to check that `event_type_to_string` covers all event types
 
-    _event_types = set(
+    # get all event types, including base classes
+    event_types = set(
         member
         for member in events.__dict__.values()
-        if type(member) is type and issubclass(member, events.Event)
+        if inspect.isclass(member) and issubclass(member, events.Event)
     )
 
-    _event_types_superclasses = {ty for ev in _event_types for ty in ev.mro() if ty is not ev}
+    # get only the leaf event classes (the ones which have no subclasses)
+    concrete_event_types = {ev for ev in event_types if not ev.__subclasses__()}
 
-    _concrete_event_types = _event_types.difference(_event_types_superclasses)
+    assert len(concrete_event_types) > 0  # Sanity check
 
-    assert len(_concrete_event_types) > 0  # Sanity check
-
-    assert _concrete_event_types.issubset(
+    assert concrete_event_types.issubset(
         event_type_to_string.keys()
-    ), _concrete_event_types.difference(event_type_to_string.keys())
+    ), concrete_event_types.difference(event_type_to_string.keys())
 
 
 _check_event_type_to_string()
@@ -214,17 +215,22 @@ def log_event(event: events.Event) -> None:
     if not event_logger.isEnabledFor(loglevel):
         return
 
-    exc_info, _ = event.extract_exc_info()
     descr = event_type_to_string[type(event)]
     msg = "; ".join([descr, *(f"{name} = {value}" for name, value in event.__dict__.items())])
-    event_logger.log(loglevel, msg, exc_info=exc_info)
+
+    if event.exc_info:
+        event_logger.log(loglevel, msg, exc_info=event.exc_info)
+    else:
+        event_logger.log(loglevel, msg)
 
 
 def log_event_repr(event: events.Event) -> None:
     """Log the result of calling `repr(event)`."""
 
-    exc_info, _ = event.extract_exc_info()
-    event_logger.debug("%r", event, exc_info=exc_info)
+    if event.exc_info:
+        event_logger.debug("%r", event, exc_info=event.exc_info)
+    else:
+        event_logger.debug("%r", event)
 
 
 @dataclass(frozen=True)

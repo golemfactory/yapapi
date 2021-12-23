@@ -1,5 +1,6 @@
 """Representing events in Golem computation."""
-import dataclasses
+import attr
+import abc
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 import logging
@@ -10,301 +11,279 @@ from yapapi.props import NodeInfo
 
 ExcInfo = Tuple[Type[BaseException], BaseException, Optional[TracebackType]]
 
-
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from yapapi.services import Service
 
 
-@dataclass(init=False)
-class Event:
+@attr.s
+class Event(abc.ABC):
     """An abstract base class for types of events emitted by `Executor.submit()`."""
 
-    def __init__(self):
-        raise NotImplementedError()
+    exc_info: Optional[ExcInfo] = attr.ib(default=None, kw_only=True)
+    """Tuple containing exception info as returned by `sys.exc_info()`, if applicable."""
 
-    def extract_exc_info(self) -> Tuple[Optional[ExcInfo], "Event"]:
-        """Extract exception information from this event.
-
-        Return the extracted exception information
-        and a copy of the event without the exception information.
-        """
-        return None, self
-
-
-@dataclass(init=False)
-class HasExcInfo(Event):
-    """A base class for types of events that carry an optional exception info."""
-
-    exc_info: Optional[ExcInfo] = None
-
-    def extract_exc_info(self) -> Tuple[Optional[ExcInfo], "Event"]:
-        """Return the `exc_info` field and a copy of this event with the field set to `None`."""
-
-        exc_info = self.exc_info
-        me = dataclasses.replace(self, exc_info=None)
-        return exc_info, me
+    @property
+    def exception(self) -> Optional[BaseException]:
+        """Exception associated with this event or `None` if the event doesn't mean a failure."""
+        if self.exc_info:
+            return self.exc_info[1]
+        return None
 
 
-@dataclass(init=False)
-class JobEvent(Event):
+@attr.s(auto_attribs=True)
+class JobEvent(Event, abc.ABC):
     job_id: str
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class ComputationStarted(JobEvent):
     expires: datetime
 
 
-@dataclass
-class ComputationFinished(HasExcInfo, JobEvent):
-    """Indicates successful completion if `exc_info` is `None` and a failure otherwise."""
+class ComputationFinished(JobEvent):
+    """Indicates successful completion if `exception` is `None` and a failure otherwise."""
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class SubscriptionCreated(JobEvent):
     sub_id: str
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class SubscriptionFailed(JobEvent):
     reason: str
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class CollectFailed(Event):
     sub_id: str
     reason: str
 
 
-@dataclass(init=False)
-class ProposalEvent(JobEvent):
+@attr.s(auto_attribs=True)
+class ProposalEvent(JobEvent, abc.ABC):
     prop_id: str
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class ProposalReceived(ProposalEvent):
     provider_id: str
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class ProposalRejected(ProposalEvent):
     reason: Optional[str] = None
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class ProposalResponded(ProposalEvent):
     pass
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class ProposalConfirmed(ProposalEvent):
     pass
 
 
-@dataclass
-class ProposalFailed(HasExcInfo, ProposalEvent):
+@attr.s(auto_attribs=True)
+class ProposalFailed(ProposalEvent):
     pass
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class NoProposalsConfirmed(Event):
     num_offers: int
     timeout: timedelta
 
 
-@dataclass(init=False)
-class AgreementEvent(JobEvent):
+@attr.s(auto_attribs=True)
+class AgreementEvent(JobEvent, abc.ABC):
     agr_id: str
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class AgreementCreated(AgreementEvent):
     provider_id: str
     provider_info: NodeInfo
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class AgreementConfirmed(AgreementEvent):
     pass
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class AgreementRejected(AgreementEvent):
     pass
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class AgreementTerminated(AgreementEvent):
     reason: dict
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class DebitNoteReceived(AgreementEvent):
     note_id: str
     amount: str
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class DebitNoteAccepted(AgreementEvent):
     note_id: str
     amount: str
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class PaymentPrepared(AgreementEvent):
     pass
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class PaymentQueued(AgreementEvent):
     pass
 
 
-@dataclass
-class PaymentFailed(HasExcInfo, AgreementEvent):
+@attr.s(auto_attribs=True)
+class PaymentFailed(AgreementEvent):
     pass
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class InvoiceReceived(AgreementEvent):
     inv_id: str
     amount: str
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class InvoiceAccepted(AgreementEvent):
     inv_id: str
     amount: str
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class WorkerStarted(AgreementEvent):
     pass
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class ActivityCreated(AgreementEvent):
     act_id: str
 
 
-@dataclass
-class ActivityCreateFailed(HasExcInfo, AgreementEvent):
+@attr.s(auto_attribs=True)
+class ActivityCreateFailed(AgreementEvent):
     pass
 
 
-@dataclass(init=False)
-class TaskEvent(Event):
+@attr.s(auto_attribs=True)
+class TaskEvent(Event, abc.ABC):
     task_id: str
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class TaskStarted(AgreementEvent, TaskEvent):
     task_data: Any
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class TaskFinished(AgreementEvent, TaskEvent):
     pass
 
 
-@dataclass(init=False)
-class ServiceEvent(AgreementEvent):
+@attr.s(auto_attribs=True)
+class ServiceEvent(AgreementEvent, abc.ABC):
     service: "Service"
 
 
-@dataclass
 class ServiceStarted(ServiceEvent):
     """Work started for the given service object"""
 
 
-@dataclass
 class ServiceFinished(ServiceEvent):
     """Work finished for the given service object"""
 
 
-@dataclass
-class WorkerFinished(HasExcInfo, AgreementEvent):
-    """Indicates successful completion if `exc_info` is `None` and a failure otherwise."""
+class WorkerFinished(AgreementEvent):
+    """Indicates successful completion if `exception` is `None` and a failure otherwise."""
 
 
-@dataclass(init=False)
-class ScriptEvent(AgreementEvent):
+@attr.s(auto_attribs=True)
+class ScriptEvent(AgreementEvent, abc.ABC):
     script_id: Optional[str]
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class ScriptSent(ScriptEvent):
     cmds: Any
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class GettingResults(ScriptEvent):
     pass
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class ScriptFinished(ScriptEvent):
     pass
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class CommandEvent(ScriptEvent):
     cmd_idx: int
 
 
-@dataclass
+@attr.s
 class CommandExecuted(CommandEvent):
-    command: Any
-    success: bool = dataclasses.field(default=True)
-    message: Optional[str] = dataclasses.field(default=None)
-    stdout: Optional[str] = dataclasses.field(default=None)
-    stderr: Optional[str] = dataclasses.field(default=None)
+    command: Any = attr.ib()
+    success: bool = attr.ib(default=True)
+    message: Optional[str] = attr.ib(default=None)
+    stdout: Optional[str] = attr.ib(default=None)
+    stderr: Optional[str] = attr.ib(default=None)
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class CommandStarted(CommandEvent):
     command: str
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class CommandStdOut(CommandEvent):
     output: str
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class CommandStdErr(CommandEvent):
     output: str
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class TaskAccepted(TaskEvent):
     result: Any
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class TaskRejected(TaskEvent):
     reason: Optional[str]
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class DownloadStarted(Event):
     path: str
 
 
-@dataclass
+@attr.s(auto_attribs=True)
 class DownloadFinished(Event):
     path: str
 
 
-@dataclass
-class ShutdownFinished(HasExcInfo):
+class ShutdownFinished(Event):
     """Indicates the completion of Executor shutdown sequence"""
 
 
-@dataclass
-class ExecutionInterrupted(HasExcInfo):
+class ExecutionInterrupted(Event):
     """Emitted when Golem was stopped by an unhandled exception in code not managed by yapapi"""
 
 

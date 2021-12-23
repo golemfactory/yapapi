@@ -21,7 +21,7 @@ async def assert_command_error(stream):
     """Assert that a worker failure due to `CommandExecutionError` is reported."""
 
     async for line in stream:
-        m = re.match(r"WorkerFinished\(.*agr_id='([^']+)'.*CommandExecutionError", line)
+        m = re.match(r"WorkerFinished\(.*CommandExecutionError.*agr_id='([^']+)'.*", line)
         if m:
             return m.group(1)
     raise AssertionError("Expected CommandExecutionError failure")
