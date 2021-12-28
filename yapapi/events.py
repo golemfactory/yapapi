@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from yapapi.script import Command
 
 
+#   ABSTRACT EVENTS
 @attr.s
 class Event(abc.ABC):
     """An abstract base class for types of events emitted by `Executor.submit()`."""
@@ -37,6 +38,37 @@ class JobEvent(Event, abc.ABC):
     job_id: str
 
 
+@attr.s(auto_attribs=True)
+class ProposalEvent(JobEvent, abc.ABC):
+    prop_id: str
+
+
+@attr.s(auto_attribs=True)
+class AgreementEvent(JobEvent, abc.ABC):
+    agr_id: str
+
+
+@attr.s(auto_attribs=True)
+class TaskEvent(Event, abc.ABC):
+    task_id: str
+
+
+@attr.s(auto_attribs=True)
+class ServiceEvent(AgreementEvent, abc.ABC):
+    service: "Service"
+
+
+@attr.s(auto_attribs=True)
+class ScriptEvent(AgreementEvent, abc.ABC):
+    script_id: Optional[str]
+
+
+@attr.s(auto_attribs=True)
+class CommandEvent(ScriptEvent, abc.ABC):
+    cmd_idx: int
+
+
+#   REAL EVENTS
 @attr.s(auto_attribs=True)
 class ComputationStarted(JobEvent):
     expires: datetime
@@ -60,11 +92,6 @@ class SubscriptionFailed(JobEvent):
 class CollectFailed(Event):
     sub_id: str
     reason: str
-
-
-@attr.s(auto_attribs=True)
-class ProposalEvent(JobEvent, abc.ABC):
-    prop_id: str
 
 
 @attr.s(auto_attribs=True)
@@ -96,11 +123,6 @@ class ProposalFailed(ProposalEvent):
 class NoProposalsConfirmed(Event):
     num_offers: int
     timeout: timedelta
-
-
-@attr.s(auto_attribs=True)
-class AgreementEvent(JobEvent, abc.ABC):
-    agr_id: str
 
 
 @attr.s(auto_attribs=True)
@@ -179,11 +201,6 @@ class ActivityCreateFailed(AgreementEvent):
 
 
 @attr.s(auto_attribs=True)
-class TaskEvent(Event, abc.ABC):
-    task_id: str
-
-
-@attr.s(auto_attribs=True)
 class TaskStarted(AgreementEvent, TaskEvent):
     task_data: Any
 
@@ -191,11 +208,6 @@ class TaskStarted(AgreementEvent, TaskEvent):
 @attr.s(auto_attribs=True)
 class TaskFinished(AgreementEvent, TaskEvent):
     pass
-
-
-@attr.s(auto_attribs=True)
-class ServiceEvent(AgreementEvent, abc.ABC):
-    service: "Service"
 
 
 class ServiceStarted(ServiceEvent):
@@ -211,11 +223,6 @@ class WorkerFinished(AgreementEvent):
 
 
 @attr.s(auto_attribs=True)
-class ScriptEvent(AgreementEvent, abc.ABC):
-    script_id: Optional[str]
-
-
-@attr.s(auto_attribs=True)
 class ScriptSent(ScriptEvent):
     cmds: Any
 
@@ -228,11 +235,6 @@ class GettingResults(ScriptEvent):
 @attr.s(auto_attribs=True)
 class ScriptFinished(ScriptEvent):
     pass
-
-
-@attr.s(auto_attribs=True)
-class CommandEvent(ScriptEvent):
-    cmd_idx: int
 
 
 @attr.s
