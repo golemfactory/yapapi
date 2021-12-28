@@ -75,7 +75,7 @@ import abc
 from datetime import datetime, timedelta
 import logging
 from types import TracebackType
-from typing import List, Optional, Type, Tuple, TYPE_CHECKING
+from typing import List, Optional, Type, Tuple, TYPE_CHECKING, TypeVar
 
 from yapapi.props import NodeInfo
 
@@ -92,6 +92,18 @@ if TYPE_CHECKING:
     from yapapi.rest.market import Agreement, OfferProposal, Subscription
     from yapapi.rest.payment import DebitNote, Invoice
     from yapapi.engine import Job
+
+
+#   Types used in all `emit()` methods, to tell the typechecker that
+#   they return object of the same class that was passed as an argument.
+#   They are only few of them (e.g. there's no AgreementEventType) because the missing ones are not
+#   needed (i.e. there are no emit() methods granular enough).
+EventType = TypeVar("EventType", bound="Event")
+JobEventType = TypeVar("JobEventType", bound="JobEvent")
+ActivityEventType = TypeVar("ActivityEventType", bound="ActivityEvent")
+TaskEventType = TypeVar("TaskEventType", bound="TaskEvent")
+ScriptEventType = TypeVar("ScriptEventType", bound="ScriptEvent")
+CommandEventType = TypeVar("CommandEventType", bound="CommandEvent")
 
 
 #   ABSTRACT EVENTS

@@ -11,7 +11,7 @@ from ya_activity.models import (
     ActivityState as yaa_ActivityState,
 )
 
-from yapapi.events import Event, CommandExecuted
+from yapapi.events import ActivityEventType, Event, CommandExecuted
 from yapapi.props.com import ComLinear
 from yapapi.script import Script
 from yapapi.storage import StorageProvider, DOWNLOAD_BYTES_LIMIT_DEFAULT
@@ -96,13 +96,13 @@ class WorkContext:
         self.__payment_model: Optional[ComLinear] = None
         self.__script: Script = self.new_script()
 
-    def emit(self, event_class: Type[Event], **kwargs) -> Event:
+    def emit(self, event_class: Type[ActivityEventType], **kwargs) -> ActivityEventType:
         if not self._emitter:
             #   TODO - why is this possible?
             raise RuntimeError("This is a WorkContext without emitter, so it won't emit")
         return self._emitter(
             event_class, activity=self._activity, agreement=self._agreement, **kwargs
-        )
+        )  # type: ignore
 
     @property
     def id(self) -> str:

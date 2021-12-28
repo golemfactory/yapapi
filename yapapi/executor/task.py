@@ -50,10 +50,10 @@ class Task(Generic[TaskData, TaskResult]):
         self._data = data
         self._status: TaskStatus = TaskStatus.WAITING
 
-    def emit(self, event_class: Type[events.Event], **kwargs) -> events.Event:
+    def emit(self, event_class: Type[events.TaskEventType], **kwargs) -> events.TaskEventType:
         if self._emit is None:
             raise RuntimeError("Task {self} haven't started yet, so it can't emit")
-        return self._emit(event_class, task=self, **kwargs)
+        return self._emit(event_class, task=self, **kwargs)  # type: ignore
 
     def _add_callback(
         self, callback: Callable[["Task[TaskData, TaskResult]", TaskStatus], None]
