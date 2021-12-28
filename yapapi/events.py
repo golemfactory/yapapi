@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from yapapi.executor.task import Task, TaskData, TaskResult
     from yapapi.rest.activity import Activity
     from yapapi.rest.market import Agreement
+    from yapapi.engine import Job
 
 
 #   ABSTRACT EVENTS
@@ -38,7 +39,19 @@ class Event(abc.ABC):
 
 @attr.s(auto_attribs=True)
 class JobEvent(Event, abc.ABC):
-    job_id: str
+    job: "Job"
+
+    @property
+    def job_id(self) -> str:
+        return self.job.id
+
+    @property
+    def expires(self) -> datetime:
+        return self.job.expiration_time
+
+    @property
+    def num_offers(self) -> int:
+        return self.job.offers_collected
 
 
 @attr.s(auto_attribs=True)
@@ -99,7 +112,7 @@ class CommandEvent(ScriptEvent, abc.ABC):
 #   REAL EVENTS
 @attr.s(auto_attribs=True)
 class ComputationStarted(JobEvent):
-    expires: datetime
+    pass
 
 
 class ComputationFinished(JobEvent):
@@ -148,8 +161,7 @@ class ProposalFailed(ProposalEvent):
 
 
 @attr.s(auto_attribs=True)
-class NoProposalsConfirmed(Event):
-    num_offers: int
+class NoProposalsConfirmed(JobEvent):
     timeout: timedelta
 
 

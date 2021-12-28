@@ -254,12 +254,6 @@ class _Engine:
         if "debit_note" in kwargs and "amount" in event_class_fields:
             kwargs["amount"] = kwargs["debit_note"].total_amount_due
 
-        if "job" in kwargs and "expires" in event_class_fields:
-            kwargs["expires"] = kwargs["job"].expiration_time
-
-        if "job" in kwargs and "num_offers" in event_class_fields:
-            kwargs["num_offers"] = kwargs["job"].offers_collected
-
         if "script" in kwargs and "cmds" in event_class_fields:
             kwargs["cmds"] = kwargs["script"]._evaluate()
 
@@ -276,7 +270,6 @@ class _Engine:
 
         #   Set id fields and remove old objects
         for row in (
-            ("job", "job_id"),
             ("script", "script_id"),
             ("proposal", "prop_id"),
             ("subscription", "sub_id"),
