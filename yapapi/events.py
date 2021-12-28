@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from yapapi.script import Command
     from yapapi.executor.task import Task, TaskData, TaskResult
     from yapapi.rest.activity import Activity
-    from yapapi.rest.market import Agreement, OfferProposal
+    from yapapi.rest.market import Agreement, OfferProposal, Subscription
     from yapapi.rest.payment import DebitNote, Invoice
     from yapapi.engine import Job
 
@@ -53,6 +53,11 @@ class JobEvent(Event, abc.ABC):
     @property
     def num_offers(self) -> int:
         return self.job.offers_collected
+
+
+@attr.s(auto_attribs=True)
+class SubscriptionEvent(JobEvent, abc.ABC):
+    subscription: "Subscription"
 
 
 @attr.s(auto_attribs=True)
@@ -147,8 +152,8 @@ class ComputationFinished(JobEvent):
 
 
 @attr.s(auto_attribs=True)
-class SubscriptionCreated(JobEvent):
-    sub_id: str
+class SubscriptionCreated(SubscriptionEvent):
+    pass
 
 
 @attr.s(auto_attribs=True)
@@ -157,8 +162,7 @@ class SubscriptionFailed(JobEvent):
 
 
 @attr.s(auto_attribs=True)
-class CollectFailed(Event):
-    sub_id: str
+class CollectFailed(SubscriptionEvent):
     reason: str
 
 

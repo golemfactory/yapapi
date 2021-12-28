@@ -262,7 +262,6 @@ class _Engine:
         #   Set id fields and remove old objects
         for row in (
             ("script", "script_id"),
-            ("subscription", "sub_id"),
         ):
             object_name = row[0]
             event_field_name = row[1]
