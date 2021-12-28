@@ -14,7 +14,8 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from yapapi.services import Service
-    from yapapi.script import BatchCommand, Command, Script
+    from yapapi.script import Script
+    from yapapi.script.command import BatchCommand, Command, _ReceiveContent
     from yapapi.executor.task import Task, TaskData, TaskResult
     from yapapi.rest.activity import Activity
     from yapapi.rest.market import Agreement, OfferProposal, Subscription
@@ -130,7 +131,7 @@ class ScriptEvent(ActivityEvent, abc.ABC):
 
 @attr.s(auto_attribs=True)
 class CommandEvent(ScriptEvent, abc.ABC):
-    cmd_idx: int
+    command: "Command"
 
 
 @attr.s(auto_attribs=True)
@@ -315,7 +316,6 @@ class ScriptFinished(ScriptEvent):
 
 @attr.s
 class CommandExecuted(CommandEvent):
-    command: "Command" = attr.ib()
     success: bool = attr.ib(default=True)
     message: Optional[str] = attr.ib(default=None)
     stdout: Optional[str] = attr.ib(default=None)
@@ -350,16 +350,22 @@ class TaskRejected(TaskEvent):
     reason: Optional[str]
 
 
-#   TODO: currently it's hard to have a CommandEvent here, but it should be possible later
 @attr.s(auto_attribs=True)
-class DownloadStarted(ScriptEvent):
-    path: str
+class DownloadStarted(CommandEvent):
+    command: "_ReceiveContent"
+
+    @property
+    def path(self) -> str:
+        return self.command._src_path
 
 
-#   TODO: ditto
 @attr.s(auto_attribs=True)
-class DownloadFinished(ScriptEvent):
-    path: str
+class DownloadFinished(CommandEvent):
+    command: "_ReceiveContent"
+
+    @property
+    def path(self) -> str:
+        return str(self.command._dst_path)
 
 
 class ShutdownFinished(Event):

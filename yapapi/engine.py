@@ -230,37 +230,12 @@ class _Engine:
 
     def emit(self, event_class: Type[events.Event], **kwargs) -> events.Event:
         """Emit an event to be consumed by this engine's event consumer."""
-        event = self._resolve_emit_args(event_class, **kwargs)
+        event = event_class(**kwargs)
 
         for wrapped_consumer in self._wrapped_consumers:
             wrapped_consumer.async_call(event)
 
         return event
-
-    @staticmethod
-    def _resolve_emit_args(event_class, **kwargs) -> events.Event:
-        #   NOTE: This is a temporary function that will disappear once the new events are ready.
-        #         Purpose of all these ugly hacks here is to allow gradual changes of
-        #         events interface (so that everything works as before after only some parts changed).
-        #         IOW, to have a dual old-new interface while the new interface is replacing the old one.
-        import attr
-
-        event_class_fields = [f.name for f in attr.fields(event_class)]
-
-        #   Set all fields that are not just ids of the passed objects
-        if "command" in kwargs and "path" in event_class_fields:
-            if event_class.__name__ == "DownloadStarted":
-                path = kwargs["command"]._src_path
-            else:
-                assert event_class.__name__ == "DownloadFinished"
-                path = str(kwargs["command"]._dst_path)
-            kwargs["path"] = path
-
-        #   Command is different because we sometimes have "command" and never "command_id"
-        if "command" in kwargs and "command" not in event_class_fields:
-            del kwargs["command"]
-
-        return event_class(**kwargs)  # type: ignore
 
     async def stop(self, *exc_info) -> Optional[bool]:
         """Stop the engine.
