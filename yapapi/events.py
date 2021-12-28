@@ -49,17 +49,22 @@ class AgreementEvent(JobEvent, abc.ABC):
 
 
 @attr.s(auto_attribs=True)
-class TaskEvent(Event, abc.ABC):
+class ActivityEvent(AgreementEvent, abc.ABC):
+    act_id: int
+
+
+@attr.s(auto_attribs=True)
+class TaskEvent(ActivityEvent, abc.ABC):
     task_id: str
 
 
 @attr.s(auto_attribs=True)
-class ServiceEvent(AgreementEvent, abc.ABC):
+class ServiceEvent(ActivityEvent, abc.ABC):
     service: "Service"
 
 
 @attr.s(auto_attribs=True)
-class ScriptEvent(AgreementEvent, abc.ABC):
+class ScriptEvent(ActivityEvent, abc.ABC):
     script_id: Optional[str]
 
 
@@ -191,8 +196,8 @@ class WorkerStarted(AgreementEvent):
 
 
 @attr.s(auto_attribs=True)
-class ActivityCreated(AgreementEvent):
-    act_id: str
+class ActivityCreated(ActivityEvent):
+    pass
 
 
 @attr.s(auto_attribs=True)
@@ -201,12 +206,12 @@ class ActivityCreateFailed(AgreementEvent):
 
 
 @attr.s(auto_attribs=True)
-class TaskStarted(AgreementEvent, TaskEvent):
+class TaskStarted(TaskEvent):
     task_data: Any
 
 
 @attr.s(auto_attribs=True)
-class TaskFinished(AgreementEvent, TaskEvent):
+class TaskFinished(TaskEvent):
     pass
 
 
@@ -218,7 +223,7 @@ class ServiceFinished(ServiceEvent):
     """Work finished for the given service object"""
 
 
-class WorkerFinished(AgreementEvent):
+class WorkerFinished(ActivityEvent):
     """Indicates successful completion if `exception` is `None` and a failure otherwise."""
 
 
@@ -248,7 +253,7 @@ class CommandExecuted(CommandEvent):
 
 @attr.s(auto_attribs=True)
 class CommandStarted(CommandEvent):
-    command: "Command"
+    pass
 
 
 @attr.s(auto_attribs=True)
@@ -271,13 +276,15 @@ class TaskRejected(TaskEvent):
     reason: Optional[str]
 
 
+#   TODO: currently it's hard to have a CommandEvent here, but it should be possible later
 @attr.s(auto_attribs=True)
-class DownloadStarted(Event):
+class DownloadStarted(ScriptEvent):
     path: str
 
 
+#   TODO: ditto
 @attr.s(auto_attribs=True)
-class DownloadFinished(Event):
+class DownloadFinished(ScriptEvent):
     path: str
 
 
