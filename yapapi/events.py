@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from yapapi.services import Service
     from yapapi.script import Command
     from yapapi.executor.task import Task, TaskData, TaskResult
+    from yapapi.rest.activity import Activity
 
 
 #   ABSTRACT EVENTS
@@ -51,7 +52,7 @@ class AgreementEvent(JobEvent, abc.ABC):
 
 @attr.s(auto_attribs=True)
 class ActivityEvent(AgreementEvent, abc.ABC):
-    act_id: int
+    activity: "Activity"
 
 
 @attr.s(auto_attribs=True)

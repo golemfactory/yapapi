@@ -284,7 +284,6 @@ class _Engine:
         for row in (
             ("job", "job_id"),
             ("agreement", "agr_id"),
-            ("activity", "act_id"),
             ("script", "script_id"),
             ("proposal", "prop_id"),
             ("subscription", "sub_id"),
