@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from yapapi.script import Command
     from yapapi.executor.task import Task, TaskData, TaskResult
     from yapapi.rest.activity import Activity
+    from yapapi.rest.market import Agreement
 
 
 #   ABSTRACT EVENTS
@@ -47,7 +48,19 @@ class ProposalEvent(JobEvent, abc.ABC):
 
 @attr.s(auto_attribs=True)
 class AgreementEvent(JobEvent, abc.ABC):
-    agr_id: str
+    agreement: "Agreement"
+
+    @property
+    def agr_id(self) -> str:
+        return self.agreement.id
+
+    @property
+    def provider_id(self) -> str:
+        return self.agreement.cached_details.raw_details.offer.provider_id  # type: ignore
+
+    @property
+    def provider_info(self) -> "NodeInfo":
+        return self.agreement.cached_details.provider_node_info
 
 
 @attr.s(auto_attribs=True)
@@ -142,8 +155,7 @@ class NoProposalsConfirmed(Event):
 
 @attr.s(auto_attribs=True)
 class AgreementCreated(AgreementEvent):
-    provider_id: str
-    provider_info: NodeInfo
+    pass
 
 
 @attr.s(auto_attribs=True)
