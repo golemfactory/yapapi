@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from yapapi.services import Service
     from yapapi.script import Command
+    from yapapi.executor.task import Task, TaskData, TaskResult
 
 
 #   ABSTRACT EVENTS
@@ -55,7 +56,15 @@ class ActivityEvent(AgreementEvent, abc.ABC):
 
 @attr.s(auto_attribs=True)
 class TaskEvent(ActivityEvent, abc.ABC):
-    task_id: str
+    task: "Task"
+
+    @property
+    def task_id(self) -> str:
+        return self.task.id
+
+    @property
+    def task_data(self) -> "TaskData":
+        return self.task.data
 
 
 @attr.s(auto_attribs=True)
@@ -207,7 +216,7 @@ class ActivityCreateFailed(AgreementEvent):
 
 @attr.s(auto_attribs=True)
 class TaskStarted(TaskEvent):
-    task_data: Any
+    pass
 
 
 @attr.s(auto_attribs=True)
@@ -268,7 +277,10 @@ class CommandStdErr(CommandEvent):
 
 @attr.s(auto_attribs=True)
 class TaskAccepted(TaskEvent):
-    result: Any
+    @property
+    def result(self) -> "TaskResult":
+        assert self.task._result is not None
+        return self.task._result
 
 
 @attr.s(auto_attribs=True)

@@ -248,12 +248,6 @@ class _Engine:
         event_class_fields = [f.name for f in attr.fields(event_class)]
 
         #   Set all fields that are not just ids of the passed objects
-        if "task" in kwargs and "task_data" in event_class_fields:
-            kwargs["task_data"] = kwargs["task"].data
-
-        if "task" in kwargs and "result" in event_class_fields:
-            kwargs["result"] = kwargs["task"]._result
-
         if "invoice" in kwargs and "amount" in event_class_fields:
             kwargs["amount"] = kwargs["invoice"].amount
 
@@ -294,7 +288,6 @@ class _Engine:
             ("script", "script_id"),
             ("proposal", "prop_id"),
             ("subscription", "sub_id"),
-            ("task", "task_id"),
             ("invoice", "inv_id", "invoice_id"),
             ("debit_note", "debit_note_id", "debit_note_id"),
         ):
