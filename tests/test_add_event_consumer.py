@@ -5,13 +5,8 @@ from yapapi import Golem, events
 
 
 sample_events = [
-    events.CollectFailed("foo", "bar"),
-    events.TaskStarted(
-        task_data=[{"some": "data"}],
-        task_id="task_id",
-        job_id="job_id",
-        agr_id="agreement_id",
-    ),
+    events.CollectFailed(job="foo", subscription="bar", reason="baz"),
+    events.TaskStarted(job="a", agreement="b", activity="c", task="d"),
 ]
 emitted_events = sample_events + [events.ShutdownFinished()]
 

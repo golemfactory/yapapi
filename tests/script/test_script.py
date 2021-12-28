@@ -104,7 +104,9 @@ class TestScript:
         future_result = script.run("/some/cmd", 1)
 
         await script._before()
-        command_executed_event = script.process_batch_event(CommandExecuted, {"cmd_idx": 0})
+        command_executed_event = script.process_batch_event(
+            CommandExecuted, {"cmd_idx": 0, "success": True, "message": "foo"}
+        )
 
         assert future_result.done()
         assert future_result.result() == command_executed_event

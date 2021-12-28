@@ -115,11 +115,11 @@ async def assert_demand_resubscribed(events: "EventStream[Event]"):
     # Make sure new subscriptions are created at least three times
     while len(subscription_ids) < 3:
         e = await wait_for_event(SubscriptionCreated, SUBSCRIPTION_EXPIRATION_TIME + 10)
-        assert e.sub_id not in subscription_ids
-        subscription_ids.add(e.sub_id)
+        assert e.subscription.id not in subscription_ids
+        subscription_ids.add(e.subscription.id)
 
     # Unsubscribe and make sure new subscription is created
-    await unsubscribe_demand(e.sub_id)
+    await unsubscribe_demand(e.subscription.id)
     logger.info("Demand unsubscribed")
     await wait_for_event(SubscriptionCreated, 5)
 

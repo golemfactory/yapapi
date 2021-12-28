@@ -21,7 +21,7 @@ async def assert_command_error(stream):
     """Assert that a worker failure due to `CommandExecutionError` is reported."""
 
     async for line in stream:
-        m = re.match(r"WorkerFinished\(.*CommandExecutionError.*agr_id='([^']+)'.*", line)
+        m = re.match(r"WorkerFinished\(.*CommandExecutionError.*Agreement\(id=([0-9a-f]+).*", line)
         if m:
             return m.group(1)
     raise AssertionError("Expected CommandExecutionError failure")
@@ -34,10 +34,11 @@ async def assert_agreement_cancelled(agr_id, stream):
     """
 
     async for line in stream:
-        if re.match(rf"TaskStarted\(.*agr_id='{agr_id}'", line):
+        if re.match(rf"TaskStarted\(.*Agreement\(id={agr_id}", line):
             raise AssertionError(f"Task started for agreement {agr_id}")
         if re.match(
-            rf"AgreementTerminated\(.*agr_id='{agr_id}'.*'golem.requestor.code': 'Cancelled'", line
+            rf"AgreementTerminated\(.*Agreement\(id={agr_id}.*'golem.requestor.code': 'Cancelled'",
+            line,
         ):
             return
 
@@ -47,7 +48,7 @@ async def assert_all_tasks_computed(stream):
     remaining_ids = {1, 2, 3, 4, 5, 6}
 
     async for line in stream:
-        m = re.search(r"TaskAccepted\(.*task_id='([0-9]+)'", line)
+        m = re.search(r"TaskAccepted\(.*task=Task\(id=([0-9]+)", line)
         if m:
             task_id = int(m.group(1))
             logger.debug("assert_all_tasks_computed: Task %d computed", task_id)
