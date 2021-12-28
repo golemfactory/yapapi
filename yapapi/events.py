@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from yapapi.script import Command
     from yapapi.executor.task import Task, TaskData, TaskResult
     from yapapi.rest.activity import Activity
-    from yapapi.rest.market import Agreement
+    from yapapi.rest.market import Agreement, OfferProposal
     from yapapi.rest.payment import DebitNote, Invoice
     from yapapi.engine import Job
 
@@ -57,7 +57,15 @@ class JobEvent(Event, abc.ABC):
 
 @attr.s(auto_attribs=True)
 class ProposalEvent(JobEvent, abc.ABC):
-    prop_id: str
+    proposal: "OfferProposal"
+
+    @property
+    def prop_id(self) -> str:
+        return self.proposal.id
+
+    @property
+    def provider_id(self) -> str:
+        return self.proposal.issuer
 
 
 @attr.s(auto_attribs=True)
@@ -156,7 +164,7 @@ class CollectFailed(Event):
 
 @attr.s(auto_attribs=True)
 class ProposalReceived(ProposalEvent):
-    provider_id: str
+    pass
 
 
 @attr.s(auto_attribs=True)

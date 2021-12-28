@@ -251,9 +251,6 @@ class _Engine:
         if "script" in kwargs and "cmds" in event_class_fields:
             kwargs["cmds"] = kwargs["script"]._evaluate()
 
-        if "proposal" in kwargs and "provider_id" in event_class_fields:
-            kwargs["provider_id"] = kwargs["proposal"].issuer
-
         if "command" in kwargs and "path" in event_class_fields:
             if event_class.__name__ == "DownloadStarted":
                 path = kwargs["command"]._src_path
@@ -265,7 +262,6 @@ class _Engine:
         #   Set id fields and remove old objects
         for row in (
             ("script", "script_id"),
-            ("proposal", "prop_id"),
             ("subscription", "sub_id"),
         ):
             object_name = row[0]
