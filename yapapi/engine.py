@@ -751,7 +751,7 @@ class Job:
         but never pass the proposal to the agreements pool.
         """
 
-        async def reject_proposal(reason: str) -> events.Event:
+        async def reject_proposal(reason: str) -> events.ProposalRejected:
             """Reject `proposal` due to given `reason`."""
             await proposal.reject(reason)
             return self.emit(events.ProposalRejected, proposal=proposal, reason=reason)
