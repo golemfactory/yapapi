@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from yapapi.executor.task import Task, TaskData, TaskResult
     from yapapi.rest.activity import Activity
     from yapapi.rest.market import Agreement
+    from yapapi.rest.payment import DebitNote, Invoice
     from yapapi.engine import Job
 
 
@@ -109,6 +110,24 @@ class CommandEvent(ScriptEvent, abc.ABC):
     cmd_idx: int
 
 
+@attr.s(auto_attribs=True)
+class InvoiceEvent(AgreementEvent, abc.ABC):
+    invoice: "Invoice"
+
+    @property
+    def amount(self) -> str:
+        return self.invoice.amount
+
+
+@attr.s(auto_attribs=True)
+class DebitNoteEvent(AgreementEvent, abc.ABC):
+    debit_note: "DebitNote"
+
+    @property
+    def amount(self) -> str:
+        return self.debit_note.total_amount_due
+
+
 #   REAL EVENTS
 @attr.s(auto_attribs=True)
 class ComputationStarted(JobEvent):
@@ -186,15 +205,13 @@ class AgreementTerminated(AgreementEvent):
 
 
 @attr.s(auto_attribs=True)
-class DebitNoteReceived(AgreementEvent):
-    note_id: str
-    amount: str
+class DebitNoteReceived(DebitNoteEvent):
+    pass
 
 
 @attr.s(auto_attribs=True)
-class DebitNoteAccepted(AgreementEvent):
-    note_id: str
-    amount: str
+class DebitNoteAccepted(DebitNoteEvent):
+    pass
 
 
 @attr.s(auto_attribs=True)
@@ -213,15 +230,13 @@ class PaymentFailed(AgreementEvent):
 
 
 @attr.s(auto_attribs=True)
-class InvoiceReceived(AgreementEvent):
-    inv_id: str
-    amount: str
+class InvoiceReceived(InvoiceEvent):
+    pass
 
 
 @attr.s(auto_attribs=True)
-class InvoiceAccepted(AgreementEvent):
-    inv_id: str
-    amount: str
+class InvoiceAccepted(InvoiceEvent):
+    pass
 
 
 @attr.s(auto_attribs=True)

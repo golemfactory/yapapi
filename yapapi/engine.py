@@ -248,12 +248,6 @@ class _Engine:
         event_class_fields = [f.name for f in attr.fields(event_class)]
 
         #   Set all fields that are not just ids of the passed objects
-        if "invoice" in kwargs and "amount" in event_class_fields:
-            kwargs["amount"] = kwargs["invoice"].amount
-
-        if "debit_note" in kwargs and "amount" in event_class_fields:
-            kwargs["amount"] = kwargs["debit_note"].total_amount_due
-
         if "script" in kwargs and "cmds" in event_class_fields:
             kwargs["cmds"] = kwargs["script"]._evaluate()
 
@@ -273,12 +267,10 @@ class _Engine:
             ("script", "script_id"),
             ("proposal", "prop_id"),
             ("subscription", "sub_id"),
-            ("invoice", "inv_id", "invoice_id"),
-            ("debit_note", "debit_note_id", "debit_note_id"),
         ):
             object_name = row[0]
             event_field_name = row[1]
-            object_id_field_name = "id" if len(row) < 3 else row[2]
+            object_id_field_name = "id"
 
             obj = kwargs.pop(object_name, None)
             if obj is not None and event_field_name in event_class_fields:
