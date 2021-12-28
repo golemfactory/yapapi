@@ -153,7 +153,6 @@ class DebitNoteEvent(AgreementEvent, abc.ABC):
 
 
 #   REAL EVENTS
-@attr.s(auto_attribs=True)
 class ComputationStarted(JobEvent):
     pass
 
@@ -162,7 +161,6 @@ class ComputationFinished(JobEvent):
     """Indicates successful completion if `exception` is `None` and a failure otherwise."""
 
 
-@attr.s(auto_attribs=True)
 class SubscriptionCreated(SubscriptionEvent):
     pass
 
@@ -177,7 +175,6 @@ class CollectFailed(SubscriptionEvent):
     reason: str
 
 
-@attr.s(auto_attribs=True)
 class ProposalReceived(ProposalEvent):
     pass
 
@@ -187,17 +184,14 @@ class ProposalRejected(ProposalEvent):
     reason: Optional[str] = None
 
 
-@attr.s(auto_attribs=True)
 class ProposalResponded(ProposalEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
 class ProposalConfirmed(ProposalEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
 class ProposalFailed(ProposalEvent):
     pass
 
@@ -207,17 +201,14 @@ class NoProposalsConfirmed(JobEvent):
     timeout: timedelta
 
 
-@attr.s(auto_attribs=True)
 class AgreementCreated(AgreementEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
 class AgreementConfirmed(AgreementEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
 class AgreementRejected(AgreementEvent):
     pass
 
@@ -227,62 +218,50 @@ class AgreementTerminated(AgreementEvent):
     reason: dict
 
 
-@attr.s(auto_attribs=True)
 class DebitNoteReceived(DebitNoteEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
 class DebitNoteAccepted(DebitNoteEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
 class PaymentPrepared(AgreementEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
 class PaymentQueued(AgreementEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
 class PaymentFailed(AgreementEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
 class InvoiceReceived(InvoiceEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
 class InvoiceAccepted(InvoiceEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
 class WorkerStarted(AgreementEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
 class ActivityCreated(ActivityEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
 class ActivityCreateFailed(AgreementEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
 class TaskStarted(TaskEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
 class TaskFinished(TaskEvent):
     pass
 
@@ -299,17 +278,14 @@ class WorkerFinished(ActivityEvent):
     """Indicates successful completion if `exception` is `None` and a failure otherwise."""
 
 
-@attr.s(auto_attribs=True)
 class ScriptSent(ScriptEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
 class GettingResults(ScriptEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
 class ScriptFinished(ScriptEvent):
     pass
 
@@ -322,7 +298,6 @@ class CommandExecuted(CommandEvent):
     stderr: Optional[str] = None
 
 
-@attr.s(auto_attribs=True)
 class CommandStarted(CommandEvent):
     pass
 
