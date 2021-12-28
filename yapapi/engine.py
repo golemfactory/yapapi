@@ -248,9 +248,6 @@ class _Engine:
         event_class_fields = [f.name for f in attr.fields(event_class)]
 
         #   Set all fields that are not just ids of the passed objects
-        if "script" in kwargs and "cmds" in event_class_fields:
-            kwargs["cmds"] = kwargs["script"]._evaluate()
-
         if "command" in kwargs and "path" in event_class_fields:
             if event_class.__name__ == "DownloadStarted":
                 path = kwargs["command"]._src_path
@@ -258,18 +255,6 @@ class _Engine:
                 assert event_class.__name__ == "DownloadFinished"
                 path = str(kwargs["command"]._dst_path)
             kwargs["path"] = path
-
-        #   Set id fields and remove old objects
-        for row in (
-            ("script", "script_id"),
-        ):
-            object_name = row[0]
-            event_field_name = row[1]
-            object_id_field_name = "id"
-
-            obj = kwargs.pop(object_name, None)
-            if obj is not None and event_field_name in event_class_fields:
-                kwargs[event_field_name] = getattr(obj, object_id_field_name)
 
         #   Command is different because we sometimes have "command" and never "command_id"
         if "command" in kwargs and "command" not in event_class_fields:

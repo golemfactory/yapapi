@@ -4,7 +4,7 @@ import abc
 from datetime import datetime, timedelta
 import logging
 from types import TracebackType
-from typing import Any, Optional, Type, Tuple, TYPE_CHECKING
+from typing import List, Optional, Type, Tuple, TYPE_CHECKING
 
 from yapapi.props import NodeInfo
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from yapapi.services import Service
-    from yapapi.script import Command
+    from yapapi.script import BatchCommand, Command, Script
     from yapapi.executor.task import Task, TaskData, TaskResult
     from yapapi.rest.activity import Activity
     from yapapi.rest.market import Agreement, OfferProposal, Subscription
@@ -115,7 +115,17 @@ class ServiceEvent(ActivityEvent, abc.ABC):
 
 @attr.s(auto_attribs=True)
 class ScriptEvent(ActivityEvent, abc.ABC):
-    script_id: Optional[str]
+    script: "Script"
+
+    @property
+    def script_id(self) -> int:
+        return self.script.id
+
+    @property
+    def cmds(self) -> List["BatchCommand"]:
+        #   NOTE: This assumes `script._before()` was already called
+        #         (currently this is always true)
+        return self.script._evaluate()
 
 
 @attr.s(auto_attribs=True)
@@ -290,7 +300,7 @@ class WorkerFinished(ActivityEvent):
 
 @attr.s(auto_attribs=True)
 class ScriptSent(ScriptEvent):
-    cmds: Any
+    pass
 
 
 @attr.s(auto_attribs=True)
