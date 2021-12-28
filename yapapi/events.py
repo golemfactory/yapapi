@@ -1,4 +1,75 @@
-"""Representing events in Golem computation."""
+"""Representing events in Golem computation.
+
+Events inheritance tree
+-----------------------
+
+Notes:
+
+*   Only leaf events are ever emitted, other events (names ending with "Event") are abstract classes
+*   Every abstract class has one more `yapapi` object attached then the parent, e.g.
+
+    *   `JobEvent` is an `Event` that is related to a given `yapapi.engine.Job`
+    *   `AgreementEvent` is a `JobEvent` that is related to a given `yapapi.rest.market.Agreement`
+
+::
+
+    Event
+        JobEvent
+            SubscriptionFailed
+            SubscriptionEvent
+                SubscriptionCreated
+                CollectFailed
+            ProposalEvent
+                ProposalReceived
+                ProposalRejected
+                ProposalResponded
+                ProposalConfirmed
+                ProposalFailed
+            NoProposalsConfirmed
+            ComputationStarted
+            ComputationFinished
+            AgreementEvent
+                AgreementCreated
+                AgreementConfirmed
+                AgreementRejected
+                AgreementTerminated
+                ActivityCreateFailed
+                WorkerStarted
+                ActivityEvent
+                    ActivityCreated
+                    TaskEvent
+                        TaskStarted
+                        TaskFinished
+                        TaskAccepted
+                        TaskRejected
+                    ServiceEvent
+                        ServiceStarted
+                        ServiceFinished
+                    ScriptEvent
+                        ScriptSent
+                        CommandEvent
+                            CommandStarted
+                            CommandStdOut
+                            CommandStdErr
+                            CommandExecuted
+                            DownloadStarted
+                            DownloadFinished
+                        GettingResults
+                        ScriptFinished
+                    WorkerFinished
+                InvoiceEvent
+                    InvoiceReceived
+                    InvoiceAccepted
+                DebitNoteEvent
+                    DebitNoteReceived
+                    DebitNoteAccepted
+                PaymentPrepared
+                PaymentQueued
+                PaymentFailed
+        ExecutionInterrupted
+        ShutdownFinished
+"""
+
 import attr
 import abc
 from datetime import datetime, timedelta
