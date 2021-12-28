@@ -314,12 +314,12 @@ class ScriptFinished(ScriptEvent):
     pass
 
 
-@attr.s
+@attr.s(auto_attribs=True)
 class CommandExecuted(CommandEvent):
-    success: bool = attr.ib(default=True)
-    message: Optional[str] = attr.ib(default=None)
-    stdout: Optional[str] = attr.ib(default=None)
-    stderr: Optional[str] = attr.ib(default=None)
+    success: bool
+    message: str
+    stdout: Optional[str] = None
+    stderr: Optional[str] = None
 
 
 @attr.s(auto_attribs=True)
