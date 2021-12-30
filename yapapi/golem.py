@@ -117,12 +117,15 @@ class Golem:
             warn_deprecated("network", "payment_network", "0.7.0", Deprecated.parameter)
             payment_network = payment_network if payment_network else network
 
+        self._event_consumers = [event_consumer or self._default_event_consumer()]
+
         if not strategy:
             strategy = LeastExpensiveLinearPayuMS(
                 max_fixed_price=Decimal("1.0"),
                 max_price_for={com.Counter.CPU: Decimal("0.2"), com.Counter.TIME: Decimal("0.1")},
             )
             strategy = DecreaseScoreForUnconfirmedAgreement(strategy, 0.5)
+            self._event_consumers.append(strategy.on_event)
 
         self._engine_args = {
             "budget": budget,
@@ -134,7 +137,6 @@ class Golem:
             "app_key": app_key,
         }
 
-        self._event_consumers = [event_consumer or self._default_event_consumer()]
         self._engine: _Engine = self._get_new_engine()
         self._engine_state_lock = asyncio.Lock()
 

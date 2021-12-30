@@ -14,6 +14,7 @@ from yapapi.props import com, Activity
 from yapapi.props.builder import DemandBuilder, DemandDecorator
 from yapapi.props.com import Counter
 from yapapi import rest
+from yapapi import events
 
 
 SCORE_NEUTRAL: Final[float] = 0.0
@@ -180,6 +181,12 @@ class DecreaseScoreForUnconfirmedAgreement(MarketStrategy):
         self.base_strategy = base_strategy
         self.factor = factor
         self._logger = logging.getLogger(f"{__name__}.{type(self).__name__}")
+
+    def on_event(self, event: events.Event) -> None:
+        if isinstance(event, events.AgreementConfirmed):
+            print("AGREEMENT CONFIRMED")
+        elif isinstance(event, events.AgreementRejected):
+            print("AGREEMENT REJECTED")
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
         """Decorate `demand` using the base strategy."""
