@@ -183,7 +183,7 @@ async def main(args):
             f"{TEXT_COLOR_DEFAULT}"
         )
 
-        data = [Task(data=c) for c in range(0, keyspace, args.chunk_size)]
+        data = (Task(data=c) for c in range(0, keyspace, args.chunk_size))
         max_workers = args.max_workers or math.ceil(keyspace / args.chunk_size) // 2
 
         completed = golem.execute_tasks(
