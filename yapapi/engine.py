@@ -35,19 +35,13 @@ from yapapi.agreements_pool import AgreementsPool
 from yapapi.ctx import WorkContext
 from yapapi.payload import Payload
 from yapapi import props
-from yapapi.props import com
 from yapapi.props.builder import DemandBuilder, DemandDecorator
 from yapapi.rest.activity import Activity
 from yapapi.rest.market import Agreement, OfferProposal, Subscription
 from yapapi.script import Script
 from yapapi.script.command import BatchCommand
 from yapapi.storage import gftp
-from yapapi.strategy import (
-    DecreaseScoreForUnconfirmedAgreement,
-    LeastExpensiveLinearPayuMS,
-    MarketStrategy,
-    SCORE_NEUTRAL,
-)
+from yapapi.strategy import MarketStrategy, SCORE_NEUTRAL
 from yapapi.utils import AsyncWrapper
 
 
@@ -101,7 +95,7 @@ class _Engine:
         self,
         *,
         budget: Union[float, Decimal],
-        strategy: Optional[MarketStrategy] = None,
+        strategy: MarketStrategy,
         subnet_tag: Optional[str] = None,
         payment_driver: Optional[str] = None,
         payment_network: Optional[str] = None,
@@ -130,16 +124,7 @@ class _Engine:
         self._budget_allocations: List[rest.payment.Allocation] = []
         self._wrapped_consumers: List[AsyncWrapper] = []
 
-        if not strategy:
-            strategy = LeastExpensiveLinearPayuMS(
-                max_fixed_price=Decimal("1.0"),
-                max_price_for={com.Counter.CPU: Decimal("0.2"), com.Counter.TIME: Decimal("0.1")},
-            )
-            # The factor 0.5 below means that an offer for a provider that failed to confirm
-            # the last agreement proposed to them will have it's score multiplied by 0.5.
-            strategy = DecreaseScoreForUnconfirmedAgreement(strategy, 0.5)
         self._strategy = strategy
-
         self._subnet: Optional[str] = subnet_tag or DEFAULT_SUBNET
         self._payment_driver: str = payment_driver.lower() if payment_driver else DEFAULT_DRIVER
         self._payment_network: str = payment_network.lower() if payment_network else DEFAULT_NETWORK

@@ -27,9 +27,12 @@ from yapapi.executor import Executor
 from yapapi.executor.task import Task
 from yapapi.network import Network
 from yapapi.payload import Payload
+from yapapi.props import com
 from yapapi.script import Script
-from yapapi.services import Cluster, Service, ServiceType
+from yapapi.services import Cluster, ServiceType
 from yapapi.utils import warn_deprecated, Deprecated
+from yapapi.strategy import DecreaseScoreForUnconfirmedAgreement, LeastExpensiveLinearPayuMS
+
 
 if TYPE_CHECKING:
     from yapapi.strategy import MarketStrategy
@@ -113,6 +116,13 @@ class Golem:
         if network:
             warn_deprecated("network", "payment_network", "0.7.0", Deprecated.parameter)
             payment_network = payment_network if payment_network else network
+
+        if not strategy:
+            strategy = LeastExpensiveLinearPayuMS(
+                max_fixed_price=Decimal("1.0"),
+                max_price_for={com.Counter.CPU: Decimal("0.2"), com.Counter.TIME: Decimal("0.1")},
+            )
+            strategy = DecreaseScoreForUnconfirmedAgreement(strategy, 0.5)
 
         self._engine_args = {
             "budget": budget,
