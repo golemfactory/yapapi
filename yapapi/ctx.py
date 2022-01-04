@@ -4,20 +4,19 @@ from datetime import timedelta, datetime
 from deprecated import deprecated  # type: ignore
 import enum
 import logging
-from typing import Callable, Optional, Dict, List, Any, Awaitable
+from typing import Callable, Optional, Dict, List, Any, Awaitable, Type
 
 from ya_activity.models import (
     ActivityUsage as yaa_ActivityUsage,
     ActivityState as yaa_ActivityState,
 )
 
-from yapapi.events import CommandExecuted
+from yapapi.events import Event, CommandExecuted
 from yapapi.props.com import ComLinear
 from yapapi.script import Script
 from yapapi.storage import StorageProvider, DOWNLOAD_BYTES_LIMIT_DEFAULT
 from yapapi.rest.market import Agreement, AgreementDetails
 from yapapi.rest.activity import Activity
-from yapapi.script.command import StorageEvent
 from yapapi.utils import get_local_timezone
 
 logger = logging.getLogger(__name__)
@@ -85,17 +84,25 @@ class WorkContext:
         activity: Activity,
         agreement: Agreement,
         storage: StorageProvider,
-        emitter: Optional[Callable[[StorageEvent], None]] = None,
+        emitter: Optional[Callable[..., Event]] = None,
     ):
         self._activity = activity
         self._agreement = agreement
         self._storage: StorageProvider = storage
-        self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
+        self._emitter = emitter
 
         self._pending_steps: List[Work] = []
 
         self.__payment_model: Optional[ComLinear] = None
         self.__script: Script = self.new_script()
+
+    def emit(self, event_class: Type[Event], **kwargs) -> Event:
+        if not self._emitter:
+            #   TODO - why is this possible?
+            raise RuntimeError("This is a WorkContext without emitter, so it won't emit")
+        return self._emitter(
+            event_class, activity=self._activity, agreement=self._agreement, **kwargs
+        )
 
     @property
     def id(self) -> str:

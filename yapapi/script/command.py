@@ -4,16 +4,17 @@ from functools import partial
 import json
 from os import PathLike
 from pathlib import Path
-from typing import Callable, List, Optional, Dict, Union, Any, Awaitable, TYPE_CHECKING
+from typing import Callable, List, Optional, Dict, Union, Any, Awaitable, Type, TYPE_CHECKING
 
 
-from yapapi.events import CommandExecuted, DownloadStarted, DownloadFinished
+from yapapi.events import DownloadStarted, DownloadFinished, Event
 from yapapi.script.capture import CaptureContext
 from yapapi.storage import StorageProvider, Source, Destination, DOWNLOAD_BYTES_LIMIT_DEFAULT
 
 
 if TYPE_CHECKING:
     from yapapi.ctx import WorkContext
+    from yapapi.script import Script
 
 
 # For example: { "start": { "args": [] } }
@@ -39,6 +40,16 @@ class Command(abc.ABC):
 
     def __init__(self):
         self._result: asyncio.Future = asyncio.get_event_loop().create_future()
+        self._script: Optional["Script"] = None
+
+    def _set_script(self, script: "Script") -> None:
+        assert self._script is None, f"Command {self} already belongs to a script {self._script}"
+        self._script = script
+
+    def emit(self, event_class: Type[Event], **kwargs) -> Event:
+        if self._script is None:
+            raise RuntimeError("Only commands attached to a Script can emit")
+        return self._script.emit(event_class, command=self, **kwargs)
 
 
 class Deploy(Command):
@@ -202,14 +213,12 @@ class _ReceiveContent(Command, abc.ABC):
     async def before(self, ctx: "WorkContext"):
         self._dst_slot = await ctx._storage.new_destination(destination_file=self._dst_path)
 
-    def _emit_download_start(self, ctx: "WorkContext"):
+    def _emit_download_start(self):
         assert self._dst_slot, f"{self.__class__} after without before"
-        if ctx._emitter:
-            ctx._emitter(DownloadStarted(path=self._src_path))
+        self.emit(DownloadStarted)
 
-    def _emit_download_end(self, ctx: "WorkContext"):
-        if ctx._emitter:
-            ctx._emitter(DownloadFinished(path=str(self._dst_path)))
+    def _emit_download_end(self):
+        self.emit(DownloadFinished)
 
 
 class DownloadFile(_ReceiveContent):
@@ -229,12 +238,12 @@ class DownloadFile(_ReceiveContent):
         self._dst_path = Path(dst_path)
 
     async def after(self, ctx: "WorkContext") -> None:
-        self._emit_download_start(ctx)
+        self._emit_download_start()
         assert self._dst_path
         assert self._dst_slot
 
         await self._dst_slot.download_file(self._dst_path)
-        self._emit_download_end(ctx)
+        self._emit_download_end()
 
 
 class DownloadBytes(_ReceiveContent):
@@ -257,11 +266,11 @@ class DownloadBytes(_ReceiveContent):
         self._limit = limit
 
     async def after(self, ctx: "WorkContext") -> None:
-        self._emit_download_start(ctx)
+        self._emit_download_start()
         assert self._dst_slot
 
         output = await self._dst_slot.download_bytes(limit=self._limit)
-        self._emit_download_end(ctx)
+        self._emit_download_end()
         await self._on_download(output)
 
 
