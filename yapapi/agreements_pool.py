@@ -41,7 +41,7 @@ class AgreementsPool:
     def __init__(
         self,
         job_id: str,
-        emitter: Callable[[events.Event], None],
+        emitter: Callable[..., events.Event],
         offer_recycler: Callable[[OfferProposal], None],
     ):
         self.job_id = job_id
@@ -129,11 +129,7 @@ class AgreementsPool:
             raise
         except Exception as e:
             exc_info = (type(e), e, sys.exc_info()[2])
-            emit(
-                events.ProposalFailed(
-                    job_id=self.job_id, prop_id=offer.proposal.id, exc_info=exc_info
-                )
-            )
+            emit(events.ProposalFailed, proposal=offer.proposal, exc_info=exc_info)
             raise
         try:
             agreement_details = await agreement.details()
@@ -141,21 +137,14 @@ class AgreementsPool:
             requestor_activity = agreement_details.requestor_view.extract(Activity)
             node_info = agreement_details.provider_view.extract(NodeInfo)
             logger.debug("New agreement. id: %s, provider: %s", agreement.id, node_info)
-            emit(
-                events.AgreementCreated(
-                    job_id=self.job_id,
-                    agr_id=agreement.id,
-                    provider_id=provider_id,
-                    provider_info=node_info,
-                )
-            )
+            emit(events.AgreementCreated, agreement=agreement)
         except (ApiException, asyncio.TimeoutError, aiohttp.ClientOSError):
             logger.debug("Cannot get agreement details. id: %s", agreement.id, exc_info=True)
-            emit(events.AgreementRejected(job_id=self.job_id, agr_id=agreement.id))
+            emit(events.AgreementRejected, agreement=agreement)
             self.offer_recycler(offer.proposal)
             return None
         if not await agreement.confirm():
-            emit(events.AgreementRejected(job_id=self.job_id, agr_id=agreement.id))
+            emit(events.AgreementRejected, agreement=agreement)
             self._rejecting_providers.add(provider_id)
             self.offer_recycler(offer.proposal)
             return None
@@ -168,7 +157,7 @@ class AgreementsPool:
                 provider_activity.multi_activity and requestor_activity.multi_activity
             ),
         )
-        emit(events.AgreementConfirmed(job_id=self.job_id, agr_id=agreement.id))
+        emit(events.AgreementConfirmed, agreement=agreement)
         self.confirmed += 1
         return agreement
 
@@ -231,7 +220,7 @@ class AgreementsPool:
 
         del self._agreements[agreement_id]
         self.emitter(
-            events.AgreementTerminated(job_id=self.job_id, agr_id=agreement_id, reason=reason)
+            events.AgreementTerminated, agreement=buffered_agreement.agreement, reason=reason
         )
 
     async def terminate_all(self, reason: dict) -> None:
@@ -255,7 +244,7 @@ class AgreementsPool:
             buffered_agreement.worker_task and buffered_agreement.worker_task.cancel()
             del self._agreements[agr_id]
             self.emitter(
-                events.AgreementTerminated(job_id=self.job_id, agr_id=agr_id, reason=reason)
+                events.AgreementTerminated, agreement=buffered_agreement.agreement, reason=reason
             )
 
     def rejected_last_agreement(self, provider_id: str) -> bool:

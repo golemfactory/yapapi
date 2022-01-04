@@ -78,10 +78,6 @@ class Executor:
         """Return the payment network used for this `Executor`'s engine."""
         return self._engine.payment_network
 
-    def emit(self, event: events.Event) -> None:
-        """Emit a computation event using this `Executor`'s engine."""
-        self._engine.emit(event)
-
     def submit(
         self,
         worker: Callable[
@@ -191,21 +187,10 @@ class Executor:
 
                     async def task_generator() -> AsyncIterator[Task[D, R]]:
                         async for handle in consumer:
-                            task = Task.for_handle(handle, work_queue, self.emit)
-                            self._engine.emit(
-                                events.TaskStarted(
-                                    job_id=job.id,
-                                    agr_id=agreement.id,
-                                    task_id=task.id,
-                                    task_data=task.data,
-                                )
-                            )
+                            task = Task.for_handle(handle, work_queue, work_context.emit)
+                            task.emit(events.TaskStarted)
                             yield task
-                            self._engine.emit(
-                                events.TaskFinished(
-                                    job_id=job.id, agr_id=agreement.id, task_id=task.id
-                                )
-                            )
+                            task.emit(events.TaskFinished)
 
                     batch_generator = worker(work_context, task_generator())
 
@@ -220,13 +205,9 @@ class Executor:
                         )
                     except StopAsyncIteration:
                         pass
-                    self.emit(events.WorkerFinished(job_id=job.id, agr_id=agreement.id))
+                    work_context.emit(events.WorkerFinished)
                 except Exception:
-                    self.emit(
-                        events.WorkerFinished(
-                            job_id=job.id, agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
-                        )
-                    )
+                    work_context.emit(events.WorkerFinished, exc_info=sys.exc_info())  # type: ignore
                     raise
                 finally:
                     await self._engine.accept_payments_for_agreement(job.id, agreement.id)
@@ -275,11 +256,7 @@ class Executor:
                 if now > job.expiration_time:
                     raise TimeoutError(f"Computation timed out after {self._timeout}")
                 if now > get_offers_deadline and job.proposals_confirmed == 0:
-                    self.emit(
-                        events.NoProposalsConfirmed(
-                            num_offers=job.offers_collected, timeout=DEFAULT_GET_OFFERS_TIMEOUT
-                        )
-                    )
+                    job.emit(events.NoProposalsConfirmed, timeout=DEFAULT_GET_OFFERS_TIMEOUT)
                     get_offers_deadline += DEFAULT_GET_OFFERS_TIMEOUT
 
                 if not get_done_task:
