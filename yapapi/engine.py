@@ -243,9 +243,9 @@ class _Engine:
         #         Purpose of all these ugly hacks here is to allow gradual changes of
         #         events interface (so that everything works as before after only some parts changed).
         #         IOW, to have a dual old-new interface while the new interface is replacing the old one.
-        import dataclasses
+        import attr
 
-        event_class_fields = [f.name for f in dataclasses.fields(event_class)]
+        event_class_fields = [f.name for f in attr.fields(event_class)]
 
         #   Set all fields that are not just ids of the passed objects
         if "task" in kwargs and "task_data" in event_class_fields:

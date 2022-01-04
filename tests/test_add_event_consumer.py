@@ -1,14 +1,19 @@
 import pytest
-from dataclasses import asdict
+from attr import asdict
 
 from yapapi import Golem, events
 
 
 sample_events = [
     events.CollectFailed("foo", "bar"),
-    events.TaskStarted("job_id", "agreement_id", "task_id", [{"some": "data"}]),
+    events.TaskStarted(
+        task_data=[{"some": "data"}],
+        task_id="task_id",
+        job_id="job_id",
+        agr_id="agreement_id",
+    ),
 ]
-emitted_events = sample_events + [events.ShutdownFinished(exc_info=None)]
+emitted_events = sample_events + [events.ShutdownFinished()]
 
 
 @pytest.mark.asyncio
