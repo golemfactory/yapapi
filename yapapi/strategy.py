@@ -5,7 +5,7 @@ from collections import defaultdict
 from decimal import Decimal
 import logging
 from types import MappingProxyType
-from typing import Dict, Mapping, Optional, Union
+from typing import Dict, Mapping, Optional, Set, Union
 
 from dataclasses import dataclass
 from typing_extensions import Final, Protocol
@@ -181,12 +181,13 @@ class DecreaseScoreForUnconfirmedAgreement(MarketStrategy):
         self.base_strategy = base_strategy
         self.factor = factor
         self._logger = logging.getLogger(f"{__name__}.{type(self).__name__}")
+        self._rejecting_providers: Set[str] = set()
 
     def on_event(self, event: events.Event) -> None:
         if isinstance(event, events.AgreementConfirmed):
-            print("AGREEMENT CONFIRMED")
+            self._rejecting_providers.discard(event.provider_id)
         elif isinstance(event, events.AgreementRejected):
-            print("AGREEMENT REJECTED")
+            self._rejecting_providers.add(event.provider_id)
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
         """Decorate `demand` using the base strategy."""
@@ -201,7 +202,7 @@ class DecreaseScoreForUnconfirmedAgreement(MarketStrategy):
         then the base score is multiplied by `self._factor`.
         """
         score = await self.base_strategy.score_offer(offer)
-        if history and history.rejected_last_agreement(offer.issuer) and score > 0:
+        if offer.issuer in self._rejecting_providers and score > 0:
             self._logger.debug("Decreasing score for offer %s from '%s'", offer.id, offer.issuer)
             score *= self.factor
         return score
