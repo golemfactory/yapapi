@@ -68,6 +68,7 @@ class Script:
     ) -> CommandEvent:
         """Event emiting and special events.CommandExecuted logic"""
         command = self._commands[event_kwargs["cmd_idx"]]
+        del event_kwargs["cmd_idx"]
         event = command.emit(event_class, **event_kwargs)
 
         if isinstance(event, CommandExecuted):

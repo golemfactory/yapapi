@@ -230,87 +230,12 @@ class _Engine:
 
     def emit(self, event_class: Type[events.Event], **kwargs) -> events.Event:
         """Emit an event to be consumed by this engine's event consumer."""
-        event = self._resolve_emit_args(event_class, **kwargs)
+        event = event_class(**kwargs)
 
         for wrapped_consumer in self._wrapped_consumers:
             wrapped_consumer.async_call(event)
 
         return event
-
-    @staticmethod
-    def _resolve_emit_args(event_class, **kwargs) -> events.Event:
-        #   NOTE: This is a temporary function that will disappear once the new events are ready.
-        #         Purpose of all these ugly hacks here is to allow gradual changes of
-        #         events interface (so that everything works as before after only some parts changed).
-        #         IOW, to have a dual old-new interface while the new interface is replacing the old one.
-        import attr
-
-        event_class_fields = [f.name for f in attr.fields(event_class)]
-
-        #   Set all fields that are not just ids of the passed objects
-        if "task" in kwargs and "task_data" in event_class_fields:
-            kwargs["task_data"] = kwargs["task"].data
-
-        if "task" in kwargs and "result" in event_class_fields:
-            kwargs["result"] = kwargs["task"]._result
-
-        if "invoice" in kwargs and "amount" in event_class_fields:
-            kwargs["amount"] = kwargs["invoice"].amount
-
-        if "debit_note" in kwargs and "amount" in event_class_fields:
-            kwargs["amount"] = kwargs["debit_note"].total_amount_due
-
-        if "agreement" in kwargs and "provider_id" in event_class_fields:
-            kwargs["provider_id"] = kwargs["agreement"].cached_details.raw_details.offer.provider_id
-
-        if "agreement" in kwargs and "provider_info" in event_class_fields:
-            kwargs["provider_info"] = kwargs["agreement"].cached_details.provider_node_info
-
-        if "job" in kwargs and "expires" in event_class_fields:
-            kwargs["expires"] = kwargs["job"].expiration_time
-
-        if "job" in kwargs and "num_offers" in event_class_fields:
-            kwargs["num_offers"] = kwargs["job"].offers_collected
-
-        if "script" in kwargs and "cmds" in event_class_fields:
-            kwargs["cmds"] = kwargs["script"]._evaluate()
-
-        if "proposal" in kwargs and "provider_id" in event_class_fields:
-            kwargs["provider_id"] = kwargs["proposal"].issuer
-
-        if "command" in kwargs and "path" in event_class_fields:
-            if event_class.__name__ == "DownloadStarted":
-                path = kwargs["command"]._src_path
-            else:
-                assert event_class.__name__ == "DownloadFinished"
-                path = str(kwargs["command"]._dst_path)
-            kwargs["path"] = path
-
-        #   Set id fields and remove old objects
-        for row in (
-            ("job", "job_id"),
-            ("agreement", "agr_id"),
-            ("activity", "act_id"),
-            ("script", "script_id"),
-            ("proposal", "prop_id"),
-            ("subscription", "sub_id"),
-            ("task", "task_id"),
-            ("invoice", "inv_id", "invoice_id"),
-            ("debit_note", "debit_note_id", "debit_note_id"),
-        ):
-            object_name = row[0]
-            event_field_name = row[1]
-            object_id_field_name = "id" if len(row) < 3 else row[2]
-
-            obj = kwargs.pop(object_name, None)
-            if obj is not None and event_field_name in event_class_fields:
-                kwargs[event_field_name] = getattr(obj, object_id_field_name)
-
-        #   Command is different because we sometimes have "command" and never "command_id"
-        if "command" in kwargs and "command" not in event_class_fields:
-            del kwargs["command"]
-
-        return event_class(**kwargs)  # type: ignore
 
     async def stop(self, *exc_info) -> Optional[bool]:
         """Stop the engine.
