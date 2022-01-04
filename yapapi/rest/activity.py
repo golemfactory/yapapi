@@ -24,6 +24,9 @@ from yapapi import events
 from yapapi.rest.common import is_intermittent_error, SuppressedExceptions
 
 
+CommandEventData = Tuple[Type[events.CommandEvent], Dict[str, Any]]
+
+
 _log = logging.getLogger("yapapi.rest")
 
 
@@ -150,7 +153,7 @@ class BatchTimeoutError(BatchError):
     """An exception that indicates that an execution of a batch of commands timed out."""
 
 
-class Batch(abc.ABC, AsyncIterable[Tuple[Type[events.CommandEvent], Dict[str, Any]]]):
+class Batch(abc.ABC, AsyncIterable[CommandEventData]):
     """Abstract base class for iterating over events related to a batch running on provider."""
 
     _activity: Activity
@@ -248,7 +251,7 @@ class PollingBatch(Batch):
 
         return []
 
-    async def __aiter__(self) -> AsyncIterator[Tuple[Type[events.CommandEvent], Dict[str, Any]]]:
+    async def __aiter__(self) -> AsyncIterator[CommandEventData]:
         last_idx = 0
 
         while last_idx < self._size:
@@ -286,7 +289,7 @@ class PollingBatch(Batch):
 class StreamingBatch(Batch):
     """A `Batch` implementation that uses event streaming to return command status."""
 
-    async def __aiter__(self) -> AsyncIterator[Tuple[Type[events.CommandEvent], Dict[str, Any]]]:
+    async def __aiter__(self) -> AsyncIterator[CommandEventData]:
         from aiohttp_sse_client import client as sse_client  # type: ignore
 
         api_client = self._activity._api.api_client
@@ -328,9 +331,7 @@ class StreamingBatch(Batch):
                 raise BatchTimeoutError()
 
 
-def _message_event_to_event_data(
-    msg_event: MessageEvent,
-) -> Tuple[Type[events.CommandEvent], Dict[str, Any]]:
+def _message_event_to_event_data(msg_event: MessageEvent) -> CommandEventData:
     """Convert a `MessageEvent` to a matching events.Event subclass and it's kwargs"""
 
     if msg_event.type != "runtime":
