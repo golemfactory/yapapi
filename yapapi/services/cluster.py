@@ -6,6 +6,7 @@ from typing import (
     AsyncContextManager,
     Dict,
     Generator,
+    Generic,
     Iterable,
     List,
     Optional,
@@ -23,7 +24,7 @@ from yapapi.network import Network
 from yapapi.payload import Payload
 from yapapi.engine import _Engine, Job
 
-from .service import Service
+from .service import ServiceType
 from .service_runner import ServiceRunner
 
 # current defaults for yagna providers as of yagna 0.6.x, see
@@ -33,13 +34,13 @@ MAX_AGREEMENT_EXPIRATION: Final[timedelta] = timedelta(minutes=180)
 DEFAULT_SERVICE_EXPIRATION: Final[timedelta] = MAX_AGREEMENT_EXPIRATION - timedelta(minutes=5)
 
 
-class Cluster(AsyncContextManager):
+class Cluster(AsyncContextManager, Generic[ServiceType]):
     """Golem's sub-engine used to spawn and control instances of a single :class:`Service`."""
 
     def __init__(
         self,
         engine: _Engine,
-        service_class: Type[Service],
+        service_class: Type[ServiceType],
         payload: Payload,
         expiration: Optional[datetime] = None,
         respawn_unstarted_instances: bool = True,
@@ -104,7 +105,7 @@ class Cluster(AsyncContextManager):
         return self.service_runner._job.payload
 
     @property
-    def service_class(self) -> Type[Service]:
+    def service_class(self) -> Type[ServiceType]:
         """Return the class instantiated by all service instances in this :class:`Cluster`."""
         return self._service_class
 
@@ -115,16 +116,16 @@ class Cluster(AsyncContextManager):
 
     def __repr__(self):
         return (
-            f"Cluster {self.id}: {len(self.__instances)}x[Service: {self._service_class.__name__}, "
-            f"Payload: {self._payload}]"
+            f"Cluster {self.id}: {len(self.instances)}x[Service: {self._service_class.__name__}, "
+            f"Payload: {self.payload}]"
         )
 
     @property
-    def instances(self) -> List[Service]:
+    def instances(self) -> List[ServiceType]:
         """Return the list of service instances in this :class:`Cluster`."""
         return self.service_runner.instances.copy()
 
-    def stop_instance(self, service: Service):
+    def stop_instance(self, service: ServiceType):
         """Stop the specific :class:`Service` instance belonging to this :class:`Cluster`."""
         self.service_runner.stop_instance(service)
 
@@ -168,7 +169,7 @@ class Cluster(AsyncContextManager):
             service._set_cluster(self)
 
     @staticmethod
-    def _instance_not_started(service: Service) -> bool:
+    def _instance_not_started(service: ServiceType) -> bool:
         return (
             service.exc_info() != (None, None, None)
             and not service.service_instance.started_successfully
