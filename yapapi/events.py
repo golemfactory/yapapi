@@ -121,19 +121,19 @@ class Event(abc.ABC):
         under the key `exception`.
         """
         fields: Tuple[attr.Attribute] = attr.fields(self.__class__)  # type: ignore
-        field_reprs = ""
+        field_reprs: List[str] = []
 
         for field in fields:
             field_value = getattr(self, field.name)
 
             if field.name == "exc_info":
                 if field_value:
-                    field_reprs += f"exception={repr(field_value[1])}, "
+                    field_reprs.append(f"exception={repr(field_value[1])}")
                 continue
 
-            field_reprs += f"{field.name}={repr(field_value)}, "
+            field_reprs.append(f"{field.name}={repr(field_value)}")
 
-        return f"{self.__class__.__name__}({field_reprs.rstrip(', ')})"
+        return f"{self.__class__.__name__}({', '.join(field_reprs)})"
 
     def __repr__(self) -> str:
         return str(self)
