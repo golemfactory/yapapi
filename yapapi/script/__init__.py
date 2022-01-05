@@ -3,7 +3,7 @@ import itertools
 from typing import Any, Awaitable, Callable, Dict, Iterator, Optional, List, Type, TYPE_CHECKING
 
 import yapapi
-from yapapi.events import CommandEvent, CommandExecuted, Event
+from yapapi.events import CommandEvent, CommandExecuted, ScriptEventType
 from yapapi.script.capture import CaptureContext
 from yapapi.script.command import (
     BatchCommand,
@@ -60,7 +60,7 @@ class Script:
         self._commands: List[Command] = []
         self._id: int = next(script_ids)
 
-    def emit(self, event_class: Type[Event], **kwargs) -> Event:
+    def emit(self, event_class: Type[ScriptEventType], **kwargs) -> ScriptEventType:
         return self._ctx.emit(event_class, script=self, **kwargs)
 
     def process_batch_event(

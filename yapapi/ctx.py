@@ -6,12 +6,18 @@ import enum
 import logging
 from typing import Callable, Optional, Dict, List, Any, Awaitable, Type
 
+try:
+    from typing import Protocol
+except ImportError:
+    from typing_extensions import Protocol  # type: ignore
+
+
 from ya_activity.models import (
     ActivityUsage as yaa_ActivityUsage,
     ActivityState as yaa_ActivityState,
 )
 
-from yapapi.events import Event, CommandExecuted
+from yapapi.events import ActivityEventType, CommandExecuted
 from yapapi.props.com import ComLinear
 from yapapi.script import Script
 from yapapi.storage import StorageProvider, DOWNLOAD_BYTES_LIMIT_DEFAULT
@@ -72,6 +78,11 @@ class ExecOptions:
     batch_timeout: Optional[timedelta] = None
 
 
+class WorkContextEmitter(Protocol):
+    def __call__(self, event_class: Type[ActivityEventType], **kwargs) -> ActivityEventType:
+        ...
+
+
 class WorkContext:
     """Provider node's work context.
 
@@ -84,7 +95,7 @@ class WorkContext:
         activity: Activity,
         agreement: Agreement,
         storage: StorageProvider,
-        emitter: Optional[Callable[..., Event]] = None,
+        emitter: Optional[WorkContextEmitter] = None,
     ):
         self._activity = activity
         self._agreement = agreement
@@ -96,7 +107,7 @@ class WorkContext:
         self.__payment_model: Optional[ComLinear] = None
         self.__script: Script = self.new_script()
 
-    def emit(self, event_class: Type[Event], **kwargs) -> Event:
+    def emit(self, event_class: Type[ActivityEventType], **kwargs) -> ActivityEventType:
         if not self._emitter:
             #   TODO - why is this possible?
             raise RuntimeError("This is a WorkContext without emitter, so it won't emit")

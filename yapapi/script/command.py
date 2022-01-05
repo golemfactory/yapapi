@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Callable, List, Optional, Dict, Union, Any, Awaitable, Type, TYPE_CHECKING
 
 
-from yapapi.events import DownloadStarted, DownloadFinished, Event
+from yapapi.events import DownloadStarted, DownloadFinished, CommandEventType
 from yapapi.script.capture import CaptureContext
 from yapapi.storage import StorageProvider, Source, Destination, DOWNLOAD_BYTES_LIMIT_DEFAULT
 
@@ -46,7 +46,7 @@ class Command(abc.ABC):
         assert self._script is None, f"Command {self} already belongs to a script {self._script}"
         self._script = script
 
-    def emit(self, event_class: Type[Event], **kwargs) -> Event:
+    def emit(self, event_class: Type[CommandEventType], **kwargs) -> CommandEventType:
         if self._script is None:
             raise RuntimeError("Only commands attached to a Script can emit")
         return self._script.emit(event_class, command=self, **kwargs)

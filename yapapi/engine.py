@@ -228,7 +228,7 @@ class _Engine:
 
         self._wrapped_consumers.append(wrapped_consumer)
 
-    def emit(self, event_class: Type[events.Event], **kwargs) -> events.Event:
+    def emit(self, event_class: Type[events.EventType], **kwargs) -> events.EventType:
         """Emit an event to be consumed by this engine's event consumer."""
         event = event_class(**kwargs)
 
@@ -729,7 +729,7 @@ class Job:
         #   Exception that ended the job
         self._exc_info = None
 
-    def emit(self, event_class: Type[events.Event], **kwargs) -> events.Event:
+    def emit(self, event_class: Type[events.JobEventType], **kwargs) -> events.JobEventType:
         return self.engine.emit(event_class, job=self, **kwargs)
 
     def set_exc_info(self, exc_info):
@@ -751,7 +751,7 @@ class Job:
         but never pass the proposal to the agreements pool.
         """
 
-        async def reject_proposal(reason: str) -> events.Event:
+        async def reject_proposal(reason: str) -> events.ProposalRejected:
             """Reject `proposal` due to given `reason`."""
             await proposal.reject(reason)
             return self.emit(events.ProposalRejected, proposal=proposal, reason=reason)
