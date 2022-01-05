@@ -74,8 +74,8 @@ from yapapi.events import (
             "stdout=None, stderr=None)",
         ),
         (
-            ExecutionInterrupted(exc_info=(RuntimeError.__class__, RuntimeError("oops"), None)),
-            "ExecutionInterrupted(exception=RuntimeError('oops'))",
+            ExecutionInterrupted(exc_info=(RuntimeError.__class__, RuntimeError(), None)),
+            "ExecutionInterrupted(exception=RuntimeError())",
         ),
     ],
 )
