@@ -79,10 +79,6 @@ from typing import List, Optional, Type, Tuple, TYPE_CHECKING, TypeVar
 
 from yapapi.props import NodeInfo
 
-ExcInfo = Tuple[Type[BaseException], BaseException, Optional[TracebackType]]
-
-logger = logging.getLogger(__name__)
-
 if TYPE_CHECKING:
     from yapapi.services import Service
     from yapapi.script import Script
@@ -93,6 +89,10 @@ if TYPE_CHECKING:
     from yapapi.rest.payment import DebitNote, Invoice
     from yapapi.engine import Job
 
+
+logger = logging.getLogger(__name__)
+
+ExcInfo = Tuple[Type[BaseException], BaseException, Optional[TracebackType]]
 
 #   Types used in all `emit()` methods, to tell the typechecker that
 #   they return object of the same class that was passed as an argument.
@@ -107,12 +107,36 @@ CommandEventType = TypeVar("CommandEventType", bound="CommandEvent")
 
 
 #   ABSTRACT EVENTS
-@attr.s
+@attr.s(frozen=True, repr=False)
 class Event(abc.ABC):
     """An abstract base class for types of events emitted by `Executor.submit()`."""
 
     exc_info: Optional[ExcInfo] = attr.ib(default=None, kw_only=True)
     """Tuple containing exception info as returned by `sys.exc_info()`, if applicable."""
+
+    def __str__(self) -> str:
+        """Mimics Python's default `repr` format, but excludes the field `exc_info` from it.
+
+        If `exc_info` is not `None`, its underlying exception is included in the result string
+        under the key `exception`.
+        """
+        fields: Tuple[attr.Attribute] = attr.fields(self.__class__)  # type: ignore
+        field_reprs: List[str] = []
+
+        for field in fields:
+            field_value = getattr(self, field.name)
+
+            if field.name == "exc_info":
+                if field_value:
+                    field_reprs.append(f"exception={repr(field_value[1])}")
+                continue
+
+            field_reprs.append(f"{field.name}={repr(field_value)}")
+
+        return f"{self.__class__.__name__}({', '.join(field_reprs)})"
+
+    def __repr__(self) -> str:
+        return str(self)
 
     @property
     def exception(self) -> Optional[BaseException]:
@@ -122,7 +146,7 @@ class Event(abc.ABC):
         return None
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class JobEvent(Event, abc.ABC):
     job: "Job"
 
@@ -139,12 +163,12 @@ class JobEvent(Event, abc.ABC):
         return self.job.offers_collected
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class SubscriptionEvent(JobEvent, abc.ABC):
     subscription: "Subscription"
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class ProposalEvent(JobEvent, abc.ABC):
     proposal: "OfferProposal"
 
@@ -157,7 +181,7 @@ class ProposalEvent(JobEvent, abc.ABC):
         return self.proposal.issuer
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class AgreementEvent(JobEvent, abc.ABC):
     agreement: "Agreement"
 
@@ -174,12 +198,12 @@ class AgreementEvent(JobEvent, abc.ABC):
         return self.agreement.cached_details.provider_node_info
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class ActivityEvent(AgreementEvent, abc.ABC):
     activity: "Activity"
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class TaskEvent(ActivityEvent, abc.ABC):
     task: "Task"
 
@@ -192,12 +216,12 @@ class TaskEvent(ActivityEvent, abc.ABC):
         return self.task.data
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class ServiceEvent(ActivityEvent, abc.ABC):
     service: "Service"
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class ScriptEvent(ActivityEvent, abc.ABC):
     script: "Script"
 
@@ -212,12 +236,12 @@ class ScriptEvent(ActivityEvent, abc.ABC):
         return self.script._evaluate()
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class CommandEvent(ScriptEvent, abc.ABC):
     command: "Command"
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class InvoiceEvent(AgreementEvent, abc.ABC):
     invoice: "Invoice"
 
@@ -226,7 +250,7 @@ class InvoiceEvent(AgreementEvent, abc.ABC):
         return self.invoice.amount
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class DebitNoteEvent(AgreementEvent, abc.ABC):
     debit_note: "DebitNote"
 
@@ -248,12 +272,12 @@ class SubscriptionCreated(SubscriptionEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class SubscriptionFailed(JobEvent):
     reason: str
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class CollectFailed(SubscriptionEvent):
     reason: str
 
@@ -262,7 +286,7 @@ class ProposalReceived(ProposalEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class ProposalRejected(ProposalEvent):
     reason: Optional[str] = None
 
@@ -279,7 +303,7 @@ class ProposalFailed(ProposalEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class NoProposalsConfirmed(JobEvent):
     timeout: timedelta
 
@@ -296,7 +320,7 @@ class AgreementRejected(AgreementEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class AgreementTerminated(AgreementEvent):
     reason: dict
 
@@ -373,7 +397,7 @@ class ScriptFinished(ScriptEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class CommandExecuted(CommandEvent):
     success: bool
     message: str
@@ -385,17 +409,17 @@ class CommandStarted(CommandEvent):
     pass
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class CommandStdOut(CommandEvent):
     output: str
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class CommandStdErr(CommandEvent):
     output: str
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class TaskAccepted(TaskEvent):
     @property
     def result(self) -> "TaskResult":
@@ -403,12 +427,12 @@ class TaskAccepted(TaskEvent):
         return self.task._result
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class TaskRejected(TaskEvent):
     reason: Optional[str]
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class DownloadStarted(CommandEvent):
     command: "_ReceiveContent"
 
@@ -417,7 +441,7 @@ class DownloadStarted(CommandEvent):
         return self.command._src_path
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, repr=False)
 class DownloadFinished(CommandEvent):
     command: "_ReceiveContent"
 
