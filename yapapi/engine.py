@@ -741,7 +741,7 @@ class Job:
             await proposal.reject(reason)
             return self.emit(events.ProposalRejected, proposal=proposal, reason=reason)
 
-        score = await self.engine._strategy.score_offer(proposal, self.agreements_pool)
+        score = await self.engine._strategy.score_offer(proposal)
         logger.debug(
             "Scored offer %s, provider: %s, strategy: %s, score: %f",
             proposal.id,

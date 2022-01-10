@@ -4,7 +4,7 @@ import datetime
 import logging
 import random
 import sys
-from typing import Dict, NamedTuple, Optional, Set, Callable
+from typing import Dict, NamedTuple, Optional, Callable
 
 import aiohttp
 
@@ -50,8 +50,6 @@ class AgreementsPool:
         self._offer_buffer: Dict[str, _BufferedProposal] = {}  # provider_id -> Proposal
         self._agreements: Dict[str, BufferedAgreement] = {}  # agreement_id -> Agreement
         self._lock = asyncio.Lock()
-        # The set of provider ids for which the last agreement creation failed
-        self._rejecting_providers: Set[str] = set()
         self.confirmed = 0
 
     async def cycle(self):
@@ -145,10 +143,8 @@ class AgreementsPool:
             return None
         if not await agreement.confirm():
             emit(events.AgreementRejected, agreement=agreement)
-            self._rejecting_providers.add(provider_id)
             self.offer_recycler(offer.proposal)
             return None
-        self._rejecting_providers.discard(provider_id)
         self._agreements[agreement.id] = BufferedAgreement(
             agreement=agreement,
             agreement_details=agreement_details,
@@ -246,7 +242,3 @@ class AgreementsPool:
             self.emitter(
                 events.AgreementTerminated, agreement=buffered_agreement.agreement, reason=reason
             )
-
-    def rejected_last_agreement(self, provider_id: str) -> bool:
-        """Return `True` iff the last agreement proposed to `provider_id` has been rejected."""
-        return provider_id in self._rejecting_providers
