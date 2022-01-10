@@ -216,11 +216,12 @@ class _Engine:
     def emit(self, event_class: Type[events.EventType], **kwargs) -> events.EventType:
         """Emit an event to be consumed by this engine's event consumer."""
         event = event_class(**kwargs)
+        self._emit_event(event)
+        return event
 
+    def _emit_event(self, event: events.Event) -> None:
         for wrapped_consumer in self._wrapped_consumers:
             wrapped_consumer.async_call(event)
-
-        return event
 
     async def stop(self, *exc_info) -> Optional[bool]:
         """Stop the engine.
