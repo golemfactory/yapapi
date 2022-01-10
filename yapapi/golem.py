@@ -120,12 +120,7 @@ class Golem:
         self._event_consumers = [event_consumer or self._default_event_consumer()]
 
         if not strategy:
-            strategy = LeastExpensiveLinearPayuMS(
-                max_fixed_price=Decimal("1.0"),
-                max_price_for={com.Counter.CPU: Decimal("0.2"), com.Counter.TIME: Decimal("0.1")},
-            )
-            strategy = DecreaseScoreForUnconfirmedAgreement(strategy, 0.5)
-            self._event_consumers.append(strategy.on_event)
+            strategy = self._initialize_default_strategy()
 
         self._engine_args = {
             "budget": budget,
@@ -442,3 +437,13 @@ class Golem:
         from yapapi.log import log_event_repr, log_summary
 
         return log_summary(log_event_repr)
+
+    def _initialize_default_strategy(self) -> DecreaseScoreForUnconfirmedAgreement:
+        """Create a default strategy and register it's event consumer"""
+        base_strategy = LeastExpensiveLinearPayuMS(
+            max_fixed_price=Decimal("1.0"),
+            max_price_for={com.Counter.CPU: Decimal("0.2"), com.Counter.TIME: Decimal("0.1")},
+        )
+        strategy = DecreaseScoreForUnconfirmedAgreement(base_strategy, 0.5)
+        self._event_consumers.append(strategy.on_event)
+        return strategy
