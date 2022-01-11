@@ -41,8 +41,8 @@ async def test_decrease_score_for(events_def, decreased_providers):
     strategy = DecreaseScoreForUnconfirmedAgreement(Always6(), 0.5)
 
     for event_cls, event_provider_id in events_def:
-        with mock_event(event_cls, event_provider_id) as event:
-            strategy.on_event(event)
+        event = mock_event(event_cls, event_provider_id)
+        strategy.on_event(event)
 
     for provider_id in (1, 2):
         offer = mock_offer(provider_id)
@@ -67,9 +67,10 @@ async def test_full_DSFUA_workflow(dummy_yagna_engine, events_def, decreased_pro
     golem = Golem(budget=1, event_consumer=empty_event_consumer, app_key="NOT_A_REAL_APPKEY")
     async with golem:
         for event_cls, event_provider_id in events_def:
-            with mock_event(event_cls, event_provider_id) as event:
-                golem._engine._emit_event(event)
-                await asyncio.sleep(0.1)  # let the events propagate
+            event = mock_event(event_cls, event_provider_id)
+            golem._engine._emit_event(event)
+
+        await asyncio.sleep(0.1)  # let the events propagate
 
         for provider_id in (1, 2):
             offer = mock_offer(provider_id)

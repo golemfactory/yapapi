@@ -12,13 +12,7 @@ def mock_offer(provider_id=1, coeffs=(0.001, 0.002, 0.1)):
     return OfferProposalFactory(**kwargs)
 
 
-@contextmanager
 def mock_event(cls, provider_id):
-    """Yield a `cls` event emitted for provider_id"""
     event = cls(Mock(), Mock())
-
-    with patch(
-        "yapapi.events.AgreementEvent.provider_id",
-        new_callable=PropertyMock(return_value=provider_id),
-    ) as mock_provider_id:
-        yield event
+    event.agreement.cached_details.raw_details.offer.provider_id = provider_id
+    return event
