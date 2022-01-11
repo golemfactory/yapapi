@@ -129,3 +129,10 @@ Utils
 .. autofunction:: yapapi.windows_event_loop_fix
 
 .. autofunction:: yapapi.get_version
+
+Contrib
+=======
+
+.. automodule:: yapapi.contrib
+
+.. autoclass:: yapapi.contrib.strategy.Blacklist
