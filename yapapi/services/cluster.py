@@ -136,6 +136,7 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
         network_addresses: Optional[List[str]] = None,
     ) -> None:
         """Spawn new instances within this :class:`Cluster`.
+
         :param num_instances: optional number of service instances to run. Defaults to a single
             instance, unless `instance_params` is given, in which case, the :class:`Cluster` will spawn
             as many instances as there are elements in the `instance_params` iterable.
