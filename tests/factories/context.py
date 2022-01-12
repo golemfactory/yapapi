@@ -13,7 +13,7 @@ class WorkContextFactory(factory.Factory):
     class Meta:
         model = WorkContext
 
-    activity = mock.MagicMock()
-    agreement = mock.MagicMock()
-    storage = mock.AsyncMock()
+    activity = factory.LazyFunction(mock.MagicMock)
+    agreement = factory.LazyFunction(mock.MagicMock)
+    storage = factory.LazyFunction(mock.AsyncMock)
     emitter = mock_emitter
