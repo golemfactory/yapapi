@@ -31,7 +31,7 @@ async def test_LeastExpensiveLinearPauyuMS_score(expected_time):
 
     scores = {
         coeffs: round(
-            await strategy.score_offer(OfferProposalFactory.new(coeffs=coeffs)),
+            await strategy.score_offer(OfferProposalFactory(coeffs=coeffs)),
             11,
         )
         for coeffs in triples
@@ -57,7 +57,7 @@ async def test_LeastExpensiveLinearPayuMS_price_caps():
 
     for cpu_price, time_price, fixed_price in triples:
 
-        offer = OfferProposalFactory.new(coeffs=(cpu_price, time_price, fixed_price))
+        offer = OfferProposalFactory(coeffs=(cpu_price, time_price, fixed_price))
 
         async def _test_strategy(strategy, cpu_price_cap, time_price_cap, fixed_price_cap):
             score = await strategy.score_offer(offer)
@@ -145,8 +145,8 @@ class TestLeastExpensiveLinearPayuMS:
     @pytest.mark.asyncio
     async def test_same_score(self):
         coeffs = [0.001, 0.002, 0.1]
-        offer1 = OfferProposalFactory.new(coeffs=coeffs)
-        offer2 = OfferProposalFactory.new(coeffs=coeffs)
+        offer1 = OfferProposalFactory(coeffs=coeffs)
+        offer2 = OfferProposalFactory(coeffs=coeffs)
 
         assert await self.strategy.score_offer(offer1) == await self.strategy.score_offer(offer2)
 
@@ -155,5 +155,5 @@ class TestLeastExpensiveLinearPayuMS:
         "coeffs", [[-0.001, 0.002, 0.1], [0.001, -0.002, 0.1], [0.001, 0.002, -0.1]]
     )
     async def test_score_negative_coeff(self, coeffs):
-        offer = OfferProposalFactory.new(coeffs=coeffs)
+        offer = OfferProposalFactory(coeffs=coeffs)
         assert await self.strategy.score_offer(offer) == SCORE_REJECTED
