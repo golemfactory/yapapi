@@ -40,5 +40,13 @@ class OfferProposalFactory(factory.Factory):
     class Meta:
         model = OfferProposal
 
+    @classmethod
+    def create(cls, provider_id=None, coeffs=None, **kwargs):
+        if provider_id:
+            kwargs["proposal__proposal__issuer_id"] = provider_id
+        if coeffs:
+            kwargs["proposal__proposal__properties__linear_coeffs"] = list(coeffs)
+        return super().create(**kwargs)
+
     subscription = factory.SubFactory(SubscriptionFactory)
     proposal = factory.SubFactory(ProposalEventFactory)
