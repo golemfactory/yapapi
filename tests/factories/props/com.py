@@ -17,7 +17,7 @@ class ComLinearPropsFactory(factory.DictFactory):
 
     price_model = com.PriceModel.LINEAR.value
     scheme = com.BillingScheme.PAYU.value
-    linear_coeffs = [0.001, 0.002, 0.0]
+    linear_coeffs = (0.001, 0.002, 0.1)
     usage_vector = [com.Counter.CPU.value, com.Counter.TIME.value]
 
 
@@ -27,5 +27,5 @@ class ComLinearFactory(factory.Factory):
 
     price_model = com.PriceModel.LINEAR.value
     scheme = com.BillingScheme.PAYU.value
-    linear_coeffs = [0.001, 0.002, 0.0]
+    linear_coeffs = (0.001, 0.002, 0.1)
     usage_vector = [com.Counter.CPU.value, com.Counter.TIME.value]
