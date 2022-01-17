@@ -1,1 +1,1 @@
-from .blacklist import Blacklist
+from .provider_filter import ProviderFilter

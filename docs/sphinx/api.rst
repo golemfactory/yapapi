@@ -135,4 +135,4 @@ Contrib
 
 .. automodule:: yapapi.contrib
 
-.. autoclass:: yapapi.contrib.strategy.Blacklist
+.. autoclass:: yapapi.contrib.strategy.ProviderFilter
