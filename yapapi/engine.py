@@ -461,38 +461,39 @@ class _Engine:
         """Process incoming debit notes."""
 
         async for debit_note in self._payment_api.incoming_debit_notes():
-            job_id = next(
-                (
-                    id
-                    for id in self._agreements_accepting_debit_notes
-                    if debit_note.agreement_id in self._agreements_accepting_debit_notes[id]
-                ),
-                None,
-            )
-            if job_id is not None:
-                self.emit(
-                    events.DebitNoteReceived(
-                        job_id=job_id,
-                        agr_id=debit_note.agreement_id,
-                        amount=debit_note.total_amount_due,
-                        note_id=debit_note.debit_note_id,
-                    )
-                )
-                try:
-                    allocation = self._get_allocation(debit_note)
-                    await debit_note.accept(
-                        amount=debit_note.total_amount_due, allocation=allocation
-                    )
-                except CancelledError:
-                    raise
-                except Exception:
-                    self.emit(
-                        events.PaymentFailed(
-                            job_id=job_id, agr_id=debit_note.agreement_id, exc_info=sys.exc_info()  # type: ignore
-                        )
-                    )
+            await self._process_debit_note(debit_note)
             if self._payment_closing and not self._agreements_to_pay:
                 break
+
+    async def _process_debit_note(self, debit_note: rest.payment.DebitNote) -> None:
+        job_id = next(
+            (
+                id
+                for id in self._agreements_accepting_debit_notes
+                if debit_note.agreement_id in self._agreements_accepting_debit_notes[id]
+            ),
+            None,
+        )
+        if job_id is not None:
+            self.emit(
+                events.DebitNoteReceived(
+                    job_id=job_id,
+                    agr_id=debit_note.agreement_id,
+                    amount=debit_note.total_amount_due,
+                    note_id=debit_note.debit_note_id,
+                )
+            )
+            try:
+                allocation = self._get_allocation(debit_note)
+                await debit_note.accept(amount=debit_note.total_amount_due, allocation=allocation)
+            except CancelledError:
+                raise
+            except Exception:
+                self.emit(
+                    events.PaymentFailed(
+                        job_id=job_id, agr_id=debit_note.agreement_id, exc_info=sys.exc_info()  # type: ignore
+                    )
+                )
 
     async def accept_payments_for_agreement(
         self, job_id: str, agreement_id: str, *, partial: bool = False
