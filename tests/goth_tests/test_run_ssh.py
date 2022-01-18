@@ -67,9 +67,7 @@ async def test_run_ssh(
             for i in range(2):
                 ssh_string = await cmd_monitor.wait_for_pattern("ssh -o ProxyCommand", timeout=120)
                 matches = re.match("ssh -o ProxyCommand=('.*') (root@.*)", ssh_string)
-                proxy_cmd = re.sub(
-                    "websocat", "~/websocat/websocat", re.sub(":16001", ":6001", matches.group(1))
-                )
+                proxy_cmd = re.sub(":16001", ":6001", matches.group(1))
                 auth_str = matches.group(2)
                 password = re.sub("password: ", "", await cmd_monitor.wait_for_pattern("password:"))
 
