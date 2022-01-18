@@ -95,6 +95,7 @@ async def test_run_ssh(
                 ssh.sendline(password)
                 ssh.expect("#1-Alpine SMP", timeout=5)
                 ssh.expect(pexpect.EOF, timeout=5)
+                logger.info("Connection to %s confirmed.", auth_str)
 
             logger.info("SSH connections confirmed.")
 
