@@ -462,9 +462,9 @@ class _Engine:
         debit_note_processing_tasks = []
         loop = asyncio.get_event_loop()
 
-        async for debit_note in self._payment_api.incoming_debit_notes():
+        async for debit_note_id in self._payment_api.incoming_debit_note_ids():
             debit_note_processing_tasks.append(
-                loop.create_task(self._process_debit_note(debit_note))
+                loop.create_task(self._process_debit_note(debit_note_id))
             )
             if self._payment_closing and not self._agreements_to_pay:
                 break
@@ -472,7 +472,8 @@ class _Engine:
         if debit_note_processing_tasks:
             await asyncio.gather(*debit_note_processing_tasks)
 
-    async def _process_debit_note(self, debit_note: rest.payment.DebitNote) -> None:
+    async def _process_debit_note(self, debit_note_id: str) -> None:
+        debit_note = await self._payment_api.debit_note(debit_note_id)
         job_id = next(
             (
                 id
