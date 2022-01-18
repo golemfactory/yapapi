@@ -3,6 +3,8 @@ import asyncio
 import logging
 import os
 from pathlib import Path
+import pexpect
+import re
 import signal
 import time
 from typing import List
@@ -59,14 +61,44 @@ async def test_run_ssh(
             cmd_monitor.add_assertion(assert_no_errors)
             cmd_monitor.add_assertion(assert_all_invoices_accepted)
 
+            ssh_connections = []
+
             # # A longer timeout to account for downloading a VM image
             for i in range(2):
                 ssh_string = await cmd_monitor.wait_for_pattern("ssh -o ProxyCommand", timeout=120)
-                password = await cmd_monitor.wait_for_pattern("password:")
-                print("---------------------- ", ssh_string, password)
+                matches = re.match("ssh -o ProxyCommand=('.*') (root@.*)", ssh_string)
+                proxy_cmd = re.sub(
+                    "websocat", "~/websocat/websocat", re.sub(":16001", ":6001", matches.group(1))
+                )
+                auth_str = matches.group(2)
+                password = re.sub("password: ", "", await cmd_monitor.wait_for_pattern("password:"))
+
+                ssh_connections.append((proxy_cmd, auth_str, password))
 
             await cmd_monitor.wait_for_pattern(
-                ".*SshService running on provider.*SshService running on provider", timeout=10)
+                ".*SshService running on provider.*SshService running on provider", timeout=10
+            )
+
+            for proxy_cmd, auth_str, password in ssh_connections:
+                args = [
+                    "ssh",
+                    "-o",
+                    "UserKnownHostsFile=/dev/null",
+                    "-o",
+                    "StrictHostKeyChecking=no",
+                    "-o",
+                    f"ProxyCommand={proxy_cmd}",
+                    auth_str,
+                    "uname -v",
+                ]
+
+                ssh = pexpect.spawn(" ".join(args))
+                ssh.expect("[pP]assword:", timeout=5)
+                ssh.sendline(password)
+                ssh.expect("#1-Alpine SMP", timeout=5)
+                ssh.expect(pexpect.EOF, timeout=5)
+
+            logger.info("SSH connections confirmed.")
 
             proc: asyncio.subprocess.Process = await process_container.get_process()
             proc.send_signal(signal.SIGINT)
@@ -74,7 +106,8 @@ async def test_run_ssh(
 
             for _ in range(2):
                 await cmd_monitor.wait_for_pattern(
-                    ".*SshService terminated on provider", timeout=120)
+                    ".*SshService terminated on provider", timeout=120
+                )
 
             logger.info(f"The instances have been terminated ({elapsed_time()})")
 
