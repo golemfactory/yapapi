@@ -67,7 +67,7 @@ async def test_power_outage(
         async with requestor.run_command_on_host(
             f"{blender_path} --subnet-tag goth --min-cpu-threads 1",
             env=os.environ,
-        ) as (_cmd_task, cmd_monitor):
+        ) as (_cmd_task, cmd_monitor, _process_container):
 
             # Add assertions to the command output monitor `cmd_monitor`:
             cmd_monitor.add_assertion(assert_no_errors)
