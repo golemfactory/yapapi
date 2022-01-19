@@ -64,7 +64,7 @@ jobs:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           poetry run poe goth-assets
-          poetry run poe goth-tests
+          PATH=.:$PATH poetry run poe goth-tests
 
       - name: Upload test logs
         uses: actions/upload-artifact@v2
