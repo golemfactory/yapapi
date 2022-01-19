@@ -1,4 +1,4 @@
-"""An integration test scenario that runs the Simple Service example requestor app."""
+"""An integration test scenario that runs the SSH example requestor app."""
 import asyncio
 import logging
 import os
@@ -67,7 +67,13 @@ async def test_run_ssh(
             for i in range(2):
                 ssh_string = await cmd_monitor.wait_for_pattern("ssh -o ProxyCommand", timeout=120)
                 matches = re.match("ssh -o ProxyCommand=('.*') (root@.*)", ssh_string)
+
+                # the default API port goes through a proxy that logs REST requests
+                # but does not support websocket connections
+                # hence, we're replacing it with a port that connects directly
+                # to the daemon's port in the requestor's Docker container
                 proxy_cmd = re.sub(":16001", ":6001", matches.group(1))
+
                 auth_str = matches.group(2)
                 password = re.sub("password: ", "", await cmd_monitor.wait_for_pattern("password:"))
 
