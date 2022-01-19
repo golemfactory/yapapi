@@ -34,15 +34,10 @@ jobs:
           poetry env use python3.8
           poetry install -E integration-tests
 
-      - name: get path
-        run: |
-          set | grep PATH
-
       - name: Install websocat
         run: |
-          wget https://github.com/vi/websocat/releases/download/v1.9.0/websocat_linux64 -O websocat
-          chmod +x websocat
-          export PATH=.:$PATH
+          wget https://github.com/vi/websocat/releases/download/v1.9.0/websocat_linux64 -O /usr/local/bin/websocat
+          chmod +x /usr/local/bin/websocat
 
       - name: Disconnect Docker containers from default network
         continue-on-error: true
@@ -68,7 +63,7 @@ jobs:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           poetry run poe goth-assets
-          PATH=.:$PATH poetry run poe goth-tests
+          poetry run poe goth-tests
 
       - name: Upload test logs
         uses: actions/upload-artifact@v2
