@@ -1,4 +1,4 @@
-"""An integration test scenario that runs the Simple Service example requestor app."""
+"""An integration test scenario that runs the SSH example requestor app."""
 import asyncio
 import logging
 import os
