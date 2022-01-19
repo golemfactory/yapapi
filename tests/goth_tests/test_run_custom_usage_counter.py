@@ -91,7 +91,7 @@ async def test_run_custom_usage_counter(
         async with requestor.run_command_on_host(
             f"{requestor_path} --running-time {RUNNING_TIME} --subnet-tag {SUBNET_TAG}",
             env=os.environ,
-        ) as (_cmd_task, cmd_monitor):
+        ) as (_cmd_task, cmd_monitor, _):
 
             cmd_monitor.add_assertion(assert_no_errors)
             cmd_monitor.add_assertion(assert_all_invoices_accepted)

@@ -35,7 +35,7 @@ async def test_concurrent_executors(
 
         async with requestor.run_command_on_host(
             str(Path(__file__).parent / "requestor.py"), env=os.environ
-        ) as (_cmd_task, cmd_monitor):
+        ) as (_cmd_task, cmd_monitor, _):
 
             # Wait for job ALEF summary
             await cmd_monitor.wait_for_pattern(".*ALEF.* Computation finished", timeout=60)
