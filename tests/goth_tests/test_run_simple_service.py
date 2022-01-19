@@ -48,7 +48,7 @@ async def test_run_simple_service(
         async with requestor.run_command_on_host(
             f"{requestor_path} --running-time {RUNNING_TIME} --subnet-tag {SUBNET_TAG}",
             env=os.environ,
-        ) as (_cmd_task, cmd_monitor, _):
+        ) as (_cmd_task, cmd_monitor, _process_container):
 
             start_time = time.time()
 

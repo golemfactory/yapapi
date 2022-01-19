@@ -84,7 +84,7 @@ async def test_agreement_termination(
         async with requestor.run_command_on_host(test_script_path, env=os.environ) as (
             _cmd_task,
             cmd_monitor,
-            _,
+            _process_container,
         ):
 
             cmd_monitor.add_assertion(assert_all_tasks_computed)

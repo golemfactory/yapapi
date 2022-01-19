@@ -83,6 +83,10 @@ async def test_run_ssh(
                 ".*SshService running on provider.*SshService running on provider", timeout=10
             )
 
+            test = pexpect.spawn("websocat")
+            test.expect(pexpect.EOF, timeout=5)
+            print(test.before)
+
             if not ssh_verify_connection:
                 logger.warning(
                     "Skipping SSH connection check. Use `--ssh-verify-connection` to perform it."
