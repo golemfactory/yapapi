@@ -30,6 +30,7 @@ async def test_run_ssh(
     project_dir: Path,
     goth_config_path: Path,
     config_overrides: List[Override],
+    ssh_verify_connection: bool,
 ) -> None:
 
     configure_logging(log_dir)
@@ -51,7 +52,6 @@ async def test_run_ssh(
         async with requestor.run_command_on_host(
             f"{requestor_path} --subnet-tag {SUBNET_TAG}",
             env=os.environ,
-            get_process_monitor=True,
         ) as (_cmd_task, cmd_monitor, process_container):
             start_time = time.time()
 
@@ -77,27 +77,32 @@ async def test_run_ssh(
                 ".*SshService running on provider.*SshService running on provider", timeout=10
             )
 
-            for proxy_cmd, auth_str, password in ssh_connections:
-                args = [
-                    "ssh",
-                    "-o",
-                    "UserKnownHostsFile=/dev/null",
-                    "-o",
-                    "StrictHostKeyChecking=no",
-                    "-o",
-                    f"ProxyCommand={proxy_cmd}",
-                    auth_str,
-                    "uname -v",
-                ]
+            if not ssh_verify_connection:
+                logger.warning(
+                    "Skipping SSH connection check. Use `--ssh-verify-connection` to perform it."
+                )
+            else:
+                for proxy_cmd, auth_str, password in ssh_connections:
+                    args = [
+                        "ssh",
+                        "-o",
+                        "UserKnownHostsFile=/dev/null",
+                        "-o",
+                        "StrictHostKeyChecking=no",
+                        "-o",
+                        f"ProxyCommand={proxy_cmd}",
+                        auth_str,
+                        "uname -v",
+                    ]
 
-                ssh = pexpect.spawn(" ".join(args))
-                ssh.expect("[pP]assword:", timeout=5)
-                ssh.sendline(password)
-                ssh.expect("#1-Alpine SMP", timeout=5)
-                ssh.expect(pexpect.EOF, timeout=5)
-                logger.info("Connection to %s confirmed.", auth_str)
+                    ssh = pexpect.spawn(" ".join(args))
+                    ssh.expect("[pP]assword:", timeout=5)
+                    ssh.sendline(password)
+                    ssh.expect("#1-Alpine SMP", timeout=5)
+                    ssh.expect(pexpect.EOF, timeout=5)
+                    logger.info("Connection to %s confirmed.", auth_str)
 
-            logger.info("SSH connections confirmed.")
+                logger.info("SSH connections confirmed.")
 
             proc: asyncio.subprocess.Process = await process_container.get_process()
             proc.send_signal(signal.SIGINT)
