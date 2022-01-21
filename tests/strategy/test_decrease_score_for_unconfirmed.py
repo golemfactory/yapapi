@@ -1,7 +1,7 @@
 import asyncio
 import pytest
 
-from yapapi.strategy import MarketStrategy, DecreaseScoreForUnconfirmedAgreement
+from yapapi.strategy import DecreaseScoreForUnconfirmedAgreement
 from yapapi import Golem
 
 from tests.factories.events import (
@@ -9,6 +9,8 @@ from tests.factories.events import (
     AgreementConfirmedFactory as AgreementConfirmed,
 )
 from tests.factories.rest.market import OfferProposalFactory
+
+from .helpers import Always6, DEFAULT_OFFER_SCORE
 
 #   (events, providers_with_decreased_scores)
 sample_data = (
@@ -22,11 +24,6 @@ sample_data = (
     (((AgreementRejected, 1), (AgreementRejected, 1)), (1,)),
     (((AgreementRejected, 1), (AgreementConfirmed, 1), (AgreementRejected, 1)), (1,)),
 )
-
-
-class Always6(MarketStrategy):
-    async def score_offer(self, offer):
-        return 6
 
 
 @pytest.mark.asyncio
@@ -64,8 +61,6 @@ async def test_full_DSFUA_workflow(dummy_yagna_engine, events_def, decreased_pro
 
     that is - if events emitted by the engine reach the event consumer of the default strategy"""
 
-    default_score = 77.51937984496124  # this matches the OfferProposalFactory default
-
     golem = Golem(budget=1, event_consumer=empty_event_consumer, app_key="NOT_A_REAL_APPKEY")
     async with golem:
         for event_cls, event_provider_id in events_def:
@@ -77,6 +72,8 @@ async def test_full_DSFUA_workflow(dummy_yagna_engine, events_def, decreased_pro
         for provider_id in (1, 2):
             offer = OfferProposalFactory(provider_id=provider_id)
             expected_score = (
-                default_score / 2 if provider_id in decreased_providers else default_score
+                DEFAULT_OFFER_SCORE / 2
+                if provider_id in decreased_providers
+                else DEFAULT_OFFER_SCORE
             )
             assert expected_score == await golem._engine._strategy.score_offer(offer)
