@@ -34,7 +34,7 @@ class FastestProviderStrategy(MarketStrategy):
     def __init__(self):
         self.history = defaultdict(list)
 
-    async def score_offer(self, offer, _agreements_pool=None):
+    async def score_offer(self, offer):
         provider_id = offer.issuer
         previous_runs = self.history[provider_id]
 

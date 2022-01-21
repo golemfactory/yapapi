@@ -1,9 +1,9 @@
 from datetime import timedelta
 import itertools
-from typing import Any, Awaitable, Callable, Dict, Iterator, Optional, List, TYPE_CHECKING
+from typing import Any, Awaitable, Callable, Dict, Iterator, Optional, List, Type, TYPE_CHECKING
 
 import yapapi
-from yapapi.events import CommandExecuted
+from yapapi.events import CommandEvent, CommandExecuted, ScriptEventType
 from yapapi.script.capture import CaptureContext
 from yapapi.script.command import (
     BatchCommand,
@@ -20,6 +20,7 @@ from yapapi.script.command import (
     Terminate,
 )
 from yapapi.storage import DOWNLOAD_BYTES_LIMIT_DEFAULT
+from yapapi.rest.activity import CommandExecutionError
 
 if TYPE_CHECKING:
     from yapapi.ctx import WorkContext
@@ -59,6 +60,25 @@ class Script:
         self._commands: List[Command] = []
         self._id: int = next(script_ids)
 
+    def emit(self, event_class: Type[ScriptEventType], **kwargs) -> ScriptEventType:
+        return self._ctx.emit(event_class, script=self, **kwargs)
+
+    def process_batch_event(
+        self, event_class: Type[CommandEvent], event_kwargs: Dict[str, Any]
+    ) -> CommandEvent:
+        """Event emiting and special events.CommandExecuted logic"""
+        command = self._commands[event_kwargs["cmd_idx"]]
+        del event_kwargs["cmd_idx"]
+        event = command.emit(event_class, **event_kwargs)
+
+        if isinstance(event, CommandExecuted):
+            if event.success:
+                command._result.set_result(event)
+            else:
+                command_str = str(command.evaluate(self._ctx))  # TODO -> Command.`__repr__`
+                raise CommandExecutionError(command_str, event.message, event.stderr)
+        return event  # type: ignore # -> TODO #786
+
     @property
     def id(self) -> int:
         """Return the ID of this :class:`Script` instance.
@@ -85,13 +105,10 @@ class Script:
         for cmd in self._commands:
             await cmd.before(self._ctx)
 
-    def _set_cmd_result(self, cmd_event: CommandExecuted) -> None:
-        cmd = self._commands[cmd_event.cmd_idx]
-        cmd._result.set_result(cmd_event)
-
     def add(self, cmd: Command) -> Awaitable[CommandExecuted]:
         """Add a :class:`yapapi.script.command.Command` to the :class:`Script`"""
         self._commands.append(cmd)
+        cmd._set_script(self)
         return cmd._result
 
     def deploy(self, **kwargs: dict) -> Awaitable[CommandExecuted]:

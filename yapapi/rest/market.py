@@ -114,6 +114,9 @@ class Agreement(object):
             logger.debug("terminateAgreement(%s) failed", self._id, exc_info=True)
             return False
 
+    def __repr__(self):
+        return f"Agreement(id={self.id})"
+
 
 class OfferProposal(object):
     """Mid-level interface to handle the negotiation phase between the parties."""

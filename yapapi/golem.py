@@ -27,9 +27,12 @@ from yapapi.executor import Executor
 from yapapi.executor.task import Task
 from yapapi.network import Network
 from yapapi.payload import Payload
+from yapapi.props import com
 from yapapi.script import Script
-from yapapi.services import Cluster, Service
+from yapapi.services import Cluster, ServiceType
 from yapapi.utils import warn_deprecated, Deprecated
+from yapapi.strategy import DecreaseScoreForUnconfirmedAgreement, LeastExpensiveLinearPayuMS
+
 
 if TYPE_CHECKING:
     from yapapi.strategy import MarketStrategy
@@ -114,6 +117,11 @@ class Golem:
             warn_deprecated("network", "payment_network", "0.7.0", Deprecated.parameter)
             payment_network = payment_network if payment_network else network
 
+        self._event_consumers = [event_consumer or self._default_event_consumer()]
+
+        if not strategy:
+            strategy = self._initialize_default_strategy()
+
         self._engine_args = {
             "budget": budget,
             "strategy": strategy,
@@ -124,7 +132,6 @@ class Golem:
             "app_key": app_key,
         }
 
-        self._event_consumers = [event_consumer or self._default_event_consumer()]
         self._engine: _Engine = self._get_new_engine()
         self._engine_state_lock = asyncio.Lock()
 
@@ -283,7 +290,7 @@ class Golem:
 
     async def run_service(
         self,
-        service_class: Type[Service],
+        service_class: Type[ServiceType],
         num_instances: Optional[int] = None,
         instance_params: Optional[Iterable[Dict]] = None,
         payload: Optional[Payload] = None,
@@ -291,7 +298,7 @@ class Golem:
         respawn_unstarted_instances=True,
         network: Optional[Network] = None,
         network_addresses: Optional[List[str]] = None,
-    ) -> Cluster:
+    ) -> Cluster[ServiceType]:
         """Run a number of instances of a service represented by a given :class:`~yapapi.services.Service` subclass.
 
         :param service_class: a subclass of :class:`~yapapi.services.Service` that represents the service to be run
@@ -430,3 +437,13 @@ class Golem:
         from yapapi.log import log_event_repr, log_summary
 
         return log_summary(log_event_repr)
+
+    def _initialize_default_strategy(self) -> DecreaseScoreForUnconfirmedAgreement:
+        """Create a default strategy and register it's event consumer"""
+        base_strategy = LeastExpensiveLinearPayuMS(
+            max_fixed_price=Decimal("1.0"),
+            max_price_for={com.Counter.CPU: Decimal("0.2"), com.Counter.TIME: Decimal("0.1")},
+        )
+        strategy = DecreaseScoreForUnconfirmedAgreement(base_strategy, 0.5)
+        self._event_consumers.append(strategy.on_event)
+        return strategy

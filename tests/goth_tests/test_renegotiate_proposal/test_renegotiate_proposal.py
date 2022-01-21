@@ -38,6 +38,7 @@ async def test_renegotiation(
         async with requestor.run_command_on_host(test_script_path, env=os.environ) as (
             _cmd_task,
             cmd_monitor,
+            _process_container,
         ):
 
             await cmd_monitor.wait_for_pattern(r"\[.+\] Renegotiating", timeout=50)

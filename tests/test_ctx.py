@@ -46,7 +46,7 @@ class TestWorkContext:
 
     @staticmethod
     def _get_work_context(storage=None):
-        return WorkContext(mock.Mock(), mock.Mock(), storage=storage)
+        return WorkContext(mock.Mock(), mock.Mock(), storage=storage, emitter=mock.Mock())
 
     @staticmethod
     def _assert_dst_path(script: Script, dst_path):

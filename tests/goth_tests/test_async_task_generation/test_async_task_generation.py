@@ -40,7 +40,7 @@ async def test_async_task_generation(
 
         async with requestor.run_command_on_host(
             str(Path(__file__).parent / "requestor.py"), env=os.environ
-        ) as (_cmd_task, cmd_monitor):
+        ) as (_cmd_task, cmd_monitor, _process_container):
             # The requestor should print "task result: 3" once ...
             await cmd_monitor.wait_for_pattern("task result: 3", timeout=60)
             # ... then "task result: 2" twice ...

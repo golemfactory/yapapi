@@ -12,6 +12,7 @@ from typing import (
     Optional,
     Tuple,
     Type,
+    TypeVar,
     TYPE_CHECKING,
     Union,
 )
@@ -385,6 +386,9 @@ class Service:
     @property
     def service_instance(self):
         return self.__service_instance
+
+
+ServiceType = TypeVar("ServiceType", bound=Service)
 
 
 @dataclass

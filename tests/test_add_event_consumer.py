@@ -1,13 +1,14 @@
 import pytest
+from attr import asdict
 
 from yapapi import Golem, events
 
 
 sample_events = [
-    events.CollectFailed("foo", "bar"),
-    events.TaskStarted("job_id", "agreement_id", "task_id", [{"some": "data"}]),
+    events.CollectFailed(job="foo", subscription="bar", reason="baz"),
+    events.TaskStarted(job="a", agreement="b", activity="c", task="d"),
 ]
-emitted_events = sample_events + [events.ShutdownFinished(exc_info=None)]
+emitted_events = sample_events + [events.ShutdownFinished()]
 
 
 @pytest.mark.asyncio
@@ -15,6 +16,7 @@ async def test_emit_event(dummy_yagna_engine):
     got_events_1 = []
     got_events_2 = []
     got_events_3 = []
+    got_events_4 = []
 
     def event_consumer_1(event: events.Event) -> None:
         #   Event consumer passed to Golem()
@@ -32,11 +34,14 @@ async def test_emit_event(dummy_yagna_engine):
     await golem.add_event_consumer(event_consumer_2)
     async with golem:
         await golem.add_event_consumer(event_consumer_3)
-        for event in sample_events:
-            golem._engine.emit(event)
+        for sample_event in sample_events:
+            event_class, event_kwargs = type(sample_event), asdict(sample_event)
+            emitted_event = golem._engine.emit(event_class, **event_kwargs)
+            got_events_4.append(emitted_event)
     assert got_events_1 == emitted_events
     assert got_events_2 == emitted_events
     assert got_events_3 == emitted_events
+    assert got_events_4 == sample_events
 
     #   NOTE: We call `Golem.add_event_consumer` and event_consumers are passed to the _Engine.
     #         When exiting from golem contextmanager, new `_Engine` is created -> we must ensure
@@ -44,9 +49,13 @@ async def test_emit_event(dummy_yagna_engine):
     got_events_1.clear()
     got_events_2.clear()
     got_events_3.clear()
+    got_events_4.clear()
     async with golem:
-        for event in sample_events:
-            golem._engine.emit(event)
+        for sample_event in sample_events:
+            event_class, event_kwargs = type(sample_event), asdict(sample_event)
+            emitted_event = golem._engine.emit(event_class, **event_kwargs)
+            got_events_4.append(emitted_event)
     assert got_events_1 == emitted_events
     assert got_events_2 == emitted_events
     assert got_events_3 == emitted_events
+    assert got_events_4 == sample_events
