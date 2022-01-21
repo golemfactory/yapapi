@@ -175,6 +175,19 @@ class Golem:
         """Return the instance of `MarketStrategy` used by the engine"""
         return self._engine.strategy
 
+    @strategy.setter
+    def strategy(self, strategy: "MarketStrategy") -> None:
+        if self.operative:
+            #   NOTE: this restriction **might** be loosened in the future,
+            #         e.g. to allow "operative" Golem with an Engine that is
+            #         not working on any Job
+            raise AttributeError(
+                "Strategy replacement is possible only when Golem is not operative"
+            )
+
+        self._engine_args["strategy"] = strategy
+        self._engine._strategy = strategy
+
     @property
     def subnet_tag(self) -> Optional[str]:
         """Return the name of the subnet, or `None` if it is not set."""
