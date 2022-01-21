@@ -45,7 +45,6 @@ async def test_dynamic_change():
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="not implemented yet")
 async def test_default_strategy_update(dummy_yagna_engine):
     """Test if default strategy extended with ProviderFilter works as expected"""
     golem = Golem(budget=1, app_key="NOT_A_REAL_APPKEY")
