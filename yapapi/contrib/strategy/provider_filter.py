@@ -1,3 +1,5 @@
+import inspect
+
 from yapapi.strategy import MarketStrategy, SCORE_REJECTED
 from yapapi.props.builder import DemandBuilder
 from yapapi.rest.market import OfferProposal
@@ -66,7 +68,7 @@ class ProviderFilter(MarketStrategy):
 
     async def score_offer(self, offer: OfferProposal) -> float:
         allowed = self._is_allowed(offer.issuer)
-        if type(allowed) is not bool:
+        if inspect.iscoroutinefunction(allowed):
             allowed = await allowed  # type: ignore
 
         if not allowed:
