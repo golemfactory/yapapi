@@ -1,0 +1,15 @@
+loaders:
+  - type: python
+processors:
+  - type: filter
+  - type: smart
+  - type: crossref
+renderer:
+  type: mkdocs
+  pages:
+    - title: API Reference
+      contents:
+        - '*'
+  mkdocs_config:
+    site_name: yapapi
+    theme: readthedocs

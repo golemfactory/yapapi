@@ -1,4 +1,4 @@
-from .base import Model
+from .base import InvalidPropertiesError, Model, prop, constraint
 from dataclasses import dataclass, field
 from typing import Optional
 from decimal import Decimal
@@ -6,12 +6,17 @@ from datetime import datetime
 
 
 @dataclass
-class Identification(Model):
+class NodeInfo(Model):
+    """Properties describing the information regarding the node."""
+
     name: Optional[str] = field(default=None, metadata={"key": "golem.node.id.name"})
+    """human-readable name of the Golem node"""
+
     subnet_tag: Optional[str] = field(default=None, metadata={"key": "golem.node.debug.subnet"})
+    """the name of the subnet within which the Demands and Offers are matched"""
 
 
-IdentificationKeys = Identification.keys()
+NodeInfoKeys = NodeInfo.property_keys()
 
 
 @dataclass()
@@ -47,8 +52,12 @@ class Activity(Model):
     expiration: Optional[datetime] = field(
         default=None, metadata={"key": "golem.srv.comp.expiration"}
     )
-    """
+    multi_activity: Optional[bool] = field(
+        default=None,
+        metadata={"key": "golem.srv.caps.multi-activity"},
+    )
+    """Whether client supports multi_activity (executing more than one activity per agreement).
     """
 
 
-ActivityKeys = Activity.keys()
+ActivityKeys = Activity.property_keys()

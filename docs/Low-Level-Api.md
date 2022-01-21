@@ -15,11 +15,11 @@ async def list_offers(conf: Configuration):
     async with conf.market() as client:
         market_api = Market(client)
         dbuild = DemandBuilder()
-        dbuild.add(yp.Identification(name="some scanning node"))
+        dbuild.add(yp.NodeInfo(name="some scanning node"))
         dbuild.add(yp.Activity(expiration=datetime.now(timezone.utc)))
 
         async with market_api.subscribe(
-            dbuild.props, dbuild.cons
+            dbuild.properties, dbuild.constraints
         ) as subscription:
             async for event in subscription.events():
                 print("event=", event)

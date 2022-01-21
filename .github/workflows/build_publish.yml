@@ -2,7 +2,7 @@ name: Build and publish the release
 
 on:
   release:
-    types: [ prereleased, released ]
+    types: [prereleased, released]
 
 jobs:
   test:
@@ -14,9 +14,9 @@ jobs:
       - uses: actions/setup-python@v1
         with:
           python-version: 3.8
-      - uses: Gr1N/setup-poetry@v2
+      - uses: Gr1N/setup-poetry@v4
         with:
-          poetry-version: 1.0.10
+          poetry-version: 1.1.4
       - run: poetry install -E cli
       - run: poetry run poe test
       - run: poetry run poe typecheck
@@ -33,9 +33,9 @@ jobs:
       - uses: actions/setup-python@v1
         with:
           python-version: 3.8
-      - uses: Gr1N/setup-poetry@v2
+      - uses: Gr1N/setup-poetry@v4
         with:
-          poetry-version: 1.0.10
+          poetry-version: 1.1.4
       - name: Get git release tag
         run: echo "::set-output name=git-release-tag::yapapi $(git describe --tags)"
         id: git_describe
@@ -44,14 +44,40 @@ jobs:
         id: poetry_version
       - name: Fail on version mismatch
         run: exit 1
-        if: ${{ steps.git_describe.outputs.git-release-tag != steps.poetry_version.outputs.poetry-version }}
+        if:
+          ${{ steps.git_describe.outputs.git-release-tag !=
+          steps.poetry_version.outputs.poetry-version }}
       - name: Build the release
         run: poetry build
       - name: Store the built package
         uses: actions/upload-artifact@v2
         with:
-            name: dist
-            path: dist
+          name: dist
+          path: dist
+
+  test_publish:
+    needs: [build]
+    name: Publish the release to test.pypi
+    runs-on: ubuntu-latest
+    if: ${{ github.event.action == 'prereleased' }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+      - uses: Gr1N/setup-poetry@v4
+        with:
+          poetry-version: 1.1.4
+      - name: Retrieve the built package
+        uses: actions/download-artifact@v2
+        with:
+          name: dist
+          path: dist
+      - name: Publish to pypi
+        run: |
+          poetry config repositories.testpypi https://test.pypi.org/legacy/
+          poetry publish -r testpypi -u __token__ -p ${{ secrets.TESTPYPI_TOKEN }}
 
   publish:
     needs: [build]
@@ -64,9 +90,9 @@ jobs:
       - uses: actions/setup-python@v1
         with:
           python-version: 3.8
-      - uses: Gr1N/setup-poetry@v2
+      - uses: Gr1N/setup-poetry@v4
         with:
-          poetry-version: 1.0.10
+          poetry-version: 1.1.4
       - name: Retrieve the built package
         uses: actions/download-artifact@v2
         with:
@@ -74,5 +100,4 @@ jobs:
           path: dist
       - name: Publish to pypi
         run: |
-          poetry config repositories.testpypi https://test.pypi.org/legacy/
-          poetry publish -r testpypi -u __token__ -p ${{ secrets.TESTPYPI_TOKEN }}
+          poetry publish -u __token__ -p ${{ secrets.PYPI_TOKEN }}

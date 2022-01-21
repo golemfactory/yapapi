@@ -2,6 +2,14 @@ __pycache__/
 .mypy_cache
 .idea
 venv
+*.egg-info
+
+#   files created by tests and examples
+*.log
+*.png
+.coverage
+
+tests/goth_tests/assets/
 
 dist/
 poetry.lock

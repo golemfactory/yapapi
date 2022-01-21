@@ -3,9 +3,11 @@ on:
   push:
     branches:
       - master
+      - b0.*
   pull_request:
     branches:
       - master
+      - b0.*
 
 jobs:
   test:
@@ -13,11 +15,18 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8, 3.9]
         os:
           - ubuntu-latest
           - macos-latest
           - windows-latest
+        exclude:
+          - os: windows-latest
+            python-version: 3.9
+          - os: macos-latest
+            python-version: 3.9
+          - os: macos-latest
+            python-version: 3.6
       fail-fast: false
 
     steps:
@@ -25,16 +34,28 @@ jobs:
       - uses: actions/setup-python@v1
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: Gr1N/setup-poetry@v2
+      - uses: Gr1N/setup-poetry@v4
         with:
-          poetry-version: 1.0.10
-      - run: echo "::set-env name=EXTENDED_CHECK::1"
+          poetry-version: 1.1.4
+
+      - run: echo "::set-output name=ENABLE::1"
         if: ${{ matrix.os == 'ubuntu-latest' }}
         name: Enable extended checks
-      - run: poetry install -E cli
+        id: extended-checks
+      - run: echo "::set-output name=ENABLE::1"
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.8' }}
+        name: Enable sphinx check
+        id: extended-checks-sphinx
+
+      - run: poetry install
+      - run: poetry install -E docs
+        if: ${{ steps.extended-checks-sphinx.outputs.ENABLE }}
+
       - run: poetry run poe test
       - run: poetry run poe typecheck
       - run: poetry run poe codestyle
-        if: ${{ env.EXTENDED_CHECK }}
+        if: ${{ steps.extended-checks.outputs.ENABLE }}
       - run: poetry run poe liccheck
-        if: ${{ env.EXTENDED_CHECK }}
+        if: ${{ steps.extended-checks.outputs.ENABLE }}
+      - run: poetry run poe sphinx -W
+        if: ${{ steps.extended-checks-sphinx.outputs.ENABLE }}
