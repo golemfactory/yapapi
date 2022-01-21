@@ -37,14 +37,25 @@ jobs:
       - uses: Gr1N/setup-poetry@v4
         with:
           poetry-version: 1.1.4
+
       - run: echo "::set-output name=ENABLE::1"
         if: ${{ matrix.os == 'ubuntu-latest' }}
         name: Enable extended checks
         id: extended-checks
-      - run: poetry install -E cli
+      - run: echo "::set-output name=ENABLE::1"
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.8' }}
+        name: Enable sphinx check
+        id: extended-checks-sphinx
+
+      - run: poetry install
+      - run: poetry install -E docs
+        if: ${{ steps.extended-checks-sphinx.outputs.ENABLE }}
+
       - run: poetry run poe test
       - run: poetry run poe typecheck
       - run: poetry run poe codestyle
         if: ${{ steps.extended-checks.outputs.ENABLE }}
       - run: poetry run poe liccheck
         if: ${{ steps.extended-checks.outputs.ENABLE }}
+      - run: poetry run poe sphinx -W
+        if: ${{ steps.extended-checks-sphinx.outputs.ENABLE }}

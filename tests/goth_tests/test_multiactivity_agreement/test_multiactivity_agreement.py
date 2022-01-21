@@ -21,7 +21,7 @@ async def assert_agreement_created(events):
     """Assert that `AgreementCreated` event occurs."""
 
     async for line in events:
-        m = re.match(r"AgreementCreated\(.*agr_id='([^']+)'", line)
+        m = re.match(r"AgreementCreated\(.*Agreement\(id=([0-9a-f]+)", line)
         if m:
             return m.group(1)
     raise AssertionError("Expected AgreementCreated event")
@@ -35,11 +35,11 @@ async def assert_multiple_workers_run(agr_id, events):
     workers_finished = 0
 
     async for line in events:
-        m = re.match(r"WorkerFinished\(.*agr_id='([^']+)'", line)
+        m = re.match(r"WorkerFinished\(.*Agreement\(id=([0-9a-f]+)", line)
         if m:
             worker_agr_id = m.group(1)
             assert worker_agr_id == agr_id, "Worker run for another agreement"
-            assert line.endswith(" exc_info=None)"), "Worker finished with error"
+            assert not "exception" in line, "Worker finished with error"
             workers_finished += 1
         elif re.match("ComputationFinished", line):
             break
@@ -74,7 +74,7 @@ async def test_multiactivity_agreement(
 
         async with requestor.run_command_on_host(
             str(Path(__file__).parent / "requestor.py"), env=os.environ
-        ) as (_cmd_task, cmd_monitor):
+        ) as (_cmd_task, cmd_monitor, _process_monitor):
 
             # Wait for agreement
             assertion = cmd_monitor.add_assertion(assert_agreement_created)

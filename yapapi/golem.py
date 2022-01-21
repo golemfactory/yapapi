@@ -27,9 +27,12 @@ from yapapi.executor import Executor
 from yapapi.executor.task import Task
 from yapapi.network import Network
 from yapapi.payload import Payload
+from yapapi.props import com
 from yapapi.script import Script
-from yapapi.services import Cluster, Service
+from yapapi.services import Cluster, ServiceType
 from yapapi.utils import warn_deprecated, Deprecated
+from yapapi.strategy import DecreaseScoreForUnconfirmedAgreement, LeastExpensiveLinearPayuMS
+
 
 if TYPE_CHECKING:
     from yapapi.strategy import MarketStrategy
@@ -95,7 +98,7 @@ class Golem:
             Uses `YAGNA_SUBNET` environment variable, defaults to `None`
         :param driver: deprecated, please use `payment_driver` instead
         :param payment_driver: name of the payment driver to use. Uses `YAGNA_PAYMENT_DRIVER`
-            environment variable, defaults to `zksync`. Only payment platforms with
+            environment variable, defaults to `erc20`. Only payment platforms with
             the specified driver will be used
         :param network: deprecated, please use `payment_network` instead
         :param payment_network: name of the network to use. Uses `YAGNA_NETWORK` environment
@@ -114,19 +117,30 @@ class Golem:
             warn_deprecated("network", "payment_network", "0.7.0", Deprecated.parameter)
             payment_network = payment_network if payment_network else network
 
+        self._event_consumers = [event_consumer or self._default_event_consumer()]
+
+        if not strategy:
+            strategy = self._initialize_default_strategy()
+
         self._engine_args = {
             "budget": budget,
             "strategy": strategy,
             "subnet_tag": subnet_tag,
             "payment_driver": payment_driver,
             "payment_network": payment_network,
-            "event_consumer": event_consumer,
             "stream_output": stream_output,
             "app_key": app_key,
         }
 
         self._engine: _Engine = self._get_new_engine()
         self._engine_state_lock = asyncio.Lock()
+
+    async def add_event_consumer(self, event_consumer: Callable[[events.Event], None]) -> None:
+        """Initialize another `event_consumer`, working just like `event_consumer` passed in `__init__`"""
+        if self._engine.started:
+            await self._engine.add_event_consumer(event_consumer)
+
+        self._event_consumers.append(event_consumer)
 
     @property
     def driver(self) -> str:
@@ -177,6 +191,11 @@ class Golem:
                 if self.operative:
                     #   Something started us before we got to the locked part
                     return
+
+                #   NOTE: we add consumers to the not-yet-started Engine, because this is the only
+                #   way to capture ShutdownFinished event with current Engine implementation
+                for event_consumer in self._event_consumers:
+                    await self._engine.add_event_consumer(event_consumer)
                 await self._engine.start()
         except:
             await self._stop_with_exc_info(*sys.exc_info())
@@ -199,6 +218,7 @@ class Golem:
         #   Engine that was stopped is not usable anymore, there is no "full" cleanup.
         #   That's why here we replace it with a fresh one.
         self._engine = self._get_new_engine()
+
         return res
 
     def _get_new_engine(self):
@@ -270,7 +290,7 @@ class Golem:
 
     async def run_service(
         self,
-        service_class: Type[Service],
+        service_class: Type[ServiceType],
         num_instances: Optional[int] = None,
         instance_params: Optional[Iterable[Dict]] = None,
         payload: Optional[Payload] = None,
@@ -278,7 +298,7 @@ class Golem:
         respawn_unstarted_instances=True,
         network: Optional[Network] = None,
         network_addresses: Optional[List[str]] = None,
-    ) -> Cluster:
+    ) -> Cluster[ServiceType]:
         """Run a number of instances of a service represented by a given :class:`~yapapi.services.Service` subclass.
 
         :param service_class: a subclass of :class:`~yapapi.services.Service` that represents the service to be run
@@ -411,3 +431,19 @@ class Golem:
         return await Network.create(
             self._engine._net_api, ip, identity, owner_ip, mask=mask, gateway=gateway
         )
+
+    @staticmethod
+    def _default_event_consumer() -> Callable[[events.Event], None]:
+        from yapapi.log import log_event_repr, log_summary
+
+        return log_summary(log_event_repr)
+
+    def _initialize_default_strategy(self) -> DecreaseScoreForUnconfirmedAgreement:
+        """Create a default strategy and register it's event consumer"""
+        base_strategy = LeastExpensiveLinearPayuMS(
+            max_fixed_price=Decimal("1.0"),
+            max_price_for={com.Counter.CPU: Decimal("0.2"), com.Counter.TIME: Decimal("0.1")},
+        )
+        strategy = DecreaseScoreForUnconfirmedAgreement(base_strategy, 0.5)
+        self._event_consumers.append(strategy.on_event)
+        return strategy

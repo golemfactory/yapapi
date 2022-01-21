@@ -47,6 +47,14 @@ def pytest_addoption(parser):
                 `docker-compose.build-environment.release-tag=0.6.`",
     )
 
+    parser.addoption(
+        "--ssh-verify-connection",
+        action="store_true",
+        help="in the `test_run_ssh.py`, peform an actual SSH connection through "
+        "the exposed websocket. Requires both `ssh` and `websocket` binaries "
+        "to be available in the path.",
+    )
+
 
 @pytest.fixture(scope="function")
 def config_overrides(request) -> List[Override]:
@@ -59,6 +67,11 @@ def config_overrides(request) -> List[Override]:
 
     overrides: List[str] = request.config.option.config_override or []
     return cast(List[Override], [tuple(o.split("=", 1)) for o in overrides])
+
+
+@pytest.fixture
+def ssh_verify_connection(request):
+    return request.config.option.ssh_verify_connection
 
 
 @pytest.fixture(scope="session")

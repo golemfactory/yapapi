@@ -67,7 +67,7 @@ async def test_power_outage(
         async with requestor.run_command_on_host(
             f"{blender_path} --subnet-tag goth --min-cpu-threads 1",
             env=os.environ,
-        ) as (_cmd_task, cmd_monitor):
+        ) as (_cmd_task, cmd_monitor, _process_monitor):
 
             # Add assertions to the command output monitor `cmd_monitor`:
             cmd_monitor.add_assertion(assert_no_errors)
@@ -84,7 +84,7 @@ async def test_power_outage(
             logger.info("Agreement confirmed")
 
             await cmd_monitor.wait_for_pattern(
-                ".*Task started on provider 'provider-1'.*", timeout=10
+                ".*Task started on provider 'provider-1'.*", timeout=20
             )
 
             logger.debug("Stopping provider 1")
