@@ -60,7 +60,7 @@ async def test_instance_restart(
 
         async with requestor.run_command_on_host(
             str(Path(__file__).parent / "requestor.py"), env=os.environ
-        ) as (_cmd_task, cmd_monitor, _process_container):
+        ) as (_cmd_task, cmd_monitor, _process_monitor):
 
             cmd_monitor.add_assertion(count_instances)
 
