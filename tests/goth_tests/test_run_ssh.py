@@ -52,7 +52,7 @@ async def test_run_ssh(
         async with requestor.run_command_on_host(
             f"{requestor_path} --subnet-tag {SUBNET_TAG}",
             env=os.environ,
-        ) as (_cmd_task, cmd_monitor, process_container):
+        ) as (_cmd_task, cmd_monitor, process_monitor):
             start_time = time.time()
 
             def elapsed_time():
@@ -112,7 +112,7 @@ async def test_run_ssh(
 
                 logger.info("SSH connections confirmed.")
 
-            proc: asyncio.subprocess.Process = await process_container.get_process()
+            proc: asyncio.subprocess.Process = await process_monitor.get_process()
             proc.send_signal(signal.SIGINT)
             logger.info("Sent SIGINT...")
 
