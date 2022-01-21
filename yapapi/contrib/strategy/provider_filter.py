@@ -15,7 +15,7 @@ class ProviderFilter(MarketStrategy):
     :param base_strategy: a market strategy that will be used to score offers from allowed providers
     :param is_allowed: a callable that accepts provider_id as an argument and returns either a boolean,
         or a boolean-returning awaitable, determining if offers from this provider should be considered
-        (that is: scored by the base_strategy)
+        (that is: scored by the `base_strategy`)
 
     Example 1. Block selected providers::
 
@@ -36,14 +36,7 @@ class ProviderFilter(MarketStrategy):
         base_strategy = SomeStrategy()
         strategy = ProviderFilter(base_strategy, is_allowed)
 
-
-    Example 3. Disable a provider for a running Golem instance::
-
-        async with Golem(...) as golem:
-            # ... whatever - this can be done when computations are already in progress
-            golem.strategy = ProviderFilter(golem.strategy, lambda provider_id: provider_id != '123abcbaaaaad')
-
-    Example 4. Disable every provider that fails to create an activity::
+    Example 3. Use the default strategy, but disable every provider that fails to create an activity::
 
         from yapapi import events
 
@@ -53,9 +46,12 @@ class ProviderFilter(MarketStrategy):
             if isinstance(event, events.ActivityCreateFailed):
                 bad_providers.add(event.provider_id)
 
-        async with Golem(...) as golem:
-            await golem.add_event_consumer(denying_event_consumer)
-            golem.strategy = ProviderFilter(golem.strategy, lambda provider_id: provider_id not in bad_providers)
+        golem = Golem(...)
+        golem.strategy = ProviderFilter(golem.strategy, lambda provider_id: provider_id not in bad_providers)
+        await golem.add_event_consumer(denying_event_consumer)
+
+        async with golem:
+            ...
 
         #   NOTE: this will currently work only for **new** offers from the provider, because old offers are already
         #   scored, this should improve in https://github.com/golemfactory/yapapi/issues/820
