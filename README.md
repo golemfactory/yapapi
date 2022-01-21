@@ -61,7 +61,7 @@ Now, you can install goth and its additional python requirements:
 poetry install -E integration-tests
 ```
 
-Finally, install goth's assets:
+Finally, generate goth's default assets:
 
 ```
 poetry run poe goth-assets
