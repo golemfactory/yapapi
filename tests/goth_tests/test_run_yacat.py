@@ -67,7 +67,7 @@ async def test_run_yacat(
             f"{yacat_path} --mask ?a?a --hash $P$5ZDzPE45CigTC6EY4cXbyJSLj/pGee0 "
             f"--subnet-tag goth --chunk-size {CHUNK_SIZE} --max-workers {PROVIDER_COUNT}",
             env=os.environ,
-        ) as (_cmd_task, cmd_monitor, _process_container):
+        ) as (_cmd_task, cmd_monitor, _process_monitor):
 
             # Add assertions to the command output monitor `cmd_monitor`:
             cmd_monitor.add_assertion(assert_no_errors)
