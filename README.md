@@ -7,9 +7,21 @@
 [![GitHub license](https://img.shields.io/github/license/golemfactory/yapapi)](https://github.com/golemfactory/yapapi/blob/master/LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/golemfactory/yapapi)](https://github.com/golemfactory/yapapi/issues)
 
-## Installation
+## What's Golem and yapapi?
 
-`yapapi` is available as a [PyPI package](https://pypi.org/project/yapapi/0.6.2/).
+**[Golem](https://golem.network)** is a global, open-source, decentralized supercomputer that anyone can access.
+It connects individual machines to form a vast network which combines their resources and allows requestors to utilize its unique potential - which may be its combined computing power, storage, the geographical distribution or its censorship resistance.
+
+**Yapapi** is the Python high-level API that allows developers to connect to their Golem nodes and manage their distributed, computational loads through Golem Network.
+
+## Golem application development
+
+For a detailed introduction to using Golem and yapapi to run your tasks on Golem and a guide to Golem Network application development in general, [please consult our handbook](https://handbook.golem.network/requestor-tutorials/flash-tutorial-of-requestor-development).
+
+
+### Installation
+
+`yapapi` is available as a [PyPI package](https://pypi.org/project/yapapi/).
 
 You can install it through `pip`:
 ```
@@ -21,11 +33,11 @@ Or if your project uses [`poetry`](https://python-poetry.org/) you can add it to
 poetry add yapapi
 ```
 
-## API Reference
+### API Reference
 
 For a comprehensive API reference, please refer to [our official readthedocs page](https://yapapi.readthedocs.io/).
 
-## Local development setup
+## Local setup for yapapi developers
 
 ### Poetry
 `yapapi` uses [`poetry`](https://python-poetry.org/) to manage its dependencies and provide a runner for common tasks.
@@ -45,9 +57,9 @@ By default, `poetry` looks for the required Python version on your `PATH` and cr
 
 All of the project's dependencies will be installed to that virtual environment.
 
-## Running `goth` integration tests
+### Running `goth` integration tests
 
-### Prerequisites
+#### Prerequisites
 
 If you'd like to run the `yapapi` integration test suite locally then you'll need to install an additional set of dependencies separately.
 
@@ -67,7 +79,7 @@ Finally, generate goth's default assets:
 poetry run poe goth-assets
 ```
 
-### Running the tests
+#### Running the tests
 
 Once you have the environment set up, to run all the integration tests, use:
 
@@ -77,8 +89,7 @@ poetry run poe goth-tests
 
 ## See also
 
-* [Golem](https://golem.network), a global, open-source, decentralized supercomputer
-that anyone can access.
+* [Golem](https://golem.network), a global, open-source, decentralized supercomputer that anyone can access.
 * Learn what you need to know to set-up your Golem requestor node:
     * [Requestor development: a quick primer](https://handbook.golem.network/requestor-tutorials/flash-tutorial-of-requestor-development)
     * [Run first task on Golem](https://handbook.golem.network/requestor-tutorials/flash-tutorial-of-requestor-development/run-first-task-on-golem)
@@ -88,7 +99,7 @@ that anyone can access.
     * [Task Model development](https://handbook.golem.network/requestor-tutorials/task-processing-development)
     * [Service Model development](https://handbook.golem.network/requestor-tutorials/service-development)
 
-### Environment variables
+## Environment variables
 
 It's possible to set various elements of `yagna` configuration through environment variables.
 `yapapi` currently supports the following environment variables:
