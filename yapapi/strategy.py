@@ -190,3 +190,16 @@ class DecreaseScoreForUnconfirmedAgreement(MarketStrategy):
             self._logger.debug("Decreasing score for offer %s from '%s'", offer.id, offer.issuer)
             score *= self.factor
         return score
+
+
+class StrategySupportingMidAgreementPayments(MarketStrategy):
+    """Strategy adding support for negotiating mid-agreement payment properties to the base strategy."""
+
+    base_strategy: MarketStrategy
+
+    def __init__(self, base_strategy):
+        """
+        :param base_strategy: the base strategy around which this strategy is wrapped
+        """
+        self.base_strategy = base_strategy
+        self._logger = logging.getLogger(f"{__name__}.{type(self).__name__}")
