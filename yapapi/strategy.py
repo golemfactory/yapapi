@@ -196,6 +196,7 @@ class StrategySupportingMidAgreementPayments(MarketStrategy):
     """Strategy that adds support for negotiating mid-agreement payment properties to the base strategy."""
 
     base_strategy: MarketStrategy
+    # TODO: dict property -> range of valid values; default values
 
     def __init__(self, base_strategy):
         """
@@ -203,3 +204,12 @@ class StrategySupportingMidAgreementPayments(MarketStrategy):
         """
         self.base_strategy = base_strategy
         self._logger = logging.getLogger(f"{__name__}.{type(self).__name__}")
+
+    async def decorate_demand(self, demand: DemandBuilder) -> None:
+        # TODO: add properties required to support mid-agreement payments
+        await self.base_strategy.decorate_demand(demand)
+
+    async def score_offer(self, offer: rest.market.OfferProposal) -> float:
+        # TODO: reject offers that have values that are not accepted by this requestor
+        score = await self.base_strategy.score_offer(offer)
+        return score
