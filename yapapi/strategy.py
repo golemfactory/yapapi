@@ -193,7 +193,7 @@ class DecreaseScoreForUnconfirmedAgreement(MarketStrategy):
 
 
 class StrategySupportingMidAgreementPayments(MarketStrategy):
-    """Strategy adding support for negotiating mid-agreement payment properties to the base strategy."""
+    """Strategy that adds support for negotiating mid-agreement payment properties to the base strategy."""
 
     base_strategy: MarketStrategy
 
