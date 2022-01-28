@@ -768,13 +768,10 @@ class Job:
                 # reject proposal if there are no common payment platforms
                 return await reject_proposal("No common payment platform")
 
-            # Check if the timeout for debit note acceptance is not too low
-            timeout = proposal.props.get(DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP)
-            if timeout:
-                if timeout < DEBIT_NOTE_MIN_TIMEOUT:
-                    return await reject_proposal("Debit note acceptance timeout is too short")
-                else:
-                    demand_builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
+            try:
+                demand_builder = await self.engine._strategy.answer_to_provider_offer(demand_builder, proposal)
+            except Exception as e:
+                return await reject_proposal(str(e))
 
             await proposal.respond(demand_builder.properties, demand_builder.constraints)
             return self.emit(events.ProposalResponded, proposal=proposal)

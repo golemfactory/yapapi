@@ -29,10 +29,10 @@ class MarketStrategy(DemandDecorator, abc.ABC):
 
     valid_prop_value_ranges: Dict[str, Tuple[float, float]]
 
-    def setValidPropValueRanges(self, ranges) -> None:
+    def setValidPropValueRanges(self, valid_prop_value_ranges) -> None:
         self.valid_prop_value_ranges = valid_prop_value_ranges
 
-    def answer_to_provider_offer(
+    async def answer_to_provider_offer(
         self,
         our_demand: DemandBuilder,
         provider_offer: rest.market.OfferProposal
@@ -42,9 +42,10 @@ class MarketStrategy(DemandDecorator, abc.ABC):
             prop_value = provider_offer.props.get(prop_name)
             valid_range = self.valid_prop_value_ranges[prop_name]
             if prop_value:
-                # Rejects offers that have values that are not accepted by this requestor.
                 if prop_value < valid_range[0] or prop_value > valid_range[1]:
-                    return None
+                    raise Exception(
+                        f"Negotiated property {prop_name} not in the {valid_range[0]}..{valid_range[1]} range."
+                    )
                 else:
                     updated_demand.properties[prop_name] = prop_value
         return updated_demand
@@ -231,7 +232,7 @@ class StrategySupportingMidAgreementPayments(MarketStrategy):
     async def decorate_demand(self, demand: DemandBuilder) -> None:
         await self.base_strategy.decorate_demand(demand)
         # To enable mid-agreement payments, golem.srv.comp.expiration must be set to a large value.
-        demand.add(Activity(expiration=datetime.max))
+        demand.add(Activity(expiration=date.max))
 
     async def score_offer(self, offer: rest.market.OfferProposal) -> float:
         score = await self.base_strategy.score_offer(offer)
