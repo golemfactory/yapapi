@@ -27,9 +27,11 @@ SCORE_TRUSTED: Final[float] = 100.0
 class MarketStrategy(DemandDecorator, abc.ABC):
     """Abstract market strategy."""
 
-    valid_prop_value_ranges: Dict[str, Tuple[float, float]]
+    valid_prop_value_ranges: Dict[str, Tuple[Optional[float], Optional[float]]]
 
-    def set_valid_prop_value_ranges(self, valid_prop_value_ranges) -> None:
+    def set_valid_prop_value_ranges(
+        self, valid_prop_value_ranges: Dict[str, Tuple[Optional[float], Optional[float]]]
+    ) -> None:
         self.valid_prop_value_ranges = valid_prop_value_ranges
 
     async def answer_to_provider_offer(
@@ -40,12 +42,11 @@ class MarketStrategy(DemandDecorator, abc.ABC):
             prop_value = provider_offer.props.get(prop_name)
             valid_range = self.valid_prop_value_ranges[prop_name]
             if prop_value:
-                if prop_value < valid_range[0] or prop_value > valid_range[1]:
-                    raise Exception(
-                        f"Negotiated property {prop_name} not in the {valid_range[0]}..{valid_range[1]} range."
-                    )
-                else:
-                    updated_demand.properties[prop_name] = prop_value
+                if valid_range[0] is not None and prop_value < valid_range[0]:
+                    raise Exception(f"Negotiated property {prop_name} < {valid_range[0]}.")
+                if valid_range[1] is not None and prop_value > valid_range[1]:
+                    raise Exception(f"Negotiated property {prop_name} > {valid_range[1]}.")
+                updated_demand.properties[prop_name] = prop_value
         return updated_demand
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:

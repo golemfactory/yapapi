@@ -126,7 +126,7 @@ class _Engine:
 
         self._strategy = strategy
         strategy.set_valid_prop_value_ranges(
-            {DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: DEBIT_NOTE_MIN_TIMEOUT}
+            {DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: (DEBIT_NOTE_MIN_TIMEOUT, None)}
         )
 
         self._subnet: Optional[str] = subnet_tag or DEFAULT_SUBNET
