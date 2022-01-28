@@ -33,9 +33,7 @@ class MarketStrategy(DemandDecorator, abc.ABC):
         self.valid_prop_value_ranges = valid_prop_value_ranges
 
     async def answer_to_provider_offer(
-        self,
-        our_demand: DemandBuilder,
-        provider_offer: rest.market.OfferProposal
+        self, our_demand: DemandBuilder, provider_offer: rest.market.OfferProposal
     ) -> DemandBuilder:
         updated_demand = deepcopy(our_demand)
         for prop_name in self.valid_prop_value_ranges:
@@ -222,7 +220,9 @@ class StrategySupportingMidAgreementPayments(MarketStrategy):
 
     base_strategy: MarketStrategy
 
-    def __init__(self, base_strategy: MarketStrategy, valid_prop_value_ranges: Dict[str, Tuple[float, float]]):
+    def __init__(
+        self, base_strategy: MarketStrategy, valid_prop_value_ranges: Dict[str, Tuple[float, float]]
+    ):
         """
         :param base_strategy: the base strategy around which this strategy is wrapped
         """
