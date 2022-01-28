@@ -3,7 +3,7 @@
 import abc
 from collections import defaultdict
 from copy import deepcopy
-from datetime import date
+from datetime import datetime
 from decimal import Decimal
 import logging
 from types import MappingProxyType
@@ -37,7 +37,7 @@ class MarketStrategy(DemandDecorator, abc.ABC):
         our_demand: DemandBuilder,
         provider_offer: rest.market.OfferProposal
     ) -> Optional[DemandBuilder]:
-        updated_demand = our_demand.deepcopy()
+        updated_demand = deepcopy(our_demand)
         for prop_name in self.valid_prop_value_ranges:
             prop_value = provider_offer.props.get(prop_name)
             valid_range = self.valid_prop_value_ranges[prop_name]
@@ -232,7 +232,7 @@ class StrategySupportingMidAgreementPayments(MarketStrategy):
     async def decorate_demand(self, demand: DemandBuilder) -> None:
         await self.base_strategy.decorate_demand(demand)
         # To enable mid-agreement payments, golem.srv.comp.expiration must be set to a large value.
-        demand.add(Activity(expiration=date.max))
+        demand.add(Activity(expiration=datetime.max))
 
     async def score_offer(self, offer: rest.market.OfferProposal) -> float:
         score = await self.base_strategy.score_offer(offer)

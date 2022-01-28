@@ -125,6 +125,10 @@ class _Engine:
         self._wrapped_consumers: List[AsyncWrapper] = []
 
         self._strategy = strategy
+        strategy.setValidPropValueRanges({
+            DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: DEBIT_NOTE_MIN_TIMEOUT
+        })
+
         self._subnet: Optional[str] = subnet_tag or DEFAULT_SUBNET
         self._payment_driver: str = payment_driver.lower() if payment_driver else DEFAULT_DRIVER
         self._payment_network: str = payment_network.lower() if payment_network else DEFAULT_NETWORK
@@ -769,6 +773,7 @@ class Job:
                 return await reject_proposal("No common payment platform")
 
             try:
+                assert demand_builder is not None
                 demand_builder = await self.engine._strategy.answer_to_provider_offer(demand_builder, proposal)
             except Exception as e:
                 return await reject_proposal(str(e))
