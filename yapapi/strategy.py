@@ -2,7 +2,7 @@
 
 import abc
 from collections import defaultdict
-from datetime import timedelta
+from datetime import date
 from decimal import Decimal
 import logging
 from types import MappingProxyType
@@ -25,6 +25,28 @@ SCORE_TRUSTED: Final[float] = 100.0
 
 class MarketStrategy(DemandDecorator, abc.ABC):
     """Abstract market strategy."""
+
+    valid_prop_value_ranges: Dict[str, Tuple[float, float]]
+
+    def setValidPropValueRanges(self, ranges) -> None:
+        self.valid_prop_value_ranges = valid_prop_value_ranges
+
+    def negotiate(
+        self,
+        our_demand: DemandBuilder,
+        provider_offer: rest.market.OfferProposal
+    ) -> Optional[DemandBuilder]:
+        updated_demand = our_demand.copy()
+        for prop_name in self.valid_prop_value_ranges:
+            prop_value = provider_offer.props.get(prop_name)
+            valid_range = self.valid_prop_value_ranges[prop_name]
+            if prop_value:
+                # Rejects offers that have values that are not accepted by this requestor.
+                if prop_value < valid_range[0] or prop_value > valid_range[1]:
+                    return None
+                else:
+                    updated_demand.properties[prop_name] = prop_value
+        return updated_demand
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
         """Optionally add relevant constraints to a Demand."""
@@ -197,7 +219,6 @@ class StrategySupportingMidAgreementPayments(MarketStrategy):
     """Strategy that adds support for negotiating mid-agreement payment properties to the base strategy."""
 
     base_strategy: MarketStrategy
-    valid_prop_value_ranges: Dict[str, Tuple[float, float]]
 
     def __init__(self, base_strategy: MarketStrategy, valid_prop_value_ranges: Dict[str, Tuple[float, float]]):
         """
@@ -205,24 +226,12 @@ class StrategySupportingMidAgreementPayments(MarketStrategy):
         """
         self.base_strategy = base_strategy
         self._logger = logging.getLogger(f"{__name__}.{type(self).__name__}")
-        self.valid_prop_value_ranges = valid_prop_value_ranges
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
         await self.base_strategy.decorate_demand(demand)
         # To enable mid-agreement payments, golem.srv.comp.expiration must be set to a large value.
-        demand.add(Activity(expiration=timedelta.max))
+        demand.add(Activity(expiration=datetime.max))
 
     async def score_offer(self, offer: rest.market.OfferProposal) -> float:
-        for prop_name in self.valid_prop_value_ranges:
-            prop_value = offer.props.get(prop_name)
-            valid_range = self.valid_prop_value_ranges[prop_name]
-            if prop_value:
-                # Rejects offers that have values that are not accepted by this requestor.
-                if prop_value < valid_range[0] or prop_value > valid_range[1]:
-                    return SCORE_REJECTED
-                else:
-                    # TODO: demand_builder.properties[prop_name] = prop_value
-                    pass
-
         score = await self.base_strategy.score_offer(offer)
         return score
