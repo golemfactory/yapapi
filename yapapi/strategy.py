@@ -6,7 +6,7 @@ from datetime import timedelta
 from decimal import Decimal
 import logging
 from types import MappingProxyType
-from typing import Dict, Mapping, Optional, Set, Union
+from typing import Dict, Mapping, Optional, Set, Tuple, Union
 
 from dataclasses import dataclass
 from typing_extensions import Final
