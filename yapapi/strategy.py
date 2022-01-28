@@ -32,7 +32,7 @@ class MarketStrategy(DemandDecorator, abc.ABC):
     def setValidPropValueRanges(self, ranges) -> None:
         self.valid_prop_value_ranges = valid_prop_value_ranges
 
-    def negotiate(
+    def answer_to_provider_offer(
         self,
         our_demand: DemandBuilder,
         provider_offer: rest.market.OfferProposal
