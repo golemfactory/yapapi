@@ -2,6 +2,7 @@
 
 import abc
 from collections import defaultdict
+from copy import deepcopy
 from datetime import date
 from decimal import Decimal
 import logging
@@ -36,7 +37,7 @@ class MarketStrategy(DemandDecorator, abc.ABC):
         our_demand: DemandBuilder,
         provider_offer: rest.market.OfferProposal
     ) -> Optional[DemandBuilder]:
-        updated_demand = our_demand.copy()
+        updated_demand = our_demand.deepcopy()
         for prop_name in self.valid_prop_value_ranges:
             prop_value = provider_offer.props.get(prop_name)
             valid_range = self.valid_prop_value_ranges[prop_name]
