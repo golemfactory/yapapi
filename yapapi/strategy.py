@@ -36,7 +36,7 @@ class MarketStrategy(DemandDecorator, abc.ABC):
         self,
         our_demand: DemandBuilder,
         provider_offer: rest.market.OfferProposal
-    ) -> Optional[DemandBuilder]:
+    ) -> DemandBuilder:
         updated_demand = deepcopy(our_demand)
         for prop_name in self.valid_prop_value_ranges:
             prop_value = provider_offer.props.get(prop_name)
