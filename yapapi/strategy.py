@@ -29,7 +29,7 @@ class MarketStrategy(DemandDecorator, abc.ABC):
 
     valid_prop_value_ranges: Dict[str, Tuple[float, float]]
 
-    def setValidPropValueRanges(self, valid_prop_value_ranges) -> None:
+    def set_valid_prop_value_ranges(self, valid_prop_value_ranges) -> None:
         self.valid_prop_value_ranges = valid_prop_value_ranges
 
     async def answer_to_provider_offer(

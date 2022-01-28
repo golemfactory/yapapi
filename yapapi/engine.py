@@ -125,7 +125,7 @@ class _Engine:
         self._wrapped_consumers: List[AsyncWrapper] = []
 
         self._strategy = strategy
-        strategy.setValidPropValueRanges(
+        strategy.set_valid_prop_value_ranges(
             {DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: DEBIT_NOTE_MIN_TIMEOUT}
         )
 
