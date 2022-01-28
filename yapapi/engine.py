@@ -773,7 +773,6 @@ class Job:
                 return await reject_proposal("No common payment platform")
 
             try:
-                assert demand_builder is not None
                 demand_builder = await self.engine._strategy.answer_to_provider_offer(demand_builder, proposal)
             except Exception as e:
                 return await reject_proposal(str(e))
