@@ -38,9 +38,8 @@ class MarketStrategy(DemandDecorator, abc.ABC):
         self, our_demand: DemandBuilder, provider_offer: rest.market.OfferProposal
     ) -> DemandBuilder:
         updated_demand = deepcopy(our_demand)
-        for prop_name in self.valid_prop_value_ranges:
+        for prop_name, valid_range in self.valid_prop_value_ranges.items():
             prop_value = provider_offer.props.get(prop_name)
-            valid_range = self.valid_prop_value_ranges[prop_name]
             if prop_value:
                 if valid_range[0] is not None and prop_value < valid_range[0]:
                     raise Exception(f"Negotiated property {prop_name} < {valid_range[0]}.")
