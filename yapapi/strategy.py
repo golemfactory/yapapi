@@ -224,7 +224,10 @@ class StrategySupportingMidAgreementPayments(MarketStrategy):
     def __init__(
         self,
         base_strategy: MarketStrategy,
-        valid_prop_value_ranges: Dict[str, Tuple[Optional[float], Optional[float]]],
+        valid_prop_value_ranges: Dict[str, Tuple[Optional[float], Optional[float]]] = {
+            "golem.com.scheme.payu.debit-note-interval-sec?": (20.0, None),
+            "golem.com.scheme.payu.payment-timeout-sec?": (None, None),
+        },
     ):
         """
         :param base_strategy: the base strategy around which this strategy is wrapped
