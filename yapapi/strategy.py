@@ -222,13 +222,16 @@ class StrategySupportingMidAgreementPayments(MarketStrategy):
     base_strategy: MarketStrategy
 
     def __init__(
-        self, base_strategy: MarketStrategy, valid_prop_value_ranges: Dict[str, Tuple[float, float]]
+        self,
+        base_strategy: MarketStrategy,
+        valid_prop_value_ranges: Dict[str, Tuple[Optional[float], Optional[float]]],
     ):
         """
         :param base_strategy: the base strategy around which this strategy is wrapped
         """
         self.base_strategy = base_strategy
         self._logger = logging.getLogger(f"{__name__}.{type(self).__name__}")
+        self.set_valid_prop_value_ranges(valid_prop_value_ranges)
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
         await self.base_strategy.decorate_demand(demand)
