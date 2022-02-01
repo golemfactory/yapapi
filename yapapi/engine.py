@@ -123,9 +123,11 @@ class _Engine:
         self._strategy = strategy
         # set default property value ranges if they were not set in the market strategy
         strategy.set_prop_value_ranges_defaults(
-            {"golem.com.payment.debit-notes.accept-timeout?": (30.0, None)},
-            {"golem.com.scheme.payu.debit-note-interval-sec?": (20.0, None)},
-            {"golem.com.scheme.payu.payment-timeout-sec?": (None, 3600.0)},
+            {
+                "golem.com.payment.debit-notes.accept-timeout?": (30.0, None),
+                "golem.com.scheme.payu.debit-note-interval-sec?": (20.0, None),
+                "golem.com.scheme.payu.payment-timeout-sec?": (None, 3600.0),
+            }
         )
 
         self._subnet: Optional[str] = subnet_tag or DEFAULT_SUBNET
