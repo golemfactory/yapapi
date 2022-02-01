@@ -2,7 +2,7 @@
 
 import abc
 from collections import defaultdict
-from copy import deepcopy
+from copy import copy, deepcopy
 from datetime import datetime
 from decimal import Decimal
 import logging
