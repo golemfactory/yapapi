@@ -35,7 +35,7 @@ class MarketStrategy(DemandDecorator, abc.ABC):
         try:
             self.valid_prop_value_ranges.update(valid_prop_value_ranges)
         except AttributeError:
-            self.valid_prop_value_ranges = valid_prop_value_ranges
+            self.valid_prop_value_ranges = valid_prop_value_ranges.copy()
 
     async def answer_to_provider_offer(
         self, our_demand: DemandBuilder, provider_offer: rest.market.OfferProposal
