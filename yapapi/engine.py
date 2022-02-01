@@ -762,6 +762,13 @@ class Job:
             demand_builder = self._demand_builder
             assert demand_builder is not None
 
+            try:
+                demand_builder = await self.engine._strategy.answer_to_provider_offer(
+                    demand_builder, proposal
+                )
+            except ValueError as e:
+                return await reject_proposal(str(e))
+
             # Check if any of the supported payment platforms matches the proposal
             common_platforms = self._get_common_payment_platforms(proposal)
             if common_platforms:
@@ -771,13 +778,6 @@ class Job:
             else:
                 # reject proposal if there are no common payment platforms
                 return await reject_proposal("No common payment platform")
-
-            try:
-                demand_builder = await self.engine._strategy.answer_to_provider_offer(
-                    demand_builder, proposal
-                )
-            except ValueError as e:
-                return await reject_proposal(str(e))
 
             await proposal.respond(demand_builder.properties, demand_builder.constraints)
             return self.emit(events.ProposalResponded, proposal=proposal)
