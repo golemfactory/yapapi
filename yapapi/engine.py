@@ -3,6 +3,7 @@ import aiohttp
 from asyncio import CancelledError
 from collections import defaultdict
 import contextlib
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -44,11 +45,6 @@ from yapapi.storage import gftp
 from yapapi.strategy import MarketStrategy, SCORE_NEUTRAL
 from yapapi.utils import AsyncWrapper
 
-
-DEBIT_NOTE_MIN_TIMEOUT: Final[int] = 30  # in seconds
-"Shortest debit note acceptance timeout the requestor will accept."
-
-DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: Final[str] = "golem.com.payment.debit-notes.accept-timeout?"
 
 DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "erc20").lower()
 DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "rinkeby").lower()
@@ -125,8 +121,11 @@ class _Engine:
         self._wrapped_consumers: List[AsyncWrapper] = []
 
         self._strategy = strategy
-        strategy.update_valid_prop_value_ranges(
-            {DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: (DEBIT_NOTE_MIN_TIMEOUT, None)}
+        # set default property value ranges if they were not set in the market strategy
+        strategy.set_prop_value_ranges_defaults(
+            {"golem.com.payment.debit-notes.accept-timeout?": (30.0, None)},
+            {"golem.com.scheme.payu.debit-note-interval-sec?": (20.0, None)},
+            {"golem.com.scheme.payu.payment-timeout-sec?": (None, 3600.0)},
         )
 
         self._subnet: Optional[str] = subnet_tag or DEFAULT_SUBNET
@@ -759,8 +758,8 @@ class Job:
             return await reject_proposal("Score too low")
 
         if ignore_draft or not proposal.is_draft:
-            demand_builder = self._demand_builder
-            assert demand_builder is not None
+            assert self._demand_builder is not None
+            demand_builder = deepcopy(self._demand_builder)
 
             try:
                 demand_builder = await self.engine._strategy.answer_to_provider_offer(

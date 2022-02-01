@@ -37,6 +37,17 @@ class MarketStrategy(DemandDecorator, abc.ABC):
         except AttributeError:
             self.valid_prop_value_ranges = copy(valid_prop_value_ranges)
 
+    def set_prop_value_ranges_defaults(
+        self, valid_prop_value_ranges: Dict[str, Tuple[Optional[float], Optional[float]]]
+    ) -> None:
+        try:
+            value_ranges = self.valid_prop_value_ranges
+            for key, value in valid_prop_value_ranges.items():
+                if key not in value_ranges:
+                    value_ranges[key] = value
+        except AttributeError:
+            self.valid_prop_value_ranges = copy(valid_prop_value_ranges)
+
     async def answer_to_provider_offer(
         self, our_demand: DemandBuilder, provider_offer: rest.market.OfferProposal
     ) -> DemandBuilder:
@@ -215,35 +226,4 @@ class DecreaseScoreForUnconfirmedAgreement(MarketStrategy):
         if offer.issuer in self._rejecting_providers and score > 0:
             self._logger.debug("Decreasing score for offer %s from '%s'", offer.id, offer.issuer)
             score *= self.factor
-        return score
-
-
-class StrategySupportingMidAgreementPayments(MarketStrategy):
-    """Strategy that adds support for negotiating mid-agreement payment properties to the base strategy."""
-
-    base_strategy: MarketStrategy
-
-    def __init__(
-        self,
-        base_strategy: MarketStrategy,
-        valid_prop_value_ranges: Dict[str, Tuple[Optional[float], Optional[float]]] = {},
-    ):
-        """
-        :param base_strategy: the base strategy around which this strategy is wrapped
-        """
-        self.base_strategy = base_strategy
-        self._logger = logging.getLogger(f"{__name__}.{type(self).__name__}")
-        if "golem.com.scheme.payu.debit-note-interval-sec?" not in valid_prop_value_ranges:
-            valid_prop_value_ranges["golem.com.scheme.payu.debit-note-interval-sec?"] = (20.0, None)
-        if "golem.com.scheme.payu.payment-timeout-sec?" not in valid_prop_value_ranges:
-            valid_prop_value_ranges["golem.com.scheme.payu.payment-timeout-sec?"] = (None, 3600.0)
-        self.update_valid_prop_value_ranges(valid_prop_value_ranges)
-
-    async def decorate_demand(self, demand: DemandBuilder) -> None:
-        await self.base_strategy.decorate_demand(demand)
-        # To enable mid-agreement payments, golem.srv.comp.expiration must be set to a large value.
-        demand.add(Activity(expiration=datetime.max))
-
-    async def score_offer(self, offer: rest.market.OfferProposal) -> float:
-        score = await self.base_strategy.score_offer(offer)
         return score
