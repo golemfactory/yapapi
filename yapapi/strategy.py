@@ -29,10 +29,13 @@ class MarketStrategy(DemandDecorator, abc.ABC):
 
     valid_prop_value_ranges: Dict[str, Tuple[Optional[float], Optional[float]]]
 
-    def set_valid_prop_value_ranges(
+    def update_valid_prop_value_ranges(
         self, valid_prop_value_ranges: Dict[str, Tuple[Optional[float], Optional[float]]]
     ) -> None:
-        self.valid_prop_value_ranges = valid_prop_value_ranges
+        try:
+            self.valid_prop_value_ranges.update(valid_prop_value_ranges)
+        except AttributeError:
+            self.valid_prop_value_ranges = valid_prop_value_ranges
 
     async def answer_to_provider_offer(
         self, our_demand: DemandBuilder, provider_offer: rest.market.OfferProposal
@@ -42,9 +45,9 @@ class MarketStrategy(DemandDecorator, abc.ABC):
             prop_value = provider_offer.props.get(prop_name)
             if prop_value:
                 if valid_range[0] is not None and prop_value < valid_range[0]:
-                    raise Exception(f"Negotiated property {prop_name} < {valid_range[0]}.")
+                    raise ValueError(f"Negotiated property {prop_name} < {valid_range[0]}.")
                 if valid_range[1] is not None and prop_value > valid_range[1]:
-                    raise Exception(f"Negotiated property {prop_name} > {valid_range[1]}.")
+                    raise ValueError(f"Negotiated property {prop_name} > {valid_range[1]}.")
                 updated_demand.properties[prop_name] = prop_value
         return updated_demand
 
@@ -234,7 +237,7 @@ class StrategySupportingMidAgreementPayments(MarketStrategy):
             valid_prop_value_ranges["golem.com.scheme.payu.debit-note-interval-sec?"] = (20.0, None)
         if "golem.com.scheme.payu.payment-timeout-sec?" not in valid_prop_value_ranges:
             valid_prop_value_ranges["golem.com.scheme.payu.payment-timeout-sec?"] = (None, 3600.0)
-        self.set_valid_prop_value_ranges(valid_prop_value_ranges)
+        self.update_valid_prop_value_ranges(valid_prop_value_ranges)
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
         await self.base_strategy.decorate_demand(demand)

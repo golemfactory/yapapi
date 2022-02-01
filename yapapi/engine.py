@@ -125,7 +125,7 @@ class _Engine:
         self._wrapped_consumers: List[AsyncWrapper] = []
 
         self._strategy = strategy
-        strategy.set_valid_prop_value_ranges(
+        strategy.update_valid_prop_value_ranges(
             {DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: (DEBIT_NOTE_MIN_TIMEOUT, None)}
         )
 
@@ -776,7 +776,7 @@ class Job:
                 demand_builder = await self.engine._strategy.answer_to_provider_offer(
                     demand_builder, proposal
                 )
-            except Exception as e:
+            except ValueError as e:
                 return await reject_proposal(str(e))
 
             await proposal.respond(demand_builder.properties, demand_builder.constraints)
