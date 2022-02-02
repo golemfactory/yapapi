@@ -141,6 +141,8 @@ class _Engine:
         # initialize the payment structures
         self._agreements_to_pay: Dict[JobId, Set[AgreementId]] = defaultdict(set)
         self._agreements_accepting_debit_notes: Dict[JobId, Set[AgreementId]] = defaultdict(set)
+        self._last_debit_note_for_agreement: Dict[AgreementId, datetime] = dict()
+        self._max_debit_note_interval: Dict[AgreementId, int] = dict()
         self._invoices: Dict[AgreementId, rest.payment.Invoice] = dict()
         self._payment_closing: bool = False
 
@@ -472,6 +474,20 @@ class _Engine:
                     agreement=agreement,
                     debit_note=debit_note,
                 )
+                ts = debit_note.timestamp
+                last_ts = self._last_debit_note_for_agreement.get(debit_note.agreement_id)
+                debit_note_interval = self._max_debit_note_interval.get(debit_note.agreement_id)
+                if last_ts is not None and debit_note_interval is not None:
+                    ts_diff = ts - last_ts
+                    # TODO
+                    if ts_diff < debit_note_interval:
+                        # terminate the agreement
+                        reason = {
+                            "message": "Too frequent debit notes",
+                            "golem.requestor.code": "Cancelled",
+                        }
+                        agreement.terminate(reason)
+                self._last_debit_note_for_agreement[debit_note.agreement_id] = ts
                 try:
                     allocation = self._get_allocation(debit_note)
                     await debit_note.accept(
