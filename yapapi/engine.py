@@ -469,8 +469,10 @@ class _Engine:
                 ),
                 None,
             )
+            logger.info(f"DN1.5 {job_id}")
             if job_id is not None:
                 job = self._get_job_by_id(job_id)
+                logger.info(f"DN1.7 {job_id}")
                 agreement = self._get_agreement_by_id(agr_id)
                 job.emit(
                     events.DebitNoteReceived,
@@ -593,8 +595,10 @@ class _Engine:
             work_context.emit(events.ActivityCreated)
 
             async with activity:
+                logger.info(f"--- act started")
                 self._activity_started_ts[agreement.id] = datetime.now()
                 agr_details = await agreement.details()
+                logger.info(f"--- act det")
                 self._max_debit_note_interval[agreement.id] = agr_details.provider_view.properties[
                     "golem.com.scheme.payu.debit-note-interval-sec?"
                 ]
