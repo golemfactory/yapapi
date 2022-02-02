@@ -141,7 +141,7 @@ class _Engine:
         # initialize the payment structures
         self._agreements_to_pay: Dict[JobId, Set[AgreementId]] = defaultdict(set)
         self._agreements_accepting_debit_notes: Dict[JobId, Set[AgreementId]] = defaultdict(set)
-        self._activity_started: Dict[AgreementId, datetime] = dict()
+        self._activity_started_ts: Dict[AgreementId, datetime] = dict()
         self._number_of_debit_notes: Dict[AgreementId, int] = defaultdict(int)
         self._max_debit_note_interval: Dict[AgreementId, int] = dict()
         self._invoices: Dict[AgreementId, rest.payment.Invoice] = dict()
@@ -476,12 +476,14 @@ class _Engine:
                     agreement=agreement,
                     debit_note=debit_note,
                 )
-                ts = debit_note.timestamp
-                start_ts = self._activity_started.get()
+                ts = datetime.now()
+                start_ts = self._activity_started_ts.get(agr_id)
                 self._number_of_debit_notes[agr_id] += 1
                 max_interval = self._max_debit_note_interval.get(agr_id)
                 if start_ts is not None and max_interval is not None:
-                    if ts - start_ts > self._number_of_debit_notes[agr_id] * max_interval:
+                    if (ts - start_ts).total_seconds() > self._number_of_debit_notes[
+                        agr_id
+                    ] * max_interval:
                         freq_descr = f"{self._number_of_debit_notes[agr_id]} in {ts - start_ts}s"
                         reason = {
                             "message": f"Too frequent debit notes: {freq_descr}",
@@ -586,6 +588,7 @@ class _Engine:
             work_context.emit(events.ActivityCreated)
 
             async with activity:
+                self._activity_started_ts[agreement.id] = datetime.now()
                 self.accept_debit_notes_for_agreement(job.id, agreement.id)
                 await run_worker(work_context)
 
