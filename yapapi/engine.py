@@ -598,7 +598,7 @@ class _Engine:
                 logger.info(f"--- act started")
                 self._activity_started_ts[agreement.id] = datetime.now()
                 agr_details = await agreement.details()
-                logger.info(f"--- act det {}")
+                logger.info(f"--- act det {agreement.id}")
                 logger.info(self._max_debit_note_interval)
                 logger.info(self._max_debit_note_interval[agreement.id])
                 logger.info(agr_details.provider_view.properties)
