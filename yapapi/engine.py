@@ -45,6 +45,11 @@ from yapapi.storage import gftp
 from yapapi.strategy import MarketStrategy, SCORE_NEUTRAL
 from yapapi.utils import AsyncWrapper
 
+DEFAULT_PROPERTY_VALUE_RANGES = {
+    "golem.com.payment.debit-notes.accept-timeout?": (30.0, None),
+    "golem.com.scheme.payu.debit-note-interval-sec?": (20.0, None),
+    "golem.com.scheme.payu.payment-timeout-sec?": (None, 3600.0),
+}
 
 DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "erc20").lower()
 DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "rinkeby").lower()
@@ -122,13 +127,7 @@ class _Engine:
 
         self._strategy = strategy
         # set default property value ranges if they were not set in the market strategy
-        strategy.set_prop_value_ranges_defaults(
-            {
-                "golem.com.payment.debit-notes.accept-timeout?": (30.0, None),
-                "golem.com.scheme.payu.debit-note-interval-sec?": (20.0, None),
-                "golem.com.scheme.payu.payment-timeout-sec?": (None, 3600.0),
-            }
-        )
+        strategy.set_prop_value_ranges_defaults(DEFAULT_PROPERTY_VALUE_RANGES)
 
         self._subnet: Optional[str] = subnet_tag or DEFAULT_SUBNET
         self._payment_driver: str = payment_driver.lower() if payment_driver else DEFAULT_DRIVER
