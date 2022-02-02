@@ -141,7 +141,8 @@ class _Engine:
         # initialize the payment structures
         self._agreements_to_pay: Dict[JobId, Set[AgreementId]] = defaultdict(set)
         self._agreements_accepting_debit_notes: Dict[JobId, Set[AgreementId]] = defaultdict(set)
-        self._last_debit_note_for_agreement: Dict[AgreementId, datetime] = dict()
+        self._activity_started: Dict[AgreementId, datetime] = dict()
+        self._number_of_debit_notes: Dict[AgreementId, int] = defaultdict(int)
         self._max_debit_note_interval: Dict[AgreementId, int] = dict()
         self._invoices: Dict[AgreementId, rest.payment.Invoice] = dict()
         self._payment_closing: bool = False
@@ -458,36 +459,36 @@ class _Engine:
         """Process incoming debit notes."""
 
         async for debit_note in self._payment_api.incoming_debit_notes():
+            agr_id = debit_note.agreement_id
             job_id = next(
                 (
                     id
                     for id in self._agreements_accepting_debit_notes
-                    if debit_note.agreement_id in self._agreements_accepting_debit_notes[id]
+                    if agr_id in self._agreements_accepting_debit_notes[id]
                 ),
                 None,
             )
             if job_id is not None:
                 job = self._get_job_by_id(job_id)
-                agreement = self._get_agreement_by_id(debit_note.agreement_id)
+                agreement = self._get_agreement_by_id(agr_id)
                 job.emit(
                     events.DebitNoteReceived,
                     agreement=agreement,
                     debit_note=debit_note,
                 )
                 ts = debit_note.timestamp
-                last_ts = self._last_debit_note_for_agreement.get(debit_note.agreement_id)
-                debit_note_interval = self._max_debit_note_interval.get(debit_note.agreement_id)
-                if last_ts is not None and debit_note_interval is not None:
-                    ts_diff = ts - last_ts
-                    # TODO
-                    if ts_diff < debit_note_interval:
-                        # terminate the agreement
+                start_ts = self._activity_started.get()
+                self._number_of_debit_notes[agr_id] += 1
+                max_interval = self._max_debit_note_interval.get(agr_id)
+                if start_ts is not None and max_interval is not None:
+                    if ts - start_ts > self._number_of_debit_notes[agr_id] * max_interval:
+                        freq_descr = f"{self._number_of_debit_notes[agr_id]} in {ts - start_ts}s"
                         reason = {
-                            "message": "Too frequent debit notes",
+                            "message": f"Too frequent debit notes: {freq_descr}",
                             "golem.requestor.code": "Cancelled",
                         }
+                        job.emit(events.PaymentFailed, agreement=agreement)
                         agreement.terminate(reason)
-                self._last_debit_note_for_agreement[debit_note.agreement_id] = ts
                 try:
                     allocation = self._get_allocation(debit_note)
                     await debit_note.accept(
