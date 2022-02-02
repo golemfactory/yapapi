@@ -486,8 +486,8 @@ class _Engine:
                     ] * max_interval:
                         freq_descr = f"{self._number_of_debit_notes[agr_id]} in {ts - start_ts}s"
                         reason = {
-                            "message": f"Too frequent debit notes: {freq_descr}",
-                            "golem.requestor.code": "Cancelled",
+                            "message": f"Too many debit notes: {freq_descr}",
+                            "golem.requestor.code": "TooManyDebitNotes",
                         }
                         job.emit(events.PaymentFailed, agreement=agreement)
                         agreement.terminate(reason)
