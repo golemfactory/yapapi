@@ -460,6 +460,7 @@ class _Engine:
 
         async for debit_note in self._payment_api.incoming_debit_notes():
             agr_id = debit_note.agreement_id
+            logger.info(f"DN {agr_id}")
             job_id = next(
                 (
                     id
@@ -476,11 +477,13 @@ class _Engine:
                     agreement=agreement,
                     debit_note=debit_note,
                 )
+                logger.info(f"DN2 {agr_id}")
                 ts = datetime.now()
                 start_ts = self._activity_started_ts.get(agr_id)
                 self._number_of_debit_notes[agr_id] += 1
                 max_interval = self._max_debit_note_interval.get(agr_id)
                 if start_ts is not None and max_interval is not None:
+                    logger.info(f"DN3 {ts} {start_ts} {max_interval}")
                     if (ts - start_ts).total_seconds() > self._number_of_debit_notes[
                         agr_id
                     ] * max_interval:
@@ -489,8 +492,10 @@ class _Engine:
                             "message": f"Too many debit notes: {freq_descr}",
                             "golem.requestor.code": "TooManyDebitNotes",
                         }
+                        logger.info("DN!!!")
                         job.emit(events.PaymentFailed, agreement=agreement)
                         agreement.terminate(reason)
+                        logger.info("DN2!!!")
                 try:
                     allocation = self._get_allocation(debit_note)
                     await debit_note.accept(
@@ -593,6 +598,7 @@ class _Engine:
                 self._max_debit_note_interval[agreement.id] = agr_details.provider_view.properties[
                     "golem.com.scheme.payu.debit-note-interval-sec?"
                 ]
+                logger.info(f"--- {agreement.id} -> {self._max_debit_note_interval[agreement.id]}")
                 self.accept_debit_notes_for_agreement(job.id, agreement.id)
                 await run_worker(work_context)
 
