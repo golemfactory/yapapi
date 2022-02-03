@@ -715,6 +715,9 @@ class Job:
         #   Exception that ended the job
         self._exc_info = None
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(id={self.id})"
+
     def emit(self, event_class: Type[events.JobEventType], **kwargs) -> events.JobEventType:
         return self.engine.emit(event_class, job=self, **kwargs)
 

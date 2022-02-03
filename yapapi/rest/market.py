@@ -69,6 +69,9 @@ class Agreement(object):
     def id(self) -> str:
         return self._id
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(id={self.id})"
+
     async def details(self, force_refresh=False) -> AgreementDetails:
         """Retrieve and cache the details of the Agreement.
         :param force_refresh: if set to True, the API call to get the details will always be made
@@ -113,9 +116,6 @@ class Agreement(object):
         except (ApiException, asyncio.TimeoutError, aiohttp.ClientOSError):
             logger.debug("terminateAgreement(%s) failed", self._id, exc_info=True)
             return False
-
-    def __repr__(self):
-        return f"Agreement(id={self.id})"
 
 
 class OfferProposal(object):

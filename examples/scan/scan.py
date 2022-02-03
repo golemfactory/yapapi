@@ -29,7 +29,7 @@ from utils import (
 
 logger = logging.getLogger(__name__)
 
-# python:3.8-alpine
+# alpine:latest
 IMAGE_HASH = "d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376"
 
 nodes_list = {}
@@ -96,8 +96,8 @@ async def main(
 
 if __name__ == "__main__":
     parser = build_parser("Scan providers")
-    parser.add_argument("--scan_size", help="Number of nodes to scan", type=int, default=5)
-    parser.add_argument("--max_workers", help="Number of scans at the same time", type=int, default=3)
+    parser.add_argument("--scan-size", help="Number of nodes to scan", type=int, default=5)
+    parser.add_argument("--max-workers", help="Number of scans at the same time", type=int, default=3)
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     parser.set_defaults(log_file=f"scan-yapapi-{now}.log")
     args = parser.parse_args()
