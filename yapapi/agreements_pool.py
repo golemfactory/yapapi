@@ -33,6 +33,7 @@ class BufferedAgreement:
         asyncio.Task
     ]  # A Task that uses agreement. Agreement won't be reused until this task is .done()
     has_multi_activity: bool
+    confirmed_at: datetime.datetime
 
 
 class AgreementsPool:
@@ -86,6 +87,19 @@ class AgreementsPool:
             task = cbk(agreement)
             await self._set_worker(agreement.id, task)
             return task
+
+    def agreement_confirmed_at(self, agr_id: str) -> Optional[datetime.datetime]:
+        try:
+            return self._agreements[agr_id].confirmed_at
+        except KeyError:
+            return None
+
+    def max_debit_note_interval_for_agreement(self, agr_id: str) -> Optional[int]:
+        agreement = self._agreements.get(agr_id)
+        if agreement is None:
+            return None
+        props = agreement.agreement_details.provider_view.properties
+        return props.get("golem.com.scheme.payu.debit-note-interval-sec?")
 
     async def _set_worker(self, agreement_id: str, task: asyncio.Task) -> None:
         try:
@@ -152,6 +166,7 @@ class AgreementsPool:
             has_multi_activity=bool(
                 provider_activity.multi_activity and requestor_activity.multi_activity
             ),
+            confirmed_at=datetime.datetime.now(),
         )
         emit(events.AgreementConfirmed, agreement=agreement)
         self.confirmed += 1
