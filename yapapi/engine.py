@@ -600,13 +600,12 @@ class _Engine:
                 agr_details = await agreement.details()
                 logger.info(f"--- act det {agreement.id}")
                 logger.info(self._max_debit_note_interval)
+                logger.info(self._max_debit_note_interval[agreement.id])
                 logger.info(agr_details.provider_view.properties)
-                props = agr_details.provider_view.properties
-                if "golem.com.scheme.payu.debit-note-interval-sec?" in props:
-                    self._max_debit_note_interval[agreement.id] = props[
-                        "golem.com.scheme.payu.debit-note-interval-sec?"
-                    ]
-                # logger.info(f"--- {agreement.id} -> {self._max_debit_note_interval[agreement.id]}")
+                self._max_debit_note_interval[agreement.id] = agr_details.provider_view.properties[
+                    "golem.com.scheme.payu.debit-note-interval-sec?"
+                ]
+                logger.info(f"--- {agreement.id} -> {self._max_debit_note_interval[agreement.id]}")
                 self.accept_debit_notes_for_agreement(job.id, agreement.id)
                 await run_worker(work_context)
 
