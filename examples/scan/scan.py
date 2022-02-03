@@ -37,7 +37,6 @@ nodes_list = {}
 
 
 class ScanStrategy(MarketStrategy):
-
     async def score_offer(self, offer, _agreements_pool=None):
         node_address = offer.issuer
 
@@ -54,15 +53,14 @@ async def main(
     payload = await vm.repo(image_hash=IMAGE_HASH)
 
     async def worker(ctx: WorkContext, tasks):
-        print(
-            f"{TEXT_COLOR_CYAN}"
-            f"Getting info for {ctx.provider_id} (aka {ctx.provider_name})"
-            f"{TEXT_COLOR_DEFAULT}",
-        )
-
         assert ctx.provider_id not in nodes_list
 
         async for task in tasks:
+            print(
+                f"{TEXT_COLOR_CYAN}"
+                f"Getting info for {ctx.provider_id} (aka {ctx.provider_name})"
+                f"{TEXT_COLOR_DEFAULT}",
+            )
             script = ctx.new_script()
 
             future_result = script.run("/bin/cat", "/proc/cpuinfo")
@@ -98,8 +96,10 @@ async def main(
         payment_network=payment_network,
     ) as golem:
         print_env_info(golem)
-        print(f"{TEXT_COLOR_YELLOW}Scanning {pluralize(scan_size, 'node')}, "
-              f"using {pluralize(max_workers, 'concurrent worker')}.{TEXT_COLOR_DEFAULT}")
+        print(
+            f"{TEXT_COLOR_YELLOW}Scanning {pluralize(scan_size, 'node')}, "
+            f"using {pluralize(max_workers, 'concurrent worker')}.{TEXT_COLOR_DEFAULT}"
+        )
 
         tasks: List[Task] = [Task(i) for i in range(scan_size)]
         async for task in golem.execute_tasks(worker, tasks, payload, max_workers=max_workers):
@@ -109,7 +109,9 @@ async def main(
 if __name__ == "__main__":
     parser = build_parser("Scan providers")
     parser.add_argument("--scan-size", help="Number of nodes to scan", type=int, default=5)
-    parser.add_argument("--max-workers", help="Number of scans at the same time", type=int, default=3)
+    parser.add_argument(
+        "--max-workers", help="Number of scans at the same time", type=int, default=3
+    )
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     parser.set_defaults(log_file=f"scan-yapapi-{now}.log")
     args = parser.parse_args()

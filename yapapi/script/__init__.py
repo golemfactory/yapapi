@@ -61,8 +61,10 @@ class Script:
         self._id: int = next(script_ids)
 
     def __repr__(self):
-        return f"{self.__class__.__name__}" \
-               f"(id={self._id}, ctx={self._ctx}, commands={self._commands})"
+        return (
+            f"{self.__class__.__name__}"
+            f"(id={self._id}, ctx={self._ctx}, commands={self._commands})"
+        )
 
     def emit(self, event_class: Type[ScriptEventType], **kwargs) -> ScriptEventType:
         return self._ctx.emit(event_class, script=self, **kwargs)

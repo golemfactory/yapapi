@@ -564,14 +564,18 @@ class SummaryLogger:
         elif isinstance(event, events.WorkerStarted):
             provider_info = self.agreement_provider_info[event.agr_id]
             self.logger.debug(
-                "Worker started for provider '%s'", provider_info.name, job_id=event.job_id,
+                "Worker started for provider '%s'",
+                provider_info.name,
+                job_id=event.job_id,
             )
 
         elif isinstance(event, events.WorkerFinished):
             provider_info = self.agreement_provider_info[event.agr_id]
             if event.exc_info is None or self.cancelled:
                 self.logger.debug(
-                    "Worker finished for provider '%s'", provider_info.name, job_id=event.job_id,
+                    "Worker finished for provider '%s'",
+                    provider_info.name,
+                    job_id=event.job_id,
                 )
                 return
             _exc_type, exc, _tb = event.exc_info

@@ -116,8 +116,10 @@ class WorkContext:
         )
 
     def __repr__(self):
-        return f"{self.__class__.__name__}" \
-               f"(id={self.id}, activity={self._activity}, provider={self.provider_id})"
+        return (
+            f"{self.__class__.__name__}"
+            f"(id={self.id}, activity={self._activity}, provider={self.provider_id})"
+        )
 
     @property
     def id(self) -> str:
