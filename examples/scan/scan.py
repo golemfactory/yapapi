@@ -11,6 +11,7 @@ from yapapi import (
     Task,
     WorkContext,
 )
+from yapapi.log import pluralize
 from yapapi.payload import vm
 from yapapi.strategy import MarketStrategy, SCORE_REJECTED, SCORE_TRUSTED
 
@@ -87,7 +88,8 @@ async def main(
         payment_network=payment_network,
     ) as golem:
         print_env_info(golem)
-        print(f"{TEXT_COLOR_YELLOW}Scanning {scan_size} nodes, using {max_workers} concurrent workers.{TEXT_COLOR_DEFAULT}")
+        print(f"{TEXT_COLOR_YELLOW}Scanning {pluralize(scan_size, 'node')}, "
+              f"using {pluralize(max_workers, 'concurrent worker')}.{TEXT_COLOR_DEFAULT}")
 
         tasks: List[Task] = [Task(i) for i in range(scan_size)]
         async for task in golem.execute_tasks(worker, tasks, payload, max_workers=max_workers):
