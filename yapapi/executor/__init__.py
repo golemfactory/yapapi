@@ -193,10 +193,11 @@ class Executor:
                     #
                     # otherwise, the user can signal the generator to finish by sending it an
                     # `aclose()` which triggers a `GeneratorExit`, which,
-                    # in turn sets a `finished` status on the `consumer`.
+                    # in turn sets a `finished` status on the `consumer` so that the consumer
+                    # stops pulling new task handles from the queue.
                     #
-                    # later, that status is used to throw `StopAsyncIteration` which signals the
-                    # engine to terminate the agreement when the worker finishes.
+                    # later, the `finished` status is used to throw `StopAsyncIteration` which
+                    # signals the engine to terminate the agreement when the worker finishes.
                     #
                     # if that wasn't done, the engine could just restart the worker on the same
                     # agreement.
