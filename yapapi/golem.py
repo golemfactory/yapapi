@@ -199,6 +199,26 @@ class Golem:
         return self._engine.started
 
     async def start(self) -> None:
+        """Start the Golem engine in non-contextmanager mode.
+
+        The default way of using Golem::
+
+            async with Golem(...) as golem:
+                # ... work with golem
+
+        Is roughly equivalent to::
+
+            golem = Golem(...)
+            try:
+                await golem.start()
+                # ... work with golem
+            finally:
+                await golem.stop()
+
+        A repeated call to :func:`Golem.start()`:
+            * If Golem is already starting, or started and wasn't stopped - will be ignored (and harmless)
+            * If Golem was stopped - will initialize a new engine that knows nothing about the previous operations
+        """
         try:
             async with self._engine_state_lock:
                 if self.operative:
@@ -215,6 +235,9 @@ class Golem:
             raise
 
     async def stop(self) -> None:
+        """Stop the Golem engine after it was started in non-contextmanager mode.
+
+        Details: :func:`Golem.start()`"""
         await self._stop_with_exc_info(None, None, None)
 
     async def __aenter__(self) -> "Golem":
