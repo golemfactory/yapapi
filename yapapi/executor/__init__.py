@@ -185,11 +185,12 @@ class Executor:
             with work_queue.new_consumer() as consumer:
                 try:
 
-                    # the `task_generator` here is passed as the `tasks` argument to the user's `worker` function
+                    # the `task_generator` here is passed as the `tasks` argument to the user's
+                    # `worker` function
                     #
-                    # by turning it into an actual `AsyncGenerator`, we're able
-                    # to throw exceptions its way so that we can terminate it explicitly
-                    # when an exception happens within the worker's generator
+                    # because it's an `AsyncGenerator`, we're able to throw exceptions its way
+                    # so that we can terminate it explicitly when an exception happens within
+                    # the worker's generator
                     #
                     # otherwise, the user can signal the generator to finish by sending it an
                     # `aclose()`, which triggers a `GeneratorExit`, which,
