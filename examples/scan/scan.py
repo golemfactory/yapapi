@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 # alpine:latest
 IMAGE_HASH = "d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376"
 
-nodes_list = {}
+scanned_nodes = set()
 
 
 class ScanStrategy(MarketStrategy):
@@ -41,7 +41,7 @@ class ScanStrategy(MarketStrategy):
         node_address = offer.issuer
 
         # reject nodes that we have already scanned
-        if node_address in nodes_list:
+        if node_address in scanned_nodes:
             return SCORE_REJECTED
 
         return SCORE_TRUSTED
@@ -53,7 +53,7 @@ async def main(
     payload = await vm.repo(image_hash=IMAGE_HASH)
 
     async def worker(ctx: WorkContext, tasks):
-        assert ctx.provider_id not in nodes_list
+        assert ctx.provider_id not in scanned_nodes
 
         async for task in tasks:
             print(
@@ -67,7 +67,7 @@ async def main(
             yield script
 
             result = (await future_result).stdout or ""
-            nodes_list[ctx.provider_id] = True
+            scanned_nodes.add(ctx.provider_id)
 
             cpu_model_match = re.search("^model name\\s+:\\s+(.*)$", result, flags=re.MULTILINE)
             if cpu_model_match:
