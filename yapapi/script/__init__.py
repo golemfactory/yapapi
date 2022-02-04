@@ -1,3 +1,4 @@
+from asyncio.exceptions import InvalidStateError
 from datetime import timedelta
 import itertools
 from typing import Any, Awaitable, Callable, Dict, Iterator, Optional, List, Type, TYPE_CHECKING
@@ -63,9 +64,7 @@ class Script:
     def emit(self, event_class: Type[ScriptEventType], **kwargs) -> ScriptEventType:
         return self._ctx.emit(event_class, script=self, **kwargs)
 
-    def process_batch_event(
-        self, event_class: Type[CommandEvent], event_kwargs: Dict[str, Any]
-    ) -> CommandEvent:
+    def process_batch_event(self, event_class: Type[CommandEvent], event_kwargs: Dict[str, Any]):
         """Event emiting and special events.CommandExecuted logic"""
         command = self._commands[event_kwargs["cmd_idx"]]
         del event_kwargs["cmd_idx"]
@@ -77,7 +76,14 @@ class Script:
             else:
                 command_str = str(command.evaluate())  # TODO -> Command.`__repr__`
                 raise CommandExecutionError(command_str, event.message, event.stderr)
-        return event  # type: ignore # -> TODO #786
+
+    @property
+    def results(self) -> List[CommandExecuted]:
+        """List of all results of the script commands. Available only after the script execution finished."""
+        try:
+            return [command._result.result() for command in self._commands]
+        except InvalidStateError:
+            raise AttributeError("Script results are available only after all commands finished")
 
     @property
     def id(self) -> int:

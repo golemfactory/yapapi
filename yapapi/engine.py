@@ -598,17 +598,15 @@ class _Engine:
 
             script.emit(events.ScriptSent)
 
-            async def get_batch_results() -> List[events.CommandEvent]:
-                results = []
+            async def get_batch_results() -> List[events.CommandExecuted]:
                 async for event_class, event_kwargs in remote:
-                    event = script.process_batch_event(event_class, event_kwargs)
-                    results.append(event)
+                    script.process_batch_event(event_class, event_kwargs)
 
                 script.emit(events.GettingResults)
                 await script._after()
                 script.emit(events.ScriptFinished)
                 await self.accept_payments_for_agreement(job_id, agreement_id, partial=True)
-                return results
+                return script.results
 
             loop = asyncio.get_event_loop()
 
