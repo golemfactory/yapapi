@@ -197,6 +197,7 @@ class Consumer(
     def __init__(self, queue: SmartQueue[Item]):
         self._queue = queue
         self._fetched: Optional[Handle[Item]] = None
+        self._finished = False
 
     def __enter__(self) -> "Consumer[Item]":
         return self
@@ -215,7 +216,16 @@ class Consumer(
         """The most-recent queue item that has been fetched to be processed by this consumer."""
         return self._fetched.data if self._fetched else None
 
+    def finish(self):
+        self._finished = True
+
+    @property
+    def finished(self):
+        return self._finished
+
     async def __anext__(self) -> Handle[Item]:
+        if self._finished:
+            raise StopAsyncIteration()
         val = await self._queue.get(self)
         self._fetched = val
         return val
