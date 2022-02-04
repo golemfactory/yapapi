@@ -55,6 +55,8 @@ class Command(abc.ABC):
         assert self._script is not None, "_storage is known only for commands in a Script"
         return self._script._ctx._storage
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}"
 
 class Deploy(Command):
     """Command which deploys a given runtime on the provider."""
@@ -64,7 +66,7 @@ class Deploy(Command):
         self.kwargs = kwargs
 
     def __repr__(self):
-        return f"deploy {self.kwargs}"
+        return f"{super().__repr__()} {self.kwargs}"
 
     def evaluate(self):
         return self._make_batch_command("deploy", **self.kwargs)
@@ -78,7 +80,7 @@ class Start(Command):
         self.args = args
 
     def __repr__(self):
-        return f"start {self.args}"
+        return f"{super().__repr__()} {self.args}"
 
     def evaluate(self):
         return self._make_batch_command("start", args=self.args)
@@ -113,6 +115,9 @@ class _SendContent(Command, abc.ABC):
     async def after(self) -> None:
         assert self._src is not None
         await self._storage.release_source(self._src)
+
+    def __repr__(self):
+        return f"{super().__repr__()} dst={self._dst_path}"
 
 
 class SendBytes(_SendContent):
@@ -161,6 +166,9 @@ class SendFile(_SendContent):
     async def _do_upload(self, storage: StorageProvider) -> Source:
         return await storage.upload_file(self._src_path)
 
+    def __repr__(self):
+        return f"{super().__repr__()} src={self._src_path}"
+
 
 class Run(Command):
     """Command which schedules running a shell command on a provider."""
@@ -194,6 +202,9 @@ class Run(Command):
             "run", entry_point=self.cmd, args=self.args, capture=capture
         )
 
+    def __repr__(self):
+        return f"{super().__repr__()} {self.cmd} {self.args}"
+
 
 StorageEvent = Union[DownloadStarted, DownloadFinished]
 
@@ -224,6 +235,9 @@ class _ReceiveContent(Command, abc.ABC):
     def _emit_download_end(self):
         self.emit(DownloadFinished)
 
+    def __repr__(self):
+        return f"{super().__repr__()} src={self._src_path}"
+
 
 class DownloadFile(_ReceiveContent):
     """Command which schedules downloading a file from a provider."""
@@ -248,6 +262,9 @@ class DownloadFile(_ReceiveContent):
 
         await self._dst_slot.download_file(self._dst_path)
         self._emit_download_end()
+
+    def __repr__(self):
+        return f"{super().__repr__()} dst={self._dst_path}"
 
 
 class DownloadBytes(_ReceiveContent):

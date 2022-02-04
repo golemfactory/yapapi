@@ -112,6 +112,12 @@ class WorkContext:
             event_class, activity=self._activity, agreement=self._agreement, **kwargs
         )
 
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}"
+            f"(id={self.id}, activity={self._activity}, provider={self.provider_id})"
+        )
+
     @property
     def id(self) -> str:
         """Unique identifier for this work context."""
