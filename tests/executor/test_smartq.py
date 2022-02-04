@@ -1,9 +1,10 @@
+import asyncio
+import itertools
+import logging
 import pytest
+from random import randint
 
 from yapapi.executor._smartq import SmartQueue
-import logging
-from random import randint
-import asyncio
 
 
 async def async_iter(iterable):
@@ -200,3 +201,28 @@ async def test_async_task_iterator(task_iterator_interval, worker_interval, exec
 
     assert yielded == inputs
     await q.close()
+
+
+@pytest.mark.asyncio
+async def test_smartq_finish():
+    """check that `consumer.finish()` stops queue from issuing new items for this consumer"""
+
+    consumed = []
+
+    async def tasks():
+        for i in itertools.count():
+            consumed.append(i)
+            yield i
+
+    q = SmartQueue(tasks())
+
+    with q.new_consumer() as consumer:
+        cnt = 0
+        async for _ in consumer:
+            cnt += 1
+            if cnt == 2:
+                consumer.finish()
+
+    await q.close()
+
+    assert consumed == [0, 1, 2]
