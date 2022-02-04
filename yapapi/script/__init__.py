@@ -75,7 +75,7 @@ class Script:
             if event.success:
                 command._result.set_result(event)
             else:
-                command_str = str(command.evaluate(self._ctx))  # TODO -> Command.`__repr__`
+                command_str = str(command.evaluate())  # TODO -> Command.`__repr__`
                 raise CommandExecutionError(command_str, event.message, event.stderr)
         return event  # type: ignore # -> TODO #786
 
@@ -92,18 +92,18 @@ class Script:
         """Evaluate and serialize this script to a list of batch commands."""
         batch: List[BatchCommand] = []
         for cmd in self._commands:
-            batch.append(cmd.evaluate(self._ctx))
+            batch.append(cmd.evaluate())
         return batch
 
     async def _after(self):
         """Hook which is executed after the script has been run on the provider."""
         for cmd in self._commands:
-            await cmd.after(self._ctx)
+            await cmd.after()
 
     async def _before(self):
         """Hook which is executed before the script is evaluated and sent to the provider."""
         for cmd in self._commands:
-            await cmd.before(self._ctx)
+            await cmd.before()
 
     def add(self, cmd: Command) -> Awaitable[CommandExecuted]:
         """Add a :class:`yapapi.script.command.Command` to the :class:`Script`"""
