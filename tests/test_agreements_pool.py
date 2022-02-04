@@ -36,14 +36,14 @@ async def test_use_agreement_chooses_max_score():
         mock_score = random.random()
         proposals[n] = (mock_score, mock_proposal)
 
-    pool = agreements_pool.AgreementsPool("job", lambda _event: None)
+    pool = agreements_pool.AgreementsPool("job", lambda _event, **kwargs: None, lambda _offer: None)
 
     for score, proposal in proposals.values():
         await pool.add_proposal(score, proposal)
 
     chosen_proposal_ids = []
 
-    def use_agreement_cb(agreement, _node_info):
+    def use_agreement_cb(agreement):
         chosen_proposal_ids.append(agreement.proposal_id)
         return True
 
@@ -73,12 +73,16 @@ async def test_use_agreement_shuffles_proposals():
             mock_score = 42.0 if n != 0 else 41.0
             proposals.append((mock_score, mock_proposal))
 
-        pool = agreements_pool.AgreementsPool("job", lambda _event: None)
+        pool = agreements_pool.AgreementsPool(
+            "job",
+            lambda _event, **kwargs: None,
+            lambda _offer: None,
+        )
 
         for score, proposal in proposals:
             await pool.add_proposal(score, proposal)
 
-        def use_agreement_cb(agreement, _node_info):
+        def use_agreement_cb(agreement):
             chosen_proposal_ids.add(agreement.proposal_id)
             return True
 
@@ -92,7 +96,7 @@ async def test_use_agreement_shuffles_proposals():
 async def test_use_agreement_no_proposals():
     """Test that `AgreementPool.use_agreement()` returns `None` when there are no proposals."""
 
-    pool = agreements_pool.AgreementsPool("job", lambda _event: None)
+    pool = agreements_pool.AgreementsPool("job", lambda _event, **kwargs: None, lambda _offer: None)
 
     def use_agreement_cb(_agreement):
         assert False, "use_agreement callback called"

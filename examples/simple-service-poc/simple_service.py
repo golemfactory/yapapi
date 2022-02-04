@@ -38,9 +38,6 @@ class SimpleService(Service):
     SIMPLE_SERVICE = "/golem/run/simple_service.py"
     SIMPLE_SERVICE_CTL = "/golem/run/simulate_observations_ctl.py"
 
-    def __repr__(self):
-        return f"<{self.__class__.__name__}: {self.name}>"
-
     def __init__(self, *args, instance_name: str, show_usage: bool = False, **kwargs):
         super().__init__(*args, **kwargs)
         self.name = instance_name
@@ -111,6 +108,10 @@ class SimpleService(Service):
             cost = await self._ctx.get_cost()
             print(f"{TEXT_COLOR_MAGENTA} --- {self.name}  COST: {cost} {TEXT_COLOR_DEFAULT}")
 
+    async def reset(self):
+        # We don't have to do anything when the service is restarted
+        pass
+
 
 async def main(
     subnet_tag,
@@ -130,12 +131,6 @@ async def main(
 
         commissioning_time = datetime.now()
 
-        print(
-            f"{TEXT_COLOR_YELLOW}"
-            f"Starting {pluralize(num_instances, 'instance')}..."
-            f"{TEXT_COLOR_DEFAULT}"
-        )
-
         # start the service
 
         cluster = await golem.run_service(
@@ -147,20 +142,29 @@ async def main(
             expiration=datetime.now(timezone.utc) + timedelta(minutes=120),
         )
 
-        # helper functions to display / filter instances
+        print(f"{TEXT_COLOR_YELLOW}" f"Starting {cluster}..." f"{TEXT_COLOR_DEFAULT}")
 
-        def instances():
-            return [f"{s.name}: {s.state.value} on {s.provider_name}" for s in cluster.instances]
+        def print_instances():
+            print(
+                f"instances: "
+                + str(
+                    [
+                        f"{s.name}: {s.state.value}"
+                        + (f" on {s.provider_name}" if s.provider_id else "")
+                        for s in cluster.instances
+                    ]
+                )
+            )
 
         def still_starting():
-            return len(cluster.instances) < num_instances or any(
-                s.state == ServiceState.starting for s in cluster.instances
+            return any(
+                i.state in (ServiceState.pending, ServiceState.starting) for i in cluster.instances
             )
 
         # wait until instances are started
 
         while still_starting() and datetime.now() < commissioning_time + STARTING_TIMEOUT:
-            print(f"instances: {instances()}")
+            print_instances()
             await asyncio.sleep(5)
 
         if still_starting():
@@ -174,20 +178,20 @@ async def main(
         start_time = datetime.now()
 
         while datetime.now() < start_time + timedelta(seconds=running_time):
-            print(f"instances: {instances()}")
+            print_instances()
             await asyncio.sleep(5)
 
-        print(f"{TEXT_COLOR_YELLOW}Stopping instances...{TEXT_COLOR_DEFAULT}")
+        print(f"{TEXT_COLOR_YELLOW}Stopping {cluster}...{TEXT_COLOR_DEFAULT}")
         cluster.stop()
 
         # wait for instances to stop
 
         cnt = 0
         while cnt < 10 and any(s.is_available for s in cluster.instances):
-            print(f"instances: {instances()}")
+            print_instances()
             await asyncio.sleep(5)
 
-    print(f"instances: {instances()}")
+    print_instances()
 
 
 if __name__ == "__main__":
