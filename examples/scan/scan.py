@@ -31,7 +31,7 @@ from utils import (
 logger = logging.getLogger(__name__)
 
 # alpine:latest
-IMAGE_HASH = "d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376"
+IMAGE_HASH = "25d5315561c3aa3b8daa1ea8cfd5a6c35f307f4347a63994c9d5f2a8"
 
 scanned_nodes = set()
 
