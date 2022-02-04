@@ -77,14 +77,14 @@ async def main(
             # add the node to the set so we don't end up signing another agreement with it
             scanned_nodes.add(ctx.provider_id)
 
-            # and accept the result (pass the result to loop in `main`)
+            # and accept the result (pass the result to the loop in `main`)
             task.accept_result((ctx.provider_id, ctx.provider_name, result))
 
             # as we don't really want the engine to execute any more tasks on this node,
             # we signal the parent generator to exit and through that
             # also request termination of the worker and the agreement
             #
-            # issuing `break` here instead will usually not do what the user is expecting
+            # issuing a `break` here instead will usually not do what the user is expecting,
             # as the parent generator would just exit cleanly without notifying the
             # engine and there's nothing stopping the engine from re-launching the activity/worker
             # on the same agreement

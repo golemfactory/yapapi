@@ -185,18 +185,18 @@ class Executor:
             with work_queue.new_consumer() as consumer:
                 try:
 
-                    # task generator is what feeds the user's `worker` directly
+                    # the `task_generator` here is what feeds the user's `worker` directly
                     #
-                    # by turning it into an actual `AsyncGenerator` we're able
+                    # by turning it into an actual `AsyncGenerator`, we're able
                     # to throw exceptions its way so that we can terminate it explicitly
                     # when an exception happens within the worker's generator
                     #
                     # otherwise, the user can signal the generator to finish by sending it an
-                    # `aclose()` which triggers a `GeneratorExit`, which,
-                    # in turn sets a `finished` status on the `consumer` so that the consumer
+                    # `aclose()`, which triggers a `GeneratorExit`, which,
+                    # in turn, sets a `finished` status on the `consumer` so that the consumer
                     # stops pulling new task handles from the queue.
                     #
-                    # later, the `finished` status is used to throw `StopAsyncIteration` which
+                    # later, the `finished` status is used to throw `StopAsyncIteration`, which
                     # signals the engine to terminate the agreement when the worker finishes.
                     #
                     # if that wasn't done, the engine could just restart the worker on the same
