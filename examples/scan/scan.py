@@ -67,7 +67,6 @@ async def main(
             yield script
 
             result = (await future_result).stdout or ""
-            scanned_nodes.add(ctx.provider_id)
 
             cpu_model_match = re.search("^model name\\s+:\\s+(.*)$", result, flags=re.MULTILINE)
             if cpu_model_match:
@@ -75,6 +74,10 @@ async def main(
             else:
                 result = None
 
+            # add the node to the set so we don't end up signing another agreement with it
+            scanned_nodes.add(ctx.provider_id)
+
+            # and accept the result (pass the result to loop in `main`)
             task.accept_result((ctx.provider_id, ctx.provider_name, result))
 
             # as we don't really want the engine to execute any more tasks on this node,
@@ -85,7 +88,6 @@ async def main(
             # as the parent generator would just exit cleanly without notifying the
             # engine and there's nothing stopping the engine from re-launching the activity/worker
             # on the same agreement
-
             await tasks.aclose()
 
     async with Golem(
