@@ -80,8 +80,7 @@ class Script:
             if event.success:
                 command._result.set_result(event)
             else:
-                command_str = str(command.evaluate())  # TODO -> Command.`__repr__`
-                raise CommandExecutionError(command_str, event.message, event.stderr)
+                raise CommandExecutionError(str(command), event.message, event.stderr)
 
     @property
     def results(self) -> List[CommandExecuted]:
