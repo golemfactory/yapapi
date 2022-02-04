@@ -8,7 +8,7 @@ Golem
 =====
 
 .. autoclass:: yapapi.Golem
-    :members: __init__, execute_tasks, run_service, create_network
+    :members: __init__, start, stop, execute_tasks, run_service, create_network
 
 
 Task API
