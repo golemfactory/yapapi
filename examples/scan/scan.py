@@ -37,7 +37,7 @@ nodes_list = {}
 
 
 class ScanStrategy(MarketStrategy):
-    async def score_offer(self, offer, _agreements_pool=None):
+    async def score_offer(self, offer):
         node_address = offer.issuer
 
         # reject nodes that we have already scanned
