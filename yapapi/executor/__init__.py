@@ -231,7 +231,7 @@ class Executor:
                     work_context.emit(events.WorkerFinished)
                 except Exception as e:
                     work_context.emit(events.WorkerFinished, exc_info=sys.exc_info())  # type: ignore
-                    await task_gen.athrow(type(e))
+                    await task_gen.athrow(type(e), e)
                     raise
                 finally:
                     await self._engine.accept_payments_for_agreement(job.id, agreement.id)
