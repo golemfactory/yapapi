@@ -67,6 +67,9 @@ class Activity(AsyncContextManager["Activity"]):
     def id(self) -> str:
         return self._id
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(id={self.id})"
+
     async def state(self) -> yaa.ActivityState:
         """Query the state of the activity."""
         state: yaa.ActivityState = await self._state.get_activity_state(self._id)
