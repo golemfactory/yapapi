@@ -26,8 +26,8 @@ Notes:
                 ProposalConfirmed
                 ProposalFailed
             NoProposalsConfirmed
-            ComputationStarted
-            ComputationFinished
+            JobStarted
+            JobFinished
             AgreementEvent
                 AgreementCreated
                 AgreementConfirmed
@@ -260,11 +260,11 @@ class DebitNoteEvent(AgreementEvent, abc.ABC):
 
 
 #   REAL EVENTS
-class ComputationStarted(JobEvent):
+class JobStarted(JobEvent):
     pass
 
 
-class ComputationFinished(JobEvent):
+class JobFinished(JobEvent):
     """Indicates successful completion if `exception` is `None` and a failure otherwise."""
 
 
