@@ -1,4 +1,4 @@
-from asyncio.exceptions import InvalidStateError
+from asyncio import InvalidStateError
 from datetime import timedelta
 import itertools
 from typing import Any, Awaitable, Callable, Dict, Iterator, Optional, List, Type, TYPE_CHECKING
