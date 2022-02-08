@@ -247,6 +247,7 @@ MIN_AGREEMENT_EXPIRATION_MINUTES = round(MIN_AGREEMENT_EXPIRATION.seconds / 60)
 AgreementId = str
 JobId = str
 TaskId = str
+ServiceId = str
 ProposalId = str
 ProviderId = str
 
@@ -300,6 +301,10 @@ class SummaryLogger:
     # by the provider for the given job
     provider_tasks: Dict[JobId, Dict[ProviderInfo, List[TaskId]]]
 
+    # Maps a job id and provider info to the list of service ids operated
+    # by the provider for the given job
+    provider_services: Dict[JobId, Dict[ProviderInfo, List[ServiceId]]]
+
     # Map a provider info to the sum of amounts in this provider's invoices
     provider_cost: Dict[ProviderInfo, Decimal]
 
@@ -333,6 +338,7 @@ class SummaryLogger:
         self.script_cmds = {}
         self.provider_cost = {}
         self.provider_tasks = defaultdict(lambda: defaultdict(list))
+        self.provider_services = defaultdict(lambda: defaultdict(list))
         self.provider_failures = defaultdict(Counter)
         self.cancelled = False
         self.error_occurred = False
@@ -364,7 +370,11 @@ class SummaryLogger:
             )
         for agr_id in self.confirmed_agreements[job_id]:
             info = self.agreement_provider_info[agr_id]
-            if info not in self.provider_tasks[job_id]:
+            if (
+                info not in self.provider_tasks[job_id]
+                #   We don't want to print the "task" info for service providers
+                and info not in self.provider_services[job_id]
+            ):
                 self.logger.info(
                     "Provider '%s' did not compute any tasks", info.name, job_id=job_id
                 )
@@ -499,6 +509,10 @@ class SummaryLogger:
                 job_id=event.job_id,
             )
             self.provider_tasks[event.job_id][provider_info].append(event.task_id)
+
+        elif isinstance(event, events.ServiceFinished):
+            provider_info = self.agreement_provider_info[event.agr_id]
+            self.provider_services[event.job_id][provider_info].append(event.service.id)
 
         elif isinstance(event, events.ScriptSent):
             provider_info = self.agreement_provider_info[event.agr_id]
