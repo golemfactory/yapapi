@@ -420,7 +420,7 @@ class SummaryLogger:
             if self.provider_cost:
                 # This means another computation run in the current Executor instance.
                 self._print_total_cost(partial=True)
-            timeout = event.expires - datetime.now(timezone.utc)
+            timeout = event.job.expiration_time - datetime.now(timezone.utc)
             # Compute the timeout as it will be seen by providers, assuming they will see
             # the Demand 5 seconds from now
             provider_timeout = timeout - timedelta(seconds=5)
@@ -443,14 +443,15 @@ class SummaryLogger:
 
         elif isinstance(event, events.NoProposalsConfirmed):
             self.time_waiting_for_proposals += event.timeout
-            if event.num_offers == 0:
+            offers_collected = event.job.offers_collected
+            if offers_collected == 0:
                 msg = (
                     "No offers have been collected from the market for"
                     f" {self.time_waiting_for_proposals.seconds}s."
                 )
             else:
                 msg = (
-                    f"{event.num_offers} {'offer has' if event.num_offers == 1 else 'offers have'} "
+                    f"{offers_collected} {'offer has' if offers_collected == 1 else 'offers have'} "
                     f"been collected from the market, but no provider has responded for "
                     f"{self.time_waiting_for_proposals.seconds}s."
                 )
