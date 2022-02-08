@@ -300,9 +300,6 @@ class SummaryLogger:
     # Set of agreements confirmed by providers, indexed by job id
     confirmed_agreements: Dict[JobId, Set[AgreementId]]
 
-    # Maps task id to task data
-    task_data: Dict[TaskId, Any]
-
     # Maps a job id and provider info to the list of task ids computed
     # by the provider for the given job
     provider_tasks: Dict[JobId, Dict[ProviderInfo, List[TaskId]]]
@@ -342,7 +339,6 @@ class SummaryLogger:
         self.confirmed_proposals = set()
         self.agreement_provider_info = {}
         self.confirmed_agreements = defaultdict(set)
-        self.task_data = {}
         self.script_cmds = {}
         self.provider_cost = {}
         self.provider_tasks = defaultdict(lambda: defaultdict(list))
@@ -496,7 +492,6 @@ class SummaryLogger:
 
         elif isinstance(event, events.TaskStarted):
             provider_info = self.agreement_provider_info[event.agr_id]
-            self.task_data[event.task_id] = event.task_data
             self.logger.info(
                 "Task started on provider '%s', task data: %s",
                 provider_info.name,
@@ -506,15 +501,13 @@ class SummaryLogger:
 
         elif isinstance(event, events.TaskFinished):
             provider_info = self.agreement_provider_info[event.agr_id]
-            data = self.task_data[event.task_id]
             self.logger.info(
                 "Task finished by provider '%s', task data: %s",
                 provider_info.name,
-                str_capped(data, 200),
+                str_capped(event.task_data, 200),
                 job_id=event.job_id,
             )
-            if event.task_id:
-                self.provider_tasks[event.job_id][provider_info].append(event.task_id)
+            self.provider_tasks[event.job_id][provider_info].append(event.task_id)
 
         elif isinstance(event, events.ScriptSent):
             provider_info = self.agreement_provider_info[event.agr_id]
