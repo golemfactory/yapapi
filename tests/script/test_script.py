@@ -4,7 +4,7 @@ import pytest
 import sys
 from unittest import mock
 
-from yapapi.events import CommandExecuted
+from yapapi.events import CommandExecuted, CommandStdOut, CommandStdErr
 from yapapi.script import Script
 
 if sys.version_info >= (3, 8):
@@ -97,16 +97,32 @@ class TestScript:
         self._assert_src_path(script, src_path)
         assert self._on_download_executed
 
+    @pytest.mark.parametrize(
+        "command_event_type_data",
+        (
+            #   This is the non-streaming API, only possible event is CommandExecuted
+            ((CommandExecuted, {"cmd_idx": 0, "success": True, "message": "foo"}),),
+            #   This is a streaming API
+            (
+                (CommandStdOut, {"cmd_idx": 0, "output": "This_is_std_out"}),
+                (CommandStdErr, {"cmd_idx": 0, "output": "This_is_std_err"}),
+                (CommandExecuted, {"cmd_idx": 0, "success": True, "message": "foo"}),
+            ),
+        ),
+    )
     @pytest.mark.asyncio
-    async def test_cmd_result(self):
+    async def test_cmd_result(self, command_event_type_data):
         work_context = WorkContextFactory()
         script = work_context.new_script()
         future_result = script.run("/some/cmd", 1)
 
+        events = []
+
         await script._before()
-        script.process_batch_event(
-            CommandExecuted, {"cmd_idx": 0, "success": True, "message": "foo"}
-        )
+        for command_event_type, command_event_data in command_event_type_data:
+            event = script.process_batch_event(command_event_type, command_event_data)
+            events.append(event)
 
         assert future_result.done()
         assert future_result.result() == script.results[0]
+        assert future_result.result() == events[-1]

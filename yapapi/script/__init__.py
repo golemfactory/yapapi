@@ -70,7 +70,9 @@ class Script:
     def emit(self, event_class: Type[ScriptEventType], **kwargs) -> ScriptEventType:
         return self._ctx.emit(event_class, script=self, **kwargs)
 
-    def process_batch_event(self, event_class: Type[CommandEvent], event_kwargs: Dict[str, Any]):
+    def process_batch_event(
+        self, event_class: Type[CommandEvent], event_kwargs: Dict[str, Any]
+    ) -> CommandEvent:
         """Event emiting and special events.CommandExecuted logic"""
         command = self._commands[event_kwargs["cmd_idx"]]
         del event_kwargs["cmd_idx"]
@@ -81,6 +83,7 @@ class Script:
                 command._result.set_result(event)
             else:
                 raise CommandExecutionError(str(command), event.message, event.stderr)
+        return event
 
     @property
     def results(self) -> List[CommandExecuted]:

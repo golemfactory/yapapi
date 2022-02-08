@@ -598,15 +598,21 @@ class _Engine:
 
             script.emit(events.ScriptSent)
 
-            async def get_batch_results() -> List[events.CommandExecuted]:
+            async def get_batch_results() -> List[events.CommandEvent]:
+                results: List[events.CommandEvent] = []
                 async for event_class, event_kwargs in remote:
-                    script.process_batch_event(event_class, event_kwargs)
+                    event = script.process_batch_event(event_class, event_kwargs)
+                    results.append(event)
 
                 script.emit(events.GettingResults)
                 await script._after()
                 script.emit(events.ScriptFinished)
                 await self.accept_payments_for_agreement(job_id, agreement_id, partial=True)
-                return script.results
+
+                #   NOTE: This is the same as script.results for non-streaming mode,
+                #         but when streaming we have here additional CommandEvents that
+                #         are not CommandExecuted
+                return results
 
             loop = asyncio.get_event_loop()
 
