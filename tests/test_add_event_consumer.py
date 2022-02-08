@@ -36,6 +36,7 @@ async def test_emit_event(dummy_yagna_engine):
         await golem.add_event_consumer(event_consumer_3)
         for sample_event in sample_events:
             event_class, event_kwargs = type(sample_event), asdict(sample_event)
+            del event_kwargs["timestamp"]  # timestamp is set only internally
             emitted_event = golem._engine.emit(event_class, **event_kwargs)
             got_events_4.append(emitted_event)
     assert got_events_1 == emitted_events
@@ -53,6 +54,7 @@ async def test_emit_event(dummy_yagna_engine):
     async with golem:
         for sample_event in sample_events:
             event_class, event_kwargs = type(sample_event), asdict(sample_event)
+            del event_kwargs["timestamp"]  # timestamp is set only internally
             emitted_event = golem._engine.emit(event_class, **event_kwargs)
             got_events_4.append(emitted_event)
     assert got_events_1 == emitted_events
