@@ -46,13 +46,12 @@ from collections import defaultdict, Counter
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-import itertools
 import inspect
 import logging
 import os
 import sys
 import time
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional, Set
 
 if sys.version_info >= (3, 8):
     from typing import Final
@@ -279,9 +278,6 @@ class SummaryLogger:
 
     logger = get_logger("yapapi.summary")
 
-    # Generates subsequent numbers, for use in generated provider names
-    numbers: Iterator[int]
-
     # Start time of the computation, indexed by job id
     start_time: Dict[JobId, float]
 
@@ -326,7 +322,6 @@ class SummaryLogger:
         """Create a SummaryLogger."""
 
         self._wrapped_emitter = wrapped_emitter
-        self.numbers: Iterator[int] = itertools.count(1)
         self._reset_counters()
         self._print_confirmed_providers()
 
