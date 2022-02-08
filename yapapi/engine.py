@@ -155,7 +155,7 @@ class _Engine:
         self._started = False
 
         #   All agreements ever used within this Engine will be stored here
-        self._all_agreements: Dict[str, Agreement] = {}
+        self._all_agreements: Dict[AgreementId, Agreement] = {}
 
     async def create_demand_builder(
         self, expiration_time: datetime, payload: Payload
