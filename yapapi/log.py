@@ -309,9 +309,6 @@ class SummaryLogger:
     # Has computation been cancelled?
     cancelled: bool
 
-    # Has computation finished?
-    finished: bool
-
     # Has Executor shut down?
     shutdown_complete: bool = False
 
@@ -328,7 +325,6 @@ class SummaryLogger:
     def _reset_counters(self):
         """Reset all information aggregated by this logger related to a single Executor instance."""
 
-        self.provider_cost = {}
         self.start_time = {}
         self.received_proposals = {}
         self.confirmed_proposals = set()
@@ -339,7 +335,6 @@ class SummaryLogger:
         self.provider_tasks = defaultdict(lambda: defaultdict(list))
         self.provider_failures = defaultdict(Counter)
         self.cancelled = False
-        self.finished = False
         self.error_occurred = False
         self.time_waiting_for_proposals = timedelta(0)
         self.prev_confirmed_providers = 0
@@ -538,10 +533,9 @@ class SummaryLogger:
             )
 
         elif isinstance(event, events.PaymentFailed):
-            assert event.exc_info
-            _exc_type, exc, _tb = event.exc_info
+            assert event.exception
             provider_info = self.agreement_provider_info[event.agr_id]
-            reason = str(exc) or repr(exc) or "unexpected error"
+            reason = str(event.exception) or repr(event.exception) or "unexpected error"
             self.logger.error(
                 "Failed to accept an invoice or a debit note from '%s', reason: %s",
                 provider_info,
@@ -566,7 +560,7 @@ class SummaryLogger:
                     job_id=event.job_id,
                 )
                 return
-            _exc_type, exc, _tb = event.exc_info
+            exc = event.exception
             self.provider_failures[event.job_id][provider_info] += 1
             reason = str(exc) or repr(exc) or "unexpected error"
             if isinstance(exc, CommandExecutionError):
@@ -589,10 +583,8 @@ class SummaryLogger:
             if not event.exc_info:
                 total_time = time.time() - self.start_time[job_id]
                 self.logger.info(f"Job finished in {total_time:.1f}s", job_id=job_id)
-                self.finished = True
             else:
-                _exc_type, exc, _tb = event.exc_info
-                if isinstance(exc, CancelledError):
+                if isinstance(event.exception, CancelledError):
                     self.cancelled = True
                     self.logger.warning("Job cancelled", job_id=job_id)
                 else:
@@ -606,8 +598,7 @@ class SummaryLogger:
             if not event.exc_info:
                 self.logger.info(SummaryLogger.GOLEM_SHUTDOWN_SUCCESSFUL_MESSAGE)
             else:
-                _exc_type, exc, _tb = event.exc_info
-                reason = str(exc) or repr(exc) or "unexpected error"
+                reason = str(event.exception) or repr(event.exception) or "unexpected error"
                 self.logger.error("Error when shutting down Golem engine: %s", reason)
             self.shutdown_complete = True
 
