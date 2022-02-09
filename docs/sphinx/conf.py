@@ -15,6 +15,8 @@ import sys
 
 sys.path.insert(0, os.path.abspath("../../"))
 
+from yapapi import get_version
+
 
 # -- Project information -----------------------------------------------------
 
@@ -23,7 +25,7 @@ copyright = "2020-2021, Golem Factory"
 author = "Golem Factory"
 
 # The full version, including alpha/beta/rc tags
-release = "0.7.0"
+release = get_version()
 
 
 # -- General configuration ---------------------------------------------------

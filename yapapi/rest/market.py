@@ -69,12 +69,26 @@ class Agreement(object):
     def id(self) -> str:
         return self._id
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(id={self.id})"
+
     async def details(self, force_refresh=False) -> AgreementDetails:
         """Retrieve and cache the details of the Agreement.
         :param force_refresh: if set to True, the API call to get the details will always be made
         """
         if not self._details or force_refresh:
             self._details = AgreementDetails(_ref=await self._api.get_agreement(self._id))
+        return self._details
+
+    @property
+    def cached_details(self) -> AgreementDetails:
+        """Return cached details after prior call to `await self.details()` or raise RuntimeError.
+
+        The only purpose is to provide a sync interface to the details."""
+        if not self._details:
+            raise RuntimeError(
+                "Method cached_details() can be called only after prior `await details()`"
+            )
         return self._details
 
     async def confirm(self) -> bool:

@@ -4,16 +4,16 @@ from functools import partial
 import json
 from os import PathLike
 from pathlib import Path
-from typing import Callable, List, Optional, Dict, Union, Any, Awaitable, TYPE_CHECKING
+from typing import Callable, List, Optional, Dict, Union, Any, Awaitable, Type, TYPE_CHECKING
 
 
-from yapapi.events import CommandExecuted, DownloadStarted, DownloadFinished
+from yapapi.events import DownloadStarted, DownloadFinished, CommandEventType
 from yapapi.script.capture import CaptureContext
 from yapapi.storage import StorageProvider, Source, Destination, DOWNLOAD_BYTES_LIMIT_DEFAULT
 
 
 if TYPE_CHECKING:
-    from yapapi.ctx import WorkContext
+    from yapapi.script import Script
 
 
 # For example: { "start": { "args": [] } }
@@ -21,14 +21,14 @@ BatchCommand = Dict[str, Dict[str, Union[str, List[str]]]]
 
 
 class Command(abc.ABC):
-    def evaluate(self, ctx: "WorkContext") -> BatchCommand:
+    def evaluate(self) -> BatchCommand:
         """Evaluate and serialize this command."""
 
-    async def after(self, ctx: "WorkContext") -> None:
+    async def after(self) -> None:
         """A hook to be executed on requestor's end after the script has finished."""
         pass
 
-    async def before(self, ctx: "WorkContext") -> None:
+    async def before(self) -> None:
         """A hook to be executed on requestor's end before the script is sent to the provider."""
         pass
 
@@ -39,6 +39,24 @@ class Command(abc.ABC):
 
     def __init__(self):
         self._result: asyncio.Future = asyncio.get_event_loop().create_future()
+        self._script: Optional["Script"] = None
+
+    def _set_script(self, script: "Script") -> None:
+        assert self._script is None, f"Command {self} already belongs to a script {self._script}"
+        self._script = script
+
+    def emit(self, event_class: Type[CommandEventType], **kwargs) -> CommandEventType:
+        if self._script is None:
+            raise RuntimeError("Only commands attached to a Script can emit")
+        return self._script.emit(event_class, command=self, **kwargs)
+
+    @property
+    def _storage(self) -> StorageProvider:
+        assert self._script is not None, "_storage is known only for commands in a Script"
+        return self._script._ctx._storage
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}"
 
 
 class Deploy(Command):
@@ -49,9 +67,9 @@ class Deploy(Command):
         self.kwargs = kwargs
 
     def __repr__(self):
-        return f"deploy {self.kwargs}"
+        return f"{super().__repr__()} {self.kwargs}"
 
-    def evaluate(self, ctx: "WorkContext"):
+    def evaluate(self):
         return self._make_batch_command("deploy", **self.kwargs)
 
 
@@ -63,16 +81,16 @@ class Start(Command):
         self.args = args
 
     def __repr__(self):
-        return f"start {self.args}"
+        return f"{super().__repr__()} {self.args}"
 
-    def evaluate(self, ctx: "WorkContext"):
+    def evaluate(self):
         return self._make_batch_command("start", args=self.args)
 
 
 class Terminate(Command):
     """Command which terminates a given runtime on the provider."""
 
-    def evaluate(self, ctx: "WorkContext"):
+    def evaluate(self):
         return self._make_batch_command("terminate")
 
 
@@ -86,18 +104,21 @@ class _SendContent(Command, abc.ABC):
     async def _do_upload(self, storage: StorageProvider) -> Source:
         pass
 
-    def evaluate(self, ctx: "WorkContext"):
+    def evaluate(self):
         assert self._src
         return self._make_batch_command(
             "transfer", _from=self._src.download_url, _to=f"container:{self._dst_path}"
         )
 
-    async def before(self, ctx: "WorkContext"):
-        self._src = await self._do_upload(ctx._storage)
+    async def before(self):
+        self._src = await self._do_upload(self._storage)
 
-    async def after(self, ctx: "WorkContext") -> None:
+    async def after(self) -> None:
         assert self._src is not None
-        await ctx._storage.release_source(self._src)
+        await self._storage.release_source(self._src)
+
+    def __repr__(self):
+        return f"{super().__repr__()} dst={self._dst_path}"
 
 
 class SendBytes(_SendContent):
@@ -146,6 +167,9 @@ class SendFile(_SendContent):
     async def _do_upload(self, storage: StorageProvider) -> Source:
         return await storage.upload_file(self._src_path)
 
+    def __repr__(self):
+        return f"{super().__repr__()} src={self._src_path}"
+
 
 class Run(Command):
     """Command which schedules running a shell command on a provider."""
@@ -173,11 +197,14 @@ class Run(Command):
         self.stderr = stderr
         self.stdout = stdout
 
-    def evaluate(self, ctx: "WorkContext"):
+    def evaluate(self):
         capture = {"stdout": self.stdout.to_dict(), "stderr": self.stderr.to_dict()}
         return self._make_batch_command(
             "run", entry_point=self.cmd, args=self.args, capture=capture
         )
+
+    def __repr__(self):
+        return f"{super().__repr__()} {self.cmd} {self.args}"
 
 
 StorageEvent = Union[DownloadStarted, DownloadFinished]
@@ -193,23 +220,24 @@ class _ReceiveContent(Command, abc.ABC):
         self._dst_slot: Optional[Destination] = None
         self._dst_path: Optional[PathLike] = None
 
-    def evaluate(self, ctx: "WorkContext"):
+    def evaluate(self):
         assert self._dst_slot
         return self._make_batch_command(
             "transfer", _from=f"container:{self._src_path}", to=self._dst_slot.upload_url
         )
 
-    async def before(self, ctx: "WorkContext"):
-        self._dst_slot = await ctx._storage.new_destination(destination_file=self._dst_path)
+    async def before(self):
+        self._dst_slot = await self._storage.new_destination(destination_file=self._dst_path)
 
-    def _emit_download_start(self, ctx: "WorkContext"):
+    def _emit_download_start(self):
         assert self._dst_slot, f"{self.__class__} after without before"
-        if ctx._emitter:
-            ctx._emitter(DownloadStarted(path=self._src_path))
+        self.emit(DownloadStarted)
 
-    def _emit_download_end(self, ctx: "WorkContext"):
-        if ctx._emitter:
-            ctx._emitter(DownloadFinished(path=str(self._dst_path)))
+    def _emit_download_end(self):
+        self.emit(DownloadFinished)
+
+    def __repr__(self):
+        return f"{super().__repr__()} src={self._src_path}"
 
 
 class DownloadFile(_ReceiveContent):
@@ -228,13 +256,16 @@ class DownloadFile(_ReceiveContent):
         super().__init__(src_path)
         self._dst_path = Path(dst_path)
 
-    async def after(self, ctx: "WorkContext") -> None:
-        self._emit_download_start(ctx)
+    async def after(self) -> None:
+        self._emit_download_start()
         assert self._dst_path
         assert self._dst_slot
 
         await self._dst_slot.download_file(self._dst_path)
-        self._emit_download_end(ctx)
+        self._emit_download_end()
+
+    def __repr__(self):
+        return f"{super().__repr__()} dst={self._dst_path}"
 
 
 class DownloadBytes(_ReceiveContent):
@@ -256,12 +287,12 @@ class DownloadBytes(_ReceiveContent):
         self._on_download = on_download
         self._limit = limit
 
-    async def after(self, ctx: "WorkContext") -> None:
-        self._emit_download_start(ctx)
+    async def after(self) -> None:
+        self._emit_download_start()
         assert self._dst_slot
 
         output = await self._dst_slot.download_bytes(limit=self._limit)
-        self._emit_download_end(ctx)
+        self._emit_download_end()
         await self._on_download(output)
 
 

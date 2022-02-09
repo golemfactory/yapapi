@@ -22,8 +22,8 @@ from goth.runner.probe import RequestorProbe
 from yapapi import Golem, Task
 from yapapi.events import (
     Event,
-    ComputationStarted,
-    ComputationFinished,
+    JobStarted,
+    JobFinished,
     SubscriptionCreated,
 )
 from yapapi.log import enable_default_logger
@@ -110,21 +110,21 @@ async def assert_demand_resubscribed(events: "EventStream[Event]"):
         logger.info(colors.cyan(str(e)))
         return e
 
-    e = await wait_for_event(ComputationStarted, 10)
+    e = await wait_for_event(JobStarted, 10)
 
     # Make sure new subscriptions are created at least three times
     while len(subscription_ids) < 3:
         e = await wait_for_event(SubscriptionCreated, SUBSCRIPTION_EXPIRATION_TIME + 10)
-        assert e.sub_id not in subscription_ids
-        subscription_ids.add(e.sub_id)
+        assert e.subscription.id not in subscription_ids
+        subscription_ids.add(e.subscription.id)
 
     # Unsubscribe and make sure new subscription is created
-    await unsubscribe_demand(e.sub_id)
+    await unsubscribe_demand(e.subscription.id)
     logger.info("Demand unsubscribed")
     await wait_for_event(SubscriptionCreated, 5)
 
     # Enough checking, wait until the computation finishes
-    await wait_for_event(ComputationFinished, 20)
+    await wait_for_event(JobFinished, 20)
 
 
 @pytest.mark.asyncio

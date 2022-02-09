@@ -57,6 +57,10 @@ class CustomCounterService(Service):
             yield s
         print(f"service {self.id} stopped on '{self.provider_name}'")
 
+    async def reset(self):
+        # We don't have to do anything when the service is restarted
+        pass
+
 
 async def main(running_time_sec, subnet_tag, driver=None, network=None):
 

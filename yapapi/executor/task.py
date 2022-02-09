@@ -2,7 +2,12 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 from enum import Enum, auto
 import itertools
-from typing import Callable, ClassVar, Iterator, Generic, Optional, Set, Tuple, TypeVar, Union
+from typing import Callable, ClassVar, Iterator, Generic, Optional, Set, Tuple, Type, TypeVar, Union
+
+try:
+    from typing import Protocol
+except ImportError:
+    from typing_extensions import Protocol  # type: ignore
 
 from yapapi import events
 from ._smartq import SmartQueue, Handle
@@ -18,6 +23,11 @@ class TaskStatus(Enum):
 TaskData = TypeVar("TaskData")
 TaskResult = TypeVar("TaskResult")
 TaskEvents = Union[events.TaskAccepted, events.TaskRejected]
+
+
+class TaskEmitter(Protocol):
+    def __call__(self, event_class: Type[events.TaskEventType], **kwargs) -> events.TaskEventType:
+        ...
 
 
 class Task(Generic[TaskData, TaskResult]):
@@ -40,7 +50,7 @@ class Task(Generic[TaskData, TaskResult]):
         self.id: str = str(next(Task.ids))
         self._started: Optional[datetime] = None
         self._finished: Optional[datetime] = None
-        self._emit: Optional[Callable[[TaskEvents], None]] = None
+        self._emit: Optional[TaskEmitter] = None
         self._callbacks: Set[Callable[["Task[TaskData, TaskResult]", TaskStatus], None]] = set()
         self._handle: Optional[
             Tuple[Handle["Task[TaskData, TaskResult]"], SmartQueue["Task[TaskData, TaskResult]"]]
@@ -50,6 +60,11 @@ class Task(Generic[TaskData, TaskResult]):
         self._data = data
         self._status: TaskStatus = TaskStatus.WAITING
 
+    def emit(self, event_class: Type[events.TaskEventType], **kwargs) -> events.TaskEventType:
+        if self._emit is None:
+            raise RuntimeError("Task {self} haven't started yet, so it can't emit")
+        return self._emit(event_class, task=self, **kwargs)
+
     def _add_callback(
         self, callback: Callable[["Task[TaskData, TaskResult]", TaskStatus], None]
     ) -> None:
@@ -58,7 +73,7 @@ class Task(Generic[TaskData, TaskResult]):
     def __repr__(self) -> str:
         return f"Task(id={self.id}, data={self._data})"
 
-    def _start(self, emitter: Callable[[TaskEvents], None]) -> None:
+    def _start(self, emitter: TaskEmitter) -> None:
         self._status = TaskStatus.RUNNING
         self._emit = emitter
         self._started = datetime.now(timezone.utc)
@@ -78,7 +93,7 @@ class Task(Generic[TaskData, TaskResult]):
     def for_handle(
         handle: Handle["Task[TaskData, TaskResult]"],
         queue: SmartQueue["Task[TaskData, TaskResult]"],
-        emitter: Callable[[events.Event], None],
+        emitter: TaskEmitter,
     ) -> "Task[TaskData, TaskResult]":
         task = handle.data
         task._handle = (handle, queue)
@@ -111,11 +126,10 @@ class Task(Generic[TaskData, TaskResult]):
 
         :param result: task computation result (optional)
         """
-        if self._emit:
-            self._emit(events.TaskAccepted(task_id=self.id, result=result))
         assert self._status == TaskStatus.RUNNING, "Accepted task not running"
         self._status = TaskStatus.ACCEPTED
         self._result = result
+        self.emit(events.TaskAccepted)
         self._stop()
         for cb in self._callbacks:
             cb(self, TaskStatus.ACCEPTED)
@@ -128,8 +142,7 @@ class Task(Generic[TaskData, TaskResult]):
 
         :param reason: task rejection description (optional)
         """
-        if self._emit:
-            self._emit(events.TaskRejected(task_id=self.id, reason=reason))
+        self.emit(events.TaskRejected, reason=reason)
         assert self._status == TaskStatus.RUNNING, "Rejected task not running"
         self._status = TaskStatus.REJECTED
         self._stop(retry)

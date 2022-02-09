@@ -4,20 +4,25 @@ from datetime import timedelta, datetime
 from deprecated import deprecated  # type: ignore
 import enum
 import logging
-from typing import Callable, Optional, Dict, List, Any, Awaitable
+from typing import Callable, Optional, Dict, List, Any, Awaitable, Type
+
+try:
+    from typing import Protocol
+except ImportError:
+    from typing_extensions import Protocol  # type: ignore
+
 
 from ya_activity.models import (
     ActivityUsage as yaa_ActivityUsage,
     ActivityState as yaa_ActivityState,
 )
 
-from yapapi.events import CommandExecuted
+from yapapi.events import ActivityEventType, CommandExecuted
 from yapapi.props.com import ComLinear
 from yapapi.script import Script
 from yapapi.storage import StorageProvider, DOWNLOAD_BYTES_LIMIT_DEFAULT
-from yapapi.rest.market import AgreementDetails
+from yapapi.rest.market import Agreement, AgreementDetails
 from yapapi.rest.activity import Activity
-from yapapi.script.command import StorageEvent
 from yapapi.utils import get_local_timezone
 
 logger = logging.getLogger(__name__)
@@ -73,6 +78,11 @@ class ExecOptions:
     batch_timeout: Optional[timedelta] = None
 
 
+class WorkContextEmitter(Protocol):
+    def __call__(self, event_class: Type[ActivityEventType], **kwargs) -> ActivityEventType:
+        ...
+
+
 class WorkContext:
     """Provider node's work context.
 
@@ -83,19 +93,30 @@ class WorkContext:
     def __init__(
         self,
         activity: Activity,
-        agreement_details: AgreementDetails,
+        agreement: Agreement,
         storage: StorageProvider,
-        emitter: Optional[Callable[[StorageEvent], None]] = None,
+        emitter: WorkContextEmitter,
     ):
         self._activity = activity
-        self._agreement_details = agreement_details
+        self._agreement = agreement
         self._storage: StorageProvider = storage
-        self._emitter: Optional[Callable[[StorageEvent], None]] = emitter
+        self._emitter = emitter
 
         self._pending_steps: List[Work] = []
 
         self.__payment_model: Optional[ComLinear] = None
         self.__script: Script = self.new_script()
+
+    def emit(self, event_class: Type[ActivityEventType], **kwargs) -> ActivityEventType:
+        return self._emitter(
+            event_class, activity=self._activity, agreement=self._agreement, **kwargs
+        )
+
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}"
+            f"(id={self.id}, activity={self._activity}, provider={self.provider_id})"
+        )
 
     @property
     def id(self) -> str:
@@ -128,6 +149,10 @@ class WorkContext:
             self.__payment_model = self._agreement_details.provider_view.extract(ComLinear)
 
         return self.__payment_model
+
+    @property
+    def _agreement_details(self) -> AgreementDetails:
+        return self._agreement.cached_details
 
     def new_script(
         self, timeout: Optional[timedelta] = None, wait_for_results: bool = True

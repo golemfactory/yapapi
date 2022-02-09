@@ -17,10 +17,9 @@ from typing import (
 )
 from typing_extensions import Final, AsyncGenerator
 
-from yapapi import rest, events
+from yapapi import events
 from yapapi.ctx import WorkContext
 from yapapi.payload import Payload
-from yapapi.rest.activity import Activity
 from yapapi.script import Script
 from yapapi.engine import _Engine, Job
 from yapapi.script.command import Deploy, Start
@@ -78,10 +77,6 @@ class Executor:
     def payment_network(self) -> str:
         """Return the payment network used for this `Executor`'s engine."""
         return self._engine.payment_network
-
-    def emit(self, event: events.Event) -> None:
-        """Emit a computation event using this `Executor`'s engine."""
-        self._engine.emit(event)
 
     def submit(
         self,
@@ -163,8 +158,6 @@ class Executor:
         job: Job,
     ) -> AsyncGenerator[Task[D, R], None]:
 
-        self.emit(events.ComputationStarted(job.id, job.expiration_time))
-
         done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
 
         def on_task_done(task: Task[D, R], status: TaskStatus) -> None:
@@ -184,33 +177,45 @@ class Executor:
 
         work_queue = SmartQueue(input_tasks())
 
-        async def run_worker(
-            agreement: rest.market.Agreement, activity: Activity, work_context: WorkContext
-        ) -> None:
-            """Run an instance of `worker` for the particular activity and work context."""
+        async def run_worker(work_context: WorkContext) -> None:
+            """Run an instance of `worker` for the particular work context."""
+            agreement = work_context._agreement
+            activity = work_context._activity
 
             with work_queue.new_consumer() as consumer:
                 try:
 
-                    async def task_generator() -> AsyncIterator[Task[D, R]]:
-                        async for handle in consumer:
-                            task = Task.for_handle(handle, work_queue, self.emit)
-                            self._engine.emit(
-                                events.TaskStarted(
-                                    job_id=job.id,
-                                    agr_id=agreement.id,
-                                    task_id=task.id,
-                                    task_data=task.data,
-                                )
-                            )
-                            yield task
-                            self._engine.emit(
-                                events.TaskFinished(
-                                    job_id=job.id, agr_id=agreement.id, task_id=task.id
-                                )
-                            )
+                    # the `task_generator` here is passed as the `tasks` argument to the user's
+                    # `worker` function
+                    #
+                    # because it's an `AsyncGenerator`, we're able to throw exceptions its way
+                    # so that we can terminate it explicitly when an exception happens within
+                    # the worker's generator
+                    #
+                    # otherwise, the user can signal the generator to finish by sending it an
+                    # `aclose()`, which triggers a `GeneratorExit`, which,
+                    # in turn, sets a `finished` status on the `consumer` so that the consumer
+                    # stops pulling new task handles from the queue.
+                    #
+                    # later, the `finished` status is used to throw `StopAsyncIteration`, which
+                    # signals the engine to terminate the agreement when the worker finishes.
+                    #
+                    # if that wasn't done, the engine could just restart the worker on the same
+                    # agreement.
 
-                    batch_generator = worker(work_context, task_generator())
+                    async def task_generator() -> AsyncGenerator[Task[D, R], None]:
+                        async for handle in consumer:
+                            task = Task.for_handle(handle, work_queue, work_context.emit)
+                            task.emit(events.TaskStarted)
+                            try:
+                                yield task
+                            except GeneratorExit:
+                                consumer.finish()
+
+                            task.emit(events.TaskFinished)
+
+                    task_gen = task_generator()
+                    batch_generator = worker(work_context, task_gen)
 
                     if self._implicit_init:
                         await self._perform_implicit_init(
@@ -223,16 +228,15 @@ class Executor:
                         )
                     except StopAsyncIteration:
                         pass
-                    self.emit(events.WorkerFinished(job_id=job.id, agr_id=agreement.id))
-                except Exception:
-                    self.emit(
-                        events.WorkerFinished(
-                            job_id=job.id, agr_id=agreement.id, exc_info=sys.exc_info()  # type: ignore
-                        )
-                    )
+                    work_context.emit(events.WorkerFinished)
+                except Exception as e:
+                    work_context.emit(events.WorkerFinished, exc_info=sys.exc_info())  # type: ignore
+                    await task_gen.athrow(type(e), e)
                     raise
                 finally:
                     await self._engine.accept_payments_for_agreement(job.id, agreement.id)
+                    if consumer.finished:
+                        raise StopAsyncIteration()
 
         async def worker_starter() -> None:
             while True:
@@ -276,13 +280,9 @@ class Executor:
 
                 now = datetime.now(timezone.utc)
                 if now > job.expiration_time:
-                    raise TimeoutError(f"Computation timed out after {self._timeout}")
+                    raise TimeoutError(f"Job timed out after {self._timeout}")
                 if now > get_offers_deadline and job.proposals_confirmed == 0:
-                    self.emit(
-                        events.NoProposalsConfirmed(
-                            num_offers=job.offers_collected, timeout=DEFAULT_GET_OFFERS_TIMEOUT
-                        )
-                    )
+                    job.emit(events.NoProposalsConfirmed, timeout=DEFAULT_GET_OFFERS_TIMEOUT)
                     get_offers_deadline += DEFAULT_GET_OFFERS_TIMEOUT
 
                 if not get_done_task:
@@ -312,11 +312,9 @@ class Executor:
                     assert get_done_task not in services
                     get_done_task = None
 
-            self.emit(events.ComputationFinished(job.id))
-
         except (Exception, CancelledError, KeyboardInterrupt) as e:
             #   TODO: why do we catch KeyboardInterrupt? How can we get one here?
-            self.emit(events.ComputationFinished(job.id, exc_info=sys.exc_info()))  # type: ignore
+            job.set_exc_info(sys.exc_info())
             cancelled = True
 
             if isinstance(e, CancelledError):
