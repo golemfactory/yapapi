@@ -91,19 +91,17 @@ import abc
 from datetime import datetime, timedelta
 import logging
 from types import TracebackType
-from typing import List, Optional, Type, Tuple, TYPE_CHECKING, TypeVar
+from typing import List, Optional, Type, Tuple, TypeVar
 
 from yapapi.props import NodeInfo
 
-if TYPE_CHECKING:
-    from yapapi.services import Service
-    from yapapi.script import Script
-    from yapapi.script.command import BatchCommand, Command, _ReceiveContent
-    from yapapi.executor.task import Task, TaskData, TaskResult
-    from yapapi.rest.activity import Activity
-    from yapapi.rest.market import Agreement, OfferProposal, Subscription
-    from yapapi.rest.payment import DebitNote, Invoice
-    from yapapi.engine import Job
+#   Q: Why `import yapapi` here?
+#   A: Because we want to have typing annotations without circular imports
+#   Q: Why not `if TYPE_CHECKING:`?
+#   A: Because TYPE_CHECKING doesn't work for a sphinx plugin we use (`sphinx-autodoc-typehints`)
+#      https://github.com/tox-dev/sphinx-autodoc-typehints/issues/22
+#      -> Compare e.g. "MarketStrategy" typing in `yapapi.golem.Golem.__init__`
+import yapapi
 
 
 logger = logging.getLogger(__name__)
@@ -168,7 +166,7 @@ class Event(abc.ABC):
 
 @attr.s(auto_attribs=True, repr=False)
 class JobEvent(Event, abc.ABC):
-    job: "Job"
+    job: "yapapi.engine.Job"
 
     @property
     def job_id(self) -> str:
@@ -177,12 +175,12 @@ class JobEvent(Event, abc.ABC):
 
 @attr.s(auto_attribs=True, repr=False)
 class SubscriptionEvent(JobEvent, abc.ABC):
-    subscription: "Subscription"
+    subscription: "yapapi.rest.market.Subscription"
 
 
 @attr.s(auto_attribs=True, repr=False)
 class ProposalEvent(JobEvent, abc.ABC):
-    proposal: "OfferProposal"
+    proposal: "yapapi.rest.market.OfferProposal"
 
     @property
     def prop_id(self) -> str:
@@ -195,7 +193,7 @@ class ProposalEvent(JobEvent, abc.ABC):
 
 @attr.s(auto_attribs=True, repr=False)
 class AgreementEvent(JobEvent, abc.ABC):
-    agreement: "Agreement"
+    agreement: "yapapi.rest.market.Agreement"
 
     @property
     def agr_id(self) -> str:
@@ -212,37 +210,37 @@ class AgreementEvent(JobEvent, abc.ABC):
 
 @attr.s(auto_attribs=True, repr=False)
 class ActivityEvent(AgreementEvent, abc.ABC):
-    activity: "Activity"
+    activity: "yapapi.rest.activity.Activity"
 
 
 @attr.s(auto_attribs=True, repr=False)
 class TaskEvent(ActivityEvent, abc.ABC):
-    task: "Task"
+    task: "yapapi.executor.task.Task"
 
     @property
     def task_id(self) -> str:
         return self.task.id
 
     @property
-    def task_data(self) -> "TaskData":
+    def task_data(self) -> "yapapi.executor.task.TaskData":
         return self.task.data
 
 
 @attr.s(auto_attribs=True, repr=False)
 class ServiceEvent(ActivityEvent, abc.ABC):
-    service: "Service"
+    service: "yapapi.services.Service"
 
 
 @attr.s(auto_attribs=True, repr=False)
 class ScriptEvent(ActivityEvent, abc.ABC):
-    script: "Script"
+    script: "yapapi.script.Script"
 
     @property
     def script_id(self) -> int:
         return self.script.id
 
     @property
-    def cmds(self) -> List["BatchCommand"]:
+    def cmds(self) -> List["yapapi.script.command.BatchCommand"]:
         #   NOTE: This assumes `script._before()` was already called
         #         (currently this is always true)
         return self.script._evaluate()
@@ -250,12 +248,12 @@ class ScriptEvent(ActivityEvent, abc.ABC):
 
 @attr.s(auto_attribs=True, repr=False)
 class CommandEvent(ScriptEvent, abc.ABC):
-    command: "Command"
+    command: "yapapi.script.command.Command"
 
 
 @attr.s(auto_attribs=True, repr=False)
 class InvoiceEvent(AgreementEvent, abc.ABC):
-    invoice: "Invoice"
+    invoice: "yapapi.rest.payment.Invoice"
 
     @property
     def amount(self) -> str:
@@ -264,7 +262,7 @@ class InvoiceEvent(AgreementEvent, abc.ABC):
 
 @attr.s(auto_attribs=True, repr=False)
 class DebitNoteEvent(AgreementEvent, abc.ABC):
-    debit_note: "DebitNote"
+    debit_note: "yapapi.rest.payment.DebitNote"
 
     @property
     def amount(self) -> str:
@@ -434,7 +432,7 @@ class CommandStdErr(CommandEvent):
 @attr.s(auto_attribs=True, repr=False)
 class TaskAccepted(TaskEvent):
     @property
-    def result(self) -> "TaskResult":
+    def result(self) -> "yapapi.executor.task.TaskResult":
         assert self.task._result is not None
         return self.task._result
 
@@ -446,7 +444,7 @@ class TaskRejected(TaskEvent):
 
 @attr.s(auto_attribs=True, repr=False)
 class DownloadStarted(CommandEvent):
-    command: "_ReceiveContent"
+    command: "yapapi.script.command._ReceiveContent"
 
     @property
     def path(self) -> str:
@@ -455,7 +453,7 @@ class DownloadStarted(CommandEvent):
 
 @attr.s(auto_attribs=True, repr=False)
 class DownloadFinished(CommandEvent):
-    command: "_ReceiveContent"
+    command: "yapapi.script.command._ReceiveContent"
 
     @property
     def path(self) -> str:
