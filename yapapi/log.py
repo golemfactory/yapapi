@@ -138,8 +138,8 @@ def enable_default_logger(
 
 # Default human-readable representation of event types.
 event_type_to_string = {
-    events.ComputationStarted: "Computation started",
-    events.ComputationFinished: "Computation finished",
+    events.JobStarted: "Job started",
+    events.JobFinished: "Job finished",
     events.SubscriptionCreated: "Demand published on the market",
     events.SubscriptionFailed: "Demand publication failed",
     events.CollectFailed: "Failed to collect proposals for demand",
@@ -429,7 +429,7 @@ class SummaryLogger:
             self.error_occurred = True
 
     def _handle(self, event: events.Event):
-        if isinstance(event, events.ComputationStarted):
+        if isinstance(event, events.JobStarted):
             self._register_job(event.job_id)
             if self.provider_cost:
                 # This means another computation run in the current Executor instance.
@@ -596,20 +596,20 @@ class SummaryLogger:
                     job_id=event.job_id,
                 )
 
-        elif isinstance(event, events.ComputationFinished):
+        elif isinstance(event, events.JobFinished):
             job_id = event.job_id
             if not event.exc_info:
                 total_time = time.time() - self.start_time[job_id]
-                self.logger.info(f"Computation finished in {total_time:.1f}s", job_id=job_id)
+                self.logger.info(f"Job finished in {total_time:.1f}s", job_id=job_id)
                 self.finished = True
             else:
                 _exc_type, exc, _tb = event.exc_info
                 if isinstance(exc, CancelledError):
                     self.cancelled = True
-                    self.logger.warning("Computation cancelled", job_id=job_id)
+                    self.logger.warning("Job cancelled", job_id=job_id)
                 else:
                     reason = str(exc) or repr(exc) or "unexpected error"
-                    self.logger.error("Computation failed, reason: %s", reason, job_id=job_id)
+                    self.logger.error("Job failed, reason: %s", reason, job_id=job_id)
             self._print_summary(job_id)
 
         elif isinstance(event, events.ShutdownFinished):

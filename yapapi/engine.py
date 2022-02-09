@@ -160,7 +160,7 @@ class _Engine:
         self._started = False
 
         #   All agreements ever used within this Engine will be stored here
-        self._all_agreements: Dict[str, Agreement] = {}
+        self._all_agreements: Dict[AgreementId, Agreement] = {}
 
     async def create_demand_builder(
         self, expiration_time: datetime, payload: Payload
@@ -532,12 +532,12 @@ class _Engine:
     def add_job(self, job: "Job"):
         """Register a job with this engine."""
         self._jobs.add(job)
-        job.emit(events.ComputationStarted)
+        job.emit(events.JobStarted)
 
     def finalize_job(self, job: "Job"):
         """Mark a job as finished."""
         job.finished.set()
-        job.emit(events.ComputationFinished, exc_info=job._exc_info)  # type: ignore
+        job.emit(events.JobFinished, exc_info=job._exc_info)  # type: ignore
 
     def register_generator(self, generator: AsyncGenerator) -> None:
         """Register a generator with this engine."""
@@ -620,7 +620,7 @@ class _Engine:
             script.emit(events.ScriptSent)
 
             async def get_batch_results() -> List[events.CommandEvent]:
-                results = []
+                results: List[events.CommandEvent] = []
                 async for event_class, event_kwargs in remote:
                     event = script.process_batch_event(event_class, event_kwargs)
                     results.append(event)
@@ -629,6 +629,10 @@ class _Engine:
                 await script._after()
                 script.emit(events.ScriptFinished)
                 await self.accept_payments_for_agreement(job_id, agreement_id, partial=True)
+
+                #   NOTE: This is the same as script.results for non-streaming mode,
+                #         but when streaming we have here additional CommandEvents that
+                #         are not CommandExecuted
                 return results
 
             loop = asyncio.get_event_loop()
@@ -728,7 +732,7 @@ class Job:
         self.expiration_time: datetime = expiration_time
         self.payload: Payload = payload
 
-        self.agreements_pool = AgreementsPool(self.id, self.emit, self.engine.recycle_offer)
+        self.agreements_pool = AgreementsPool(self.emit, self.engine.recycle_offer)
         self.finished = asyncio.Event()
 
         self._demand_builder: Optional[DemandBuilder] = None

@@ -26,8 +26,8 @@ Notes:
                 ProposalConfirmed
                 ProposalFailed
             NoProposalsConfirmed
-            ComputationStarted
-            ComputationFinished
+            JobStarted
+            JobFinished
             AgreementEvent
                 AgreementCreated
                 AgreementConfirmed
@@ -114,8 +114,11 @@ class Event(abc.ABC):
     exc_info: Optional[ExcInfo] = attr.ib(default=None, kw_only=True)
     """Tuple containing exception info as returned by `sys.exc_info()`, if applicable."""
 
+    timestamp: datetime = attr.ib(default=datetime.now(), init=False)
+    """Event creation time"""
+
     def __str__(self) -> str:
-        """Mimics Python's default `repr` format, but excludes the field `exc_info` from it.
+        """Mimics Python's default `repr` format, but excludes the fields `exc_info` and `timestamp` from it.
 
         If `exc_info` is not `None`, its underlying exception is included in the result string
         under the key `exception`.
@@ -129,9 +132,10 @@ class Event(abc.ABC):
             if field.name == "exc_info":
                 if field_value:
                     field_reprs.append(f"exception={repr(field_value[1])}")
+            elif field.name == "timestamp":
                 continue
-
-            field_reprs.append(f"{field.name}={repr(field_value)}")
+            else:
+                field_reprs.append(f"{field.name}={repr(field_value)}")
 
         return f"{self.__class__.__name__}({', '.join(field_reprs)})"
 
@@ -260,11 +264,11 @@ class DebitNoteEvent(AgreementEvent, abc.ABC):
 
 
 #   REAL EVENTS
-class ComputationStarted(JobEvent):
+class JobStarted(JobEvent):
     pass
 
 
-class ComputationFinished(JobEvent):
+class JobFinished(JobEvent):
     """Indicates successful completion if `exception` is `None` and a failure otherwise."""
 
 

@@ -231,7 +231,7 @@ class Executor:
                     work_context.emit(events.WorkerFinished)
                 except Exception as e:
                     work_context.emit(events.WorkerFinished, exc_info=sys.exc_info())  # type: ignore
-                    await task_gen.athrow(type(e))
+                    await task_gen.athrow(type(e), e)
                     raise
                 finally:
                     await self._engine.accept_payments_for_agreement(job.id, agreement.id)
@@ -280,7 +280,7 @@ class Executor:
 
                 now = datetime.now(timezone.utc)
                 if now > job.expiration_time:
-                    raise TimeoutError(f"Computation timed out after {self._timeout}")
+                    raise TimeoutError(f"Job timed out after {self._timeout}")
                 if now > get_offers_deadline and job.proposals_confirmed == 0:
                     job.emit(events.NoProposalsConfirmed, timeout=DEFAULT_GET_OFFERS_TIMEOUT)
                     get_offers_deadline += DEFAULT_GET_OFFERS_TIMEOUT
