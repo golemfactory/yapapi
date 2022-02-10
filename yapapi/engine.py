@@ -43,7 +43,7 @@ from yapapi.script import Script
 from yapapi.script.command import BatchCommand
 from yapapi.storage import gftp
 from yapapi.strategy import MarketStrategy, SCORE_NEUTRAL
-from yapapi.utils import AsyncWrapper
+from yapapi.utils import AsyncWrapper, yagna_version_less_than
 
 DEFAULT_PROPERTY_VALUE_RANGES = {
     "golem.com.payment.debit-notes.accept-timeout?": (30.0, None),
@@ -866,6 +866,15 @@ class Job:
 
         When the subscription expires, create a new one. And so on...
         """
+        # Remove some negotiable property ranges when yagna version is less than 0.10.0-rc1.
+        # This will be handled by yagna capabilities API in the future.
+        if yagna_version_less_than("0.10.0-rc1"):
+            for prop_name in [
+                "golem.com.scheme.payu.debit-note-interval-sec?",
+                "golem.com.scheme.payu.payment-timeout-sec?",
+            ]:
+                DEFAULT_PROPERTY_VALUE_RANGES.pop(prop_name, None)
+
         if self._demand_builder is None:
             self._demand_builder = await self.engine.create_demand_builder(
                 self.expiration_time, self.payload
