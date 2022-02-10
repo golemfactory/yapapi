@@ -543,7 +543,7 @@ class SummaryLogger:
             self.logger.info(
                 "Accepted invoice from '%s', amount: %s",
                 provider_info.name,
-                cost.normalize(),
+                event.invoice.amount,
                 job_id=event.job_id,
             )
 
