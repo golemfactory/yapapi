@@ -86,6 +86,7 @@ class NoPaymentAccountError(Exception):
 
 # Type aliases to make some type annotations more meaningful
 JobId = str
+ActivityId = str
 AgreementId = str
 
 
@@ -141,7 +142,8 @@ class _Engine:
         # initialize the payment structures
         self._agreements_to_pay: Dict[JobId, Set[AgreementId]] = defaultdict(set)
         self._agreements_accepting_debit_notes: Dict[JobId, Set[AgreementId]] = defaultdict(set)
-        self._number_of_debit_notes: Dict[AgreementId, int] = defaultdict(int)
+        self._number_of_debit_notes: Dict[ActivityId, int] = defaultdict(int)
+        self._activity_created_at: Dict[ActivityId, datetime] = dict()
         self._invoices: Dict[AgreementId, rest.payment.Invoice] = dict()
         self._payment_closing: bool = False
 
@@ -458,6 +460,7 @@ class _Engine:
 
         async for debit_note in self._payment_api.incoming_debit_notes():
             agr_id = debit_note.agreement_id
+            act_id = debit_note.activity_id
             job_id = next(
                 (
                     id
@@ -474,17 +477,17 @@ class _Engine:
                     agreement=agreement,
                     debit_note=debit_note,
                 )
-                self._number_of_debit_notes[agr_id] += 1
+                self._number_of_debit_notes[act_id] += 1
+                num_notes = self._number_of_debit_notes[act_id]
                 ts = datetime.now()
-                start_ts = job.agreements_pool.agreement_confirmed_at(agr_id)
+                start_ts = self._activity_created_at.get(act_id)
                 max_interval = job.agreements_pool.max_debit_note_interval_for_agreement(agr_id)
                 if start_ts is not None and max_interval is not None:
-                    if (ts - start_ts).total_seconds() > self._number_of_debit_notes[
-                        agr_id
-                    ] * max_interval:
-                        freq_descr = f"{self._number_of_debit_notes[agr_id]} in {ts - start_ts}s"
+                    dur = (ts - start_ts).total_seconds()
+                    if dur > 0 and dur < num_notes * max_interval:
+                        freq_descr = f"{num_notes}/{dur}s"
                         reason = {
-                            "message": f"Too many debit notes: {freq_descr}",
+                            "message": f"Too many debit notes: {freq_descr} (activity: {act_id})",
                             "golem.requestor.code": "TooManyDebitNotes",
                         }
                         job.emit(events.PaymentFailed, agreement=agreement)
@@ -584,6 +587,8 @@ class _Engine:
 
             work_context = WorkContext(activity, agreement, self.storage_manager, emitter=job.emit)
             work_context.emit(events.ActivityCreated)
+
+            self._activity_created_at[activity.id] = datetime.now()
 
             async with activity:
                 self.accept_debit_notes_for_agreement(job.id, agreement.id)
