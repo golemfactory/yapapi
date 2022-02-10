@@ -158,14 +158,6 @@ class JobEvent(Event, abc.ABC):
     def job_id(self) -> str:
         return self.job.id
 
-    @property
-    def expires(self) -> datetime:
-        return self.job.expiration_time
-
-    @property
-    def num_offers(self) -> int:
-        return self.job.offers_collected
-
 
 @attr.s(auto_attribs=True, repr=False)
 class SubscriptionEvent(JobEvent, abc.ABC):
