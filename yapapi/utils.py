@@ -144,7 +144,7 @@ def get_logger(name: str, fmt="[Job {job_id}] {msg}"):
     return _AddJobId(logger, fmt=fmt)
 
 
-@functools.lru_cache
+@functools.lru_cache(None)
 async def yagna_version_less_than(checked_version: str) -> bool:
     try:
         handle = await asyncio.create_subprocess_shell("yagna -V", stdout=asyncio.subprocess.PIPE)
