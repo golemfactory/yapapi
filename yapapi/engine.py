@@ -455,6 +455,25 @@ class _Engine:
             ):
                 break
 
+    async def _check_debit_note_rate(act_id: ActivityId, agr_id: AgreementId, job: Job) -> None:
+        agreement = self._get_agreement_by_id(agr_id)
+        self._number_of_debit_notes[act_id] += 1
+        num_notes = self._number_of_debit_notes[act_id]
+        ts = datetime.now()
+        start_ts = self._activity_created_at.get(act_id)
+        max_interval = job.agreements_pool.max_debit_note_interval_for_agreement(agr_id)
+        if start_ts is not None and max_interval is not None:
+            dur = (ts - start_ts).total_seconds()
+            freq_descr = f"{num_notes} notes/{dur}s"
+            logger.debug("Debit notes for activity {act_id}: {freq_descr}")
+            if dur > 0 and dur < num_notes * max_interval:
+                reason = {
+                    "message": f"Too many debit notes: {freq_descr} (activity: {act_id})",
+                    "golem.requestor.code": "TooManyDebitNotes",
+                }
+                job.emit(events.PaymentFailed, agreement=agreement)
+                await agreement.terminate(reason)
+
     async def _process_debit_notes(self) -> None:
         """Process incoming debit notes."""
 
@@ -477,21 +496,7 @@ class _Engine:
                     agreement=agreement,
                     debit_note=debit_note,
                 )
-                self._number_of_debit_notes[act_id] += 1
-                num_notes = self._number_of_debit_notes[act_id]
-                ts = datetime.now()
-                start_ts = self._activity_created_at.get(act_id)
-                max_interval = job.agreements_pool.max_debit_note_interval_for_agreement(agr_id)
-                if start_ts is not None and max_interval is not None:
-                    dur = (ts - start_ts).total_seconds()
-                    if dur > 0 and dur < num_notes * max_interval:
-                        freq_descr = f"{num_notes}/{dur}s"
-                        reason = {
-                            "message": f"Too many debit notes: {freq_descr} (activity: {act_id})",
-                            "golem.requestor.code": "TooManyDebitNotes",
-                        }
-                        job.emit(events.PaymentFailed, agreement=agreement)
-                        agreement.terminate(reason)
+                await _check_debit_note_rate(act_id, agr_id, job, agreement)
                 try:
                     allocation = self._get_allocation(debit_note)
                     await debit_note.accept(
