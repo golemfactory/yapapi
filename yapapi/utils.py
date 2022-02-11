@@ -4,6 +4,7 @@ from datetime import datetime, timezone, tzinfo
 import enum
 import functools
 import logging
+from os import environ
 from packaging import version
 from typing import AsyncContextManager, Callable, Optional
 import warnings
@@ -147,7 +148,9 @@ def get_logger(name: str, fmt="[Job {job_id}] {msg}"):
 @functools.lru_cache(None)
 async def yagna_version_less_than(checked_version: str) -> bool:
     try:
-        handle = await asyncio.create_subprocess_shell("yagna -V", stdout=asyncio.subprocess.PIPE)
+        handle = await asyncio.create_subprocess_shell(
+            "yagna -V", stdout=asyncio.subprocess.PIPE, env=dict(environ)
+        )
         out, err = await handle.communicate()
         yagna_version = str(out).split()[1]
         return version.parse(yagna_version) < version.parse(checked_version)
