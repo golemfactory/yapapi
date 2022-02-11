@@ -599,7 +599,8 @@ class SummaryLogger:
                 total_time = time.time() - self.start_time[job_id]
                 self.logger.info(f"Job finished in {total_time:.1f}s", job_id=job_id)
             else:
-                if isinstance(event.exception, CancelledError):
+                exc = event.exception
+                if isinstance(exc, CancelledError):
                     self.cancelled = True
                     self.logger.warning("Job cancelled", job_id=job_id)
                 else:
