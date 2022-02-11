@@ -603,6 +603,7 @@ class SummaryLogger:
                     self.cancelled = True
                     self.logger.warning("Job cancelled", job_id=job_id)
                 else:
+                    exc = event.exception
                     reason = str(exc) or repr(exc) or "unexpected error"
                     self.logger.error("Job failed, reason: %s", reason, job_id=job_id)
             self._print_summary(job_id)
