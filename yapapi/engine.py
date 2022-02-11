@@ -455,7 +455,7 @@ class _Engine:
             ):
                 break
 
-    async def _check_debit_note_rate(act_id: ActivityId, agr_id: AgreementId, job: Job) -> None:
+    async def _check_debit_note_rate(self, act_id: ActivityId, agr_id: AgreementId, job: Job):
         agreement = self._get_agreement_by_id(agr_id)
         self._number_of_debit_notes[act_id] += 1
         num_notes = self._number_of_debit_notes[act_id]
@@ -496,7 +496,7 @@ class _Engine:
                     agreement=agreement,
                     debit_note=debit_note,
                 )
-                await _check_debit_note_rate(act_id, agr_id, job, agreement)
+                await self._check_debit_note_rate(act_id, agr_id, job)
                 try:
                     allocation = self._get_allocation(debit_note)
                     await debit_note.accept(
