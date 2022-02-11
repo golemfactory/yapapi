@@ -455,7 +455,7 @@ class _Engine:
             ):
                 break
 
-    async def _check_debit_note_rate(self, act_id: ActivityId, agr_id: AgreementId, job: Job):
+    async def _check_debit_note_rate(self, act_id: ActivityId, agr_id: AgreementId, job: "Job"):
         agreement = self._get_agreement_by_id(agr_id)
         self._number_of_debit_notes[act_id] += 1
         num_notes = self._number_of_debit_notes[act_id]
