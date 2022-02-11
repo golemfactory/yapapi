@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import pathlib
 import sys
+import itertools
 from collections import defaultdict
 
 from yapapi import (
@@ -78,6 +79,11 @@ async def main(subnet_tag, payment_driver, payment_network):
 
             task.accept_result()
 
+            #   We want to test as many different providers as possible, so here we tell
+            #   the Golem engine to stop computations in this agreement (and thus to look
+            #   for a new agreement, maybe with a new provider).
+            await tasks.aclose()
+
     async with Golem(
         budget=10,
         strategy=strategy,
@@ -87,13 +93,10 @@ async def main(subnet_tag, payment_driver, payment_network):
     ) as golem:
         print_env_info(golem)
 
-        #   NOTE: this is **not** the recomended way of running multiple tasks on Golem.
-        #   We do this for the sake of example, because every `golem.execute_tasks` scores offers
-        #   and creates new agreements.
-        for i in range(10000):
-            tasks = [Task(None)]
-            async for task in golem.execute_tasks(worker, tasks, payload, max_workers=1):
-                pass
+        #   Task generator that never ends
+        tasks = (Task(None) for _ in itertools.count(1))
+        async for task in golem.execute_tasks(worker, tasks, payload, max_workers=1):
+            pass
 
 
 if __name__ == "__main__":
