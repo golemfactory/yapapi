@@ -868,7 +868,7 @@ class Job:
         """
         # Remove some negotiable property ranges when yagna version is less than 0.10.0-rc1.
         # This will be handled by yagna capabilities API in the future.
-        if yagna_version_less_than("0.10.0-rc1"):
+        if await yagna_version_less_than("0.10.0-rc1"):
             for prop_name in [
                 "golem.com.scheme.payu.debit-note-interval-sec?",
                 "golem.com.scheme.payu.payment-timeout-sec?",
