@@ -15,6 +15,7 @@ from typing_extensions import Final
 from yapapi.props import com, Activity
 from yapapi.props.builder import DemandBuilder, DemandDecorator
 from yapapi.props.com import Counter
+from yapapi.utils import yagna_version_less_than
 from yapapi import rest
 from yapapi import events
 

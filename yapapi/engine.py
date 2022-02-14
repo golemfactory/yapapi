@@ -43,7 +43,7 @@ from yapapi.script import Script
 from yapapi.script.command import BatchCommand
 from yapapi.storage import gftp
 from yapapi.strategy import MarketStrategy, SCORE_NEUTRAL
-from yapapi.utils import AsyncWrapper, yagna_version_less_than
+from yapapi.utils import AsyncWrapper
 
 DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "erc20").lower()
 DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "rinkeby").lower()
