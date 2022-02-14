@@ -76,7 +76,7 @@ class SshService(Service):
         pass
 
 
-async def main(subnet_tag, payment_driver=None, payment_network=None):
+async def main(subnet_tag, payment_driver=None, payment_network=None, num_instances=2):
     # By passing `event_consumer=log_summary()` we enable summary logging.
     # See the documentation of the `yapapi.log` module on how to set
     # the level of detail and format of the logged information.
@@ -90,7 +90,9 @@ async def main(subnet_tag, payment_driver=None, payment_network=None):
 
         network = await golem.create_network("192.168.0.1/24")
         async with network:
-            cluster = await golem.run_service(SshService, network=network, num_instances=2)
+            cluster = await golem.run_service(
+                SshService, network=network, num_instances=num_instances
+            )
             instances = cluster.instances
 
             while True:
@@ -111,6 +113,12 @@ async def main(subnet_tag, payment_driver=None, payment_network=None):
 
 if __name__ == "__main__":
     parser = build_parser("Golem VPN SSH example")
+    parser.add_argument(
+        "--num-instances",
+        type=int,
+        default=2,
+        help="Number of instances to spawn",
+    )
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     parser.set_defaults(log_file=f"ssh-yapapi-{now}.log")
     args = parser.parse_args()
@@ -120,6 +128,7 @@ if __name__ == "__main__":
             subnet_tag=args.subnet_tag,
             payment_driver=args.payment_driver,
             payment_network=args.payment_network,
+            num_instances=args.num_instances,
         ),
         log_file=args.log_file,
     )

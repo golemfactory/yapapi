@@ -25,7 +25,6 @@ SUBNET_TAG = "goth"
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="regression in yagna 0.10 and up, GitHub issue: yapapi#843")
 async def test_run_ssh(
     log_dir: Path,
     project_dir: Path,
