@@ -145,14 +145,20 @@ def get_logger(name: str, fmt="[Job {job_id}] {msg}"):
     return _AddJobId(logger, fmt=fmt)
 
 
-@functools.lru_cache(None)
+version_less_than_cached: Optional[bool] = None
+
+
 async def yagna_version_less_than(checked_version: str) -> bool:
+    if version_less_than_cached:
+        return version_less_than_cached
     try:
         handle = await asyncio.create_subprocess_shell(
             "yagna -V", stdout=asyncio.subprocess.PIPE, env=dict(environ)
         )
         out, err = await handle.communicate()
         yagna_version = str(out).split()[1]
-        return version.parse(yagna_version) < version.parse(checked_version)
+        version_less_than_cached = version.parse(yagna_version) < version.parse(checked_version)
+        return yagna_version_less_than_cached
     except:
+        version_less_than_cached = True
         return True
