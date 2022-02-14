@@ -25,7 +25,7 @@ SCORE_REJECTED: Final[float] = -1.0
 SCORE_TRUSTED: Final[float] = 100.0
 
 
-DEFAULT_PROPERTY_VALUE_RANGES = {
+DEFAULT_PROPERTY_VALUE_RANGES: Dict[str, Tuple[Optional[float], Optional[float]]] = {
     "golem.com.payment.debit-notes.accept-timeout?": (30.0, None),
     "golem.com.scheme.payu.debit-note-interval-sec?": (20.0, None),
     "golem.com.scheme.payu.payment-timeout-sec?": (1800.0, None),
