@@ -24,6 +24,13 @@ SCORE_REJECTED: Final[float] = -1.0
 SCORE_TRUSTED: Final[float] = 100.0
 
 
+DEFAULT_PROPERTY_VALUE_RANGES = {
+    "golem.com.payment.debit-notes.accept-timeout?": (30.0, None),
+    "golem.com.scheme.payu.debit-note-interval-sec?": (20.0, None),
+    "golem.com.scheme.payu.payment-timeout-sec?": (1800.0, None),
+}
+
+
 class MarketStrategy(DemandDecorator, abc.ABC):
     """Abstract market strategy."""
 
@@ -51,6 +58,17 @@ class MarketStrategy(DemandDecorator, abc.ABC):
     async def answer_to_provider_offer(
         self, our_demand: DemandBuilder, provider_offer: rest.market.OfferProposal
     ) -> DemandBuilder:
+        # Remove some negotiable property ranges when yagna version is less than 0.10.0-rc1.
+        # This will be handled by yagna capabilities API in the future.
+        if await yagna_version_less_than("0.10.0-rc1"):
+            for prop_name in [
+                "golem.com.scheme.payu.debit-note-interval-sec?",
+                "golem.com.scheme.payu.payment-timeout-sec?",
+            ]:
+                DEFAULT_PROPERTY_VALUE_RANGES.pop(prop_name, None)
+        # Set default property value ranges if they were not set in the market strategy.
+        self.set_prop_value_ranges_defaults(DEFAULT_PROPERTY_VALUE_RANGES)
+        # Create a new DemandBuilder with an answer to a provider offer.
         updated_demand = deepcopy(our_demand)
         for prop_name, valid_range in self.valid_prop_value_ranges.items():
             prop_value = provider_offer.props.get(prop_name)
