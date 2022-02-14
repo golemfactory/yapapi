@@ -149,6 +149,7 @@ version_less_than_cached: Optional[bool] = None
 
 
 async def yagna_version_less_than(checked_version: str) -> bool:
+    global version_less_than_cached
     if version_less_than_cached is not None:
         return version_less_than_cached
     try:
