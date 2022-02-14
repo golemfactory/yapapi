@@ -149,7 +149,7 @@ version_less_than_cached: Optional[bool] = None
 
 
 async def yagna_version_less_than(checked_version: str) -> bool:
-    if version_less_than_cached:
+    if version_less_than_cached is not None:
         return version_less_than_cached
     try:
         handle = await asyncio.create_subprocess_shell(
@@ -158,7 +158,6 @@ async def yagna_version_less_than(checked_version: str) -> bool:
         out, err = await handle.communicate()
         yagna_version = str(out).split()[1]
         version_less_than_cached = version.parse(yagna_version) < version.parse(checked_version)
-        return yagna_version_less_than_cached
     except:
         version_less_than_cached = True
-        return True
+    return yagna_version_less_than_cached
