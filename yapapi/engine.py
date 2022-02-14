@@ -48,7 +48,7 @@ from yapapi.utils import AsyncWrapper, yagna_version_less_than
 DEFAULT_PROPERTY_VALUE_RANGES = {
     "golem.com.payment.debit-notes.accept-timeout?": (30.0, None),
     "golem.com.scheme.payu.debit-note-interval-sec?": (20.0, None),
-    "golem.com.scheme.payu.payment-timeout-sec?": (None, 3600.0),
+    "golem.com.scheme.payu.payment-timeout-sec?": (1800.0, None),
 }
 
 DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "erc20").lower()
@@ -457,7 +457,6 @@ class _Engine:
 
     async def _check_debit_note_rate(self, act_id: ActivityId, agr_id: AgreementId, job: "Job"):
         agreement = self._get_agreement_by_id(agr_id)
-        self._number_of_debit_notes[act_id] += 1
         num_notes = self._number_of_debit_notes[act_id]
         ts = datetime.now()
         start_ts = self._activity_created_at.get(act_id)
@@ -472,7 +471,7 @@ class _Engine:
                     "golem.requestor.code": "TooManyDebitNotes",
                 }
                 job.emit(events.PaymentFailed, agreement=agreement)
-                await agreement.terminate(reason)
+                await job.agreements_pool._terminate_agreement(agr_id, reason)
 
     async def _process_debit_notes(self) -> None:
         """Process incoming debit notes."""
@@ -496,6 +495,7 @@ class _Engine:
                     agreement=agreement,
                     debit_note=debit_note,
                 )
+                self._number_of_debit_notes[act_id] += 1
                 await self._check_debit_note_rate(act_id, agr_id, job)
                 try:
                     allocation = self._get_allocation(debit_note)
