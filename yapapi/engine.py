@@ -121,7 +121,6 @@ class _Engine:
         self._wrapped_consumers: List[AsyncWrapper] = []
 
         self._strategy = strategy
-
         self._subnet: Optional[str] = subnet_tag or DEFAULT_SUBNET
         self._payment_driver: str = payment_driver.lower() if payment_driver else DEFAULT_DRIVER
         self._payment_network: str = payment_network.lower() if payment_network else DEFAULT_NETWORK
