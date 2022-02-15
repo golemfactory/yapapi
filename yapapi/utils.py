@@ -160,5 +160,5 @@ async def yagna_version_less_than(checked_version: str) -> bool:
         yagna_version = str(out).split()[1]
         version_less_than_cached = version.parse(yagna_version) < version.parse(checked_version)
     except:
-        version_less_than_cached = True
+        version_less_than_cached = False
     return version_less_than_cached
