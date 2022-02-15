@@ -790,7 +790,7 @@ class Job:
 
             try:
                 demand_builder = await self.engine._strategy.answer_to_provider_offer(
-                    demand_builder, proposal
+                    demand_builder, proposal, self.engine
                 )
             except ValueError as e:
                 return await reject_proposal(str(e))

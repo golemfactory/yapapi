@@ -57,11 +57,14 @@ class MarketStrategy(DemandDecorator, abc.ABC):
             self.valid_prop_value_ranges = valid_prop_value_ranges.copy()
 
     async def answer_to_provider_offer(
-        self, our_demand: DemandBuilder, provider_offer: rest.market.OfferProposal
+        self,
+        our_demand: DemandBuilder,
+        provider_offer: rest.market.OfferProposal,
+        engine=None,  # Temporary solution, see https://github.com/golemfactory/yapapi/issues/636
     ) -> DemandBuilder:
         # Remove some negotiable property ranges when yagna version is less than 0.10.0-rc1.
         # This will be handled by yagna capabilities API in the future.
-        if await yagna_version_less_than("0.10.0-rc1"):
+        if await yagna_version_less_than("0.10.0-rc1", engine):
             for prop_name in [
                 "golem.com.scheme.payu.debit-note-interval-sec?",
                 "golem.com.scheme.payu.payment-timeout-sec?",
