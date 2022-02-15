@@ -157,7 +157,6 @@ async def yagna_version_less_than(checked_version: str, engine=None) -> bool:
         async with engine._root_api_session.get(f"{engine._api_config.root_url}/version/get") as r:
             yagna_version = str(json.loads(await r.text()).get("current").get("version"))
             version_less_than_cached = version.parse(yagna_version) < version.parse(checked_version)
-            print(f"VERSION: {yagna_version} {version_less_than_cached}")
     except:
         version_less_than_cached = True
     return version_less_than_cached
