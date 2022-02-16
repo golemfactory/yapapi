@@ -6,13 +6,16 @@ build-backend = "poetry.core.masonry.api"
 name = "yapapi"
 version = "0.9.0-dev"
 description = "High-level Python API for the New Golem"
-authors = ["Przemysław K. Rekucki <przemyslaw.rekucki@golem.network>", "GolemFactory <contact@golem.network>"]
+authors = [
+  "Przemysław K. Rekucki <przemyslaw.rekucki@golem.network>",
+  "GolemFactory <contact@golem.network>",
+]
 license = "LGPL-3.0-or-later"
 classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Framework :: AsyncIO",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: System :: Distributed Computing"
+  "Development Status :: 3 - Alpha",
+  "Framework :: AsyncIO",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: System :: Distributed Computing",
 ]
 repository = "https://github.com/golemfactory/yapapi"
 documentation = "https://yapapi.readthedocs.io/en/stable/api.html"
@@ -22,8 +25,10 @@ readme = "README.md"
 python = "^3.6.2"
 aiohttp = "^3.6"
 aiohttp-sse-client = "^0.1.7"
-dataclasses = { version = "^0.8", python = ">=3.6, <3.7"}
+dataclasses = { version = "^0.8", python = ">=3.6, <3.7" }
+dpath = "^2.0"
 more-itertools = "^8.6.0"
+pyyaml = "^5.4"
 urllib3 = "^1.25.9"
 typing_extensions = "^3.10.0"
 
@@ -34,7 +39,7 @@ ya-aioclient = "^0.6.3"
 toml = "^0.10.1"
 srvresolver = "^0.3.5"
 colorama = "^0.4.4"
-semantic-version="^2.8"
+semantic-version = "^2.8"
 
 # Adding `goth` to dependencies causes > 40 additional packages to be installed. Given
 # that dependency resolution in `poetry` is rather slow, we'd like to avoid installing
@@ -49,12 +54,12 @@ Deprecated = "^1.2.12"
 python-statemachine = "^0.8.0"
 
 # goth tests
-pexpect = {version = "^4.8.0", optional = true}
+pexpect = { version = "^4.8.0", optional = true }
 
 # Docs
 sphinx = { version = "^4.0.1", optional = true }
 sphinx-autodoc-typehints = { version = "^1.12.0", optional = true }
-sphinx-rtd-theme = { version = "^1.0.0", optional = true}
+sphinx-rtd-theme = { version = "^1.0.0", optional = true }
 
 [tool.poetry.extras]
 integration-tests = ['goth', 'pytest', 'pytest-asyncio', 'pexpect']
@@ -93,9 +98,7 @@ authorized_licenses = [
   "Python Software Foundation",
   "ISC",
 ]
-unauthorized_licenses = [
-  "gpl v3"
-]
+unauthorized_licenses = ["gpl v3"]
 
 [tool.liccheck.authorized_packages]
 ya-client-activity = "0.1.0"
@@ -119,5 +122,12 @@ clean_http_proxy = "rm -f examples/http-proxy/*.log"
 clean_simple_service = "rm -f examples/simple-service-poc/*.png examples/simple-service-poc/*.log"
 clean_ssh = "rm -f examples/ssh/*.log"
 clean_yacat = "rm -f examples/yacat/*.log"
-clean_examples = ["clean_blender", "clean_hello", "clean_http_proxy", "clean_simple_service", "clean_ssh", "clean_yacat"]
+clean_examples = [
+  "clean_blender",
+  "clean_hello",
+  "clean_http_proxy",
+  "clean_simple_service",
+  "clean_ssh",
+  "clean_yacat",
+]
 sphinx = "sphinx-build docs/sphinx/ build -E"

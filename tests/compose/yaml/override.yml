@@ -1,0 +1,11 @@
+version: "0.0.1"
+
+payment:
+  budget: 1
+
+payloads:
+  nginx:
+    params:
+      repo: "repo-url"
+    capabilities:
+      - "gpu"

@@ -1,0 +1,16 @@
+version: "0.0.1"
+
+payment:
+  budget: 10
+  driver: "polygon"
+
+payloads:
+  nginx:
+    runtime: "vm"
+    params:
+      image: "image-hash"
+    constraints:
+      "golem.inf.cpu.cores": 2
+      "golem.inf.mem.gib": 4
+    capabilities:
+      - "vpn"
