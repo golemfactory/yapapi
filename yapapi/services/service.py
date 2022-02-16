@@ -125,7 +125,8 @@ class Service:
         provider_description = (
             f" on {self.provider_name} [ {self.provider_id} ]" if self.provider_id else ""
         )
-        return f"<{class_name} {state}{provider_description}>"
+        network_description = f" @ {self._network_node.ip}" if self._network_node else ""
+        return f"<{class_name} {state}{provider_description}{network_description}>"
 
     def exc_info(self) -> ExcInfo:
         """Return exception info for an exception that caused the last state transition.
