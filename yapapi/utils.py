@@ -4,7 +4,6 @@ from datetime import datetime, timezone, tzinfo
 import enum
 import functools
 import logging
-from os import environ
 from typing import AsyncContextManager, Callable, Optional
 import warnings
 
