@@ -15,7 +15,6 @@ from typing_extensions import Final
 from yapapi.props import com, Activity
 from yapapi.props.builder import DemandBuilder, DemandDecorator
 from yapapi.props.com import Counter
-from yapapi.utils import yagna_version_less_than
 from yapapi import rest
 from yapapi import events
 
@@ -64,7 +63,7 @@ class MarketStrategy(DemandDecorator, abc.ABC):
     ) -> DemandBuilder:
         # Remove some negotiable property ranges when yagna version is less than 0.10.0-rc1.
         # This will be handled by yagna capabilities API in the future.
-        if await yagna_version_less_than("0.10.0-rc1", engine):
+        if engine and await engine.yagna_version_less_than("0.10.0-rc1"):
             for prop_name in [
                 "golem.com.scheme.payu.debit-note-interval-sec?",
                 "golem.com.scheme.payu.payment-timeout-sec?",

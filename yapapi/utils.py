@@ -3,10 +3,8 @@ import asyncio
 from datetime import datetime, timezone, tzinfo
 import enum
 import functools
-import json
 import logging
 from os import environ
-from packaging import version
 from typing import AsyncContextManager, Callable, Optional
 import warnings
 
@@ -144,19 +142,3 @@ def get_logger(name: str, fmt="[Job {job_id}] {msg}"):
     """
     logger = logging.getLogger(name)
     return _AddJobId(logger, fmt=fmt)
-
-
-version_less_than_cached: Optional[bool] = None
-
-
-async def yagna_version_less_than(checked_version: str, engine=None) -> bool:
-    global version_less_than_cached
-    if version_less_than_cached is not None:
-        return version_less_than_cached
-    try:
-        async with engine._root_api_session.get(f"{engine._api_config.root_url}/version/get") as r:
-            yagna_version = str(json.loads(await r.text()).get("current").get("version"))
-            version_less_than_cached = version.parse(yagna_version) < version.parse(checked_version)
-    except:
-        version_less_than_cached = True
-    return version_less_than_cached
