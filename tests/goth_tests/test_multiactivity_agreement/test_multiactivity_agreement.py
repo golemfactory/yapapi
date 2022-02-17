@@ -49,6 +49,7 @@ async def assert_multiple_workers_run(agr_id, events):
     )
 
 
+@pytest.mark.skip
 @pytest.mark.asyncio
 async def test_multiactivity_agreement(
     log_dir: Path,

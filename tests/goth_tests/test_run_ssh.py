@@ -25,6 +25,7 @@ SUBNET_TAG = "goth"
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip
 async def test_run_ssh(
     log_dir: Path,
     project_dir: Path,
