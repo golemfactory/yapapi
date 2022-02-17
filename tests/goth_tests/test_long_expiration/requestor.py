@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import asyncio
 from typing import AsyncIterable
+from datetime import timedelta
 
 from yapapi import Golem, Task, WorkContext
 from yapapi.log import enable_default_logger, log_event_repr
