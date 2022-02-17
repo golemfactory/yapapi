@@ -810,7 +810,7 @@ class Job:
             demand_builder = deepcopy(self._demand_builder)
 
             try:
-                logger.info(f"New proposal: {proposal} for demand {demand_builder}")
+                logger.info(f"New prop: {proposal._proposal.proposal} for demand {demand_builder}")
                 demand_builder = await self.engine._strategy.answer_to_provider_offer(
                     demand_builder, proposal, self.engine
                 )
