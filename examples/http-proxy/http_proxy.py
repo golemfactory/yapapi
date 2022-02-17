@@ -4,21 +4,14 @@ a simple http proxy example
 """
 import asyncio
 
-import aiohttp
-from aiohttp import web
 from datetime import datetime, timedelta
-import functools
 import pathlib
-import re
 import shlex
 import sys
 
 
-from yapapi import (
-    __version__ as yapapi_version,
-)
 from yapapi import Golem
-from yapapi.services import Service, Cluster, ServiceState
+from yapapi.services import ServiceState
 
 from yapapi.payload import vm
 
@@ -29,50 +22,15 @@ from utils import (
     build_parser,
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
-    TEXT_COLOR_GREEN,
-    TEXT_COLOR_YELLOW,
     run_golem_example,
     print_env_info,
 )
+from utils.service.http_proxy import HttpProxyService, LocalHttpProxy
 
 STARTING_TIMEOUT = timedelta(minutes=4)
 
 
-# ######## local http server
-
-request_count = 0
-
-
-async def request_handler(cluster: Cluster, request: web.Request):
-    global request_count
-
-    print(f"{TEXT_COLOR_GREEN}local HTTP request: {dict(request.query)}{TEXT_COLOR_DEFAULT}")
-
-    instances = [i for i in cluster.instances if i.state == ServiceState.running]
-    instance: HttpService = instances[request_count % len(instances)]
-    request_count += 1
-    response, status = await instance.handle_request(request.path_qs)
-    return web.Response(text=response, status=status)
-
-
-async def run_local_server(cluster: Cluster, port: int):
-    """
-    run a local HTTP server, listening on `port`
-    and passing all requests through the `request_handler` function above
-    """
-    handler = functools.partial(request_handler, cluster)
-    runner = web.ServerRunner(web.Server(handler))
-    await runner.setup()
-    site = web.TCPSite(runner, port=port)
-    await site.start()
-
-    return site
-
-
-# ######## Golem Service
-
-
-class HttpService(Service):
+class HttpService(HttpProxyService):
     @staticmethod
     async def get_payload():
         return await vm.repo(
@@ -114,41 +72,6 @@ class HttpService(Service):
 
     # we don't need to implement `run` since, after the service is started,
     # all communication is performed through the VPN
-
-    async def handle_request(self, query_string: str):
-        """
-        handle the request coming from the local HTTP server
-        by passing it to the instance through the VPN
-        """
-        instance_ws = self.network_node.get_websocket_uri(80)
-        app_key = self.cluster.service_runner._job.engine._api_config.app_key
-
-        print(
-            f"{TEXT_COLOR_GREEN}sending a remote request '{query_string}' to {self}{TEXT_COLOR_DEFAULT}"
-        )
-        ws_session = aiohttp.ClientSession()
-        async with ws_session.ws_connect(
-            instance_ws, headers={"Authorization": f"Bearer {app_key}"}
-        ) as ws:
-            await ws.send_str(f"GET {query_string} HTTP/1.0\r\n\r\n")
-            headers = await ws.__anext__()
-            status = int(re.match("^HTTP/1.1 (\d+)", headers.data.decode("ascii")).group(1))
-            print(f"{TEXT_COLOR_GREEN}remote headers: {headers.data} {TEXT_COLOR_DEFAULT}")
-
-            if status == 200:
-                content = await ws.__anext__()
-                data: bytes = content.data
-                print(f"{TEXT_COLOR_GREEN}remote content: {data} {TEXT_COLOR_DEFAULT}")
-
-                response_text = data.decode("utf-8")
-            else:
-                response_text = None
-            print(
-                f"{TEXT_COLOR_GREEN}local response ({status}): {response_text}{TEXT_COLOR_DEFAULT}"
-            )
-
-        await ws_session.close()
-        return response_text, status
 
     async def reset(self):
         # We don't have to do anything when the service is restarted
@@ -195,7 +118,8 @@ async def main(
 
         # service instances started, start the local HTTP server
 
-        site = await run_local_server(cluster, port)
+        proxy = LocalHttpProxy(cluster, port)
+        await proxy.run()
 
         print(
             f"{TEXT_COLOR_CYAN}Local HTTP server listening on:\nhttp://localhost:{port}{TEXT_COLOR_DEFAULT}"
@@ -212,7 +136,7 @@ async def main(
 
         # perform the shutdown of the local http server and the service cluster
 
-        await site.stop()
+        await proxy.stop()
         print(f"{TEXT_COLOR_CYAN}HTTP server stopped{TEXT_COLOR_DEFAULT}")
 
         cluster.stop()
