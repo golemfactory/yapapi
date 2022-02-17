@@ -165,7 +165,7 @@ class _Engine:
         """Create a `DemandBuilder` for given `payload` and `expiration_time`."""
         builder = DemandBuilder()
         builder.add(props.Activity(expiration=expiration_time, multi_activity=True))
-        builder.properties["golem.com.scheme.payu.debit-note-interval-sec?"] = 120
+        builder.properties["golem.com.scheme.payu.debit-note.interval-sec?"] = 120
         builder.add(props.NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({props.NodeInfoKeys.subnet_tag}={self._subnet})")
