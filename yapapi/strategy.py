@@ -84,7 +84,7 @@ class MarketStrategy(DemandDecorator, abc.ABC):
                     raise ValueError(f"Negotiated property {prop_name} < {valid_range[0]}.")
                 if valid_range[1] is not None and prop_value > valid_range[1]:
                     raise ValueError(f"Negotiated property {prop_name} > {valid_range[1]}.")
-                self._logger.info(f"Checking {prov_value}")
+                self._logger.info(f"Checking {prop_value}")
                 updated_demand.properties[prop_name] = prop_value
                 self._logger.info(f"Updated {prop_name}")
         return updated_demand
