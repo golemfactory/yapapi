@@ -13,13 +13,16 @@ from .. import (
 
 
 class HttpProxyService(Service, abc.ABC):
+    def __init__(self, remote_port: int = 80):
+        super().__init__()
+        self._remote_port = remote_port
 
     async def handle_request(self, request: web.Request):
         """
         handle the request coming from the local HTTP server
         by passing it to the instance through the VPN
         """
-        instance_ws = self.network_node.get_websocket_uri(80)
+        instance_ws = self.network_node.get_websocket_uri(self._remote_port)
         app_key = self.cluster.service_runner._job.engine._api_config.app_key  # noqa
         query_string = request.path_qs
 
@@ -34,7 +37,7 @@ class HttpProxyService(Service, abc.ABC):
         ) as ws:
             await ws.send_str(f"GET {query_string} HTTP/1.0\r\n\r\n")
             headers = await ws.__anext__()
-            status = int(re.match("^HTTP/1.1 (\\d+)", headers.data.decode("ascii")).group(1))
+            status = int(re.match("^HTTP/1.\\d (\\d+)", headers.data.decode("ascii")).group(1))
             print(f"{TEXT_COLOR_GREEN}remote headers: {headers.data} {TEXT_COLOR_DEFAULT}")
 
             if status == 200:
