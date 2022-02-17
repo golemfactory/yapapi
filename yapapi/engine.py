@@ -810,10 +810,13 @@ class Job:
             demand_builder = deepcopy(self._demand_builder)
 
             try:
+                logger.info(f"New proposal: {proposal} for demand {demand_builder}")
                 demand_builder = await self.engine._strategy.answer_to_provider_offer(
                     demand_builder, proposal, self.engine
                 )
+                logger.info(f"Answer: {demand_builder}")
             except ValueError as e:
+                logger.info(f"Error: {e}")
                 return await reject_proposal(str(e))
 
             # Check if any of the supported payment platforms matches the proposal
