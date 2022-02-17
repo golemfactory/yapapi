@@ -2,10 +2,7 @@
 import asyncio
 from datetime import timedelta
 import pathlib
-import random
 import sys
-import string
-from uuid import uuid4
 
 
 from datetime import datetime
@@ -24,14 +21,11 @@ from utils import (
     build_parser,
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
-    TEXT_COLOR_RED,
-    TEXT_COLOR_YELLOW,
     run_golem_example,
     print_env_info,
 )
 from utils.service.http_proxy import HttpProxyService, LocalHttpProxy
 
-SSH_RQLITE_CLIENT_IMAGE_HASH = "1fa641433cb2c7eb0f88d87e92c32ca01755e46c0b922dfb285dfcbf"
 WEBAPP_IMAGE_HASH = "bcaf918f45345f466d7a3d2f896fbaa32e25affc84fda91346528417"
 RQLITE_IMAGE_HASH = "85021afecf51687ecae8bdc21e10f3b11b82d2e3b169ba44e177340c"
 
