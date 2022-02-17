@@ -26,7 +26,7 @@ SCORE_TRUSTED: Final[float] = 100.0
 
 DEFAULT_PROPERTY_VALUE_RANGES: Dict[str, Tuple[Optional[float], Optional[float]]] = {
     "golem.com.payment.debit-notes.accept-timeout?": (30.0, None),
-    "golem.com.scheme.payu.debit-note-interval-sec?": (20.0, None),
+    "golem.com.scheme.payu.debit-note.interval-sec?": (20.0, None),
     "golem.com.scheme.payu.payment-timeout-sec?": (90.0, None),
 }
 
@@ -61,18 +61,22 @@ class MarketStrategy(DemandDecorator, abc.ABC):
         provider_offer: rest.market.OfferProposal,
         engine=None,  # Temporary solution, see https://github.com/golemfactory/yapapi/issues/636
     ) -> DemandBuilder:
+        # Create a new DemandBuilder with a response to a provider offer.
+        updated_demand = deepcopy(our_demand)
         # Remove some negotiable property ranges when yagna version is less than 0.10.0-rc1.
         # This will be handled by yagna capabilities API in the future.
         if engine and await engine.yagna_version_less_than("0.10.0-rc1"):
             for prop_name in [
-                "golem.com.scheme.payu.debit-note-interval-sec?",
+                "golem.com.scheme.payu.debit-note.interval-sec?",
                 "golem.com.scheme.payu.payment-timeout-sec?",
             ]:
                 DEFAULT_PROPERTY_VALUE_RANGES.pop(prop_name, None)
+        # Don't send debit-note-interval-sec? if the provider doesn't set it.
+        if "golem.com.scheme.payu.debit-note.interval-sec?" not in provider_offer.props:
+            updated_demand.properties.pop("golem.com.scheme.payu.debit-note.interval-sec?", None)
         # Set default property value ranges if they were not set in the market strategy.
         self.set_prop_value_ranges_defaults(DEFAULT_PROPERTY_VALUE_RANGES)
-        # Create a new DemandBuilder with an answer to a provider offer.
-        updated_demand = deepcopy(our_demand)
+        # Update our response if all values are within accepted ranges, otherwise raise ValueError.
         for prop_name, valid_range in self.valid_prop_value_ranges.items():
             prop_value = provider_offer.props.get(prop_name)
             if prop_value:

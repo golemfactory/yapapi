@@ -90,7 +90,7 @@ class AgreementsPool:
         if agreement is None:
             return None
         props = agreement.agreement_details.provider_view.properties
-        return props.get("golem.com.scheme.payu.debit-note-interval-sec?")
+        return props.get("golem.com.scheme.payu.debit-note.interval-sec?")
 
     async def _set_worker(self, agreement_id: str, task: asyncio.Task) -> None:
         try:
