@@ -45,20 +45,6 @@ async def test_long_expiration(
             _process_monitor,
         ):
 
-            # cmd_monitor.add_assertion(assert_all_tasks_computed)
-
-            # # Wait for worker failure due to command error
-            # assertion = cmd_monitor.add_assertion(assert_command_error)
-            # agr_id = await assertion.wait_for_result(timeout=60)
-            # logger.info("Detected command error in activity for agreement %s", agr_id)
-
-            # # Make sure no new tasks are sent and the agreement is terminated
-            # assertion = cmd_monitor.add_assertion(
-            #     partial(assert_agreement_cancelled, agr_id),
-            #     name=f"assert_agreement_cancelled({agr_id})",
-            # )
-            # await assertion.wait_for_result(timeout=10)
-
             # Wait for executor shutdown
             await cmd_monitor.wait_for_pattern("ShutdownFinished", timeout=900)
             logger.info("Requestor script finished")

@@ -63,7 +63,9 @@ class MarketStrategy(DemandDecorator, abc.ABC):
     ) -> DemandBuilder:
         # Remove some negotiable property ranges when yagna version is less than 0.10.0-rc1.
         # This will be handled by yagna capabilities API in the future.
+        assert self._logger
         if engine and await engine.yagna_version_less_than("0.10.0-rc1"):
+            self._logger.info("Old version")
             for prop_name in [
                 "golem.com.scheme.payu.debit-note-interval-sec?",
                 "golem.com.scheme.payu.payment-timeout-sec?",
@@ -71,16 +73,20 @@ class MarketStrategy(DemandDecorator, abc.ABC):
                 DEFAULT_PROPERTY_VALUE_RANGES.pop(prop_name, None)
         # Set default property value ranges if they were not set in the market strategy.
         self.set_prop_value_ranges_defaults(DEFAULT_PROPERTY_VALUE_RANGES)
+        self._logger.info(self.valid_prop_value_ranges)
         # Create a new DemandBuilder with an answer to a provider offer.
         updated_demand = deepcopy(our_demand)
         for prop_name, valid_range in self.valid_prop_value_ranges.items():
             prop_value = provider_offer.props.get(prop_name)
+            self._logger.info(f"Checking {prop_name} -> {prop_value}")
             if prop_value:
                 if valid_range[0] is not None and prop_value < valid_range[0]:
                     raise ValueError(f"Negotiated property {prop_name} < {valid_range[0]}.")
                 if valid_range[1] is not None and prop_value > valid_range[1]:
                     raise ValueError(f"Negotiated property {prop_name} > {valid_range[1]}.")
+                self._logger.info(f"Checking {prov_value}")
                 updated_demand.properties[prop_name] = prop_value
+                self._logger.info(f"Updated {prop_name}")
         return updated_demand
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
