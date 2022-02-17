@@ -24,7 +24,7 @@ async def main():
     )
 
     tasks = [Task(data=None)]
-    timeout = timedelta(days=10)
+    timeout = timedelta(hours=9)
 
     async with Golem(
         budget=10.0,
