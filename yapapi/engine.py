@@ -478,7 +478,6 @@ class _Engine:
                     "message": f"Too many debit notes: {freq_descr} (activity: {act_id})",
                     "golem.requestor.code": "TooManyDebitNotes",
                 }
-                job.emit(events.PaymentFailed, agreement=agreement)
                 await job.agreements_pool._terminate_agreement(agr_id, reason)
 
     async def _process_debit_notes(self) -> None:
