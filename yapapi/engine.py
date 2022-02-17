@@ -503,6 +503,12 @@ class _Engine:
                     debit_note=debit_note,
                 )
                 self._number_of_debit_notes[act_id] += 1
+                logger.info(
+                    f"New debit note"
+                    f"{debit_note.payment_due_date}, "
+                    f"{debit_note.status}, "
+                    f"{debit_note}."
+                )
                 await self._check_debit_note_rate(act_id, agr_id, job)
                 try:
                     allocation = self._get_allocation(debit_note)

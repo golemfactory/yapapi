@@ -159,6 +159,12 @@ class AgreementsPool:
             ),
         )
         emit(events.AgreementConfirmed, agreement=agreement)
+        logger.info(
+            f"O --> {agreement.cached_details.raw_details.offer.constraints}, "
+            f"{agreement.cached_details.raw_details.offer.properties}, "
+            f"D --> {agreement.cached_details.raw_details.demand.constraints}, "
+            f"{agreement.cached_details.raw_details.demand.properties}"
+        )
         self.confirmed += 1
         return agreement
 
