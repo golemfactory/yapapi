@@ -60,5 +60,5 @@ async def test_long_expiration(
             # await assertion.wait_for_result(timeout=10)
 
             # Wait for executor shutdown
-            await cmd_monitor.wait_for_pattern("ShutdownFinished", timeout=60)
+            await cmd_monitor.wait_for_pattern("ShutdownFinished", timeout=900)
             logger.info("Requestor script finished")
