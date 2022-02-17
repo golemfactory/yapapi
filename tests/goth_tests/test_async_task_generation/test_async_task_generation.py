@@ -14,7 +14,6 @@ from goth.runner.probe import RequestorProbe
 logger = logging.getLogger("goth.test.async_task_generation")
 
 
-@pytest.mark.skip
 @pytest.mark.asyncio
 async def test_async_task_generation(
     log_dir: Path,

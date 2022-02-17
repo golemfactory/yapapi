@@ -15,7 +15,6 @@ from goth.runner.probe import RequestorProbe
 logger = logging.getLogger("goth.test.async_concurrent_executors")
 
 
-@pytest.mark.skip
 @pytest.mark.asyncio
 async def test_concurrent_executors(
     log_dir: Path,

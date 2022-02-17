@@ -65,7 +65,6 @@ async def assert_correct_startup_and_shutdown(output_lines: EventStream[str]):
         raise AssertionError(f"Services not stopped: {','.join(service_ids)}")
 
 
-@pytest.mark.skip
 @pytest.mark.asyncio
 async def test_run_custom_usage_counter(
     log_dir: Path,

@@ -34,7 +34,6 @@ async def count_instances(events):
             pass
 
 
-@pytest.mark.skip
 @pytest.mark.asyncio
 async def test_instance_restart(
     log_dir: Path,

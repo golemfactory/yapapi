@@ -14,7 +14,6 @@ logger = logging.getLogger("goth.test.renegotiate_proposal")
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip
 async def test_renegotiation(
     log_dir: Path,
     goth_config_path: Path,

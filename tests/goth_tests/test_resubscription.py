@@ -128,7 +128,6 @@ async def assert_demand_resubscribed(events: "EventStream[Event]"):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip
 async def test_demand_resubscription(log_dir: Path, goth_config_path: Path, monkeypatch) -> None:
     """Test that checks that a demand is re-submitted after its previous submission expires."""
 
