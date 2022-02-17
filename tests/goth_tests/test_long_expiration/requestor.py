@@ -3,7 +3,7 @@ import asyncio
 from typing import AsyncIterable
 
 from yapapi import Golem, Task, WorkContext
-from yapapi.log import enable_default_logger
+from yapapi.log import enable_default_logger, log_event_repr
 from yapapi.payload import vm
 
 
@@ -25,7 +25,11 @@ async def main():
     tasks = [Task(data=None)]
     timeout = timedelta(days=10)
 
-    async with Golem(budget=1.0, subnet_tag="goth") as golem:
+    async with Golem(
+        budget=10.0,
+        subnet_tag="goth",
+        event_consumer=log_event_repr,
+    ) as golem:
         async for completed in golem.execute_tasks(worker, tasks, payload=package, timeout=timeout):
             print(f"Task finished: {completed}.")
 
