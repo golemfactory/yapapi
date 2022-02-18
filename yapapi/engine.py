@@ -607,7 +607,7 @@ class _Engine:
                 await run_worker(work_context)
                 # Providers may issue debit notes after activity ends.
                 # This will prevent terminating agreements when this happens.
-                self._activity_created_at[activity.id] = datetime.min
+                self._activity_created_at.pop(activity.id, None)
 
         return await job.agreements_pool.use_agreement(
             lambda agreement: loop.create_task(worker_task(agreement))
