@@ -611,6 +611,9 @@ class _Engine:
             async with activity:
                 self.accept_debit_notes_for_agreement(job.id, agreement.id)
                 await run_worker(work_context)
+                # Providers may issue debit notes after activity ends.
+                # This will prevent terminating agreements when this happens.
+                self._activity_created_at[activity.id] = datetime.min
 
         return await job.agreements_pool.use_agreement(
             lambda agreement: loop.create_task(worker_task(agreement))
