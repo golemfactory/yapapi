@@ -166,6 +166,9 @@ class _Engine:
         builder = DemandBuilder()
         builder.add(props.Activity(expiration=expiration_time, multi_activity=True))
         builder.properties["golem.com.scheme.payu.debit-note.interval-sec?"] = 150
+        builder.properties["golem.com.scheme.payu.payment-timeout-sec?"] = (
+            min(1800, max((expiration_time - datetime.now()).total_seconds(), 0)) + 300
+        )
         builder.add(props.NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({props.NodeInfoKeys.subnet_tag}={self._subnet})")
