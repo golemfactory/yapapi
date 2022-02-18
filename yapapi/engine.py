@@ -173,6 +173,7 @@ class _Engine:
         if self._subnet:
             builder.ensure(f"({props.NodeInfoKeys.subnet_tag}={self._subnet})")
         await builder.decorate(self.payment_decorator, self.strategy, payload)
+        logger.info(f"Demand properties: {builder.properties}")
         return builder
 
     @property
