@@ -476,7 +476,7 @@ class _Engine:
         if start_ts is not None and max_interval is not None:
             dur = (ts - start_ts).total_seconds()
             freq_descr = f"{num_notes} notes/{dur}s"
-            logger.info("Debit notes for activity {act_id}: {freq_descr}")
+            logger.debug(f"Debit notes for activity {act_id}: {freq_descr}")
             if dur > 0 and dur < num_notes * max_interval:
                 reason = {
                     "message": f"Too many debit notes: {freq_descr} (activity: {act_id})",
