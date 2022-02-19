@@ -11,7 +11,7 @@ from yapapi.payload import vm
 async def worker(context: WorkContext, tasks: AsyncIterable[Task]):
     async for task in tasks:
         script = context.new_script()
-        future_result = script.run("/bin/sh", "-c", "sleep 600")
+        future_result = script.run("/bin/sh", "-c", "sleep 1000")
 
         yield script
 
