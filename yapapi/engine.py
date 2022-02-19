@@ -476,7 +476,7 @@ class _Engine:
         if start_ts is not None and max_interval is not None:
             dur = (ts - start_ts).total_seconds()
             freq_descr = f"{num_notes} notes/{dur}s"
-            logger.debug("Debit notes for activity {act_id}: {freq_descr}")
+            logger.info("Debit notes for activity {act_id}: {freq_descr}")
             if dur > 0 and dur < num_notes * max_interval:
                 reason = {
                     "message": f"Too many debit notes: {freq_descr} (activity: {act_id})",
@@ -508,10 +508,9 @@ class _Engine:
                 )
                 self._number_of_debit_notes[act_id] += 1
                 logger.info(
-                    f"New debit note"
+                    f"New debit note "
                     f"{debit_note.payment_due_date}, "
-                    f"{debit_note.status}, "
-                    f"{debit_note}."
+                    f"{debit_note.status}."
                 )
                 await self._check_debit_note_rate(act_id, agr_id, job)
                 try:
