@@ -26,13 +26,13 @@ from utils import (
 )
 from utils.service.http_proxy import HttpProxyService, LocalHttpProxy
 
-WEBAPP_IMAGE_HASH = "bcaf918f45345f466d7a3d2f896fbaa32e25affc84fda91346528417"
-RQLITE_IMAGE_HASH = "85021afecf51687ecae8bdc21e10f3b11b82d2e3b169ba44e177340c"
+HTTP_IMAGE_HASH = "c37c1364f637c199fe710ca62241ff486db92c875b786814c6030aa1"
+DB_IMAGE_HASH = "85021afecf51687ecae8bdc21e10f3b11b82d2e3b169ba44e177340c"
 
 STARTING_TIMEOUT = timedelta(minutes=4)
 
 
-class WebService(HttpProxyService):
+class HttpService(HttpProxyService):
     def __init__(self, db_address: str, db_port: int = 4001):
         super().__init__(remote_port=5000)
         self._db_address = db_address
@@ -41,7 +41,7 @@ class WebService(HttpProxyService):
     @staticmethod
     async def get_payload():
         return await vm.repo(
-            image_hash=WEBAPP_IMAGE_HASH,
+            image_hash=HTTP_IMAGE_HASH,
             capabilities=[vm.VM_CAPS_VPN],
         )
 
@@ -53,8 +53,16 @@ class WebService(HttpProxyService):
 
         script = self._ctx.new_script(timeout=timedelta(seconds=10))
 
-        script.run("/bin/bash", "-c", f"cd /webapp && python app.py --db-address {self._db_address} --db-port {self._db_port} initdb")
-        script.run("/bin/bash", "-c", f"cd /webapp && python app.py --db-address {self._db_address} --db-port {self._db_port} run > /webapp/out 2> /webapp/err &")
+        script.run(
+            "/bin/bash",
+            "-c",
+            f"cd /webapp && python app.py --db-address {self._db_address} --db-port {self._db_port} initdb",
+        )
+        script.run(
+            "/bin/bash",
+            "-c",
+            f"cd /webapp && python app.py --db-address {self._db_address} --db-port {self._db_port} run > /webapp/out 2> /webapp/err &",
+        )
         yield script
 
     async def reset(self):
@@ -69,7 +77,7 @@ class DbService(Service):
     @staticmethod
     async def get_payload():
         return await vm.repo(
-            image_hash=RQLITE_IMAGE_HASH,
+            image_hash=DB_IMAGE_HASH,
             capabilities=[vm.VM_CAPS_VPN],
         )
 
@@ -106,21 +114,24 @@ async def main(subnet_tag, payment_driver, payment_network, port):
                 await asyncio.sleep(5)
                 print(db_instance)
 
-            print(f"{TEXT_COLOR_CYAN}DB instance started, spawning the web server{TEXT_COLOR_DEFAULT}")
+            print(
+                f"{TEXT_COLOR_CYAN}DB instance started, spawning the web server{TEXT_COLOR_DEFAULT}"
+            )
 
             commissioning_time = datetime.now()
 
             web_cluster = await golem.run_service(
-                WebService,
+                HttpService,
                 network=network,
-                instance_params=[{"db_address": db_instance.network_node.ip}]
+                instance_params=[{"db_address": db_instance.network_node.ip}],
             )
 
             instances = web_cluster.instances
 
             def still_starting():
                 return any(
-                    i.state in (ServiceState.pending, ServiceState.starting) for i in instances)
+                    i.state in (ServiceState.pending, ServiceState.starting) for i in instances
+                )
 
             # wait until all remote http instances are started
 
@@ -160,7 +171,9 @@ async def main(subnet_tag, payment_driver, payment_network, port):
             db_cluster.stop()
 
             cnt = 0
-            while cnt < 3 and any(s.is_available for s in web_cluster.instances + db_cluster.instances):
+            while cnt < 3 and any(
+                s.is_available for s in web_cluster.instances + db_cluster.instances
+            ):
                 print(instances)
                 await asyncio.sleep(5)
                 cnt += 1
@@ -183,7 +196,7 @@ if __name__ == "__main__":
             subnet_tag=args.subnet_tag,
             payment_driver=args.payment_driver,
             payment_network=args.payment_network,
-            port=args.port
+            port=args.port,
         ),
         log_file=args.log_file,
     )
