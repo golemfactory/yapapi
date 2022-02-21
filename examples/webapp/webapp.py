@@ -165,8 +165,6 @@ async def main(subnet_tag, payment_driver, payment_network, port):
                 await asyncio.sleep(5)
                 cnt += 1
 
-            await network.remove()
-
 
 if __name__ == "__main__":
     parser = build_parser("Golem simple Web app example")

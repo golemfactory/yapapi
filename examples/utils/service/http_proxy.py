@@ -2,59 +2,86 @@ import abc
 import aiohttp
 from aiohttp import web
 import asyncio
-import functools
+from multidict import CIMultiDict
 import re
+from typing import Optional, Tuple
 
 from yapapi.services import Cluster, ServiceState, Service
 from .. import (
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_GREEN,
+    TEXT_COLOR_RED,
 )
 
 
 class HttpProxyService(Service, abc.ABC):
-    def __init__(self, remote_port: int = 80):
+    def __init__(self, remote_port: int = 80, remote_host: Optional[str] = None, response_timeout: float = 60):
         super().__init__()
         self._remote_port = remote_port
+        self._remote_host = remote_host
+        self._remote_response_timeout = response_timeout
 
-    async def handle_request(self, request: web.Request):
+    @staticmethod
+    def _extract_response(content: bytes) -> Tuple[int, CIMultiDict, bytes]:
+        m = re.match(b"^(.*?)\r\n\r\n(.*)$", content, re.DOTALL)
+
+        if not m:
+            return 500, CIMultiDict(), b"Error extracting remote request"
+
+        header_lines = m.group(1).decode('ascii').splitlines()
+        status = int(header_lines[0].split()[1])
+
+        headers = CIMultiDict()
+        for header_line in header_lines[1:]:
+            if header_line:
+                name, value = header_line.split(': ', maxsplit=1)
+                headers[name] = value
+
+        body = m.group(2)
+        return status, headers, body
+
+    async def handle_request(self, request: web.Request) -> web.Response:
         """
         handle the request coming from the local HTTP server
         by passing it to the instance through the VPN
         """
         instance_ws = self.network_node.get_websocket_uri(self._remote_port)
         app_key = self.cluster.service_runner._job.engine._api_config.app_key  # noqa
-        query_string = request.path_qs
+
+        remote_headers = "\r\n".join([f"{k}: {v if k != 'Host' else self._remote_host or v}" for k, v in request.headers.items()])
+
+        remote_request: bytes = (
+            f"{request.method} {request.path_qs} "
+            f"HTTP/{request.version.major}.{request.version.minor}\r\n"
+            f"{remote_headers}\r\n\r\n"
+        ).encode("ascii") + (await request.read() if request.can_read_body else b'')
 
         print(
             f"{TEXT_COLOR_GREEN}"
-            f"sending a remote request '{query_string}' to {self}"
+            f"sending a remote request to `{request.path_qs}` @ {self} [{remote_request}]"
             f"{TEXT_COLOR_DEFAULT}"
         )
+
         ws_session = aiohttp.ClientSession()
         async with ws_session.ws_connect(
             instance_ws, headers={"Authorization": f"Bearer {app_key}"}
         ) as ws:
-            await ws.send_str(f"GET {query_string} HTTP/1.0\r\n\r\n")
-            headers = await ws.__anext__()
-            status = int(re.match("^HTTP/1.\\d (\\d+)", headers.data.decode("ascii")).group(1))
-            print(f"{TEXT_COLOR_GREEN}remote headers: {headers.data} {TEXT_COLOR_DEFAULT}")
+            await ws.send_bytes(remote_request)
+            remote_content: bytes = b''
 
-            if status == 200:
-                content = await ws.__anext__()
-                data: bytes = content.data
+            for _ in range(2):
+                try:
+                    l = await ws.receive(timeout=self._remote_response_timeout)
+                    remote_content += l.data
+                except asyncio.exceptions.TimeoutError:
+                    print(f"{TEXT_COLOR_RED}Remote HTTP server timeout{TEXT_COLOR_DEFAULT}")
+                    return web.Response(status=500, text="Remote HTTP server timeout")
 
-                print(f"{TEXT_COLOR_GREEN}remote content: {data} {TEXT_COLOR_DEFAULT}")
-
-                response_text = data.decode("utf-8")
-            else:
-                response_text = None
-            print(
-                f"{TEXT_COLOR_GREEN}local response ({status}): {response_text}{TEXT_COLOR_DEFAULT}"
-            )
+            status, headers, body = self._extract_response(remote_content)
+            print(f"{TEXT_COLOR_GREEN}response: {status} headers:{headers} body:{body}{TEXT_COLOR_DEFAULT}")
 
         await ws_session.close()
-        return response_text, status
+        return web.Response(status=status, body=body, headers=headers)
 
 
 class LocalHttpProxy:
@@ -74,8 +101,7 @@ class LocalHttpProxy:
         async with self._request_lock:
             instance: HttpProxyService = instances[self._request_count % len(instances)]
             self._request_count += 1
-        response, status = await instance.handle_request(request)
-        return web.Response(text=response, status=status)
+        return await instance.handle_request(request)
 
     async def run(self):
         """
