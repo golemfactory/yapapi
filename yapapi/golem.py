@@ -117,7 +117,7 @@ class Golem:
             warn_deprecated("network", "payment_network", "0.7.0", Deprecated.parameter)
             payment_network = payment_network if payment_network else network
 
-        self._event_consumers = [event_consumer or self._default_event_consumer()]
+        self._event_consumers = [(event_consumer or self._default_event_consumer(), events.Event)]
 
         if not strategy:
             strategy = self._initialize_default_strategy()
@@ -135,12 +135,16 @@ class Golem:
         self._engine: _Engine = self._get_new_engine()
         self._engine_state_lock = asyncio.Lock()
 
-    async def add_event_consumer(self, event_consumer: Callable[[events.Event], None]) -> None:
+    async def add_event_consumer(
+        self,
+        event_consumer: Callable[[events.Event], None],
+        event_class: Type[events.Event] = events.Event,
+    ) -> None:
         """Initialize another `event_consumer`, working just like `event_consumer` passed in `__init__`"""
         if self._engine.started:
-            await self._engine.add_event_consumer(event_consumer, events.Event)
+            await self._engine.add_event_consumer(event_consumer, event_class)
 
-        self._event_consumers.append(event_consumer)
+        self._event_consumers.append((event_consumer, event_class))
 
     @property
     def driver(self) -> str:
@@ -227,8 +231,8 @@ class Golem:
 
                 #   NOTE: we add consumers to the not-yet-started Engine, because this is the only
                 #   way to capture ShutdownFinished event with current Engine implementation
-                for event_consumer in self._event_consumers:
-                    await self._engine.add_event_consumer(event_consumer, events.Event)
+                for event_consumer, event_class in self._event_consumers:
+                    await self._engine.add_event_consumer(event_consumer, event_class)
                 await self._engine.start()
         except:
             await self._stop_with_exc_info(*sys.exc_info())
@@ -481,5 +485,5 @@ class Golem:
             max_price_for={com.Counter.CPU: Decimal("0.2"), com.Counter.TIME: Decimal("0.1")},
         )
         strategy = DecreaseScoreForUnconfirmedAgreement(base_strategy, 0.5)
-        self._event_consumers.append(strategy.on_event)
+        self._event_consumers.append((strategy.on_event, events.Event))
         return strategy
