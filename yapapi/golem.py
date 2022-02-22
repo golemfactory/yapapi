@@ -138,7 +138,7 @@ class Golem:
     async def add_event_consumer(self, event_consumer: Callable[[events.Event], None]) -> None:
         """Initialize another `event_consumer`, working just like `event_consumer` passed in `__init__`"""
         if self._engine.started:
-            await self._engine.add_event_consumer(event_consumer)
+            await self._engine.add_event_consumer(event_consumer, events.Event)
 
         self._event_consumers.append(event_consumer)
 
@@ -228,7 +228,7 @@ class Golem:
                 #   NOTE: we add consumers to the not-yet-started Engine, because this is the only
                 #   way to capture ShutdownFinished event with current Engine implementation
                 for event_consumer in self._event_consumers:
-                    await self._engine.add_event_consumer(event_consumer)
+                    await self._engine.add_event_consumer(event_consumer, events.Event)
                 await self._engine.start()
         except:
             await self._stop_with_exc_info(*sys.exc_info())

@@ -20,6 +20,7 @@ from typing import (
     List,
     Optional,
     Set,
+    Tuple,
     Type,
     Union,
 )
@@ -122,7 +123,7 @@ class _Engine:
         self._api_config = rest.Configuration(app_key)
         self._budget_amount = Decimal(budget)
         self._budget_allocations: List[rest.payment.Allocation] = []
-        self._wrapped_consumers: List[AsyncWrapper] = []
+        self._wrapped_consumers: List[Tuple[AsyncWrapper, Type[events.Event]]] = []
 
         self._strategy = strategy
         self._subnet: Optional[str] = subnet_tag or DEFAULT_SUBNET
@@ -199,8 +200,11 @@ class _Engine:
         """Return `True` if this instance is initialized, `False` otherwise."""
         return self._started
 
-    async def add_event_consumer(self, event_consumer: Callable[[events.Event], None]) -> None:
-        """All events emited via `self.emit` will be passed to this callable
+    async def add_event_consumer(
+        self, event_consumer: Callable[[events.Event], None], event_class: Type[events.Event]
+    ) -> None:
+        """All events emited via `self.emit` that inherit from `event_class` will be passed to
+        the `event_consumer` callable.
 
         NOTE: after this method was called (either on an already started Engine or not),
               stop() is required for a clean shutdown.
@@ -211,7 +215,7 @@ class _Engine:
 
         await self._wrapped_consumer_stack.enter_async_context(wrapped_consumer)
 
-        self._wrapped_consumers.append(wrapped_consumer)
+        self._wrapped_consumers.append((wrapped_consumer, event_class))
 
     def emit(self, event_class: Type[events.EventType], **kwargs) -> events.EventType:
         """Emit an event to be consumed by this engine's event consumer."""
@@ -220,8 +224,9 @@ class _Engine:
         return event
 
     def _emit_event(self, event: events.Event) -> None:
-        for wrapped_consumer in self._wrapped_consumers:
-            wrapped_consumer.async_call(event)
+        for wrapped_consumer, event_class in self._wrapped_consumers:
+            if isinstance(event, event_class):
+                wrapped_consumer.async_call(event)
 
     async def stop(self, *exc_info) -> Optional[bool]:
         """Stop the engine.
