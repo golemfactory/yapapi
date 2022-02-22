@@ -12,8 +12,10 @@ import sys
 
 from yapapi import Golem
 from yapapi.services import ServiceState
-
 from yapapi.payload import vm
+
+from yapapi.contrib.service.http_proxy import HttpProxyService, LocalHttpProxy
+
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
@@ -25,7 +27,6 @@ from utils import (
     run_golem_example,
     print_env_info,
 )
-from utils.service.http_proxy import HttpProxyService, LocalHttpProxy
 
 STARTING_TIMEOUT = timedelta(minutes=4)
 

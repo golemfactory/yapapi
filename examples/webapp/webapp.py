@@ -7,12 +7,12 @@ import sys
 
 from datetime import datetime
 
-from yapapi import (
-    Golem,
-)
+from yapapi import Golem
 from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.payload import vm
 from yapapi.services import Service, ServiceState
+
+from yapapi.contrib.service.http_proxy import HttpProxyService, LocalHttpProxy
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
@@ -24,7 +24,6 @@ from utils import (
     run_golem_example,
     print_env_info,
 )
-from utils.service.http_proxy import HttpProxyService, LocalHttpProxy
 
 HTTP_IMAGE_HASH = "c37c1364f637c199fe710ca62241ff486db92c875b786814c6030aa1"
 DB_IMAGE_HASH = "85021afecf51687ecae8bdc21e10f3b11b82d2e3b169ba44e177340c"
@@ -71,9 +70,6 @@ class HttpService(HttpProxyService):
 
 
 class DbService(Service):
-    def __init__(self):
-        super().__init__()
-
     @staticmethod
     async def get_payload():
         return await vm.repo(
@@ -110,15 +106,33 @@ async def main(subnet_tag, payment_driver, payment_network, port):
             db_cluster = await golem.run_service(DbService, network=network)
             db_instance = db_cluster.instances[0]
 
-            while db_instance.state != ServiceState.running:
+            def still_starting(cluster):
+                return any(
+                    i.state in (ServiceState.pending, ServiceState.starting)
+                    for i in cluster.instances
+                )
+
+            def raise_exception_if_still_starting(cluster):
+                if still_starting(cluster):
+                    raise Exception(
+                        f"Failed to start {cluster} instances "
+                        f"after {STARTING_TIMEOUT.total_seconds()} seconds"
+                    )
+
+            commissioning_time = datetime.now()
+
+            while (
+                still_starting(db_cluster)
+                and datetime.now() < commissioning_time + STARTING_TIMEOUT
+            ):
+                print(db_cluster.instances)
                 await asyncio.sleep(5)
-                print(db_instance)
+
+            raise_exception_if_still_starting(db_cluster)
 
             print(
                 f"{TEXT_COLOR_CYAN}DB instance started, spawning the web server{TEXT_COLOR_DEFAULT}"
             )
-
-            commissioning_time = datetime.now()
 
             web_cluster = await golem.run_service(
                 HttpService,
@@ -126,23 +140,16 @@ async def main(subnet_tag, payment_driver, payment_network, port):
                 instance_params=[{"db_address": db_instance.network_node.ip}],
             )
 
-            instances = web_cluster.instances
-
-            def still_starting():
-                return any(
-                    i.state in (ServiceState.pending, ServiceState.starting) for i in instances
-                )
-
             # wait until all remote http instances are started
 
-            while still_starting() and datetime.now() < commissioning_time + STARTING_TIMEOUT:
-                print(instances)
+            while (
+                still_starting(web_cluster)
+                and datetime.now() < commissioning_time + STARTING_TIMEOUT
+            ):
+                print(web_cluster.instances + db_cluster.instances)
                 await asyncio.sleep(5)
 
-            if still_starting():
-                raise Exception(
-                    f"Failed to start web instances after {STARTING_TIMEOUT.total_seconds()} seconds"
-                )
+            raise_exception_if_still_starting(web_cluster)
 
             # service instances started, start the local HTTP server
 
@@ -156,7 +163,7 @@ async def main(subnet_tag, payment_driver, payment_network, port):
             # wait until Ctrl-C
 
             while True:
-                print(instances)
+                print(web_cluster.instances + db_cluster.instances)
                 try:
                     await asyncio.sleep(10)
                 except (KeyboardInterrupt, asyncio.CancelledError):
@@ -174,7 +181,7 @@ async def main(subnet_tag, payment_driver, payment_network, port):
             while cnt < 3 and any(
                 s.is_available for s in web_cluster.instances + db_cluster.instances
             ):
-                print(instances)
+                print(web_cluster.instances + db_cluster.instances)
                 await asyncio.sleep(5)
                 cnt += 1
 
