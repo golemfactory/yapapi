@@ -81,7 +81,7 @@ async def test_emit_event_class(dummy_yagna_engine):
     golem = Golem(budget=1, app_key="NOT_A_REAL_APPKEY")
 
     await golem.add_event_consumer(event_consumer_1, events.SubscriptionEvent)
-    await golem.add_event_consumer(event_consumer_2, events.ServiceEvent)
+    await golem.add_event_consumer(event_consumer_2, "ServiceEvent")
     await golem.add_event_consumer(event_consumer_3)
     async with golem:
         service_started = golem._engine.emit(
@@ -100,3 +100,10 @@ async def test_emit_event_class(dummy_yagna_engine):
     #   Additional ShutdownFinished event is passed to the catchall consumer only
     assert got_events_3[:3] == [service_started, subscription_created, service_finished]
     assert len(got_events_3) == 4 and isinstance(got_events_3[3], events.ShutdownFinished)
+
+
+@pytest.mark.asyncio
+async def test_incorrect_event_class_str():
+    golem = Golem(budget=1, app_key="NOT_A_REAL_APPKEY")
+    with pytest.raises(ValueError):
+        await golem.add_event_consumer(lambda event: event, "NoSuchEvent")

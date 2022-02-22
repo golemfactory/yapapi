@@ -138,13 +138,36 @@ class Golem:
     async def add_event_consumer(
         self,
         event_consumer: Callable[[events.Event], None],
-        event_class: Type[events.Event] = events.Event,
+        event_class_or_str: Union[Type[events.Event], str] = events.Event,
     ) -> None:
-        """Initialize another `event_consumer`, working just like `event_consumer` passed in `__init__`"""
+        """Initialize another `event_consumer`, working just like the `event_consumer` passed in `__init__`.
+
+        If the second argument is a class, only events inheriting from this class will be passed to
+        this `event_consumer`.
+
+        If the second argument is a str, it is expected to be a name of a class defined in `yapapi.events`,
+        and works just as if this class was passed."""
+        event_class = self._parse_event_class_arg(event_class_or_str)
+
         if self._engine.started:
             await self._engine.add_event_consumer(event_consumer, event_class)
 
         self._event_consumers.append((event_consumer, event_class))
+
+    @staticmethod
+    def _parse_event_class_arg(
+        event_class_or_str: Union[Type[events.Event], str]
+    ) -> Type[events.Event]:
+        if isinstance(event_class_or_str, type(events.Event)):
+            return event_class_or_str
+        else:
+            try:
+                return getattr(events, event_class_or_str)  # type: ignore
+            except AttributeError:
+                raise ValueError(
+                    "Second argument must be either an event class, or a name of "
+                    f"a class defined on `yapapi.events`, got {event_class_or_str}"
+                )
 
     @property
     def driver(self) -> str:
