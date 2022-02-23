@@ -100,7 +100,10 @@ class HttpProxyService(Service, abc.ABC):
             f"{request.method} {request.path_qs} "
             f"HTTP/{request.version.major}.{request.version.minor}\r\n"
             f"{remote_headers}\r\n\r\n"
-        ).encode("ascii") + (await request.read() if request.can_read_body else b"")
+        ).encode("ascii")
+
+        if request.can_read_body:
+            remote_request += await request.read()
 
         logger.info("Sending request: `%s %s` to %s", request.method, request.path_qs, self)
         logger.debug("remote_request: %s", remote_request)
