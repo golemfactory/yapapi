@@ -8,7 +8,7 @@ This example demonstrates using yapapi's Services API to run a web application c
 
 For the backend, we decided to use **[rqlite](https://github.com/rqlite/rqlite)** - an "easy-to-use, lightweight, distributed relational database, which uses SQLite as its storage engine."
 
-One reason to use `rqlite` is that it's very easy to set-up and another, more important one is that its clustering capabilities make it extremely useful for distributed deployments on Golem.
+One reason to use `rqlite` is that it's very easy to set-up, and another - more important one - is that its clustering capabilities make it extremely useful for distributed deployments on Golem.
 
 ### HTTP frontend: a "oneliner" status app
 
