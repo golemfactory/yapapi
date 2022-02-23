@@ -59,8 +59,8 @@ class _ResponseParser:
 
     async def get_response(self) -> web.Response:
         while not self.content_received:
-            l = await self.ws.receive(self.timeout)
-            self.receive_data(l.data)
+            ws_response = await self.ws.receive(self.timeout)
+            self.receive_data(ws_response.data)
 
         assert self.status
         return web.Response(status=self.status, headers=self.headers, body=self.content)
@@ -148,10 +148,17 @@ class LocalHttpProxy:
         self._port = port
         self._site = None
 
-    async def request_handler(self, request: web.Request):
+    async def request_handler(self, request: web.Request) -> web.Response:
         logger.info("Received a local HTTP request: %s %s", request.method, request.path_qs)
 
         instances = [i for i in self._cluster.instances if i.state == ServiceState.running]
+
+        if not instances:
+            logger.error(
+                "No running instances of %s available to handle the request", self._cluster
+            )
+            return web.Response(status=503, text="No service instances available.")
+
         async with self._request_lock:
             instance: HttpProxyService = instances[self._request_count % len(instances)]
             self._request_count += 1
