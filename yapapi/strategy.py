@@ -110,14 +110,14 @@ class MarketStrategy(DemandDecorator, abc.ABC):
         )
 
         if mid_agreement_payments_enabled:
-            logger.info(
+            logger.debug(
                 "Enabling mid-agreement payments mechanism "
                 "as the expiration set to %ss (more than %ss).",
                 expiration_secs,
                 MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS,
             )
         elif trigger_mid_agreement_payments:
-            logger.info(
+            logger.debug(
                 "Expiration of %ss (more than our minimum for MAP: %ss) while negotiating "
                 "with a provider unaware of mid-agreeement-payments.",
                 expiration_secs,
@@ -134,7 +134,7 @@ class MarketStrategy(DemandDecorator, abc.ABC):
 
                 if prop_value not in acceptable_range:
                     our_value = acceptable_range.closest_acceptable(prop_value)
-                    logger.info(
+                    logger.debug(
                         f"Negotiated property %s = %s outside of our accepted range: %s. "
                         f"Proposing our own value instead: %s",
                         prop_key,

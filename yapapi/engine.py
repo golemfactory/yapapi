@@ -479,7 +479,7 @@ class _Engine:
 
         def reason_for_termination(num_notes: int, interval: int, payable: bool):
             freq_descr = f"{num_notes} notes/{dur}s"
-            logger.info(
+            logger.debug(
                 f"{'Payable Debit notes' if payable else 'Debit notes'} for activity {act_id}: {freq_descr}"
             )
             if dur > 0 and dur + DEBIT_NOTE_INTERVAL_GRACE_PERIOD < num_notes * interval:
@@ -502,7 +502,7 @@ class _Engine:
         # break agreement if the debit notes arrive too often
 
         interval = await agreement.get_requestor_property(PROP_DEBIT_NOTE_INTERVAL_SEC)
-        logger.info("Debit notes interval: %ss", interval)
+        logger.debug("Debit notes interval: %ss", interval)
         if interval:
             reason = reason_for_termination(self._num_debit_notes[act_id], interval, False)
             if reason:
@@ -514,7 +514,7 @@ class _Engine:
         # or if we're required to pay too often
 
         payable_interval = await agreement.get_requestor_property(PROP_PAYMENT_TIMEOUT_SEC)
-        logger.info("Payable debit notes interval: %ss", payable_interval)
+        logger.debug("Payable debit notes interval: %ss", payable_interval)
         if debit_note.payment_due_date and payable_interval:
             reason = reason_for_termination(
                 self._num_payable_debit_notes[act_id], payable_interval, True
