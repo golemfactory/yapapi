@@ -13,7 +13,6 @@ import sys
 from yapapi import Golem
 from yapapi.services import Service, ServiceState
 
-from yapapi.log import pluralize
 from yapapi.payload import vm
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
@@ -139,7 +138,9 @@ async def main(
                 {"instance_name": f"simple-service-{i+1}", "show_usage": show_usage}
                 for i in range(num_instances)
             ],
-            expiration=datetime.now(timezone.utc) + timedelta(minutes=120),
+            expiration=datetime.now(timezone.utc)
+            + STARTING_TIMEOUT
+            + timedelta(seconds=running_time),
         )
 
         print(f"{TEXT_COLOR_YELLOW}" f"Starting {cluster}..." f"{TEXT_COLOR_DEFAULT}")

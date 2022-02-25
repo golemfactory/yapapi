@@ -59,7 +59,6 @@ else:
     from typing_extensions import Final
 
 from yapapi import events, __version__ as yapapi_version
-from yapapi.services import MAX_AGREEMENT_EXPIRATION, MIN_AGREEMENT_EXPIRATION
 from yapapi.rest.activity import CommandExecutionError
 from yapapi.utils import get_local_timezone, get_logger
 
@@ -237,10 +236,6 @@ class ProviderInfo:
     id: str
     name: str
     subnet_tag: Optional[str]
-
-
-MAX_AGREEMENT_EXPIRATION_MINUTES = round(MAX_AGREEMENT_EXPIRATION.seconds / 60)
-MIN_AGREEMENT_EXPIRATION_MINUTES = round(MIN_AGREEMENT_EXPIRATION.seconds / 60)
 
 
 # Some type aliases to make types more meaningful
@@ -430,20 +425,6 @@ class SummaryLogger:
             if self.provider_cost:
                 # This means another computation run in the current Executor instance.
                 self._print_total_cost(partial=True)
-            timeout = event.job.expiration_time - datetime.now(timezone.utc)
-            # Compute the timeout as it will be seen by providers, assuming they will see
-            # the Demand 5 seconds from now
-            provider_timeout = timeout - timedelta(seconds=5)
-            if not MIN_AGREEMENT_EXPIRATION <= provider_timeout <= MAX_AGREEMENT_EXPIRATION:
-                min, sec = divmod(round(timeout.total_seconds()), 60)
-                seconds_str = f" {sec} sec " if sec else " "
-                self.logger.warning(
-                    f"Expiration time for your tasks is set to {min} min{seconds_str}from now."
-                    f" Providers may not be willing to take up tasks which expire sooner than"
-                    f" {MIN_AGREEMENT_EXPIRATION_MINUTES} min or later than"
-                    f" {MAX_AGREEMENT_EXPIRATION_MINUTES} min, counting"
-                    f" from the moment they get your demand."
-                )
 
         elif isinstance(event, events.ProposalReceived):
             self.received_proposals[event.prop_id] = event.provider_id
@@ -467,9 +448,7 @@ class SummaryLogger:
                 )
             msg += (
                 f" Make sure you're using the latest released versions of yagna and yapapi,"
-                f" and the correct subnet. Also make sure that the timeout for computing all"
-                f" tasks is within the {MIN_AGREEMENT_EXPIRATION_MINUTES} min to"
-                f" {MAX_AGREEMENT_EXPIRATION_MINUTES} min range."
+                f" and the correct subnet. "
             )
             self.logger.warning(msg)
 

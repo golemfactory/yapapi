@@ -4,7 +4,7 @@ a simple http proxy example
 """
 import asyncio
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pathlib
 import shlex
 import sys
@@ -82,13 +82,7 @@ class HttpService(HttpProxyService):
 # ######## Main application code which spawns the Golem service and the local HTTP server
 
 
-async def main(
-    subnet_tag,
-    payment_driver,
-    payment_network,
-    num_instances,
-    port,
-):
+async def main(subnet_tag, payment_driver, payment_network, num_instances, port, running_time):
     async with Golem(
         budget=1.0,
         subnet_tag=subnet_tag,
@@ -100,7 +94,14 @@ async def main(
         commissioning_time = datetime.now()
 
         network = await golem.create_network("192.168.0.1/24")
-        cluster = await golem.run_service(HttpService, network=network, num_instances=num_instances)
+        cluster = await golem.run_service(
+            HttpService,
+            network=network,
+            num_instances=num_instances,
+            expiration=datetime.now(timezone.utc)
+            + STARTING_TIMEOUT
+            + timedelta(seconds=running_time),
+        )
         instances = cluster.instances
 
         def still_starting():
@@ -128,7 +129,9 @@ async def main(
 
         # wait until Ctrl-C
 
-        while True:
+        start_time = datetime.now()
+
+        while datetime.now() < start_time + timedelta(seconds=running_time):
             print(instances)
             try:
                 await asyncio.sleep(10)

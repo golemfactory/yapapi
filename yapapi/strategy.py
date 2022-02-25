@@ -2,12 +2,12 @@
 
 import abc
 from collections import defaultdict
-from copy import copy, deepcopy
-from datetime import datetime
+from copy import deepcopy
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import logging
 from types import MappingProxyType
-from typing import Dict, Mapping, Optional, Set, Tuple, Union
+from typing import Dict, Mapping, Optional, Set, Tuple, Union, NamedTuple
 
 from dataclasses import dataclass
 from typing_extensions import Final
@@ -23,68 +23,104 @@ SCORE_NEUTRAL: Final[float] = 0.0
 SCORE_REJECTED: Final[float] = -1.0
 SCORE_TRUSTED: Final[float] = 100.0
 
+PROP_DEBIT_NOTE_INTERVAL_SEC: Final[str] = "golem.com.scheme.payu.debit-note.interval-sec?"
+PROP_PAYMENT_TIMEOUT_SEC: Final[str] = "golem.com.scheme.payu.payment-timeout-sec?"
+PROP_DEBIT_NOTE_ACCEPTANCE_TIMEOUT: Final[str] = "golem.com.payment.debit-notes.accept-timeout?"
 
-DEFAULT_PROPERTY_VALUE_RANGES: Dict[str, Tuple[Optional[float], Optional[float]]] = {
-    "golem.com.payment.debit-notes.accept-timeout?": (30.0, None),
-    "golem.com.scheme.payu.debit-note.interval-sec?": (55.0, None),
-    "golem.com.scheme.payu.payment-timeout-sec?": (90.0, None),
+MID_AGREEMENT_PAYMENTS_PROPS = [PROP_DEBIT_NOTE_INTERVAL_SEC, PROP_PAYMENT_TIMEOUT_SEC]
+
+
+class PropValueRange(NamedTuple):
+    min: Optional[Union[int, float]] = None
+    max: Optional[Union[int, float]] = None
+
+    def __contains__(self, item: Union[int, float]) -> bool:
+        return (self.min is None or item >= self.min) and (self.max is None or item <= self.max)
+
+    def closest_acceptable(self, item: Union[int, float]):
+        if self.min is not None and item < self.min:
+            return self.min
+        if self.max is not None and item > self.max:
+            return self.max
+        return item
+
+    def __str__(self):
+        return f"({self.min}, {self.max})"
+
+
+DEFAULT_DEBIT_NOTE_ACCEPTANCE_TIMEOUT_SEC: Final[int] = 30
+DEFAULT_DEBIT_NOTE_INTERVAL_SEC: Final[int] = 60
+DEFAULT_PAYMENT_TIMEOUT_SEC: Final[int] = 18000
+MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS: Final[int] = DEFAULT_PAYMENT_TIMEOUT_SEC
+
+
+DEFAULT_PROPERTY_VALUE_RANGES: Dict[str, PropValueRange] = {
+    PROP_DEBIT_NOTE_INTERVAL_SEC: PropValueRange(DEFAULT_DEBIT_NOTE_INTERVAL_SEC, None),
+    PROP_PAYMENT_TIMEOUT_SEC: PropValueRange(DEFAULT_PAYMENT_TIMEOUT_SEC, None),
+    PROP_DEBIT_NOTE_ACCEPTANCE_TIMEOUT: PropValueRange(DEFAULT_DEBIT_NOTE_ACCEPTANCE_TIMEOUT_SEC, None),
 }
+
+logger = logging.getLogger(__name__)
 
 
 class MarketStrategy(DemandDecorator, abc.ABC):
     """Abstract market strategy."""
 
-    valid_prop_value_ranges: Dict[str, Tuple[Optional[float], Optional[float]]]
-
-    def update_valid_prop_value_ranges(
-        self, valid_prop_value_ranges: Dict[str, Tuple[Optional[float], Optional[float]]]
-    ) -> None:
-        try:
-            self.valid_prop_value_ranges.update(valid_prop_value_ranges)
-        except AttributeError:
-            self.valid_prop_value_ranges = valid_prop_value_ranges.copy()
+    acceptable_prop_value_ranges: Dict[str, PropValueRange]
 
     def set_prop_value_ranges_defaults(
-        self, valid_prop_value_ranges: Dict[str, Tuple[Optional[float], Optional[float]]]
+        self, acceptable_prop_value_ranges: Dict[str, PropValueRange]
     ) -> None:
         try:
-            value_ranges = self.valid_prop_value_ranges
-            for key, value in valid_prop_value_ranges.items():
+            value_ranges = self.acceptable_prop_value_ranges
+            for key, value in acceptable_prop_value_ranges.items():
                 if key not in value_ranges:
                     value_ranges[key] = value
         except AttributeError:
-            self.valid_prop_value_ranges = valid_prop_value_ranges.copy()
+            self.acceptable_prop_value_ranges = acceptable_prop_value_ranges.copy()
 
-    async def answer_to_provider_offer(
+    async def respond_to_provider_offer(
         self,
         our_demand: DemandBuilder,
         provider_offer: rest.market.OfferProposal,
-        engine=None,  # Temporary solution, see https://github.com/golemfactory/yapapi/issues/636
     ) -> DemandBuilder:
         # Create a new DemandBuilder with a response to a provider offer.
         updated_demand = deepcopy(our_demand)
-        # Remove some negotiable property ranges when yagna version is less than 0.10.0-rc1.
-        # This will be handled by yagna capabilities API in the future.
-        if engine and await engine.yagna_version_less_than("0.10.0-rc1"):
-            for prop_name in [
-                "golem.com.scheme.payu.debit-note.interval-sec?",
-                "golem.com.scheme.payu.payment-timeout-sec?",
-            ]:
-                DEFAULT_PROPERTY_VALUE_RANGES.pop(prop_name, None)
-        # Don't send debit-note-interval-sec? if the provider doesn't set it.
-        if "golem.com.scheme.payu.debit-note.interval-sec?" not in provider_offer.props:
-            updated_demand.properties.pop("golem.com.scheme.payu.debit-note.interval-sec?", None)
+
         # Set default property value ranges if they were not set in the market strategy.
         self.set_prop_value_ranges_defaults(DEFAULT_PROPERTY_VALUE_RANGES)
-        # Update our response if all values are within accepted ranges, otherwise raise ValueError.
-        for prop_name, valid_range in self.valid_prop_value_ranges.items():
-            prop_value = provider_offer.props.get(prop_name)
-            if prop_value:
-                if valid_range[0] is not None and prop_value < valid_range[0]:
-                    raise ValueError(f"Negotiated property {prop_name} < {valid_range[0]}.")
-                if valid_range[1] is not None and prop_value > valid_range[1]:
-                    raise ValueError(f"Negotiated property {prop_name} > {valid_range[1]}.")
-                updated_demand.properties[prop_name] = prop_value
+
+        # only enable mid-agreement-payments when we need a longer expiration
+        # and when the provider supports it
+        activity = Activity.from_properties(our_demand.properties)
+        expiration_secs = round((activity.expiration - datetime.now(timezone.utc)).total_seconds())
+        trigger_mid_agreement_payments = expiration_secs >= float(MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS)
+
+        mid_agreement_payments_enabled = PROP_DEBIT_NOTE_INTERVAL_SEC in provider_offer.props and trigger_mid_agreement_payments
+
+        if mid_agreement_payments_enabled:
+            logger.info(
+                "Enabling mid-agreement payments mechanism "
+                "as the expiration set to %ss (more than %ss).",
+                expiration_secs, MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS)
+        elif trigger_mid_agreement_payments:
+            logger.info(
+                "Expiration of %ss (more than our minimum for MAP: %ss) while negotiating "
+                "with a provider unaware of mid-agreeement-payments.",
+                expiration_secs, MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS)
+
+        # Update response by either accepting proposed values or by proposing ours
+        # only set mid-agreement payments values if we're agreeing to them
+        for prop_key, acceptable_range in self.acceptable_prop_value_ranges.items():
+            prop_value = provider_offer.props.get(prop_key)
+            if prop_value and (mid_agreement_payments_enabled or prop_key not in MID_AGREEMENT_PAYMENTS_PROPS):
+                if prop_value not in acceptable_range:
+                    our_value = acceptable_range.closest_acceptable(prop_value)
+                    logger.info(
+                        f"Negotiated property %s = %s outside of our accepted range: %s. "
+                        f"Proposing our own value instead: %s",
+                        prop_key, prop_value, acceptable_range, our_value)
+                updated_demand.properties[prop_key] = prop_value
         return updated_demand
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
@@ -121,7 +157,9 @@ class DummyMS(MarketStrategy, object):
         self._activity = activity
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
-        """Ensure that the offer uses `PriceModel.LINEAR` price model."""
+        await super().decorate_demand(demand)
+
+        # Ensure that the offer uses `PriceModel.LINEAR` price model
         demand.ensure(f"({com.PRICE_MODEL}={com.PriceModel.LINEAR.value})")
         self._activity = Activity.from_properties(demand.properties)
 
@@ -163,7 +201,9 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
         )
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
-        """Ensure that the offer uses `PriceModel.LINEAR` price model."""
+        await super().decorate_demand(demand)
+
+        # Ensure that the offer uses `PriceModel.LINEAR` price model.
         demand.ensure(f"({com.PRICE_MODEL}={com.PriceModel.LINEAR.value})")
 
     async def score_offer(self, offer: rest.market.OfferProposal) -> float:

@@ -165,10 +165,6 @@ class _Engine:
         """Create a `DemandBuilder` for given `payload` and `expiration_time`."""
         builder = DemandBuilder()
         builder.add(props.Activity(expiration=expiration_time, multi_activity=True))
-        builder.properties["golem.com.scheme.payu.debit-note.interval-sec?"] = 150
-        builder.properties["golem.com.scheme.payu.payment-timeout-sec?"] = (
-            min(1800, max((expiration_time - datetime.now(timezone.utc)).total_seconds(), 0)) + 300
-        )
         builder.add(props.NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({props.NodeInfoKeys.subnet_tag}={self._subnet})")
@@ -810,8 +806,8 @@ class Job:
             demand_builder = deepcopy(self._demand_builder)
 
             try:
-                demand_builder = await self.engine._strategy.answer_to_provider_offer(
-                    demand_builder, proposal, self.engine
+                demand_builder = await self.engine._strategy.respond_to_provider_offer(
+                    demand_builder, proposal
                 )
             except ValueError as e:
                 return await reject_proposal(str(e))
