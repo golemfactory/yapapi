@@ -41,10 +41,17 @@ from yapapi import props
 from yapapi.props.builder import DemandBuilder, DemandDecorator
 from yapapi.rest.activity import Activity
 from yapapi.rest.market import Agreement, OfferProposal, Subscription
+from yapapi.rest.payment import DebitNote
 from yapapi.script import Script
 from yapapi.script.command import BatchCommand
 from yapapi.storage import gftp
-from yapapi.strategy import MarketStrategy, SCORE_NEUTRAL
+from yapapi.strategy import (
+    MarketStrategy,
+    SCORE_NEUTRAL,
+    PROP_DEBIT_NOTE_INTERVAL_SEC,
+    PROP_PAYMENT_TIMEOUT_SEC,
+    DEBIT_NOTE_INTERVAL_GRACE_PERIOD
+)
 from yapapi.utils import AsyncWrapper
 
 DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "erc20").lower()
@@ -137,7 +144,8 @@ class _Engine:
         # initialize the payment structures
         self._agreements_to_pay: Dict[JobId, Set[AgreementId]] = defaultdict(set)
         self._agreements_accepting_debit_notes: Dict[JobId, Set[AgreementId]] = defaultdict(set)
-        self._number_of_debit_notes: Dict[ActivityId, int] = defaultdict(int)
+        self._num_debit_notes: Dict[ActivityId, int] = defaultdict(int)
+        self._num_payable_debit_notes: Dict[ActivityId, int] = defaultdict(int)
         self._activity_created_at: Dict[ActivityId, datetime] = dict()
         self._invoices: Dict[AgreementId, rest.payment.Invoice] = dict()
         self._payment_closing: bool = False
@@ -288,18 +296,6 @@ class _Engine:
 
     async def add_to_async_context(self, async_context_manager: AsyncContextManager) -> None:
         await self._stack.enter_async_context(async_context_manager)
-
-    async def yagna_version_less_than(self, checked_version: str) -> bool:
-        if self.version_less_than_cached is not None:
-            return self.version_less_than_cached
-        try:
-            async with self._root_api_session.get(f"{self._api_config.root_url}/version/get") as r:
-                yagna_version = str(json.loads(await r.text()).get("current").get("version"))
-                lt_version = version.parse(checked_version)
-                self.version_less_than_cached = version.parse(yagna_version) < lt_version
-        except:
-            self.version_less_than_cached = True
-        return self.version_less_than_cached
 
     def _unpaid_agreement_ids(self) -> Set[AgreementId]:
         """Return the set of all yet unpaid agreement ids."""
@@ -462,22 +458,62 @@ class _Engine:
             ):
                 break
 
-    async def _check_debit_note_rate(self, act_id: ActivityId, agr_id: AgreementId, job: "Job"):
-        agreement = self._get_agreement_by_id(agr_id)
-        num_notes = self._number_of_debit_notes[act_id]
+    async def _enforce_debit_note_intervals(self, job: "Job", debit_note: DebitNote):
+        agreement = self._get_agreement_by_id(debit_note.agreement_id)
+        if not agreement or agreement.terminated:
+            return
+
+        act_id = debit_note.activity_id
+
+        self._num_debit_notes[act_id] += 1
+        if debit_note.payment_due_date:
+            self._num_payable_debit_notes[act_id] += 1
+
         ts = datetime.now()
         start_ts = self._activity_created_at.get(act_id)
-        max_interval = job.agreements_pool.max_debit_note_interval_for_agreement(agr_id)
-        if start_ts is not None and max_interval is not None:
-            dur = (ts - start_ts).total_seconds()
+
+        if not start_ts:
+            return
+
+        dur = (ts - start_ts).total_seconds()
+
+        def reason_for_termination(num_notes: int, interval: int, payable: bool):
             freq_descr = f"{num_notes} notes/{dur}s"
-            logger.debug(f"Debit notes for activity {act_id}: {freq_descr}")
-            if dur > 0 and dur + 30 < num_notes * max_interval:
+            logger.info(f"{'Payable Debit notes' if payable else 'Debit notes'} for activity {act_id}: {freq_descr}")
+            if dur > 0 and dur + DEBIT_NOTE_INTERVAL_GRACE_PERIOD < num_notes * interval:
                 reason = {
-                    "message": f"Too many debit notes: {freq_descr} (activity: {act_id})",
-                    "golem.requestor.code": "TooManyDebitNotes",
+                    "message": f"Too many {'payable ' if payable else ''}debit notes: {freq_descr} (activity: {act_id})",
+                    "golem.requestor.code": "TooManyPayableDebitNotes" if payable else "TooManyDebitNotes",
                 }
-                await job.agreements_pool._terminate_agreement(agr_id, reason)
+                logger.error(
+                    f"Too many {'payable ' if payable else ''}debit notes received."
+                    " %s, activity: %s",
+                    freq_descr,
+                    act_id
+                )
+                return reason
+
+            return None
+
+        # break agreement if the debit notes arrive too often
+
+        interval = await agreement.get_requestor_property(PROP_DEBIT_NOTE_INTERVAL_SEC)
+        logger.info("Debit notes interval: %ss", interval)
+        if interval:
+            reason = reason_for_termination(self._num_debit_notes[act_id], interval, False)
+            if reason:
+                await job.agreements_pool._terminate_agreement(debit_note.agreement_id, reason)  # noqa
+                return
+
+        # or if we're required to pay too often
+
+        payable_interval = await agreement.get_requestor_property(PROP_PAYMENT_TIMEOUT_SEC)
+        logger.info("Payable debit notes interval: %ss", payable_interval)
+        if debit_note.payment_due_date and payable_interval:
+            reason = reason_for_termination(self._num_payable_debit_notes[act_id], payable_interval, True)
+            if reason:
+                await job.agreements_pool._terminate_agreement(debit_note.agreement_id, reason)  # noqa
+                return
 
     async def _process_debit_notes(self) -> None:
         """Process incoming debit notes."""
@@ -501,8 +537,7 @@ class _Engine:
                     agreement=agreement,
                     debit_note=debit_note,
                 )
-                self._number_of_debit_notes[act_id] += 1
-                await self._check_debit_note_rate(act_id, agr_id, job)
+                await self._enforce_debit_note_intervals(job, debit_note)
                 try:
                     allocation = self._get_allocation(debit_note)
                     await debit_note.accept(

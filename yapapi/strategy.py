@@ -53,6 +53,8 @@ DEFAULT_DEBIT_NOTE_INTERVAL_SEC: Final[int] = 60
 DEFAULT_PAYMENT_TIMEOUT_SEC: Final[int] = 18000
 MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS: Final[int] = DEFAULT_PAYMENT_TIMEOUT_SEC
 
+DEBIT_NOTE_INTERVAL_GRACE_PERIOD: Final[int] = 30
+
 
 DEFAULT_PROPERTY_VALUE_RANGES: Dict[str, PropValueRange] = {
     PROP_DEBIT_NOTE_INTERVAL_SEC: PropValueRange(DEFAULT_DEBIT_NOTE_INTERVAL_SEC, None),
@@ -114,12 +116,15 @@ class MarketStrategy(DemandDecorator, abc.ABC):
         for prop_key, acceptable_range in self.acceptable_prop_value_ranges.items():
             prop_value = provider_offer.props.get(prop_key)
             if prop_value and (mid_agreement_payments_enabled or prop_key not in MID_AGREEMENT_PAYMENTS_PROPS):
+
                 if prop_value not in acceptable_range:
                     our_value = acceptable_range.closest_acceptable(prop_value)
                     logger.info(
                         f"Negotiated property %s = %s outside of our accepted range: %s. "
                         f"Proposing our own value instead: %s",
                         prop_key, prop_value, acceptable_range, our_value)
+                    prop_value = our_value
+
                 updated_demand.properties[prop_key] = prop_value
         return updated_demand
 
