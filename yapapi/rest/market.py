@@ -6,7 +6,7 @@ from types import TracebackType
 from typing import AsyncIterator, Optional, TypeVar, Type, Generator, Any, Generic
 
 import aiohttp
-import statemachine
+import statemachine  # type: ignore
 from typing_extensions import Awaitable, AsyncContextManager
 
 from ya_market import ApiClient, ApiException, RequestorApi, models  # type: ignore

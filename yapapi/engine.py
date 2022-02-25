@@ -50,7 +50,7 @@ from yapapi.strategy import (
     SCORE_NEUTRAL,
     PROP_DEBIT_NOTE_INTERVAL_SEC,
     PROP_PAYMENT_TIMEOUT_SEC,
-    DEBIT_NOTE_INTERVAL_GRACE_PERIOD
+    DEBIT_NOTE_INTERVAL_GRACE_PERIOD,
 )
 from yapapi.utils import AsyncWrapper
 
@@ -479,17 +479,21 @@ class _Engine:
 
         def reason_for_termination(num_notes: int, interval: int, payable: bool):
             freq_descr = f"{num_notes} notes/{dur}s"
-            logger.info(f"{'Payable Debit notes' if payable else 'Debit notes'} for activity {act_id}: {freq_descr}")
+            logger.info(
+                f"{'Payable Debit notes' if payable else 'Debit notes'} for activity {act_id}: {freq_descr}"
+            )
             if dur > 0 and dur + DEBIT_NOTE_INTERVAL_GRACE_PERIOD < num_notes * interval:
                 reason = {
                     "message": f"Too many {'payable ' if payable else ''}debit notes: {freq_descr} (activity: {act_id})",
-                    "golem.requestor.code": "TooManyPayableDebitNotes" if payable else "TooManyDebitNotes",
+                    "golem.requestor.code": "TooManyPayableDebitNotes"
+                    if payable
+                    else "TooManyDebitNotes",
                 }
                 logger.error(
                     f"Too many {'payable ' if payable else ''}debit notes received."
                     " %s, activity: %s",
                     freq_descr,
-                    act_id
+                    act_id,
                 )
                 return reason
 
@@ -502,7 +506,9 @@ class _Engine:
         if interval:
             reason = reason_for_termination(self._num_debit_notes[act_id], interval, False)
             if reason:
-                await job.agreements_pool._terminate_agreement(debit_note.agreement_id, reason)  # noqa
+                await job.agreements_pool._terminate_agreement(
+                    debit_note.agreement_id, reason
+                )  # noqa
                 return
 
         # or if we're required to pay too often
@@ -510,9 +516,13 @@ class _Engine:
         payable_interval = await agreement.get_requestor_property(PROP_PAYMENT_TIMEOUT_SEC)
         logger.info("Payable debit notes interval: %ss", payable_interval)
         if debit_note.payment_due_date and payable_interval:
-            reason = reason_for_termination(self._num_payable_debit_notes[act_id], payable_interval, True)
+            reason = reason_for_termination(
+                self._num_payable_debit_notes[act_id], payable_interval, True
+            )
             if reason:
-                await job.agreements_pool._terminate_agreement(debit_note.agreement_id, reason)  # noqa
+                await job.agreements_pool._terminate_agreement(
+                    debit_note.agreement_id, reason
+                )  # noqa
                 return
 
     async def _process_debit_notes(self) -> None:

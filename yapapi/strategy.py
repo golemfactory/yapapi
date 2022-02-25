@@ -30,7 +30,8 @@ PROP_DEBIT_NOTE_ACCEPTANCE_TIMEOUT: Final[str] = "golem.com.payment.debit-notes.
 MID_AGREEMENT_PAYMENTS_PROPS = [PROP_DEBIT_NOTE_INTERVAL_SEC, PROP_PAYMENT_TIMEOUT_SEC]
 
 
-class PropValueRange(NamedTuple):
+@dataclass
+class PropValueRange:
     min: Optional[Union[int, float]] = None
     max: Optional[Union[int, float]] = None
 
@@ -59,7 +60,9 @@ DEBIT_NOTE_INTERVAL_GRACE_PERIOD: Final[int] = 30
 DEFAULT_PROPERTY_VALUE_RANGES: Dict[str, PropValueRange] = {
     PROP_DEBIT_NOTE_INTERVAL_SEC: PropValueRange(DEFAULT_DEBIT_NOTE_INTERVAL_SEC, None),
     PROP_PAYMENT_TIMEOUT_SEC: PropValueRange(DEFAULT_PAYMENT_TIMEOUT_SEC, None),
-    PROP_DEBIT_NOTE_ACCEPTANCE_TIMEOUT: PropValueRange(DEFAULT_DEBIT_NOTE_ACCEPTANCE_TIMEOUT_SEC, None),
+    PROP_DEBIT_NOTE_ACCEPTANCE_TIMEOUT: PropValueRange(
+        DEFAULT_DEBIT_NOTE_ACCEPTANCE_TIMEOUT_SEC, None
+    ),
 }
 
 logger = logging.getLogger(__name__)
@@ -95,34 +98,50 @@ class MarketStrategy(DemandDecorator, abc.ABC):
         # only enable mid-agreement-payments when we need a longer expiration
         # and when the provider supports it
         activity = Activity.from_properties(our_demand.properties)
-        expiration_secs = round((activity.expiration - datetime.now(timezone.utc)).total_seconds())
-        trigger_mid_agreement_payments = expiration_secs >= float(MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS)
 
-        mid_agreement_payments_enabled = PROP_DEBIT_NOTE_INTERVAL_SEC in provider_offer.props and trigger_mid_agreement_payments
+        assert activity.expiration
+        expiration_secs = round((activity.expiration - datetime.now(timezone.utc)).total_seconds())
+        trigger_mid_agreement_payments = expiration_secs >= float(
+            MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS
+        )
+
+        mid_agreement_payments_enabled = (
+            PROP_DEBIT_NOTE_INTERVAL_SEC in provider_offer.props and trigger_mid_agreement_payments
+        )
 
         if mid_agreement_payments_enabled:
             logger.info(
                 "Enabling mid-agreement payments mechanism "
                 "as the expiration set to %ss (more than %ss).",
-                expiration_secs, MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS)
+                expiration_secs,
+                MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS,
+            )
         elif trigger_mid_agreement_payments:
             logger.info(
                 "Expiration of %ss (more than our minimum for MAP: %ss) while negotiating "
                 "with a provider unaware of mid-agreeement-payments.",
-                expiration_secs, MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS)
+                expiration_secs,
+                MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS,
+            )
 
         # Update response by either accepting proposed values or by proposing ours
         # only set mid-agreement payments values if we're agreeing to them
         for prop_key, acceptable_range in self.acceptable_prop_value_ranges.items():
             prop_value = provider_offer.props.get(prop_key)
-            if prop_value and (mid_agreement_payments_enabled or prop_key not in MID_AGREEMENT_PAYMENTS_PROPS):
+            if prop_value and (
+                mid_agreement_payments_enabled or prop_key not in MID_AGREEMENT_PAYMENTS_PROPS
+            ):
 
                 if prop_value not in acceptable_range:
                     our_value = acceptable_range.closest_acceptable(prop_value)
                     logger.info(
                         f"Negotiated property %s = %s outside of our accepted range: %s. "
                         f"Proposing our own value instead: %s",
-                        prop_key, prop_value, acceptable_range, our_value)
+                        prop_key,
+                        prop_value,
+                        acceptable_range,
+                        our_value,
+                    )
                     prop_value = our_value
 
                 updated_demand.properties[prop_key] = prop_value
