@@ -168,6 +168,15 @@ if __name__ == "__main__":
         default=8080,
         help="The local port to listen on",
     )
+    parser.add_argument(
+        "--running-time",
+        default=600,
+        type=int,
+        help=(
+            "How long should the instance run before the cluster is stopped "
+            "(in seconds, default: %(default)s)"
+        ),
+    )
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     parser.set_defaults(log_file=f"http-proxy-{now}.log")
     args = parser.parse_args()
@@ -179,6 +188,7 @@ if __name__ == "__main__":
             payment_network=args.payment_network,
             num_instances=args.num_instances,
             port=args.port,
+            running_time=args.running_time,
         ),
         log_file=args.log_file,
     )
