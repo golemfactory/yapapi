@@ -2,10 +2,12 @@
 
 import abc
 from collections import defaultdict
+from copy import copy, deepcopy
+from datetime import datetime
 from decimal import Decimal
 import logging
 from types import MappingProxyType
-from typing import Dict, Mapping, Optional, Set, Union
+from typing import Dict, Mapping, Optional, Set, Tuple, Union
 
 from dataclasses import dataclass
 from typing_extensions import Final
@@ -22,8 +24,68 @@ SCORE_REJECTED: Final[float] = -1.0
 SCORE_TRUSTED: Final[float] = 100.0
 
 
+DEFAULT_PROPERTY_VALUE_RANGES: Dict[str, Tuple[Optional[float], Optional[float]]] = {
+    "golem.com.payment.debit-notes.accept-timeout?": (30.0, None),
+    "golem.com.scheme.payu.debit-note.interval-sec?": (55.0, None),
+    "golem.com.scheme.payu.payment-timeout-sec?": (90.0, None),
+}
+
+
 class MarketStrategy(DemandDecorator, abc.ABC):
     """Abstract market strategy."""
+
+    valid_prop_value_ranges: Dict[str, Tuple[Optional[float], Optional[float]]]
+
+    def update_valid_prop_value_ranges(
+        self, valid_prop_value_ranges: Dict[str, Tuple[Optional[float], Optional[float]]]
+    ) -> None:
+        try:
+            self.valid_prop_value_ranges.update(valid_prop_value_ranges)
+        except AttributeError:
+            self.valid_prop_value_ranges = valid_prop_value_ranges.copy()
+
+    def set_prop_value_ranges_defaults(
+        self, valid_prop_value_ranges: Dict[str, Tuple[Optional[float], Optional[float]]]
+    ) -> None:
+        try:
+            value_ranges = self.valid_prop_value_ranges
+            for key, value in valid_prop_value_ranges.items():
+                if key not in value_ranges:
+                    value_ranges[key] = value
+        except AttributeError:
+            self.valid_prop_value_ranges = valid_prop_value_ranges.copy()
+
+    async def answer_to_provider_offer(
+        self,
+        our_demand: DemandBuilder,
+        provider_offer: rest.market.OfferProposal,
+        engine=None,  # Temporary solution, see https://github.com/golemfactory/yapapi/issues/636
+    ) -> DemandBuilder:
+        # Create a new DemandBuilder with a response to a provider offer.
+        updated_demand = deepcopy(our_demand)
+        # Remove some negotiable property ranges when yagna version is less than 0.10.0-rc1.
+        # This will be handled by yagna capabilities API in the future.
+        if engine and await engine.yagna_version_less_than("0.10.0-rc1"):
+            for prop_name in [
+                "golem.com.scheme.payu.debit-note.interval-sec?",
+                "golem.com.scheme.payu.payment-timeout-sec?",
+            ]:
+                DEFAULT_PROPERTY_VALUE_RANGES.pop(prop_name, None)
+        # Don't send debit-note-interval-sec? if the provider doesn't set it.
+        if "golem.com.scheme.payu.debit-note.interval-sec?" not in provider_offer.props:
+            updated_demand.properties.pop("golem.com.scheme.payu.debit-note.interval-sec?", None)
+        # Set default property value ranges if they were not set in the market strategy.
+        self.set_prop_value_ranges_defaults(DEFAULT_PROPERTY_VALUE_RANGES)
+        # Update our response if all values are within accepted ranges, otherwise raise ValueError.
+        for prop_name, valid_range in self.valid_prop_value_ranges.items():
+            prop_value = provider_offer.props.get(prop_name)
+            if prop_value:
+                if valid_range[0] is not None and prop_value < valid_range[0]:
+                    raise ValueError(f"Negotiated property {prop_name} < {valid_range[0]}.")
+                if valid_range[1] is not None and prop_value > valid_range[1]:
+                    raise ValueError(f"Negotiated property {prop_name} > {valid_range[1]}.")
+                updated_demand.properties[prop_name] = prop_value
+        return updated_demand
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
         """Optionally add relevant constraints to a Demand."""

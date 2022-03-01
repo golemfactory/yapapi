@@ -85,6 +85,13 @@ class AgreementsPool:
             await self._set_worker(agreement.id, task)
             return task
 
+    def max_debit_note_interval_for_agreement(self, agr_id: str) -> Optional[int]:
+        agreement = self._agreements.get(agr_id)
+        if agreement is None:
+            return None
+        props = agreement.agreement_details.provider_view.properties
+        return props.get("golem.com.scheme.payu.debit-note.interval-sec?")
+
     async def _set_worker(self, agreement_id: str, task: asyncio.Task) -> None:
         try:
             buffered_agreement = self._agreements[agreement_id]

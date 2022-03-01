@@ -3,12 +3,15 @@ import aiohttp
 from asyncio import CancelledError
 from collections import defaultdict
 import contextlib
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
 import itertools
+import json
 import logging
 import os
+from packaging import version
 import sys
 from typing import (
     AsyncContextManager,
@@ -43,12 +46,6 @@ from yapapi.script.command import BatchCommand
 from yapapi.storage import gftp
 from yapapi.strategy import MarketStrategy, SCORE_NEUTRAL
 from yapapi.utils import AsyncWrapper
-
-
-DEBIT_NOTE_MIN_TIMEOUT: Final[int] = 30  # in seconds
-"Shortest debit note acceptance timeout the requestor will accept."
-
-DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: Final[str] = "golem.com.payment.debit-notes.accept-timeout?"
 
 DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "erc20").lower()
 DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "rinkeby").lower()
@@ -85,6 +82,7 @@ class NoPaymentAccountError(Exception):
 
 # Type aliases to make some type annotations more meaningful
 JobId = str
+ActivityId = str
 AgreementId = str
 
 
@@ -130,6 +128,8 @@ class _Engine:
         self._payment_network: str = payment_network.lower() if payment_network else DEFAULT_NETWORK
         self._stream_output = stream_output
 
+        self.version_less_than_cached: Optional[bool] = None
+
         # a set of `Job` instances used to track jobs - computations or services - started
         # it can be used to wait until all jobs are finished
         self._jobs: Set[Job] = set()
@@ -137,6 +137,8 @@ class _Engine:
         # initialize the payment structures
         self._agreements_to_pay: Dict[JobId, Set[AgreementId]] = defaultdict(set)
         self._agreements_accepting_debit_notes: Dict[JobId, Set[AgreementId]] = defaultdict(set)
+        self._number_of_debit_notes: Dict[ActivityId, int] = defaultdict(int)
+        self._activity_created_at: Dict[ActivityId, datetime] = dict()
         self._invoices: Dict[AgreementId, rest.payment.Invoice] = dict()
         self._payment_closing: bool = False
 
@@ -163,6 +165,10 @@ class _Engine:
         """Create a `DemandBuilder` for given `payload` and `expiration_time`."""
         builder = DemandBuilder()
         builder.add(props.Activity(expiration=expiration_time, multi_activity=True))
+        builder.properties["golem.com.scheme.payu.debit-note.interval-sec?"] = 150
+        builder.properties["golem.com.scheme.payu.payment-timeout-sec?"] = (
+            min(1800, max((expiration_time - datetime.now(timezone.utc)).total_seconds(), 0)) + 300
+        )
         builder.add(props.NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
             builder.ensure(f"({props.NodeInfoKeys.subnet_tag}={self._subnet})")
@@ -286,6 +292,18 @@ class _Engine:
 
     async def add_to_async_context(self, async_context_manager: AsyncContextManager) -> None:
         await self._stack.enter_async_context(async_context_manager)
+
+    async def yagna_version_less_than(self, checked_version: str) -> bool:
+        if self.version_less_than_cached is not None:
+            return self.version_less_than_cached
+        try:
+            async with self._root_api_session.get(f"{self._api_config.root_url}/version/get") as r:
+                yagna_version = str(json.loads(await r.text()).get("current").get("version"))
+                lt_version = version.parse(checked_version)
+                self.version_less_than_cached = version.parse(yagna_version) < lt_version
+        except:
+            self.version_less_than_cached = True
+        return self.version_less_than_cached
 
     def _unpaid_agreement_ids(self) -> Set[AgreementId]:
         """Return the set of all yet unpaid agreement ids."""
@@ -448,26 +466,47 @@ class _Engine:
             ):
                 break
 
+    async def _check_debit_note_rate(self, act_id: ActivityId, agr_id: AgreementId, job: "Job"):
+        agreement = self._get_agreement_by_id(agr_id)
+        num_notes = self._number_of_debit_notes[act_id]
+        ts = datetime.now()
+        start_ts = self._activity_created_at.get(act_id)
+        max_interval = job.agreements_pool.max_debit_note_interval_for_agreement(agr_id)
+        if start_ts is not None and max_interval is not None:
+            dur = (ts - start_ts).total_seconds()
+            freq_descr = f"{num_notes} notes/{dur}s"
+            logger.debug(f"Debit notes for activity {act_id}: {freq_descr}")
+            if dur > 0 and dur + 30 < num_notes * max_interval:
+                reason = {
+                    "message": f"Too many debit notes: {freq_descr} (activity: {act_id})",
+                    "golem.requestor.code": "TooManyDebitNotes",
+                }
+                await job.agreements_pool._terminate_agreement(agr_id, reason)
+
     async def _process_debit_notes(self) -> None:
         """Process incoming debit notes."""
 
         async for debit_note in self._payment_api.incoming_debit_notes():
+            agr_id = debit_note.agreement_id
+            act_id = debit_note.activity_id
             job_id = next(
                 (
                     id
                     for id in self._agreements_accepting_debit_notes
-                    if debit_note.agreement_id in self._agreements_accepting_debit_notes[id]
+                    if agr_id in self._agreements_accepting_debit_notes[id]
                 ),
                 None,
             )
             if job_id is not None:
                 job = self._get_job_by_id(job_id)
-                agreement = self._get_agreement_by_id(debit_note.agreement_id)
+                agreement = self._get_agreement_by_id(agr_id)
                 job.emit(
                     events.DebitNoteReceived,
                     agreement=agreement,
                     debit_note=debit_note,
                 )
+                self._number_of_debit_notes[act_id] += 1
+                await self._check_debit_note_rate(act_id, agr_id, job)
                 try:
                     allocation = self._get_allocation(debit_note)
                     await debit_note.accept(
@@ -564,9 +603,14 @@ class _Engine:
             work_context = WorkContext(activity, agreement, self.storage_manager, emitter=job.emit)
             work_context.emit(events.ActivityCreated)
 
+            self._activity_created_at[activity.id] = datetime.now()
+
             async with activity:
                 self.accept_debit_notes_for_agreement(job.id, agreement.id)
                 await run_worker(work_context)
+                # Providers may issue debit notes after activity ends.
+                # This will prevent terminating agreements when this happens.
+                self._activity_created_at.pop(activity.id, None)
 
         return await job.agreements_pool.use_agreement(
             lambda agreement: loop.create_task(worker_task(agreement))
@@ -762,8 +806,15 @@ class Job:
             return await reject_proposal("Score too low")
 
         if ignore_draft or not proposal.is_draft:
-            demand_builder = self._demand_builder
-            assert demand_builder is not None
+            assert self._demand_builder is not None
+            demand_builder = deepcopy(self._demand_builder)
+
+            try:
+                demand_builder = await self.engine._strategy.answer_to_provider_offer(
+                    demand_builder, proposal, self.engine
+                )
+            except ValueError as e:
+                return await reject_proposal(str(e))
 
             # Check if any of the supported payment platforms matches the proposal
             common_platforms = self._get_common_payment_platforms(proposal)
@@ -774,14 +825,6 @@ class Job:
             else:
                 # reject proposal if there are no common payment platforms
                 return await reject_proposal("No common payment platform")
-
-            # Check if the timeout for debit note acceptance is not too low
-            timeout = proposal.props.get(DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP)
-            if timeout:
-                if timeout < DEBIT_NOTE_MIN_TIMEOUT:
-                    return await reject_proposal("Debit note acceptance timeout is too short")
-                else:
-                    demand_builder.properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout
 
             await proposal.respond(demand_builder.properties, demand_builder.constraints)
             return self.emit(events.ProposalResponded, proposal=proposal)
