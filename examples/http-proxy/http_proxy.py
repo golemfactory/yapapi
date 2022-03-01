@@ -28,7 +28,13 @@ from utils import (
     print_env_info,
 )
 
+# the timeout after we commission our service instances
+# before we abort this script
 STARTING_TIMEOUT = timedelta(minutes=4)
+
+# additional expiration margin to allow providers to take our offer,
+# as providers typically won't take offers that expire sooner than 5 minutes in the future
+EXPIRATION_MARGIN = timedelta(minutes=5)
 
 
 class HttpService(HttpProxyService):
@@ -100,6 +106,7 @@ async def main(subnet_tag, payment_driver, payment_network, num_instances, port,
             num_instances=num_instances,
             expiration=datetime.now(timezone.utc)
             + STARTING_TIMEOUT
+            + EXPIRATION_MARGIN
             + timedelta(seconds=running_time),
         )
         instances = cluster.instances
