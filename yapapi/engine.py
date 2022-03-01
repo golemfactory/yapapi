@@ -8,10 +8,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
 import itertools
-import json
 import logging
 import os
-from packaging import version
 import sys
 from typing import (
     AsyncContextManager,
@@ -26,7 +24,7 @@ from typing import (
     Type,
     Union,
 )
-from typing_extensions import Final, AsyncGenerator
+from typing_extensions import AsyncGenerator
 
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
@@ -134,8 +132,6 @@ class _Engine:
         self._payment_driver: str = payment_driver.lower() if payment_driver else DEFAULT_DRIVER
         self._payment_network: str = payment_network.lower() if payment_network else DEFAULT_NETWORK
         self._stream_output = stream_output
-
-        self.version_less_than_cached: Optional[bool] = None
 
         # a set of `Job` instances used to track jobs - computations or services - started
         # it can be used to wait until all jobs are finished
@@ -530,7 +526,6 @@ class _Engine:
 
         async for debit_note in self._payment_api.incoming_debit_notes():
             agr_id = debit_note.agreement_id
-            act_id = debit_note.activity_id
             job_id = next(
                 (
                     id
