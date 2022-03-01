@@ -44,9 +44,8 @@ async def test_emit_event(dummy_yagna_engine):
     assert got_events_3 == emitted_events
     assert got_events_4 == sample_events
 
-    #   NOTE: We call `Golem.add_event_consumer` and event_consumers are passed to the _Engine.
-    #         When exiting from golem contextmanager, new `_Engine` is created -> we must ensure
-    #         event consumers are not lost when `_Engine` exits -> so we repeat the same test again
+    #   When exiting from golem contextmanager, new `_Engine` is created -> we must ensure
+    #   event consumers are not lost when `_Engine` exits -> so we repeat the same test again
     got_events_1.clear()
     got_events_2.clear()
     got_events_3.clear()

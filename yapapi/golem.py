@@ -225,6 +225,11 @@ class Golem:
                 if self.operative:
                     #   Something started us before we got to the locked part
                     return
+
+                #   NOTE: this is necessary only if Golem was stopped before, because stopping Golem
+                #         closes event consumers, and here we reopen them
+                self._async_event_emitter.start()
+
                 await self._engine.start()
         except:
             await self._stop_with_exc_info(*sys.exc_info())
@@ -246,6 +251,7 @@ class Golem:
     async def _stop_with_exc_info(self, *exc_info) -> Optional[bool]:
         async with self._engine_state_lock:
             res = await self._engine.stop(*exc_info)
+            await self._async_event_emitter.stop()
 
         #   Engine that was stopped is not usable anymore, there is no "full" cleanup.
         #   That's why here we replace it with a fresh one.
