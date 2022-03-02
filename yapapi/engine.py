@@ -476,9 +476,7 @@ class _Engine:
                 False,
             )
 
-    def _verify_payment_timeout(
-        self, agreement: Agreement, debit_note: DebitNote, duration: float
-    ):
+    def _verify_payment_timeout(self, agreement: Agreement, debit_note: DebitNote, duration: float):
         payable_interval = agreement.get_requestor_property(PROP_PAYMENT_TIMEOUT_SEC)
         logger.debug("Payable debit notes interval: %ss", payable_interval)
         if debit_note.payment_due_date and payable_interval:
