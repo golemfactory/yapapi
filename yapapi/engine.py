@@ -455,7 +455,7 @@ class _Engine:
                 break
 
     @staticmethod
-    def _reason_for_termination(
+    def _check_for_termination_reason(
         activity_id: str, duration: float, num_notes: int, interval: int, payable: bool
     ):
         freq_descr = f"{num_notes} notes/{duration}s"
@@ -479,13 +479,13 @@ class _Engine:
 
         return None
 
-    async def _verify_debit_note_interval(
+    def _verify_debit_note_interval(
         self, agreement: Agreement, debit_note: DebitNote, duration: float
     ):
-        interval = await agreement.get_requestor_property(PROP_DEBIT_NOTE_INTERVAL_SEC)
+        interval = agreement.get_requestor_property(PROP_DEBIT_NOTE_INTERVAL_SEC)
         logger.debug("Debit notes interval: %ss", interval)
         if interval:
-            return self._reason_for_termination(
+            return self._check_for_termination_reason(
                 debit_note.activity_id,
                 duration,
                 self._num_debit_notes[debit_note.activity_id],
@@ -493,13 +493,13 @@ class _Engine:
                 False,
             )
 
-    async def _verify_payment_timeout(
+    def _verify_payment_timeout(
         self, agreement: Agreement, debit_note: DebitNote, duration: float
     ):
-        payable_interval = await agreement.get_requestor_property(PROP_PAYMENT_TIMEOUT_SEC)
+        payable_interval = agreement.get_requestor_property(PROP_PAYMENT_TIMEOUT_SEC)
         logger.debug("Payable debit notes interval: %ss", payable_interval)
         if debit_note.payment_due_date and payable_interval:
-            return self._reason_for_termination(
+            return self._check_for_termination_reason(
                 debit_note.activity_id,
                 duration,
                 self._num_payable_debit_notes[debit_note.activity_id],
@@ -510,7 +510,7 @@ class _Engine:
     async def _enforce_debit_note_intervals(self, job: "Job", debit_note: DebitNote):
         agreement = self._get_agreement_by_id(debit_note.agreement_id)
         if not agreement or agreement.terminated:
-            return
+            return False
 
         self._num_debit_notes[debit_note.activity_id] += 1
         if debit_note.payment_due_date:
@@ -520,20 +520,23 @@ class _Engine:
         start_ts = self._activity_created_at.get(debit_note.activity_id)
 
         if not start_ts:
-            return
+            return False
 
         duration = (ts - start_ts).total_seconds()
 
         # break agreement if the debit notes arrive too often
-        reason = await self._verify_debit_note_interval(agreement, debit_note, duration)
+        reason = self._verify_debit_note_interval(agreement, debit_note, duration)
 
         # or if we're required to pay too often
         if not reason:
-            reason = await self._verify_payment_timeout(agreement, debit_note, duration)
+            reason = self._verify_payment_timeout(agreement, debit_note, duration)
 
         # and if we found any reason for termination, do so...
         if reason:
             await job.agreements_pool._terminate_agreement(debit_note.agreement_id, reason)  # noqa
+            return False
+
+        return True
 
     async def _process_debit_notes(self) -> None:
         """Process incoming debit notes."""
@@ -556,7 +559,8 @@ class _Engine:
                     agreement=agreement,
                     debit_note=debit_note,
                 )
-                await self._enforce_debit_note_intervals(job, debit_note)
+                if not await self._enforce_debit_note_intervals(job, debit_note):
+                    continue
                 try:
                     allocation = self._get_allocation(debit_note)
                     await debit_note.accept(

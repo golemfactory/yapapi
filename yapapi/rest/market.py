@@ -6,7 +6,6 @@ from types import TracebackType
 from typing import AsyncIterator, Optional, TypeVar, Type, Generator, Any, Generic
 
 import aiohttp
-import statemachine  # type: ignore
 from typing_extensions import Awaitable, AsyncContextManager
 
 from ya_market import ApiClient, ApiException, RequestorApi, models  # type: ignore
@@ -84,7 +83,7 @@ class Agreement(object):
     def details(self) -> AgreementDetails:
         """Return cached details.
 
-        Requires a prior call to `await self.details().
+        Requires a prior call to `await self.get_details().
         Raises RuntimeError if the details had not been retrieved.
         """
         if not self._details:

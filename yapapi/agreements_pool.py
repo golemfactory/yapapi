@@ -181,13 +181,7 @@ class AgreementsPool:
             return
 
         buffered_agreement = self._agreements[agreement_id]
-
-        try:
-            agreement_details = buffered_agreement.agreement.details
-            provider = agreement_details.provider_view.extract(NodeInfo).name
-        except (ApiException, asyncio.TimeoutError, aiohttp.ClientOSError):
-            logger.debug("Cannot get details for agreement %s", agreement_id, exc_info=True)
-            provider = "<couldn't get provider name>"
+        provider = buffered_agreement.agreement.details.provider_view.extract(NodeInfo).name
 
         logger.debug(
             "Terminating agreement. id: %s, reason: %s, provider: %s",
