@@ -20,6 +20,14 @@ class AsyncWrapper(AsyncContextManager):
           wrapper.async_call("Hello", world=True)
           wrapper.async_call("Bye!")
 
+      # OR
+
+      wrapper = AsyncWrapper(func)
+      wrapper.start()
+      wrapper.async_call("Hello", world=True)
+      wrapper.async_call("Bye!")
+      await wrapper.stop()
+
     The above code will make two asynchronous calls to `func`.
     The results of the calls, if any, are discarded, so this class is
     most useful for wrapping callables that return `None`.
@@ -36,20 +44,35 @@ class AsyncWrapper(AsyncContextManager):
         self._task = None
 
     async def __aenter__(self) -> "AsyncWrapper":
-        self._task = self._loop.create_task(self._worker())
+        self.start()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> Optional[bool]:
-        """Stop the wrapper, process queued calls but do not accept any new ones."""
-        if self._task:
-            # Set self._task to None so we don't accept any more calls in `async_call()`
-            worker_task = self._task
-            self._task = None
-            await self._args_buffer.join()
-            worker_task.cancel()
-            await asyncio.gather(worker_task, return_exceptions=True)
+        await self.stop()
+
         # Don't suppress the exception (if any), so return a non-True value
         return None
+
+    @property
+    def closed(self) -> bool:
+        return self._task is None
+
+    def start(self):
+        if self.closed:
+            self._task = self._loop.create_task(self._worker())
+
+    async def stop(self):
+        """Stop the wrapper, process queued calls but do not accept any new ones."""
+        if self.closed:
+            return
+
+        # Set self._task to None so we don't accept any more calls in `async_call()`
+        worker_task = self._task
+        self._task = None
+
+        await self._args_buffer.join()
+        worker_task.cancel()
+        await asyncio.gather(worker_task, return_exceptions=True)
 
     async def _worker(self) -> None:
         while True:
@@ -76,7 +99,7 @@ class AsyncWrapper(AsyncContextManager):
 
     def async_call(self, *args, **kwargs) -> None:
         """Schedule an asynchronous call to the wrapped callable."""
-        if not self._task or self._task.done():
+        if self.closed:
             raise RuntimeError("AsyncWrapper is closed")
         self._args_buffer.put_nowait((args, kwargs))
 

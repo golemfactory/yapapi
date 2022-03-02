@@ -21,6 +21,7 @@ from typing_extensions import AsyncGenerator
 
 import yapapi
 from yapapi import events
+from yapapi.event_dispatcher import AsyncEventDispatcher
 from yapapi.ctx import WorkContext
 from yapapi.engine import _Engine
 from yapapi.executor import Executor
@@ -117,7 +118,9 @@ class Golem:
             warn_deprecated("network", "payment_network", "0.7.0", Deprecated.parameter)
             payment_network = payment_network if payment_network else network
 
-        self._event_consumers = [event_consumer or self._default_event_consumer()]
+        self._event_dispatcher = AsyncEventDispatcher()
+
+        self.add_event_consumer(event_consumer or self._default_event_consumer())
 
         if not strategy:
             strategy = self._initialize_default_strategy()
@@ -125,6 +128,7 @@ class Golem:
         self._engine_args = {
             "budget": budget,
             "strategy": strategy,
+            "event_consumer": self._event_dispatcher.emit,
             "subnet_tag": subnet_tag,
             "payment_driver": payment_driver,
             "payment_network": payment_network,
@@ -135,12 +139,9 @@ class Golem:
         self._engine: _Engine = self._get_new_engine()
         self._engine_state_lock = asyncio.Lock()
 
-    async def add_event_consumer(self, event_consumer: Callable[[events.Event], None]) -> None:
+    def add_event_consumer(self, event_consumer: Callable[[events.Event], None]) -> None:
         """Initialize another `event_consumer`, working just like `event_consumer` passed in `__init__`"""
-        if self._engine.started:
-            await self._engine.add_event_consumer(event_consumer)
-
-        self._event_consumers.append(event_consumer)
+        self._event_dispatcher.add_event_consumer(event_consumer, self.operative)
 
     @property
     def driver(self) -> str:
@@ -196,7 +197,8 @@ class Golem:
     @property
     def operative(self) -> bool:
         """Return True if Golem started and didn't stop"""
-        return self._engine.started
+        engine_init_finished = hasattr(self, "_engine")  # to avoid special cases in __init__
+        return engine_init_finished and self._engine.started
 
     async def start(self) -> None:
         """Start the Golem engine in non-contextmanager mode.
@@ -225,10 +227,7 @@ class Golem:
                     #   Something started us before we got to the locked part
                     return
 
-                #   NOTE: we add consumers to the not-yet-started Engine, because this is the only
-                #   way to capture ShutdownFinished event with current Engine implementation
-                for event_consumer in self._event_consumers:
-                    await self._engine.add_event_consumer(event_consumer)
+                self._event_dispatcher.start()
                 await self._engine.start()
         except:
             await self._stop_with_exc_info(*sys.exc_info())
@@ -250,6 +249,7 @@ class Golem:
     async def _stop_with_exc_info(self, *exc_info) -> Optional[bool]:
         async with self._engine_state_lock:
             res = await self._engine.stop(*exc_info)
+            await self._event_dispatcher.stop()
 
         #   Engine that was stopped is not usable anymore, there is no "full" cleanup.
         #   That's why here we replace it with a fresh one.
@@ -481,5 +481,5 @@ class Golem:
             max_price_for={com.Counter.CPU: Decimal("0.2"), com.Counter.TIME: Decimal("0.1")},
         )
         strategy = DecreaseScoreForUnconfirmedAgreement(base_strategy, 0.5)
-        self._event_consumers.append(strategy.on_event)
+        self.add_event_consumer(strategy.on_event)
         return strategy
