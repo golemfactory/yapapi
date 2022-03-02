@@ -139,9 +139,37 @@ class Golem:
         self._engine: _Engine = self._get_new_engine()
         self._engine_state_lock = asyncio.Lock()
 
-    def add_event_consumer(self, event_consumer: Callable[[events.Event], None]) -> None:
-        """Initialize another `event_consumer`, working just like `event_consumer` passed in `__init__`"""
-        self._event_dispatcher.add_event_consumer(event_consumer)
+    def add_event_consumer(
+        self,
+        event_consumer: Callable[[events.Event], None],
+        event_classes_or_names: Iterable[Union[Type[events.Event], str]] = (events.Event,),
+    ):
+        """Initialize another `event_consumer`, working just like `event_consumer` passed in `__init__`.
+
+        :param event_consumer: A callable that will be executed on every event.
+        :param event_classes_or_names: An iterable defining classes of events that should be passed to
+            this `event_consumer`. Both classes and class names are accepted (in the latter case classes must be
+            available in the `yapapi.events` namespace).
+            If this argument is omitted, all events inheriting from `yapapi.events.Event`
+            (i.e. all currently implemented events) will be passed to the `event_consumer`.
+        """
+        event_classes = set((self._parse_event_cls_or_name(x) for x in event_classes_or_names))
+        self._event_dispatcher.add_event_consumer(event_consumer, event_classes)
+
+    @staticmethod
+    def _parse_event_cls_or_name(
+        event_cls_or_name: Union[Type[events.Event], str]
+    ) -> Type[events.Event]:
+        if isinstance(event_cls_or_name, type):
+            return event_cls_or_name
+        else:
+            try:
+                return getattr(events, event_cls_or_name)  # type: ignore
+            except AttributeError:
+                raise ValueError(
+                    "Second argument must be either an event class, or a name of "
+                    f"a class defined on `yapapi.events`, got {event_cls_or_name}"
+                )
 
     @property
     def driver(self) -> str:

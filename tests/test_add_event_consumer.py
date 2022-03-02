@@ -60,3 +60,58 @@ async def test_emit_event(dummy_yagna_engine):
     assert got_events_2 == emitted_events
     assert got_events_3 == emitted_events
     assert got_events_4 == sample_events
+
+
+@pytest.mark.asyncio
+async def test_emit_event_class(dummy_yagna_engine):
+    got_events_1 = []
+    got_events_2 = []
+    got_events_3 = []
+
+    def event_consumer_1(event: events.Event):
+        got_events_1.append(event)
+
+    def event_consumer_2(event: events.Event):
+        got_events_2.append(event)
+
+    def event_consumer_3(event: events.Event):
+        got_events_3.append(event)
+
+    golem = Golem(budget=1, app_key="NOT_A_REAL_APPKEY")
+
+    golem.add_event_consumer(event_consumer_1, [events.SubscriptionEvent])
+    golem.add_event_consumer(event_consumer_2, [events.TaskEvent, "ServiceEvent"])
+    golem.add_event_consumer(event_consumer_3)
+    async with golem:
+        service_started = golem._engine.emit(
+            events.ServiceStarted, job="foo", agreement="bar", activity="baz", service="???"
+        )
+        subscription_created = golem._engine.emit(
+            events.SubscriptionCreated, job="foo", subscription="bar"
+        )
+        service_finished = golem._engine.emit(
+            events.ServiceFinished, job="foo", agreement="bar", activity="baz", service="???"
+        )
+        task_started = golem._engine.emit(
+            events.TaskStarted, job="foo", agreement="bar", activity="baz", task="???"
+        )
+
+    assert got_events_1 == [subscription_created]
+    assert got_events_2 == [service_started, service_finished, task_started]
+
+    #   Additional ShutdownFinished event is passed to the catchall consumer only
+    assert got_events_3[:4] == [
+        service_started,
+        subscription_created,
+        service_finished,
+        task_started,
+    ]
+    assert len(got_events_3) == 5 and isinstance(got_events_3[4], events.ShutdownFinished)
+
+
+@pytest.mark.asyncio
+async def test_incorrect_event_class_str():
+    golem = Golem(budget=1, app_key="NOT_A_REAL_APPKEY")
+    with pytest.raises(ValueError):
+        golem.add_event_consumer(lambda event: event, ["NoSuchEvent"])
+    await golem.stop()  # This is required for a clean shutdown (without hanging tasks)

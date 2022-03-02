@@ -1,5 +1,5 @@
 import asyncio
-from typing import Callable, List
+from typing import Callable, List, Set, Type
 
 from yapapi import events
 from yapapi.utils import AsyncWrapper
@@ -9,7 +9,11 @@ class AsyncEventDispatcher:
     def __init__(self):
         self._consumers: List[AsyncWrapper] = []
 
-    def add_event_consumer(self, event_consumer: Callable[[events.Event], None]):
+    def add_event_consumer(
+        self,
+        event_consumer: Callable[[events.Event], None],
+        event_classes: Set[Type[events.Event]],
+    ):
         consumer = AsyncWrapper(event_consumer)
         consumer.start()
         self._consumers.append(consumer)
