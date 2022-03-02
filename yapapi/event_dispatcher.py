@@ -13,9 +13,11 @@ class AsyncEventDispatcher:
         self,
         event_consumer: Callable[[events.Event], None],
         event_classes: Set[Type[events.Event]],
+        start_consumer: bool,
     ):
         consumer = AsyncWrapper(event_consumer)
-        consumer.start()
+        if start_consumer:
+            consumer.start()
         self._consumers.append(consumer)
 
     def emit(self, event: events.Event):

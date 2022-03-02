@@ -114,4 +114,3 @@ async def test_incorrect_event_class_str():
     golem = Golem(budget=1, app_key="NOT_A_REAL_APPKEY")
     with pytest.raises(ValueError):
         golem.add_event_consumer(lambda event: event, ["NoSuchEvent"])
-    await golem.stop()  # This is required for a clean shutdown (without hanging tasks)

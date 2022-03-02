@@ -154,7 +154,7 @@ class Golem:
             (i.e. all currently implemented events) will be passed to the `event_consumer`.
         """
         event_classes = set((self._parse_event_cls_or_name(x) for x in event_classes_or_names))
-        self._event_dispatcher.add_event_consumer(event_consumer, event_classes)
+        self._event_dispatcher.add_event_consumer(event_consumer, event_classes, self.operative)
 
     @staticmethod
     def _parse_event_cls_or_name(
@@ -225,7 +225,8 @@ class Golem:
     @property
     def operative(self) -> bool:
         """Return True if Golem started and didn't stop"""
-        return self._engine.started
+        engine_init_finished = hasattr(self, "_engine")  # to avoid special cases in __init__
+        return engine_init_finished and self._engine.started
 
     async def start(self) -> None:
         """Start the Golem engine in non-contextmanager mode.
@@ -254,10 +255,7 @@ class Golem:
                     #   Something started us before we got to the locked part
                     return
 
-                #   NOTE: this is necessary only if Golem was stopped before, because stopping Golem
-                #         closes event consumers, and here we reopen them
                 self._event_dispatcher.start()
-
                 await self._engine.start()
         except:
             await self._stop_with_exc_info(*sys.exc_info())
