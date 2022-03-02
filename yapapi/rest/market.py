@@ -57,15 +57,6 @@ class AgreementDetails(object):
         self.raw_details = _ref
 
 
-class AgreementState(statemachine.StateMachine):
-    pending = statemachine.State("pending", initial=True)
-    confirmed = statemachine.State("confirmed")
-    terminated = statemachine.State("terminated")
-
-    confirm = pending.to(confirmed)
-    terminate = confirmed.to(terminated)
-
-
 class Agreement(object):
     """Mid-level interface to the REST's Agreement model."""
 
@@ -74,7 +65,7 @@ class Agreement(object):
         self._subscription = subscription
         self._id = agreement_id
         self._details: Optional[AgreementDetails] = None
-        self._state: AgreementState = AgreementState()
+        self._terminated = False
 
     @property
     def id(self) -> str:
@@ -108,7 +99,6 @@ class Agreement(object):
         try:
             await self._api.confirm_agreement(self._id)
             await self._api.wait_for_approval(self._id, timeout=15, _request_timeout=16)
-            self._state.confirm()
             return True
         except (ApiException, asyncio.TimeoutError, aiohttp.ClientOSError):
             logger.debug("waitForApproval(%s) failed", self._id, exc_info=True)
@@ -122,19 +112,15 @@ class Agreement(object):
         try:
             await self._api.terminate_agreement(self._id, request_body=reason)
             logger.debug("terminateAgreement(%s) returned successfully", self._id)
-            self._state.terminate()
+            self._terminated = True
             return True
         except (ApiException, asyncio.TimeoutError, aiohttp.ClientOSError):
             logger.debug("terminateAgreement(%s) failed", self._id, exc_info=True)
             return False
 
     @property
-    def confirmed(self):
-        return self._state.current_state == AgreementState.confirmed
-
-    @property
     def terminated(self):
-        return self._state.current_state == AgreementState.terminated
+        return self._terminated
 
     def get_provider_property(self, prop_key):
         """Retrieve a value of a provider-side (Offer) property of the Agreement."""

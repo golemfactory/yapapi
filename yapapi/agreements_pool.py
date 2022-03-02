@@ -236,6 +236,7 @@ class AgreementsPool:
             except KeyError:
                 return
             buffered_agreement.worker_task and buffered_agreement.worker_task.cancel()
+            buffered_agreement.agreement._terminated = True
             del self._agreements[agr_id]
             self.emitter(
                 events.AgreementTerminated, agreement=buffered_agreement.agreement, reason=reason
