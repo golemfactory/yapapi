@@ -15,7 +15,7 @@ class _AgreementFactory(factory.Factory):
 
     @factory.post_generation
     def provider_id(obj: mock.Mock, create, extracted, **kwargs):
-        obj.cached_details.raw_details.offer.provider_id = extracted
+        obj.details.raw_details.offer.provider_id = extracted
 
 
 class AgreementEventFactory(factory.Factory):
