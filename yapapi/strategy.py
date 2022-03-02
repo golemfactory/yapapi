@@ -32,13 +32,13 @@ MID_AGREEMENT_PAYMENTS_PROPS = [PROP_DEBIT_NOTE_INTERVAL_SEC, PROP_PAYMENT_TIMEO
 
 @dataclass
 class PropValueRange:
-    min: Optional[Union[int, float]] = None
-    max: Optional[Union[int, float]] = None
+    min: Optional[float] = None
+    max: Optional[float] = None
 
-    def __contains__(self, item: Union[int, float]) -> bool:
+    def __contains__(self, item: float) -> bool:
         return (self.min is None or item >= self.min) and (self.max is None or item <= self.max)
 
-    def closest_acceptable(self, item: Union[int, float]):
+    def closest_acceptable(self, item: float):
         if self.min is not None and item < self.min:
             return self.min
         if self.max is not None and item > self.max:
