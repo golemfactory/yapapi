@@ -454,72 +454,86 @@ class _Engine:
             ):
                 break
 
+    @staticmethod
+    def _reason_for_termination(
+        activity_id: str, duration: float, num_notes: int, interval: int, payable: bool
+    ):
+        freq_descr = f"{num_notes} notes/{duration}s"
+        logger.debug(
+            f"{'Payable Debit notes' if payable else 'Debit notes'} for activity {activity_id}: {freq_descr}"
+        )
+        if duration > 0 and duration + DEBIT_NOTE_INTERVAL_GRACE_PERIOD < num_notes * interval:
+            reason = {
+                "message": f"Too many {'payable ' if payable else ''}debit notes: {freq_descr} (activity: {activity_id})",
+                "golem.requestor.code": "TooManyPayableDebitNotes"
+                if payable
+                else "TooManyDebitNotes",
+            }
+            logger.error(
+                f"Too many {'payable ' if payable else ''}debit notes received."
+                " %s, activity: %s",
+                freq_descr,
+                activity_id,
+            )
+            return reason
+
+        return None
+
+    async def _verify_debit_note_interval(
+        self, agreement: Agreement, debit_note: DebitNote, duration: float
+    ):
+        interval = await agreement.get_requestor_property(PROP_DEBIT_NOTE_INTERVAL_SEC)
+        logger.debug("Debit notes interval: %ss", interval)
+        if interval:
+            return self._reason_for_termination(
+                debit_note.activity_id,
+                duration,
+                self._num_debit_notes[debit_note.activity_id],
+                interval,
+                False,
+            )
+
+    async def _verify_payment_timeout(
+        self, agreement: Agreement, debit_note: DebitNote, duration: float
+    ):
+        payable_interval = await agreement.get_requestor_property(PROP_PAYMENT_TIMEOUT_SEC)
+        logger.debug("Payable debit notes interval: %ss", payable_interval)
+        if debit_note.payment_due_date and payable_interval:
+            return self._reason_for_termination(
+                debit_note.activity_id,
+                duration,
+                self._num_payable_debit_notes[debit_note.activity_id],
+                payable_interval,
+                True,
+            )
+
     async def _enforce_debit_note_intervals(self, job: "Job", debit_note: DebitNote):
         agreement = self._get_agreement_by_id(debit_note.agreement_id)
         if not agreement or agreement.terminated:
             return
 
-        act_id = debit_note.activity_id
-
-        self._num_debit_notes[act_id] += 1
+        self._num_debit_notes[debit_note.activity_id] += 1
         if debit_note.payment_due_date:
-            self._num_payable_debit_notes[act_id] += 1
+            self._num_payable_debit_notes[debit_note.activity_id] += 1
 
         ts = datetime.now()
-        start_ts = self._activity_created_at.get(act_id)
+        start_ts = self._activity_created_at.get(debit_note.activity_id)
 
         if not start_ts:
             return
 
-        dur = (ts - start_ts).total_seconds()
-
-        def reason_for_termination(num_notes: int, interval: int, payable: bool):
-            freq_descr = f"{num_notes} notes/{dur}s"
-            logger.debug(
-                f"{'Payable Debit notes' if payable else 'Debit notes'} for activity {act_id}: {freq_descr}"
-            )
-            if dur > 0 and dur + DEBIT_NOTE_INTERVAL_GRACE_PERIOD < num_notes * interval:
-                reason = {
-                    "message": f"Too many {'payable ' if payable else ''}debit notes: {freq_descr} (activity: {act_id})",
-                    "golem.requestor.code": "TooManyPayableDebitNotes"
-                    if payable
-                    else "TooManyDebitNotes",
-                }
-                logger.error(
-                    f"Too many {'payable ' if payable else ''}debit notes received."
-                    " %s, activity: %s",
-                    freq_descr,
-                    act_id,
-                )
-                return reason
-
-            return None
+        duration = (ts - start_ts).total_seconds()
 
         # break agreement if the debit notes arrive too often
-
-        interval = await agreement.get_requestor_property(PROP_DEBIT_NOTE_INTERVAL_SEC)
-        logger.debug("Debit notes interval: %ss", interval)
-        if interval:
-            reason = reason_for_termination(self._num_debit_notes[act_id], interval, False)
-            if reason:
-                await job.agreements_pool._terminate_agreement(
-                    debit_note.agreement_id, reason
-                )  # noqa
-                return
+        reason = await self._verify_debit_note_interval(agreement, debit_note, duration)
 
         # or if we're required to pay too often
+        if not reason:
+            reason = await self._verify_payment_timeout(agreement, debit_note, duration)
 
-        payable_interval = await agreement.get_requestor_property(PROP_PAYMENT_TIMEOUT_SEC)
-        logger.debug("Payable debit notes interval: %ss", payable_interval)
-        if debit_note.payment_due_date and payable_interval:
-            reason = reason_for_termination(
-                self._num_payable_debit_notes[act_id], payable_interval, True
-            )
-            if reason:
-                await job.agreements_pool._terminate_agreement(
-                    debit_note.agreement_id, reason
-                )  # noqa
-                return
+        # and if we found any reason for termination, do so...
+        if reason:
+            await job.agreements_pool._terminate_agreement(debit_note.agreement_id, reason)  # noqa
 
     async def _process_debit_notes(self) -> None:
         """Process incoming debit notes."""
