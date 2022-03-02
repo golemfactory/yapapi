@@ -21,7 +21,7 @@ from typing_extensions import AsyncGenerator
 
 import yapapi
 from yapapi import events
-from yapapi.async_event_emitter import AsyncEventEmitter
+from yapapi.event_dispatcher import AsyncEventDispatcher
 from yapapi.ctx import WorkContext
 from yapapi.engine import _Engine
 from yapapi.executor import Executor
@@ -118,7 +118,7 @@ class Golem:
             warn_deprecated("network", "payment_network", "0.7.0", Deprecated.parameter)
             payment_network = payment_network if payment_network else network
 
-        self._async_event_emitter = AsyncEventEmitter()
+        self._event_dispatcher = AsyncEventDispatcher()
 
         self.add_event_consumer(event_consumer or self._default_event_consumer())
 
@@ -128,7 +128,7 @@ class Golem:
         self._engine_args = {
             "budget": budget,
             "strategy": strategy,
-            "event_consumer": self._async_event_emitter.emit,
+            "event_consumer": self._event_dispatcher.emit,
             "subnet_tag": subnet_tag,
             "payment_driver": payment_driver,
             "payment_network": payment_network,
@@ -141,7 +141,7 @@ class Golem:
 
     def add_event_consumer(self, event_consumer: Callable[[events.Event], None]) -> None:
         """Initialize another `event_consumer`, working just like `event_consumer` passed in `__init__`"""
-        self._async_event_emitter.add_event_consumer(event_consumer)
+        self._event_dispatcher.add_event_consumer(event_consumer)
 
     @property
     def driver(self) -> str:
@@ -228,7 +228,7 @@ class Golem:
 
                 #   NOTE: this is necessary only if Golem was stopped before, because stopping Golem
                 #         closes event consumers, and here we reopen them
-                self._async_event_emitter.start()
+                self._event_dispatcher.start()
 
                 await self._engine.start()
         except:
@@ -251,7 +251,7 @@ class Golem:
     async def _stop_with_exc_info(self, *exc_info) -> Optional[bool]:
         async with self._engine_state_lock:
             res = await self._engine.stop(*exc_info)
-            await self._async_event_emitter.stop()
+            await self._event_dispatcher.stop()
 
         #   Engine that was stopped is not usable anymore, there is no "full" cleanup.
         #   That's why here we replace it with a fresh one.

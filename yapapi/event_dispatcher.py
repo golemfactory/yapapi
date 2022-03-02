@@ -5,7 +5,7 @@ from yapapi import events
 from yapapi.utils import AsyncWrapper
 
 
-class AsyncEventEmitter:
+class AsyncEventDispatcher:
     def __init__(self):
         self._consumers: List[AsyncWrapper] = []
 
