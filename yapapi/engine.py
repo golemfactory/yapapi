@@ -108,7 +108,7 @@ class _Engine:
         :param strategy: market strategy used to select providers from the market
             (e.g. LeastExpensiveLinearPayuMS or DummyMS)
         :param event_consumer: callable that will be directly executed on every Event this Engine creates.
-            NOTE: it is expected to be fast - if not, it will block the _Engine.
+            NOTE: it is expected to be fast or async - if not, it will block the _Engine.
         :param subnet_tag: use only providers in the subnet with the subnet_tag name.
             Uses `YAGNA_SUBNET` environment variable, defaults to `None`
         :param payment_driver: name of the payment driver to use. Uses `YAGNA_PAYMENT_DRIVER`
