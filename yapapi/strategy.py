@@ -23,6 +23,10 @@ SCORE_NEUTRAL: Final[float] = 0.0
 SCORE_REJECTED: Final[float] = -1.0
 SCORE_TRUSTED: Final[float] = 100.0
 
+# the properties and their default ranges here are part of the general protocol used by all
+# provider and requestor agents on the market to agree on certain parameters of their
+# offers, demands and, finally the resultant agreements
+
 PROP_DEBIT_NOTE_INTERVAL_SEC: Final[str] = "golem.com.scheme.payu.debit-note.interval-sec?"
 PROP_PAYMENT_TIMEOUT_SEC: Final[str] = "golem.com.scheme.payu.payment-timeout-sec?"
 PROP_DEBIT_NOTE_ACCEPTANCE_TIMEOUT: Final[str] = "golem.com.payment.debit-notes.accept-timeout?"
@@ -38,7 +42,9 @@ class PropValueRange:
     def __contains__(self, item: float) -> bool:
         return (self.min is None or item >= self.min) and (self.max is None or item <= self.max)
 
-    def closest_acceptable(self, item: float):
+    def clamp(self, item: float):
+        if self.min is not None and self.max is not None and self.min > self.max:
+            raise ValueError(f"Cannot clamp to a range in which min={self.min} > max={self.max}.")
         if self.min is not None and item < self.min:
             return self.min
         if self.max is not None and item > self.max:
@@ -71,18 +77,22 @@ logger = logging.getLogger(__name__)
 class MarketStrategy(DemandDecorator, abc.ABC):
     """Abstract market strategy."""
 
-    acceptable_prop_value_ranges: Dict[str, PropValueRange]
+    acceptable_prop_value_ranges_overrides: Dict[str, PropValueRange]
+    __acceptable_prop_value_ranges: Dict[str, PropValueRange]
 
-    def set_prop_value_ranges_defaults(
-        self, acceptable_prop_value_ranges: Dict[str, PropValueRange]
-    ) -> None:
-        try:
-            value_ranges = self.acceptable_prop_value_ranges
-            for key, value in acceptable_prop_value_ranges.items():
-                if key not in value_ranges:
-                    value_ranges[key] = value
-        except AttributeError:
-            self.acceptable_prop_value_ranges = acceptable_prop_value_ranges.copy()
+    @property
+    def acceptable_prop_value_ranges(self) -> Dict[str, PropValueRange]:
+        if not hasattr(self, "_acceptable_prop_value_ranges"):
+            # initialize with the overrides
+            self.__acceptable_prop_value_ranges = getattr(
+                self, "acceptable_prop_value_range_overrides", {}
+            ).copy()
+
+            # and set default property value ranges if they were not set in the market strategy.
+            for key, value in DEFAULT_PROPERTY_VALUE_RANGES.items():
+                self.__acceptable_prop_value_ranges.setdefault(key, value)
+
+        return self.__acceptable_prop_value_ranges
 
     async def respond_to_provider_offer(
         self,
@@ -92,14 +102,12 @@ class MarketStrategy(DemandDecorator, abc.ABC):
         # Create a new DemandBuilder with a response to a provider offer.
         updated_demand = deepcopy(our_demand)
 
-        # Set default property value ranges if they were not set in the market strategy.
-        self.set_prop_value_ranges_defaults(DEFAULT_PROPERTY_VALUE_RANGES)
-
         # only enable mid-agreement-payments when we need a longer expiration
         # and when the provider supports it
         activity = Activity.from_properties(our_demand.properties)
 
-        assert activity.expiration
+        assert activity.expiration  # type/sanity check, normally always set by the Engine
+
         expiration_secs = round((activity.expiration - datetime.now(timezone.utc)).total_seconds())
         trigger_mid_agreement_payments = expiration_secs >= float(
             MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS
@@ -128,12 +136,12 @@ class MarketStrategy(DemandDecorator, abc.ABC):
         # only set mid-agreement payments values if we're agreeing to them
         for prop_key, acceptable_range in self.acceptable_prop_value_ranges.items():
             prop_value = provider_offer.props.get(prop_key)
-            if prop_value and (
+            if prop_value is not None and (
                 mid_agreement_payments_enabled or prop_key not in MID_AGREEMENT_PAYMENTS_PROPS
             ):
 
                 if prop_value not in acceptable_range:
-                    our_value = acceptable_range.closest_acceptable(prop_value)
+                    our_value = acceptable_range.clamp(prop_value)
                     logger.debug(
                         f"Negotiated property %s = %s outside of our accepted range: %s. "
                         f"Proposing our own value instead: %s",
