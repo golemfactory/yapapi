@@ -9,9 +9,14 @@ class AsyncEventDispatcher:
     def __init__(self):
         self._consumers: List[AsyncWrapper] = []
 
-    def add_event_consumer(self, event_consumer: Callable[[events.Event], None]):
+    def add_event_consumer(
+        self,
+        event_consumer: Callable[[events.Event], None],
+        start_consumer: bool,
+    ):
         consumer = AsyncWrapper(event_consumer)
-        consumer.start()
+        if start_consumer:
+            consumer.start()
         self._consumers.append(consumer)
 
     def emit(self, event: events.Event):

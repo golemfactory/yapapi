@@ -141,7 +141,7 @@ class Golem:
 
     def add_event_consumer(self, event_consumer: Callable[[events.Event], None]) -> None:
         """Initialize another `event_consumer`, working just like `event_consumer` passed in `__init__`"""
-        self._event_dispatcher.add_event_consumer(event_consumer)
+        self._event_dispatcher.add_event_consumer(event_consumer, self.operative)
 
     @property
     def driver(self) -> str:
@@ -197,7 +197,8 @@ class Golem:
     @property
     def operative(self) -> bool:
         """Return True if Golem started and didn't stop"""
-        return self._engine.started
+        engine_init_finished = hasattr(self, "_engine")  # to avoid special cases in __init__
+        return engine_init_finished and self._engine.started
 
     async def start(self) -> None:
         """Start the Golem engine in non-contextmanager mode.
@@ -226,10 +227,7 @@ class Golem:
                     #   Something started us before we got to the locked part
                     return
 
-                #   NOTE: this is necessary only if Golem was stopped before, because stopping Golem
-                #         closes event consumers, and here we reopen them
                 self._event_dispatcher.start()
-
                 await self._engine.start()
         except:
             await self._stop_with_exc_info(*sys.exc_info())
