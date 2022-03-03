@@ -4,7 +4,7 @@ a simple http proxy example
 """
 import asyncio
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pathlib
 import shlex
 import sys
@@ -28,7 +28,13 @@ from utils import (
     print_env_info,
 )
 
+# the timeout after we commission our service instances
+# before we abort this script
 STARTING_TIMEOUT = timedelta(minutes=4)
+
+# additional expiration margin to allow providers to take our offer,
+# as providers typically won't take offers that expire sooner than 5 minutes in the future
+EXPIRATION_MARGIN = timedelta(minutes=5)
 
 
 class HttpService(HttpProxyService):
@@ -82,13 +88,7 @@ class HttpService(HttpProxyService):
 # ######## Main application code which spawns the Golem service and the local HTTP server
 
 
-async def main(
-    subnet_tag,
-    payment_driver,
-    payment_network,
-    num_instances,
-    port,
-):
+async def main(subnet_tag, payment_driver, payment_network, num_instances, port, running_time):
     async with Golem(
         budget=1.0,
         subnet_tag=subnet_tag,
@@ -100,7 +100,15 @@ async def main(
         commissioning_time = datetime.now()
 
         network = await golem.create_network("192.168.0.1/24")
-        cluster = await golem.run_service(HttpService, network=network, num_instances=num_instances)
+        cluster = await golem.run_service(
+            HttpService,
+            network=network,
+            num_instances=num_instances,
+            expiration=datetime.now(timezone.utc)
+            + STARTING_TIMEOUT
+            + EXPIRATION_MARGIN
+            + timedelta(seconds=running_time),
+        )
         instances = cluster.instances
 
         def still_starting():
@@ -128,7 +136,9 @@ async def main(
 
         # wait until Ctrl-C
 
-        while True:
+        start_time = datetime.now()
+
+        while datetime.now() < start_time + timedelta(seconds=running_time):
             print(instances)
             try:
                 await asyncio.sleep(10)
@@ -165,6 +175,15 @@ if __name__ == "__main__":
         default=8080,
         help="The local port to listen on",
     )
+    parser.add_argument(
+        "--running-time",
+        default=600,
+        type=int,
+        help=(
+            "How long should the instance run before the cluster is stopped "
+            "(in seconds, default: %(default)s)"
+        ),
+    )
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     parser.set_defaults(log_file=f"http-proxy-{now}.log")
     args = parser.parse_args()
@@ -176,6 +195,7 @@ if __name__ == "__main__":
             payment_network=args.payment_network,
             num_instances=args.num_instances,
             port=args.port,
+            running_time=args.running_time,
         ),
         log_file=args.log_file,
     )

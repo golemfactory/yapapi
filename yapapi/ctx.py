@@ -152,7 +152,7 @@ class WorkContext:
 
     @property
     def _agreement_details(self) -> AgreementDetails:
-        return self._agreement.cached_details
+        return self._agreement.details
 
     def new_script(
         self, timeout: Optional[timedelta] = None, wait_for_results: bool = True
