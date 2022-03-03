@@ -540,8 +540,16 @@ class _Engine:
                     agreement=agreement,
                     debit_note=debit_note,
                 )
+
+                # We ignore debit notes we can't accept, since rejection is not implemented in yagna
+
+                # The most we risk by not accepting a debit note would be a termination of the
+                # agreement by the provider which is not an issue here
+                # because in all of these cases the agreement had already been terminated or
+                # we have just terminated it in the course of interval enforcement
                 if not await self._enforce_debit_note_intervals(job, debit_note):
                     continue
+
                 try:
                     allocation = self._get_allocation(debit_note)
                     await debit_note.accept(
@@ -848,8 +856,8 @@ class Job:
                 demand_builder = await self.engine._strategy.respond_to_provider_offer(
                     demand_builder, proposal
                 )
-            except ValueError as e:
-                return await reject_proposal(str(e))
+            except ValueError:
+                return await reject_proposal("Could not accept provider's terms.")
 
             # Check if any of the supported payment platforms matches the proposal
             common_platforms = self._get_common_payment_platforms(proposal)
