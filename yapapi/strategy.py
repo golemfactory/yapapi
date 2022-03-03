@@ -77,12 +77,12 @@ logger = logging.getLogger(__name__)
 class MarketStrategy(DemandDecorator, abc.ABC):
     """Abstract market strategy."""
 
-    acceptable_prop_value_ranges_overrides: Dict[str, PropValueRange]
+    acceptable_prop_value_range_overrides: Dict[str, PropValueRange]
     __acceptable_prop_value_ranges: Dict[str, PropValueRange]
 
     @property
     def acceptable_prop_value_ranges(self) -> Dict[str, PropValueRange]:
-        if not hasattr(self, "_acceptable_prop_value_ranges"):
+        if not hasattr(self, "__acceptable_prop_value_ranges"):
             # initialize with the overrides
             self.__acceptable_prop_value_ranges = getattr(
                 self, "acceptable_prop_value_range_overrides", {}
