@@ -1,31 +1,81 @@
-"""Objects representing events in Golem computation.
+"""Objects representing events in a Golem computation.
 
 Everytime something important happens, an event is emitted.
 Emitted events are passed to all current event consumers, set
 either in :func:`yapapi.Golem.__init__` or via :func:`yapapi.Golem.add_event_consumer`.
 
-Every event has a set of attributes that describe it. Set of attributes shared by various events:
+Events are considered a semi-experimental feature:
 
-* exc_info - either `None`, or tuple returned by :func:`sys.exc_info()`
-* job - :class:`yapapi.engine.Job` - [TODO]
-* script - :class:`yapapi.script.Script` - [TODO]
-* agreement - :class:`yapapi.rest.market.Agreement` - [TODO]
-* [TODO]
+* The backward compatibility will **not** be maintained, the interface might change
+  between subsequent major releases without prior deprecation.
+* Some parts are not documented and should not be considered a public interface.
+* On the other hand, we're pretty sure the whole concept and large part of the
+  implementation will be preserved in the future.
 
-Events should be consumed in strict `read_only` mode: event objects are shared between all event consumers,
-and their attributes are used internally by the Golem engine, so any change might have unexpected
+Every event is described by a set of attributes that can be divided into three groups:
+
+* Attributes common to all events, documented on :class:`yapapi.events.Event`.
+* Internal parts of `yapapi` that define the context of the event (details in the next section).
+* Additional event-specific information, e.g. the reason of the agreement termination for
+  the :class:`AgreementTerminated` event, described along the particular event classes.
+
+Events should be consumed in a strict `read_only` mode: event objects are shared between all event consumers,
+and their attributes are used internally by the Golem engine, so any modification might have unexpected
 side effects.
+
+
+Attributes shared by various events
+-----------------------------------
+.. list-table::
+   :header-rows: 1
+
+   * - Name
+     - Value
+     - Description
+   * - job
+     - :class:`yapapi.engine.Job`
+     - The highest-level unit of a Golem computation, corresponding to a single call to
+       :func:`yapapi.Golem.execute_tasks` or :func:`yapapi.Golem.run_service`
+   * - subscription
+     - :class:`yapapi.rest.market.Subscription`
+     - Object responsible for gathering offers from the market
+   * - proposal
+     - :class:`yapapi.rest.market.OfferProposal`
+     - A single offer from the market
+   * - agreement
+     - :class:`yapapi.rest.market.Agreement`
+     - An agreement between provider and requestor (not necessarly confirmed)
+   * - activity
+     - :class:`yapapi.rest.activity.Activity`
+     - Object corresponding to a provider-side activity within an agreement
+   * - script
+     - :class:`yapapi.script.Script`
+     - [Class documentation available]
+   * - command
+     - :class:`yapapi.script.command.Command`
+     - A single command to be executed within a Script
+   * - task
+     - :class:`yapapi.executor.task.Task`
+     - [Class documentation available]
+   * - service
+     - :class:`yapapi.services.Service`
+     - [Class documentation available]
+   * - debit_note
+     - :class:`yapapi.rest.payment.DebitNote`
+     - A single debit note sent by the provider
+   * - invoice
+     - :class:`yapapi.rest.payment.Invoice`
+     - A final invoice sent by the provider
+
 
 Events inheritance tree
 -----------------------
 
-Notes:
-
-*   Only leaf events are ever emitted, other events (names ending with "Event") are abstract classes
+*   Only leaf events are ever emitted, other events (named :class:`*Event`) are abstract classes
 *   Every abstract class has one more `yapapi` object attached then the parent, e.g.
 
-    *   `JobEvent` is an `Event` that is related to a given `yapapi.engine.Job`
-    *   `AgreementEvent` is a `JobEvent` that is related to a given `yapapi.rest.market.Agreement`
+    *   :class:`JobEvent` is an :class:`Event` that happened in the context of a particular :attr:`job`
+    *   :class:`AgreementEvent` is a :class:`JobEvent` that happened in the context of a particular :attr:`agreement`
 
 ::
 
