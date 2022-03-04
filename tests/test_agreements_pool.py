@@ -17,7 +17,7 @@ def mock_agreement(**properties):
 
     async def create_agreement():
         mock_agreement = mock.MagicMock(**properties)
-        mock_agreement.details = mock_details
+        mock_agreement.get_details = mock_details
         mock_agreement.confirm = mock_confirm
         return mock_agreement
 

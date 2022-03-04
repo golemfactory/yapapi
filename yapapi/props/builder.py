@@ -76,6 +76,10 @@ class DemandBuilder:
             assert isinstance(value, (str, int, list))
             self._properties[prop_id] = value
 
+    def add_properties(self, props: dict):
+        """Add properties from the given dictionary to this demand definition."""
+        self._properties.update(props)
+
     async def subscribe(self, market: Market) -> Subscription:
         """Create a Demand on the market and subscribe to Offers that will match that Demand."""
         return await market.subscribe(self._properties, self.constraints)

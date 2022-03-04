@@ -201,11 +201,11 @@ class AgreementEvent(JobEvent, abc.ABC):
 
     @property
     def provider_id(self) -> str:
-        return self.agreement.cached_details.raw_details.offer.provider_id  # type: ignore
+        return self.agreement.details.raw_details.offer.provider_id  # type: ignore
 
     @property
     def provider_info(self) -> "NodeInfo":
-        return self.agreement.cached_details.provider_node_info
+        return self.agreement.details.provider_node_info
 
 
 @attr.s(auto_attribs=True, repr=False)
