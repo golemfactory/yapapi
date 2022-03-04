@@ -150,8 +150,24 @@ class Golem:
         :param event_classes_or_names: An iterable defining classes of events that should be passed to
             this `event_consumer`. Both classes and class names are accepted (in the latter case classes must be
             available in the `yapapi.events` namespace).
-            If this argument is omitted, all events inheriting from `yapapi.events.Event`
+            If this argument is omitted, all events inheriting from :class:`yapapi.events.Event`
             (i.e. all currently implemented events) will be passed to the `event_consumer`.
+
+        Example usages::
+
+            def event_consumer(event: "yapapi.events.Event"):
+                print(f"Got an event! {type(event).__name__}")
+
+            golem.add_event_consumer(event_consumer)
+
+        ::
+
+            def event_consumer(event: "yapapi.events.AgreementConfirmed"):
+                provider_name = event.agreement.details.provider_node_info.name
+                print(f"We're trading with {provider_name}! Nice!")
+
+            golem.add_event_consumer(event_consumer, ["AgreementConfirmed"])
+
         """
         event_classes = set((self._parse_event_cls_or_name(x) for x in event_classes_or_names))
         self._event_dispatcher.add_event_consumer(event_consumer, event_classes, self.operative)
