@@ -134,6 +134,10 @@ Events inheritance tree
                 PaymentFailed
         ExecutionInterrupted
         ShutdownFinished
+
+List of event classes
+---------------------
+
 """
 
 import attr
@@ -173,7 +177,7 @@ CommandEventType = TypeVar("CommandEventType", bound="CommandEvent")
 #   ABSTRACT EVENTS
 @attr.s(frozen=True, repr=False)
 class Event(abc.ABC):
-    """An abstract base class for types of events emitted by `Executor.submit()`."""
+    """An abstract base class for all types of events."""
 
     exc_info: Optional[ExcInfo] = attr.ib(default=None, kw_only=True)
     """Tuple containing exception info as returned by `sys.exc_info()`, if applicable."""
@@ -208,7 +212,7 @@ class Event(abc.ABC):
 
     @property
     def exception(self) -> Optional[BaseException]:
-        """Exception associated with this event or `None` if the event doesn't mean a failure."""
+        """Exception associated with this event or `None`"""
         if self.exc_info:
             return self.exc_info[1]
         return None
@@ -325,7 +329,7 @@ class JobStarted(JobEvent):
 
 
 class JobFinished(JobEvent):
-    """Indicates successful completion if `exception` is `None` and a failure otherwise."""
+    """:attr:`job` is done, succeded if :attr:`exception` is `None` failed otherwise."""
 
 
 class SubscriptionCreated(SubscriptionEvent):
@@ -348,6 +352,8 @@ class ProposalReceived(ProposalEvent):
 
 @attr.s(auto_attribs=True, repr=False)
 class ProposalRejected(ProposalEvent):
+    """We decided to reject provider's proposal because of a :attr:`reason`"""
+
     reason: Optional[str] = None
 
 
@@ -365,6 +371,8 @@ class ProposalFailed(ProposalEvent):
 
 @attr.s(auto_attribs=True, repr=False)
 class NoProposalsConfirmed(JobEvent):
+    """We didn't confirm any proposal for a period of :attr:`timeout`"""
+
     timeout: timedelta
 
 
@@ -434,15 +442,15 @@ class TaskFinished(TaskEvent):
 
 
 class ServiceStarted(ServiceEvent):
-    """Work started for the given service object"""
+    pass
 
 
 class ServiceFinished(ServiceEvent):
-    """Work finished for the given service object"""
+    pass
 
 
 class WorkerFinished(ActivityEvent):
-    """Indicates successful completion if `exception` is `None` and a failure otherwise."""
+    pass
 
 
 class ScriptSent(ScriptEvent):
@@ -511,8 +519,8 @@ class DownloadFinished(CommandEvent):
 
 
 class ShutdownFinished(Event):
-    """Indicates the completion of Executor shutdown sequence"""
+    """Golem completed the shutdown sequence and is no longer operative"""
 
 
 class ExecutionInterrupted(Event):
-    """Emitted when Golem was stopped by an unhandled exception in code not managed by yapapi"""
+    """Golem was stopped by an unhandled exception in code not managed by yapapi"""
