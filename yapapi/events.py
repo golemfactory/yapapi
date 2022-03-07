@@ -6,11 +6,9 @@ either in :func:`yapapi.Golem.__init__` or via :func:`yapapi.Golem.add_event_con
 
 Events are considered a semi-experimental feature:
 
-* The backward compatibility will **not** be maintained, the interface might change
-  between subsequent major releases without prior deprecation.
+* The backward compatibility of subsequent future updates **is not** guaranteed,
+  the interface might change between major releases without prior deprecation.
 * Some parts are not documented and should not be considered a public interface.
-* On the other hand, we're pretty sure the whole concept and large part of the
-  implementation will be preserved in the future.
 
 Every event is described by a set of attributes that can be divided into three groups:
 
@@ -20,7 +18,7 @@ Every event is described by a set of attributes that can be divided into three g
   the :class:`AgreementTerminated` event, described along the particular event classes.
 
 Events should be consumed in a strict `read_only` mode: event objects are shared between all event consumers,
-and their attributes are used internally by the Golem engine, so any modification might have unexpected
+and their attributes are used internally by the Golem engine, so any modification may have unexpected
 side effects.
 
 
