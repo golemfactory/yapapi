@@ -36,7 +36,7 @@ from yapapi.strategy import DecreaseScoreForUnconfirmedAgreement, LeastExpensive
 
 
 if TYPE_CHECKING:
-    from yapapi.strategy import MarketStrategy
+    from yapapi.strategy import BaseMarketStrategy
 
 
 D = TypeVar("D")  # Type var for task data
@@ -80,7 +80,7 @@ class Golem:
         self,
         *,
         budget: Union[float, Decimal],
-        strategy: Optional["yapapi.strategy.MarketStrategy"] = None,
+        strategy: Optional["yapapi.strategy.BaseMarketStrategy"] = None,
         subnet_tag: Optional[str] = None,
         driver: Optional[str] = None,
         payment_driver: Optional[str] = None,
@@ -200,12 +200,12 @@ class Golem:
         return self._engine.payment_network
 
     @property
-    def strategy(self) -> "MarketStrategy":
-        """Return the instance of `MarketStrategy` used by the engine"""
+    def strategy(self) -> "BaseMarketStrategy":
+        """Return the instance of `BaseMarketStrategy` used by the engine"""
         return self._engine.strategy
 
     @strategy.setter
-    def strategy(self, strategy: "MarketStrategy") -> None:
+    def strategy(self, strategy: "BaseMarketStrategy") -> None:
         if self.operative:
             #   NOTE: this restriction **might** be loosened in the future,
             #         e.g. to allow "operative" Golem with an Engine that is
