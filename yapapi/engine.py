@@ -569,9 +569,7 @@ class _Engine:
             if self._payment_closing and not self._agreements_to_pay:
                 break
 
-    async def accept_payments_for_agreement(
-        self, job_id: str, agreement_id: str, *, partial: bool = False
-    ) -> None:
+    async def accept_payments_for_agreement(self, job_id: str, agreement_id: str) -> None:
         """Add given agreement to the set of agreements for which invoices should be accepted."""
         job = self._get_job_by_id(job_id)
         agreement = self._get_agreement_by_id(agreement_id)
@@ -694,7 +692,7 @@ class _Engine:
                 script.emit(events.GettingResults)
                 await script._after()
                 script.emit(events.ScriptFinished)
-                await self.accept_payments_for_agreement(job_id, agreement_id, partial=True)
+                await self.accept_payments_for_agreement(job_id, agreement_id)
 
                 #   NOTE: This is the same as script.results for non-streaming mode,
                 #         but when streaming we have here additional CommandEvents that
