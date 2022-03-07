@@ -93,7 +93,7 @@ class DemandDecorator(abc.ABC):
     """An interface that specifies classes that can add properties and constraints through a DemandBuilder"""
 
     @abc.abstractmethod
-    async def decorate_demand(self, demand: DemandBuilder):
+    async def decorate_demand(self, demand: DemandBuilder) -> None:
         """Add appropriate properties and constraints to a Demand"""
 
 
