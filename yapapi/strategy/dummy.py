@@ -1,5 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass
+from deprecated import deprecated
 from decimal import Decimal
 from types import MappingProxyType
 from typing import Dict, Mapping, Optional, Union
@@ -12,6 +13,7 @@ from yapapi.props.com import Counter
 from .base import MarketStrategy, SCORE_REJECTED, SCORE_NEUTRAL
 
 
+@deprecated(version="0.9.0", reason="Use `LeastExpensiveLinearPayuMS` instead.")
 @dataclass
 class DummyMS(MarketStrategy, object):
     """A default market strategy implementation.
