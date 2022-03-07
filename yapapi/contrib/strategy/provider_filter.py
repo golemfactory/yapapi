@@ -1,7 +1,6 @@
 import inspect
 
-from yapapi.strategy import MarketStrategy, SCORE_REJECTED
-from yapapi.props.builder import DemandBuilder
+from yapapi.strategy import BaseMarketStrategy, SCORE_REJECTED, WrappingMarketStrategy
 from yapapi.rest.market import OfferProposal
 from typing import Awaitable, Callable, Union
 
@@ -11,7 +10,7 @@ IsAllowedType = Union[
 ]
 
 
-class ProviderFilter(MarketStrategy):
+class ProviderFilter(WrappingMarketStrategy):
     """ProviderFilter - extend a market strategy with a layer that excludes offers from certain issuers
 
     :param base_strategy: a market strategy that will be used to score offers from allowed providers
@@ -59,12 +58,9 @@ class ProviderFilter(MarketStrategy):
         #   scored, this should improve in https://github.com/golemfactory/yapapi/issues/820
     """
 
-    def __init__(self, base_strategy: MarketStrategy, is_allowed: IsAllowedType):
-        self.base_strategy = base_strategy
+    def __init__(self, base_strategy: BaseMarketStrategy, is_allowed: IsAllowedType):
+        super().__init__(base_strategy)
         self._is_allowed = is_allowed
-
-    async def decorate_demand(self, demand: DemandBuilder) -> None:
-        await self.base_strategy.decorate_demand(demand)
 
     async def score_offer(self, offer: OfferProposal) -> float:
         allowed = self._is_allowed(offer.issuer)

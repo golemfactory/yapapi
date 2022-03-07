@@ -44,7 +44,7 @@ from yapapi.script import Script
 from yapapi.script.command import BatchCommand
 from yapapi.storage import gftp
 from yapapi.strategy import (
-    MarketStrategy,
+    BaseMarketStrategy,
     SCORE_NEUTRAL,
     PROP_DEBIT_NOTE_INTERVAL_SEC,
     PROP_PAYMENT_TIMEOUT_SEC,
@@ -97,7 +97,7 @@ class _Engine:
         self,
         *,
         budget: Union[float, Decimal],
-        strategy: MarketStrategy,
+        strategy: BaseMarketStrategy,
         event_consumer: Callable[[events.Event], None],
         subnet_tag: Optional[str] = None,
         payment_driver: Optional[str] = None,
@@ -189,8 +189,8 @@ class _Engine:
         return self._storage_manager
 
     @property
-    def strategy(self) -> MarketStrategy:
-        """Return the instance of `MarketStrategy` used by this engine."""
+    def strategy(self) -> BaseMarketStrategy:
+        """Return the instance of `BaseMarketStrategy` used by this engine."""
         return self._strategy
 
     @property
