@@ -1,6 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass
-from deprecated import deprecated
+from deprecated import deprecated  # type: ignore
 from decimal import Decimal
 from types import MappingProxyType
 from typing import Dict, Mapping, Optional, Union

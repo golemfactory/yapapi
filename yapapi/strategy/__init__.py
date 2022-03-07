@@ -1,5 +1,6 @@
 from .base import (
     DEBIT_NOTE_INTERVAL_GRACE_PERIOD,
+    BaseMarketStrategy,
     MarketStrategy,
     PropValueRange,
     PROP_DEBIT_NOTE_ACCEPTANCE_TIMEOUT,
@@ -12,3 +13,4 @@ from .base import (
 from .decrease_score_unconfirmed import DecreaseScoreForUnconfirmedAgreement
 from .dummy import DummyMS
 from .least_expensive import LeastExpensiveLinearPayuMS
+from .wrapping_strategy import WrappingMarketStrategy

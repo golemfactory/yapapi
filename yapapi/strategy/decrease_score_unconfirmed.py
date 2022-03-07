@@ -5,13 +5,12 @@ from yapapi import events
 from yapapi.props.builder import DemandBuilder
 from yapapi import rest
 
-from .base import MarketStrategy
+from .wrapping_strategy import WrappingMarketStrategy
 
 
-class DecreaseScoreForUnconfirmedAgreement(MarketStrategy):
+class DecreaseScoreForUnconfirmedAgreement(WrappingMarketStrategy):
     """A market strategy that modifies a base strategy based on history of agreements."""
 
-    base_strategy: MarketStrategy
     factor: float
 
     def __init__(self, base_strategy, factor):
@@ -20,7 +19,7 @@ class DecreaseScoreForUnconfirmedAgreement(MarketStrategy):
         :param factor: the factor by which the score of an offer for a provider which
                        failed to confirm the last agreement proposed to them will be multiplied
         """
-        self.base_strategy = base_strategy
+        super().__init__(base_strategy)
         self.factor = factor
         self._logger = logging.getLogger(f"{__name__}.{type(self).__name__}")
         self._rejecting_providers: Set[str] = set()

@@ -69,7 +69,25 @@ DEFAULT_PROPERTY_VALUE_RANGES: Dict[str, PropValueRange] = {
 logger = logging.getLogger(__name__)
 
 
-class MarketStrategy(DemandDecorator, abc.ABC):
+class BaseMarketStrategy(DemandDecorator, abc.ABC):
+    """Base market strategy interface."""
+
+    @abc.abstractmethod
+    async def score_offer(self, offer: rest.market.OfferProposal) -> float:
+        """Score `offer`. Better offers should get higher scores."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    async def respond_to_provider_offer(
+        self,
+        our_demand: DemandBuilder,
+        provider_offer: rest.market.OfferProposal,
+    ) -> DemandBuilder:
+        """Respond with a modified `DemandBuilder` object to an offer coming from a provider."""
+        raise NotImplementedError()
+
+
+class MarketStrategy(BaseMarketStrategy, abc.ABC):
     """Abstract market strategy."""
 
     acceptable_prop_value_range_overrides: Dict[str, PropValueRange]
@@ -152,7 +170,3 @@ class MarketStrategy(DemandDecorator, abc.ABC):
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
         """Optionally add relevant constraints to a Demand."""
-
-    async def score_offer(self, offer: rest.market.OfferProposal) -> float:
-        """Score `offer`. Better offers should get higher scores."""
-        return SCORE_REJECTED
