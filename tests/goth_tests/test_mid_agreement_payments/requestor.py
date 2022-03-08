@@ -35,7 +35,7 @@ async def main():
 
 
 if __name__ == "__main__":
-    enable_default_logger(log_file="long_expiration.log")
+    enable_default_logger(log_file="mid_agreement_payments.log")
 
     loop = asyncio.get_event_loop()
     task = loop.create_task(main())

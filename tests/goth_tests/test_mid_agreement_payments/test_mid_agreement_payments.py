@@ -30,10 +30,7 @@ async def test_mid_agreement_payments(
 
     configure_logging(log_dir)
 
-    runner = Runner(
-        base_log_dir=log_dir,
-        compose_config=goth_config.compose_config,
-    )
+    runner = Runner(base_log_dir=log_dir, compose_config=goth_config.compose_config)
 
     async with runner(goth_config.containers):
 
