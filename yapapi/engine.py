@@ -566,8 +566,14 @@ class _Engine:
                     job.emit(
                         events.PaymentFailed, agreement=agreement, exc_info=sys.exc_info()  # type: ignore
                     )
-            if self._payment_closing and not self._agreements_to_pay:
-                break
+
+            if self._payment_closing:
+                any_agreement_accepts = any(self._agreements_accepting_debit_notes.values())
+                if not any_agreement_accepts:
+                    #   There are no agreements we're accepting debit notes for,
+                    #   and we're shutting down, so there will never be any again
+                    #   -> we can safely ignore all further incoming debit notes
+                    break
 
     async def accept_payments_for_agreement(self, job_id: str, agreement_id: str) -> None:
         """Add given agreement to the set of agreements for which invoices should be accepted."""
