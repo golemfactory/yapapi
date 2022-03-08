@@ -446,15 +446,15 @@ class _Engine:
             f"{'Payable Debit notes' if payable else 'Debit notes'} for activity {activity_id}: {freq_descr}"
         )
         if duration > 0 and duration + DEBIT_NOTE_INTERVAL_GRACE_PERIOD < num_notes * interval:
+            payable_str = "payable " if payable else ""
             reason = {
-                "message": f"Too many {'payable ' if payable else ''}debit notes: {freq_descr} (activity: {activity_id})",
+                "message": f"Too many {payable_str}debit notes: {freq_descr} (activity: {activity_id})",
                 "golem.requestor.code": "TooManyPayableDebitNotes"
                 if payable
                 else "TooManyDebitNotes",
             }
             logger.error(
-                f"Too many {'payable ' if payable else ''}debit notes received."
-                " %s, activity: %s",
+                f"Too many {payable_str}debit notes received. %s, activity: %s",
                 freq_descr,
                 activity_id,
             )
