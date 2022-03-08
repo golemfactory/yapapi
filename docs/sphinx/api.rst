@@ -8,7 +8,7 @@ Golem
 =====
 
 .. autoclass:: yapapi.Golem
-    :members: __init__, start, stop, execute_tasks, run_service, create_network
+    :members: __init__, start, stop, execute_tasks, run_service, create_network, add_event_consumer
 
 
 Task API
@@ -108,6 +108,12 @@ Market strategies
 .. autoclass:: yapapi.strategy.LeastExpensiveLinearPayuMS
 
 .. autoclass:: yapapi.strategy.DecreaseScoreForUnconfirmedAgreement
+
+Events
+==========
+
+.. automodule:: yapapi.events
+    :members:
 
 Exceptions
 ==========
