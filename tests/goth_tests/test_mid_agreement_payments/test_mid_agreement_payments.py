@@ -18,7 +18,7 @@ logger = logging.getLogger("goth.test.mid_agreement_payments")
 
 
 @pytest.mark.asyncio
-async def test_long_expiration(
+async def test_mid_agreement_payments(
     log_dir: Path,
     goth_config_path: Path,
     config_overrides: List[Override],
