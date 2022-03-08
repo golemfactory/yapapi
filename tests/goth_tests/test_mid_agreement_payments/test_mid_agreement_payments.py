@@ -36,11 +36,16 @@ async def test_mid_agreement_payments(
 
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
-        async with requestor.run_command_on_host(test_script_path, env=os.environ) as (
+        async with requestor.run_command_on_host(
+            test_script_path,
+            env=os.environ,
+            command_timeout=2000,
+        ) as (
             _cmd_task,
             cmd_monitor,
             _process_monitor,
         ):
+            await cmd_monitor.wait_for_pattern(".*Enabling mid-agreement payments.*", timeout=60)
             # Wait for executor shutdown
-            await cmd_monitor.wait_for_pattern("ShutdownFinished", timeout=2000)
+            await cmd_monitor.wait_for_pattern(".*ShutdownFinished.*", timeout=2000)
             logger.info("Requestor script finished")
