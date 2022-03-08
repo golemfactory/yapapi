@@ -105,7 +105,7 @@ ya-market = "0.1.0"
 [tool.poe.tasks]
 test = "pytest --cov=yapapi --ignore tests/goth_tests"
 goth-assets = "python -m goth create-assets tests/goth_tests/assets"
-goth-tests = "pytest -svx tests/goth_tests --ssh-verify-connection --reruns 3 --only-rerun AssertionError --only-rerun TimeoutError --only-rerun goth.runner.exceptions.TemporalAssertionError --only-rerun urllib.error.URLError --only-rerun goth.runner.exceptions.CommandError"
+goth-tests = "pytest -svx tests/goth_tests/test_mid_agreement_payments"
 typecheck = "mypy ."
 codestyle = "black --check --diff ."
 _liccheck_export = "poetry export -f requirements.txt -o .requirements.txt"
