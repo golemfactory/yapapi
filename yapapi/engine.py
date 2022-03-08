@@ -50,6 +50,7 @@ from yapapi.strategy import (
     PROP_PAYMENT_TIMEOUT_SEC,
     DEBIT_NOTE_INTERVAL_GRACE_PERIOD,
 )
+from yapapi.invoice_manager import InvoiceManager
 
 DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "erc20").lower()
 DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "rinkeby").lower()
@@ -141,12 +142,12 @@ class _Engine:
         self._jobs: Set[Job] = set()
 
         # initialize the payment structures
-        self._agreements_to_pay: Dict[JobId, Set[AgreementId]] = defaultdict(set)
+        self._invoice_manager = InvoiceManager()
+
         self._agreements_accepting_debit_notes: Dict[JobId, Set[AgreementId]] = defaultdict(set)
         self._num_debit_notes: Dict[ActivityId, int] = defaultdict(int)
         self._num_payable_debit_notes: Dict[ActivityId, int] = defaultdict(int)
         self._activity_created_at: Dict[ActivityId, datetime] = dict()
-        self._invoices: Dict[AgreementId, rest.payment.Invoice] = dict()
         self._payment_closing: bool = False
 
         self._process_invoices_job: Optional[asyncio.Task] = None
@@ -276,14 +277,6 @@ class _Engine:
     async def add_to_async_context(self, async_context_manager: AsyncContextManager) -> None:
         await self._stack.enter_async_context(async_context_manager)
 
-    def _unpaid_agreement_ids(self) -> Set[AgreementId]:
-        """Return the set of all yet unpaid agreement ids."""
-
-        unpaid_agreement_ids = set()
-        for job_id, agreement_ids in self._agreements_to_pay.items():
-            unpaid_agreement_ids.update(agreement_ids)
-        return unpaid_agreement_ids
-
     async def _shutdown(self, *exc_info):
         """Shutdown this Golem instance."""
 
@@ -313,7 +306,7 @@ class _Engine:
         # then cancel the invoices service
         if self._process_invoices_job:
 
-            unpaid_agreements = self._unpaid_agreement_ids()
+            unpaid_agreements = self._invoice_manager.payable_unpaid_agreement_ids
             if unpaid_agreements:
                 logger.info(
                     "%s still unpaid, waiting for invoices...",
@@ -323,7 +316,7 @@ class _Engine:
                     await asyncio.wait_for(self._process_invoices_job, timeout=30)
                 except asyncio.TimeoutError:
                     logger.debug("process_invoices_job cancelled")
-                unpaid_agreements = self._unpaid_agreement_ids()
+                unpaid_agreements = self._invoice_manager.payable_unpaid_agreement_ids
                 if unpaid_agreements:
                     logger.warning("Unpaid agreements: %s", unpaid_agreements)
 
@@ -392,50 +385,26 @@ class _Engine:
 
     async def _process_invoices(self) -> None:
         """Process incoming invoices."""
-
+        invoice_manager = self._invoice_manager
         async for invoice in self._payment_api.incoming_invoices():
-            job_id = next(
-                (
-                    id
-                    for id in self._agreements_to_pay
-                    if invoice.agreement_id in self._agreements_to_pay[id]
-                ),
-                None,
-            )
-            if job_id is not None:
-                job = self._get_job_by_id(job_id)
-                agreement = self._get_agreement_by_id(invoice.agreement_id)
-                job.emit(
-                    events.InvoiceReceived,
-                    agreement=agreement,
-                    invoice=invoice,
-                )
-                try:
-                    allocation = self._get_allocation(invoice)
-                    await invoice.accept(amount=invoice.amount, allocation=allocation)
-                    job.emit(
-                        events.InvoiceAccepted,
-                        agreement=agreement,
-                        invoice=invoice,
-                    )
-                except CancelledError:
-                    raise
-                except Exception:
-                    job.emit(
-                        events.PaymentFailed,
-                        agreement=agreement,
-                        exc_info=sys.exc_info(),  # type: ignore
-                    )
-                else:
-                    self._agreements_to_pay[job_id].remove(invoice.agreement_id)
-                    assert invoice.agreement_id in self._agreements_accepting_debit_notes[job_id]
-                    self._agreements_accepting_debit_notes[job_id].remove(invoice.agreement_id)
-            else:
-                self._invoices[invoice.agreement_id] = invoice
-            if self._payment_closing and not any(
-                agr_ids for agr_ids in self._agreements_to_pay.values()
-            ):
+            invoice_manager.add_invoice(invoice)
+            await self._agreement_payment_attempt(invoice.agreement_id)
+            if self._payment_closing and not invoice_manager.has_payable_unpaid_agreements:
                 break
+
+    async def accept_payments_for_agreement(self, job_id: str, agreement_id: str) -> None:
+        """Add given agreement to the set of agreements for which invoices should be accepted."""
+        self._invoice_manager.set_payable(agreement_id)
+        await self._agreement_payment_attempt(agreement_id)
+
+    async def _agreement_payment_attempt(self, agreement_id: str) -> None:
+        invoice_manager = self._invoice_manager
+        paid = await invoice_manager.attempt_payment(agreement_id, self._get_allocation)
+        if paid:
+            #   We've accepted the final invoice, so we can ignore debit notes
+            job_id = invoice_manager.agreement_job(agreement_id).id
+            assert agreement_id in self._agreements_accepting_debit_notes[job_id]
+            self._agreements_accepting_debit_notes[job_id].remove(agreement_id)
 
     @staticmethod
     def _check_for_termination_reason(
@@ -575,21 +544,6 @@ class _Engine:
                     #   -> we can safely ignore all further incoming debit notes
                     break
 
-    async def accept_payments_for_agreement(self, job_id: str, agreement_id: str) -> None:
-        """Add given agreement to the set of agreements for which invoices should be accepted."""
-        job = self._get_job_by_id(job_id)
-        agreement = self._get_agreement_by_id(agreement_id)
-        job.emit(events.PaymentPrepared, agreement=agreement)
-        inv = self._invoices.get(agreement_id)
-        if inv is None:
-            self._agreements_to_pay[job_id].add(agreement_id)
-            job.emit(events.PaymentQueued, agreement=agreement)
-            return
-        del self._invoices[agreement_id]
-        allocation = self._get_allocation(inv)
-        await inv.accept(amount=inv.amount, allocation=allocation)
-        job.emit(events.InvoiceAccepted, agreement=agreement, invoice=inv)
-
     def accept_debit_notes_for_agreement(self, job_id: str, agreement_id: str) -> None:
         """Add given agreement to the set of agreements for which debit notes should be accepted."""
         self._agreements_accepting_debit_notes[job_id].add(agreement_id)
@@ -638,6 +592,7 @@ class _Engine:
             and then executes `run_worker` with this WorkContext.
             """
             self._all_agreements[agreement.id] = agreement
+            self._invoice_manager.add_agreement(job, agreement)
 
             job.emit(events.WorkerStarted, agreement=agreement)
 
