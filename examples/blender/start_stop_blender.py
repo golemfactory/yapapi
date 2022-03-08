@@ -7,20 +7,15 @@ This way of using Golem might be more convenient for some specific use cases (al
 in the blender example).
 """
 
-import asyncio
 from datetime import datetime, timedelta
 import pathlib
 import sys
 
 from yapapi import (
     Golem,
-    NoPaymentAccountError,
     Task,
-    __version__ as yapapi_version,
     WorkContext,
-    windows_event_loop_fix,
 )
-from yapapi.log import enable_default_logger
 from yapapi.payload import vm
 from yapapi.rest.activity import BatchTimeoutError
 
@@ -32,7 +27,6 @@ from utils import (
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_RED,
-    TEXT_COLOR_YELLOW,
     TEXT_COLOR_MAGENTA,
     format_usage,
     print_env_info,
@@ -127,28 +121,30 @@ async def main(golem, show_usage, min_cpu_threads):
     num_tasks = 0
     start_time = datetime.now()
 
-    await golem.start()
-    completed_tasks = golem.execute_tasks(
-        worker,
-        [Task(data=frame) for frame in frames],
-        payload=package,
-        max_workers=3,
-        timeout=timeout,
-    )
-    async for task in completed_tasks:
-        num_tasks += 1
+    try:
+        await golem.start()
+        completed_tasks = golem.execute_tasks(
+            worker,
+            [Task(data=frame) for frame in frames],
+            payload=package,
+            max_workers=3,
+            timeout=timeout,
+        )
+        async for task in completed_tasks:
+            num_tasks += 1
+            print(
+                f"{TEXT_COLOR_CYAN}"
+                f"Task computed: {task}, result: {task.result}, time: {task.running_time}"
+                f"{TEXT_COLOR_DEFAULT}"
+            )
+
         print(
             f"{TEXT_COLOR_CYAN}"
-            f"Task computed: {task}, result: {task.result}, time: {task.running_time}"
+            f"{num_tasks} tasks computed, total time: {datetime.now() - start_time}"
             f"{TEXT_COLOR_DEFAULT}"
         )
-
-    print(
-        f"{TEXT_COLOR_CYAN}"
-        f"{num_tasks} tasks computed, total time: {datetime.now() - start_time}"
-        f"{TEXT_COLOR_DEFAULT}"
-    )
-    await golem.stop()
+    finally:
+        await golem.stop()
 
 
 if __name__ == "__main__":
