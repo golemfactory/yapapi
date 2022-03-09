@@ -523,14 +523,26 @@ class _Engine:
 
                 try:
                     allocation = self._get_allocation(debit_note)
-                    await debit_note.accept(
-                        amount=debit_note.total_amount_due, allocation=allocation
-                    )
-                    job.emit(
-                        events.DebitNoteAccepted,
-                        agreement=agreement,
-                        debit_note=debit_note,
-                    )
+                    accepted_amount = await self._strategy.debit_note_accepted_amount(debit_note)
+                    if accepted_amount == Decimal(debit_note.total_amount_due):
+                        await debit_note.accept(
+                            amount=debit_note.total_amount_due, allocation=allocation
+                        )
+                        job.emit(
+                            events.DebitNoteAccepted,
+                            agreement=agreement,
+                            debit_note=debit_note,
+                        )
+                    else:
+                        #   We should reject the debit note, but it's not implemented in yagna,
+                        #   so we just ignore it now
+                        logger.warning(
+                            "Ignored debit note %s for %s, we accept only %s",
+                            debit_note.debit_note_id,
+                            debit_note.total_amount_due,
+                            accepted_amount,
+                        )
+
                 except CancelledError:
                     raise
                 except Exception:
