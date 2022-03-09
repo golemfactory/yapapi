@@ -1,4 +1,5 @@
 import abc
+from decimal import Decimal
 
 from yapapi.props.builder import DemandBuilder
 from yapapi import rest
@@ -29,6 +30,9 @@ class WrappingMarketStrategy(BaseMarketStrategy, abc.ABC):
 
     async def score_offer(self, offer: rest.market.OfferProposal) -> float:
         return await self.base_strategy.score_offer(offer)
+
+    async def invoice_accepted_amount(self, invoice: rest.payment.Invoice) -> Decimal:
+        return await self.base_strategy.invoice_accepted_amount(invoice)
 
     async def respond_to_provider_offer(
         self,

@@ -1,6 +1,7 @@
 from asyncio import CancelledError
 from dataclasses import dataclass
-from typing import Callable, Dict, Optional, Set, TYPE_CHECKING
+from decimal import Decimal
+from typing import Awaitable, Callable, Dict, Optional, Set, TYPE_CHECKING
 import sys
 
 from yapapi import events
@@ -18,6 +19,11 @@ class AgreementData:
     invoice: Optional["Invoice"] = None
     payable: bool = False
     paid: bool = False
+
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class InvoiceManager:
@@ -71,7 +77,10 @@ class InvoiceManager:
         self._agreement_data[agreement_id].payable = True
 
     async def attempt_payment(
-        self, agreement_id: str, get_allocation: Callable[["Invoice"], "Allocation"]
+        self,
+        agreement_id: str,
+        get_allocation: Callable[["Invoice"], "Allocation"],
+        get_accepted_amount: Callable[["Invoice"], Awaitable[Decimal]],
     ) -> bool:
         ad = self._agreement_data.get(agreement_id)
         if not ad or not ad.invoice or not ad.payable or ad.paid:
@@ -80,12 +89,23 @@ class InvoiceManager:
         invoice = ad.invoice
         try:
             allocation = get_allocation(invoice)
-            await invoice.accept(amount=invoice.amount, allocation=allocation)
-            ad.job.emit(
-                events.InvoiceAccepted,
-                agreement=ad.agreement,
-                invoice=invoice,
-            )
+            accepted_amount = await get_accepted_amount(invoice)
+            if accepted_amount == Decimal(invoice.amount):
+                await invoice.accept(amount=accepted_amount, allocation=allocation)
+                ad.job.emit(
+                    events.InvoiceAccepted,
+                    agreement=ad.agreement,
+                    invoice=invoice,
+                )
+            else:
+                #   We should reject the invoice, but it's not implemented in yagna,
+                #   so we just ignore it now
+                logger.warning(
+                    "Ignored invoice %s for %s, we accept only %s",
+                    invoice.invoice_id,
+                    invoice.amount,
+                    accepted_amount,
+                )
         except CancelledError:
             raise
         except Exception:

@@ -399,7 +399,9 @@ class _Engine:
 
     async def _agreement_payment_attempt(self, agreement_id: str) -> None:
         invoice_manager = self._invoice_manager
-        paid = await invoice_manager.attempt_payment(agreement_id, self._get_allocation)
+        paid = await invoice_manager.attempt_payment(
+            agreement_id, self._get_allocation, self._strategy.invoice_accepted_amount
+        )
         if paid:
             #   We've accepted the final invoice, so we can ignore debit notes
             job_id = invoice_manager.agreement_job(agreement_id).id
