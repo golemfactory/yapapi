@@ -479,14 +479,25 @@ class _Engine:
     def _verify_payment_timeout(self, agreement: Agreement, debit_note: DebitNote, duration: float):
         payable_interval = agreement.get_requestor_property(PROP_PAYMENT_TIMEOUT_SEC)
         logger.debug("Payable debit notes interval: %ss", payable_interval)
-        if debit_note.payment_due_date and payable_interval:
-            return self._check_for_termination_reason(
-                debit_note.activity_id,
-                duration,
-                self._num_payable_debit_notes[debit_note.activity_id],
-                payable_interval,
-                True,
-            )
+        if debit_note.payment_due_date:
+            if payable_interval:
+                return self._check_for_termination_reason(
+                    debit_note.activity_id,
+                    duration,
+                    self._num_payable_debit_notes[debit_note.activity_id],
+                    payable_interval,
+                    True,
+                )
+            else:
+                msg = "Payable debit note received when mid-agreement payments inactive."
+                logger.error(
+                    f"{msg}. activity: %s",
+                    debit_note.activity_id,
+                )
+                return {
+                    "message": f"{msg} (activity: {debit_note.activity_id})",
+                    "golem.requestor.code": "TooManyPayableDebitNotes",
+                }
 
     async def _enforce_debit_note_intervals(self, job: "Job", debit_note: DebitNote):
         agreement = self._get_agreement_by_id(debit_note.agreement_id)
