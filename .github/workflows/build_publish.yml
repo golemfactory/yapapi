@@ -17,7 +17,7 @@ jobs:
       - uses: Gr1N/setup-poetry@v4
         with:
           poetry-version: 1.1.4
-      - run: poetry install -E cli
+      - run: poetry install
       - run: poetry run poe test
       - run: poetry run poe typecheck
       - run: poetry run poe codestyle
