@@ -29,9 +29,7 @@ def test_bad_strategy_instantiate():
     with pytest.raises(TypeError) as e:
         BadStrategy()
 
-    assert str(e.value).startswith(
-        "Can't instantiate abstract class BadStrategy with abstract method score_offer"
-    )
+    assert str(e.value).startswith("Can't instantiate abstract class BadStrategy")
 
 
 def test_good_strategy_instantiate():
