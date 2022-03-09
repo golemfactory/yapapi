@@ -3,11 +3,12 @@ from yapapi.strategy import WrappingMarketStrategy
 
 
 class MyBaseStrategy(mock.Mock):
-    some_other_value = 123
+    some_value = 123
+    some_other_value = 456
 
 
 class MyStrategy(WrappingMarketStrategy):
-    some_value = 456
+    some_value = 789
 
     def some_method(self):
         return True
