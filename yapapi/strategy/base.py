@@ -3,6 +3,7 @@
 import abc
 from copy import deepcopy
 from datetime import datetime, timezone
+from decimal import Decimal
 import logging
 from typing import Dict, Optional
 
@@ -84,6 +85,14 @@ class BaseMarketStrategy(DemandDecorator, abc.ABC):
         provider_offer: rest.market.OfferProposal,
     ) -> DemandBuilder:
         """Respond with a modified `DemandBuilder` object to an offer coming from a provider."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    async def invoice_accepted_amount(self, invoice: rest.payment.Invoice) -> Decimal:
+        """Return the amount we accept to pay.
+
+        Current Golem implementation accepts the invoice if returned amount equals `invoice.amount`
+        and ignores the invoice if it is different. This will change in the future."""
         raise NotImplementedError()
 
 
@@ -170,3 +179,7 @@ class MarketStrategy(BaseMarketStrategy, abc.ABC):
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
         """Optionally add relevant constraints to a Demand."""
+
+    async def invoice_accepted_amount(self, invoice: rest.payment.Invoice) -> Decimal:
+        """Accept full invoice amount."""
+        return Decimal(invoice.amount)
