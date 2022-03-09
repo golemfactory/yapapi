@@ -102,11 +102,17 @@ class AgreementFactory(RestApiModelFactory):
         model = Agreement
 
     @factory.post_generation
-    def details(obj, created, extracted, **kwargs):
+    def details(obj: Agreement, created, extracted, **kwargs):
         if extracted:
             obj._details = extracted
         else:
             obj._details = AgreementDetailsFactory(**kwargs)
+
+    @factory.post_generation
+    def terminated(obj: Agreement, created, extracted, **kwargs):
+        assert not kwargs
+        if extracted:
+            obj._terminated = extracted
 
     agreement_id = factory.Faker("pystr")
     subscription = factory.SubFactory(SubscriptionFactory)
