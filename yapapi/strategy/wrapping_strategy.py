@@ -34,6 +34,9 @@ class WrappingMarketStrategy(BaseMarketStrategy, abc.ABC):
     async def invoice_accepted_amount(self, invoice: rest.payment.Invoice) -> Decimal:
         return await self.base_strategy.invoice_accepted_amount(invoice)
 
+    async def debit_note_accepted_amount(self, debit_note: rest.payment.DebitNote) -> Decimal:
+        return await self.base_strategy.debit_note_accepted_amount(debit_note)
+
     async def respond_to_provider_offer(
         self,
         our_demand: DemandBuilder,
