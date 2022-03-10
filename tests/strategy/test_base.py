@@ -1,5 +1,8 @@
+from datetime import datetime, timedelta, timezone
 import pytest
 
+from yapapi.props import Activity
+from yapapi.props.builder import DemandBuilder
 from yapapi.strategy import (
     MarketStrategy,
     PROP_DEBIT_NOTE_ACCEPTANCE_TIMEOUT,
@@ -7,7 +10,15 @@ from yapapi.strategy import (
     PROP_PAYMENT_TIMEOUT_SEC,
     PropValueRange,
 )
-from yapapi.strategy.base import DEFAULT_PROPERTY_VALUE_RANGES
+from yapapi.strategy.base import (
+    DEFAULT_PROPERTY_VALUE_RANGES,
+    DEFAULT_DEBIT_NOTE_ACCEPTANCE_TIMEOUT_SEC,
+    DEFAULT_DEBIT_NOTE_INTERVAL_SEC,
+    DEFAULT_PAYMENT_TIMEOUT_SEC,
+    MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS,
+)
+
+from tests.factories.rest.market import OfferProposalFactory
 
 
 class BadStrategy(MarketStrategy):  # noqa
@@ -86,3 +97,67 @@ def test_prop_value_range(min, max, val, contains, clamped, clamp_error):
             range.clamp(val)
     else:
         assert range.clamp(val) == clamped
+
+
+@pytest.mark.parametrize(
+    "offer_props, expiration_secs, expected_props",
+    [
+        ({}, 1000, {}),
+        ({}, MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS + 1000, {}),
+        ({PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC + 1000}, 1000, {}),
+        ({PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC - 10}, 1000, {}),
+        (
+            {PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC + 1000},
+            MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS + 1000,
+            {PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC + 1000},
+        ),
+        (
+            {PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC - 10},
+            MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS + 1000,
+            {PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC},
+        ),
+        (
+            {
+                PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC + 1000,
+                PROP_PAYMENT_TIMEOUT_SEC: DEFAULT_PAYMENT_TIMEOUT_SEC + 1000,
+            },
+            1000,
+            {},
+        ),
+        (
+            {
+                PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC + 1000,
+                PROP_PAYMENT_TIMEOUT_SEC: DEFAULT_PAYMENT_TIMEOUT_SEC + 1000,
+            },
+            MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS + 1000,
+            {
+                PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC + 1000,
+                PROP_PAYMENT_TIMEOUT_SEC: DEFAULT_PAYMENT_TIMEOUT_SEC + 1000,
+            },
+        ),
+        (
+            {
+                PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC + 1000,
+                PROP_PAYMENT_TIMEOUT_SEC: DEFAULT_PAYMENT_TIMEOUT_SEC - 1000,
+            },
+            MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS + 1000,
+            {
+                PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC + 1000,
+                PROP_PAYMENT_TIMEOUT_SEC: DEFAULT_PAYMENT_TIMEOUT_SEC,
+            },
+        ),
+    ],
+)
+@pytest.mark.asyncio
+async def test_respond_to_provider_offer(offer_props, expiration_secs, expected_props):
+    strategy = GoodStrategy()
+    demand = DemandBuilder()
+    expiration = datetime.now() + timedelta(seconds=expiration_secs)
+    demand.add(Activity(expiration=expiration))
+    offer_kwargs = {"proposal__proposal__properties": offer_props}
+    offer = OfferProposalFactory(**offer_kwargs)
+
+    updated_demand = await strategy.respond_to_provider_offer(demand, offer)
+    del updated_demand.properties["golem.srv.comp.expiration"]
+
+    assert updated_demand.properties == expected_props
