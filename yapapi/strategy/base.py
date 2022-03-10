@@ -35,9 +35,23 @@ class PropValueRange:
     max: Optional[float] = None
 
     def __contains__(self, item: float) -> bool:
+        """Check if the value fits inside the range.
+
+        When `max` is `None`, any value above `min` fits.
+        Whem `min` is `None`, any value below `max` fits.
+        When both `min` and `max` are `None`, any value fits.
+        """
         return (self.min is None or item >= self.min) and (self.max is None or item <= self.max)
 
     def clamp(self, item: float):
+        """
+        Return a value closest to the given one, within the acceptable range.
+        :param item: the value to clamp
+        :return: clamped value
+
+        In case a range is defined with max < min (effectively making it an empty range),
+        `clamp` raises a `ValueError`.
+        """
         if self.min is not None and self.max is not None and self.min > self.max:
             raise ValueError(f"Cannot clamp to a range in which min={self.min} > max={self.max}.")
         if self.min is not None and item < self.min:

@@ -56,3 +56,33 @@ def test_acceptable_prop_value_range_override():
         effective_ranges[PROP_DEBIT_NOTE_ACCEPTANCE_TIMEOUT]
         == defaults[PROP_DEBIT_NOTE_ACCEPTANCE_TIMEOUT]
     )
+
+
+@pytest.mark.parametrize(
+    "min, max, val, contains, clamped, clamp_error",
+    [
+        (None, None, 0, True, 0, False),
+        (None, None, 12345, True, 12345, False),
+        (None, None, -0.12345, True, -0.12345, False),
+        (-42, None, 0, True, 0, False),
+        (42, None, 42, True, 42, False),
+        (0, None, -66, False, 0, False),
+        (None, 42, 0, True, 0, False),
+        (None, -42, 0, False, -42, False),
+        (None, 0, 0, True, 0, False),
+        (-42.5, 66.7, 0, True, 0, False),
+        (-42.5, 66.7, -42.5, True, -42.5, False),
+        (-42.5, 66.7, 66.7, True, 66.7, False),
+        (-42.5, 66.7, -66, False, -42.5, False),
+        (-42.5, 66.7, 88, False, 66.7, False),
+        (256, 0, 128, False, None, True),
+    ],
+)
+def test_prop_value_range(min, max, val, contains, clamped, clamp_error):
+    range = PropValueRange(min, max)
+    assert (val in range) == contains
+    if clamp_error:
+        with pytest.raises(ValueError):
+            range.clamp(val)
+    else:
+        assert range.clamp(val) == clamped
