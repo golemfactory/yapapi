@@ -445,7 +445,7 @@ class _Engine:
         logger.debug(
             f"{'Payable Debit notes' if payable else 'Debit notes'} for activity {activity_id}: {freq_descr}"
         )
-        if duration > 0 and duration + DEBIT_NOTE_INTERVAL_GRACE_PERIOD < num_notes * interval:
+        if duration + DEBIT_NOTE_INTERVAL_GRACE_PERIOD < num_notes * interval:
             payable_str = "payable " if payable else ""
             reason = {
                 "message": f"Too many {payable_str}debit notes: {freq_descr} (activity: {activity_id})",
