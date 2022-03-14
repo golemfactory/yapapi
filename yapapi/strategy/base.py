@@ -43,7 +43,7 @@ class PropValueRange:
         """
         return (self.min is None or item >= self.min) and (self.max is None or item <= self.max)
 
-    def clamp(self, item: float):
+    def clamp(self, item: float) -> float:
         """
         Return a value closest to the given one, within the acceptable range.
         :param item: the value to clamp
