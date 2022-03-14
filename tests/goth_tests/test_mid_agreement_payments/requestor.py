@@ -23,11 +23,7 @@ async def main():
     tasks = [Task(data=None)]
     timeout = timedelta(hours=24)
 
-    async with Golem(
-        budget=10.0,
-        subnet_tag="goth",
-        event_consumer=log_event_repr,
-    ) as golem:
+    async with Golem(budget=10.0, subnet_tag="goth", event_consumer=log_event_repr) as golem:
         logger = logging.getLogger("yapapi")
         logger.handlers[0].setLevel(logging.DEBUG)
         async for completed in golem.execute_tasks(worker, tasks, payload=package, timeout=timeout):
