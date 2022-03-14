@@ -163,7 +163,7 @@ class MarketStrategy(BaseMarketStrategy, abc.ABC):
             )
         else:
             logger.debug(
-                "Not enabling mid-agreement payments for this activity. "
+                "Not enabling mid-agreement payments for the planned activity. "
                 "expiration: %s, provider: %s",
                 expiration_secs,
                 provider_offer.issuer,

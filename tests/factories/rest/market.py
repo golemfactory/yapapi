@@ -1,14 +1,15 @@
 import datetime
 import factory
-from unittest import mock
+
+from ya_market import models as market_models
 
 from yapapi.rest.market import (
-    models as market_models,
     Agreement,
     AgreementDetails,
     OfferProposal,
     Subscription,
 )
+
 
 from tests.factories.props.com import ComLinearPropsFactory
 from tests.factories.rest import RestApiModelFactory

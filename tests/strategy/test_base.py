@@ -99,50 +99,67 @@ def test_prop_value_range(min, max, val, contains, clamped, clamp_error):
         assert range.clamp(val) == clamped
 
 
+SHORT_EXPIRATION = 1000
+LONG_EXPIRATION = MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS + 1000
+ACCEPTABLE_DEBIT_NOTE_INTERVAL = DEFAULT_DEBIT_NOTE_INTERVAL_SEC + 10
+UNACCEPTABLE_DEBIT_NOTE_INTERAL = DEFAULT_DEBIT_NOTE_INTERVAL_SEC - 10
+ACCEPTABLE_PAYMENT_TIMEOUT = DEFAULT_PAYMENT_TIMEOUT_SEC + 10
+UNACCEPTABLE_PAYMENT_TIMEOUT = DEFAULT_PAYMENT_TIMEOUT_SEC - 10
+
+
 @pytest.mark.parametrize(
     "offer_props, expiration_secs, expected_props",
     [
-        ({}, 1000, {}),
-        ({}, MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS + 1000, {}),
-        ({PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC + 1000}, 1000, {}),
-        ({PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC - 10}, 1000, {}),
+        # provider is unaware of mid-agreement payments, don't negotiate it from our end either
+        ({}, SHORT_EXPIRATION, {}),
+        # provider is unaware of mid-agreement payments, don't negotiate it from our end either
+        ({}, LONG_EXPIRATION, {}),
+        # provider would like mid-agreement payments but it doesn't make sense from requestor pov
+        ({PROP_DEBIT_NOTE_INTERVAL_SEC: ACCEPTABLE_DEBIT_NOTE_INTERVAL}, SHORT_EXPIRATION, {}),
+        # provider would like mid-agreement payments but it doesn't make sense from requestor pov
+        ({PROP_DEBIT_NOTE_INTERVAL_SEC: UNACCEPTABLE_DEBIT_NOTE_INTERAL}, SHORT_EXPIRATION, {}),
+        # provider would like mid-agreement payments and the debit note interval is okay
         (
-            {PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC + 1000},
-            MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS + 1000,
-            {PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC + 1000},
+            {PROP_DEBIT_NOTE_INTERVAL_SEC: ACCEPTABLE_DEBIT_NOTE_INTERVAL},
+            LONG_EXPIRATION,
+            {PROP_DEBIT_NOTE_INTERVAL_SEC: ACCEPTABLE_DEBIT_NOTE_INTERVAL},
         ),
+        # provider would like mid-agreement payments but the debit note interval is unacceptable
         (
-            {PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC - 10},
-            MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS + 1000,
+            {PROP_DEBIT_NOTE_INTERVAL_SEC: UNACCEPTABLE_DEBIT_NOTE_INTERAL},
+            LONG_EXPIRATION,
             {PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC},
         ),
+        # full set of m-a p props from provider end but too short expiration for requestor
         (
             {
-                PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC + 1000,
-                PROP_PAYMENT_TIMEOUT_SEC: DEFAULT_PAYMENT_TIMEOUT_SEC + 1000,
+                PROP_DEBIT_NOTE_INTERVAL_SEC: ACCEPTABLE_DEBIT_NOTE_INTERVAL,
+                PROP_PAYMENT_TIMEOUT_SEC: ACCEPTABLE_PAYMENT_TIMEOUT,
             },
-            1000,
+            SHORT_EXPIRATION,
             {},
         ),
+        # full set of m-a p props from the provider and all intervals within acceptable bounds
         (
             {
-                PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC + 1000,
-                PROP_PAYMENT_TIMEOUT_SEC: DEFAULT_PAYMENT_TIMEOUT_SEC + 1000,
+                PROP_DEBIT_NOTE_INTERVAL_SEC: ACCEPTABLE_DEBIT_NOTE_INTERVAL,
+                PROP_PAYMENT_TIMEOUT_SEC: ACCEPTABLE_PAYMENT_TIMEOUT,
             },
-            MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS + 1000,
+            LONG_EXPIRATION,
             {
-                PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC + 1000,
-                PROP_PAYMENT_TIMEOUT_SEC: DEFAULT_PAYMENT_TIMEOUT_SEC + 1000,
+                PROP_DEBIT_NOTE_INTERVAL_SEC: ACCEPTABLE_DEBIT_NOTE_INTERVAL,
+                PROP_PAYMENT_TIMEOUT_SEC: ACCEPTABLE_PAYMENT_TIMEOUT,
             },
         ),
+        # full set of m-a p props from the provider but payment timeout not acceptable for requestor
         (
             {
-                PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC + 1000,
-                PROP_PAYMENT_TIMEOUT_SEC: DEFAULT_PAYMENT_TIMEOUT_SEC - 1000,
+                PROP_DEBIT_NOTE_INTERVAL_SEC: ACCEPTABLE_DEBIT_NOTE_INTERVAL,
+                PROP_PAYMENT_TIMEOUT_SEC: UNACCEPTABLE_PAYMENT_TIMEOUT,
             },
-            MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS + 1000,
+            LONG_EXPIRATION,
             {
-                PROP_DEBIT_NOTE_INTERVAL_SEC: DEFAULT_DEBIT_NOTE_INTERVAL_SEC + 1000,
+                PROP_DEBIT_NOTE_INTERVAL_SEC: ACCEPTABLE_DEBIT_NOTE_INTERVAL,
                 PROP_PAYMENT_TIMEOUT_SEC: DEFAULT_PAYMENT_TIMEOUT_SEC,
             },
         ),

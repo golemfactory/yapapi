@@ -2,9 +2,10 @@ import datetime
 import factory
 from unittest import mock
 
-from ya_market.api.requestor_api import RequestorApi
+from ya_payment.api.requestor_api import RequestorApi
+from ya_payment import models as payment_models
 
-from yapapi.rest.payment import yap as payment_models, DebitNote
+from yapapi.rest.payment import DebitNote
 
 
 class RestDebitNoteFactory(factory.Factory):
