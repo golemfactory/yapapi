@@ -79,7 +79,8 @@ class RepA1(WrappingMarketStrategy):
         self._failed_activities.add(activity_id)
 
         provider_name = event.provider_info.name
-        logger.warning("Disabling payments for activity %s on %s, reason %s", activity_id, provider_name, reason)
+        msg = "Activity %s on %s failed (reason: %s), we'll pay only the already accepted amount %s"
+        logger.warning(msg, activity_id, provider_name, reason, self._accepted_amounts[activity_id])
 
     async def debit_note_accepted_amount(self, debit_note: "DebitNote") -> Decimal:
         activity_id = debit_note.activity_id
@@ -94,11 +95,15 @@ class RepA1(WrappingMarketStrategy):
         agreement_id = invoice.agreement_id
         if self._agreement_has_failed_activity(agreement_id):
             accepted_amount = self._total_agreement_amount(agreement_id)
-            logger.warning("REJECTED INVOICE FOR %s, we accept only %s", invoice.amount, accepted_amount)
-            return accepted_amount
-        else:
-            logger.warning("ACCEPTED INVOICE FOR %s", invoice.amount)
-            return Decimal(invoice.amount)
+
+            #   NOTE: this will (currently) always be true for a failed activity, but there is no rule
+            #   saying provider must send invoice for more than the accepted amount
+            if accepted_amount > Decimal(invoice.amount):
+                logger.warning("REJECTED INVOICE FOR %s, we accept only %s", invoice.amount, accepted_amount)
+                return accepted_amount
+
+        logger.warning("ACCEPTED INVOICE FOR %s", invoice.amount)
+        return Decimal(invoice.amount)
 
     def _agreement_has_failed_activity(self, agreement_id: str) -> bool:
         return any(act in self._failed_activities for act in self._agreement_activity_map[agreement_id])
