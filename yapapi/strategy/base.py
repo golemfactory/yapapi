@@ -35,9 +35,23 @@ class PropValueRange:
     max: Optional[float] = None
 
     def __contains__(self, item: float) -> bool:
+        """Check if the value fits inside the range.
+
+        When `max` is `None`, any value above `min` fits.
+        Whem `min` is `None`, any value below `max` fits.
+        When both `min` and `max` are `None`, any value fits.
+        """
         return (self.min is None or item >= self.min) and (self.max is None or item <= self.max)
 
-    def clamp(self, item: float):
+    def clamp(self, item: float) -> float:
+        """
+        Return a value closest to the given one, within the acceptable range.
+        :param item: the value to clamp
+        :return: clamped value
+
+        In case a range is defined with max < min (effectively making it an empty range),
+        `clamp` raises a `ValueError`.
+        """
         if self.min is not None and self.max is not None and self.min > self.max:
             raise ValueError(f"Cannot clamp to a range in which min={self.min} > max={self.max}.")
         if self.min is not None and item < self.min:
@@ -122,6 +136,7 @@ class MarketStrategy(BaseMarketStrategy, abc.ABC):
         assert activity.expiration  # type/sanity check, normally always set by the Engine
 
         expiration_secs = round((activity.expiration - datetime.now(timezone.utc)).total_seconds())
+
         trigger_mid_agreement_payments = expiration_secs >= float(
             MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS
         )
@@ -133,16 +148,25 @@ class MarketStrategy(BaseMarketStrategy, abc.ABC):
         if mid_agreement_payments_enabled:
             logger.debug(
                 "Enabling mid-agreement payments mechanism "
-                "as the expiration set to %ss (more than %ss).",
+                "as the expiration set to %ss (more than %ss). provider=%s",
                 expiration_secs,
                 MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS,
+                provider_offer.issuer,
             )
         elif trigger_mid_agreement_payments:
             logger.debug(
                 "Expiration of %ss (more than our minimum for MAP: %ss) while negotiating "
-                "with a provider unaware of mid-agreeement-payments.",
+                "with a provider unaware of mid-agreeement-payments. provider=%s",
                 expiration_secs,
                 MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS,
+                provider_offer.issuer,
+            )
+        else:
+            logger.debug(
+                "Not enabling mid-agreement payments for the planned activity. "
+                "expiration: %s, provider: %s",
+                expiration_secs,
+                provider_offer.issuer,
             )
 
         # Update response by either accepting proposed values or by proposing ours
