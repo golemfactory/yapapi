@@ -8,24 +8,26 @@ from yapapi import Golem, Task, WorkContext
 from yapapi.log import enable_default_logger, log_event_repr
 from yapapi.payload import vm
 from yapapi.props.builder import DemandBuilder
-from yapapi.strategy import LeastExpensiveLinearPayuMS, WrappingMarketStrategy
+from yapapi.strategy import (
+    LeastExpensiveLinearPayuMS,
+    PROP_DEBIT_NOTE_INTERVAL_SEC,
+    PROP_PAYMENT_TIMEOUT_SEC,
+    PropValueRange,
+    SCORE_TRUSTED,
+)
 
 
-class ShortDebitNoteIntervalAndPaymentTimeout(WrappingMarketStrategy):
-    def __init__(self, base_strategy):
-        super().__init__(base_strategy)
-
-    async def decorate_demand(self, demand: DemandBuilder) -> None:
-        await self.base_strategy.decorate_demand(demand)
-        demand.ensure(f"(PROP_DEBIT_NOTE_INTERVAL_SEC=15)")
-        demand.ensure(f"(PROP_PAYMENT_TIMEOUT_SEC=20)")
-        demand.ensure(f"(PROP_DEBIT_NOTE_ACCEPTANCE_TIMEOUT=10)")
+class ShortDebitNoteIntervalAndPaymentTimeout(LeastExpensiveLinearPayuMS):
+    acceptable_prop_value_range_overrides = {
+        PROP_DEBIT_NOTE_INTERVAL_SEC: PropValueRange(25, 30),
+        PROP_PAYMENT_TIMEOUT_SEC: PropValueRange(60, 70),
+    }
 
 
 async def worker(context: WorkContext, tasks: AsyncIterable[Task]):
     async for task in tasks:
         script = context.new_script()
-        future_result = script.run("/bin/sh", "-c", "sleep 100")
+        future_result = script.run("/bin/sh", "-c", "sleep 105")
         yield script
         task.accept_result(result=await future_result)
 
@@ -38,13 +40,15 @@ async def main():
 
     async with Golem(
         budget=10.0,
-        strategy=ShortDebitNoteIntervalAndPaymentTimeout(LeastExpensiveLinearPayuMS()),
+        strategy=ShortDebitNoteIntervalAndPaymentTimeout(),
         subnet_tag="goth",
         event_consumer=log_event_repr,
     ) as golem:
         logger = logging.getLogger("yapapi")
         logger.handlers[0].setLevel(logging.DEBUG)
-        async for completed in golem.execute_tasks(worker, tasks, payload=package, timeout=timeout):
+        async for completed in golem.execute_tasks(
+            worker, tasks, payload=package, max_workers=1, timeout=timeout
+        ):
             print(f"Task finished: {completed}.")
 
 
