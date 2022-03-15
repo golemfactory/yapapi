@@ -91,16 +91,16 @@ class BaseMarketStrategy(DemandDecorator, abc.ABC):
     async def invoice_accepted_amount(self, invoice: rest.payment.Invoice) -> Decimal:
         """Return the amount we accept to pay for the invoice.
 
-        Current Golem implementation accepts the invoice if returned amount equals `invoice.amount`
-        and ignores the invoice if it is different. This will change in the future."""
+        Current Golem Engine implementation accepts the invoice if returned amount is not lower than
+        `invoice.amount` and ignores the invoice otherwise. This will change in the future."""
         raise NotImplementedError()
 
     @abc.abstractmethod
     async def debit_note_accepted_amount(self, debit_note: rest.payment.DebitNote) -> Decimal:
         """Return the amount we accept to pay for the debit note.
 
-        Current Golem implementation accepts the debit note if returned amount equals a
-        `debit_note.total_amount_due` and ignores the debit note if it is different.
+        Current Golem Engine implementation accepts the debit note if returned amount is not lower than
+        `debit_note.total_amount_due` and ignores the debit note otherwise.
         This will change in the future."""
         raise NotImplementedError()
 

@@ -524,7 +524,7 @@ class _Engine:
                 try:
                     allocation = self._get_allocation(debit_note)
                     accepted_amount = await self._strategy.debit_note_accepted_amount(debit_note)
-                    if accepted_amount == Decimal(debit_note.total_amount_due):
+                    if accepted_amount >= Decimal(debit_note.total_amount_due):
                         await debit_note.accept(
                             amount=debit_note.total_amount_due, allocation=allocation
                         )

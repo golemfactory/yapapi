@@ -90,7 +90,7 @@ class InvoiceManager:
         try:
             allocation = get_allocation(invoice)
             accepted_amount = await get_accepted_amount(invoice)
-            if accepted_amount == Decimal(invoice.amount):
+            if accepted_amount >= Decimal(invoice.amount):
                 await invoice.accept(amount=accepted_amount, allocation=allocation)
                 ad.job.emit(
                     events.InvoiceAccepted,
