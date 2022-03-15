@@ -133,6 +133,41 @@ Events inheritance tree
         ExecutionInterrupted
         ShutdownFinished
 
+Custom events
+-------------
+
+It's possible to define and use a custom event class, e.g.
+
+Declare the class::
+
+    from yapapi.events import ActivityEvent
+    import attr
+
+    @attr.s(auto_attribs=True, repr=False)
+    class ActivityEvaluated(ActivityEvent):
+        activity_score: float
+
+Emit the event e.g. in the :func:`worker` function of the Task API::
+
+    async def worker(ctx: WorkContext, tasks):
+        ... #  whatever
+        activity_score = await score_activity(ctx)  # Some app-specific logic
+        ctx.emit(ActivityEvaluated, activity_score=activity_score)
+
+And consume the event anywhere you want::
+
+    def event_consumer(event):
+        if isinstance(event, ActivityEvaluated):
+            if event.activity_score < 7:
+                print(f"Oh no! Activity {event.activity.id} is scored below 7!")
+    golem.add_event_consumer(event_consumer)
+
+Q: Why would one create and emit a custom event when the can just directly access all components?
+A: This way we keep the emitting/consuming logic separate. E.g. there could be a single MarketStrategy
+that consumes the `ActivityEvaluated` event and many different applications that utilize this strategy
+and evaluate activities in different ways.
+
+
 List of event classes
 ---------------------
 

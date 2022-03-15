@@ -213,7 +213,8 @@ def log_event(event: events.Event) -> None:
     if not event_logger.isEnabledFor(loglevel):
         return
 
-    descr = event_type_to_string[type(event)]
+    #   Default value because we allow developers to declare their own events
+    descr = event_type_to_string.get(type(event), type(event).__name__)
     msg = "; ".join([descr, *(f"{name} = {value}" for name, value in event.__dict__.items())])
 
     if event.exc_info:
