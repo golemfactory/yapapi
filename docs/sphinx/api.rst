@@ -148,5 +148,7 @@ Yapapi Contrib
 .. automodule:: yapapi.contrib.service.http_proxy
 
 .. autoclass:: yapapi.contrib.service.http_proxy.LocalHttpProxy
+    :members: __init__, run, stop
 
 .. autoclass:: yapapi.contrib.service.http_proxy.HttpProxyService
+    :members: __init__, handle_request

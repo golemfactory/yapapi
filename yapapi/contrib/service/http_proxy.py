@@ -2,7 +2,7 @@
 Local HTTP Proxy
 ^^^^^^^^^^^^^^^^
 
-A local HTTP proxy that enables easy connection to any VPN-enabled, HTTP-based services launched on
+A local HTTP proxy that enables easy connections to any VPN-enabled, HTTP-based services launched on
 Golem providers using yapapi's Services API.
 
 For usage in a complete requestor agent app, see the
@@ -79,12 +79,27 @@ class _ResponseParser:
 
 
 class HttpProxyService(Service, abc.ABC):
+    """
+    Base class for services connected to the :class:`~LocalHttpProxy`.
+
+    Implements the interface used by `LocalHttpProxy` to route HTTP requests to the instances of an
+    HTTP service running on providers.
+    """
+
     def __init__(
         self,
         remote_port: int = 80,
         remote_host: Optional[str] = None,
         response_timeout: float = 10.0,
     ):
+        """
+        Initialize the HTTP proxy service
+
+        :param remote_port: the port on which the service on the provider's end listens
+        :param remote_host: optional hostname to be used in the headers passed to the remote HTTP
+            server. If not provided, the `Host` header of the incoming http requests will be passed.
+        :param response_timeout: the timeout for the requests made to the remote server
+        """
         super().__init__()
         self._remote_port = remote_port
         self._remote_host = remote_host
@@ -92,8 +107,11 @@ class HttpProxyService(Service, abc.ABC):
 
     async def handle_request(self, request: web.Request) -> web.Response:
         """
-        handle the request coming from the local HTTP server
-        by passing it to the instance through the VPN
+        handle a single request coming from a :class:`~LocalHttpProxy` server
+        by passing it to the HTTP service on the provider's end through the VPN
+
+        :param request: an `aiohttp.web.Request`
+        :return: an `aiohttp.web.Response`
         """
         assert self.network_node, "Ensure that the service is started within a network."
         assert self.cluster
@@ -154,16 +172,55 @@ class HttpProxyService(Service, abc.ABC):
 
 
 class LocalHttpProxy:
-    """runs a local aiohttp server and processes requests through instances of HttpProxyService."""
+    """Runs a local `aiohttp` server and processes requests through instances of
+    :class:`~HttpProxyService`.
+
+    Using `yapapi`'s Network API (:meth:`~yapapi.Golem.create_network`), execution units on the
+    provider nodes can be connected to a virtual network which can then be used both for
+    communication between those nodes (through virtual network interfaces within VMs) and between
+    the specific nodes and the requestor agent (through a websocket endpoint in the yagna daemon's
+    REST API).
+
+    `LocalHttpProxy` and `HttpProxyService` use the latter to enable HTTP connections to be routed
+    from a local port on the requestor's host, to a specified TCP port within the VM on the
+    provider's end.
+
+    Example usage::
+
+        class HttpService(HttpProxyService):
+            ...
+
+        cluster = await golem.run_service(
+            HttpService,
+            network=network,
+            instance_params=[{"remote_port": 80}],  # optional, 80 by default
+        )
+
+        proxy = LocalHttpProxy(cluster, 8080)
+        await proxy.run()
+
+        ... # requests made to http://localhost:8080 are routed to port 80 within the VM
+
+        await proxy.stop()
+        cluster.stop()
+
+    """
 
     def __init__(self, cluster: Cluster[HttpProxyService], port: int):
+        """
+        Initialize the local HTTP proxy
+
+        :param cluster: a :class:`~yapapi.services.Cluster` of one or more VPN-connected
+            :class:`~HttpProxyService` instances.
+        :param port: a local port on the requestor's machine to listen on
+        """
         self._request_count = 0
         self._request_lock = asyncio.Lock()
         self._cluster = cluster
         self._port = port
         self._site = None
 
-    async def request_handler(self, request: web.Request) -> web.Response:
+    async def _request_handler(self, request: web.Request) -> web.Response:
         logger.info("Received a local HTTP request: %s %s", request.method, request.path_qs)
 
         instances = [i for i in self._cluster.instances if i.state == ServiceState.running]
@@ -181,10 +238,11 @@ class LocalHttpProxy:
 
     async def run(self):
         """
-        run a local HTTP server, listening on `port`
-        and passing all requests through the `request_handler` function above
+        run a local HTTP server, listening on the specified port and passing subsequent requests to
+        the :meth:`~HttpProxyService.handle_request` of the specified cluster in a round-robin
+        fashion
         """
-        runner = web.ServerRunner(web.Server(self.request_handler))  # type: ignore
+        runner = web.ServerRunner(web.Server(self._request_handler))  # type: ignore
         await runner.setup()
         site = web.TCPSite(runner, port=self._port)
         await site.start()
