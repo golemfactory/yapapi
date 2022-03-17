@@ -214,7 +214,7 @@ def log_event(event: events.Event) -> None:
         return
 
     #   Default value because we allow developers to declare their own events
-    descr = event_type_to_string.get(type(event), type(event).__name__)
+    descr = event_type_to_string.get(type(event), str(type(event)))
     msg = "; ".join([descr, *(f"{name} = {value}" for name, value in event.__dict__.items())])
 
     if event.exc_info:
