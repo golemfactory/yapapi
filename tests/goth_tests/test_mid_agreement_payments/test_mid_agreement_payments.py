@@ -71,5 +71,5 @@ async def test_mid_agreement_payments(
             cmd_monitor.add_assertion(check_debit_note_freq)
             await cmd_monitor.wait_for_pattern(".*Enabling mid-agreement payments.*", timeout=60)
             # Wait for executor shutdown
-            await cmd_monitor.wait_for_pattern(".*ShutdownFinished.*", timeout=500)
+            await cmd_monitor.wait_for_pattern(".*ShutdownFinished.*", timeout=200)
             logger.info("Requestor script finished")
