@@ -1,3 +1,11 @@
+"""
+ProviderFilter
+^^^^^^^^^^^^^^
+
+Market strategy wrapper that enables easy exclusion of offers from certain providers using
+a simple boolean condition, while preserving correct scoring of the remaining offers by the
+base strategy.
+"""
 import inspect
 
 from yapapi.strategy import BaseMarketStrategy, SCORE_REJECTED, WrappingMarketStrategy

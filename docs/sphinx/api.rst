@@ -136,9 +136,17 @@ Utils
 
 .. autofunction:: yapapi.get_version
 
-Contrib
-=======
+Yapapi Contrib
+==============
 
 .. automodule:: yapapi.contrib
 
+.. automodule:: yapapi.contrib.strategy.provider_filter
+
 .. autoclass:: yapapi.contrib.strategy.ProviderFilter
+
+.. automodule:: yapapi.contrib.service.http_proxy
+
+.. autoclass:: yapapi.contrib.service.http_proxy.LocalHttpProxy
+
+.. autoclass:: yapapi.contrib.service.http_proxy.HttpProxyService
