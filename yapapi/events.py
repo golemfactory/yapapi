@@ -133,6 +133,49 @@ Events inheritance tree
         ExecutionInterrupted
         ShutdownFinished
 
+Custom events
+-------------
+
+Apart from consuming events emitted by the Python API's internal components, application authors
+may wish to define their own, custom event classes. That way, Golem's event system can be easily
+extended with additional, custom triggers while keeping the consumer logic uniform for both Golem's
+own events and the custom ones.
+
+Additionally, such custom events may be used to create pieces of useful, reusable components while
+keeping the the emitting and consuming logic separate at the same time. As an example, one could
+provide a custom MarketStrategy that consumes an event such as e.g.: `ActivityEvaluated` and have
+many different applications utilize this strategy but evaluate activities in different ways.
+
+Example usage
+^^^^^^^^^^^^^
+
+Declare the class::
+
+    from yapapi.events import ActivityEvent
+    import attr
+
+    @attr.s(auto_attribs=True, repr=False)
+    class ActivityEvaluated(ActivityEvent):
+        activity_score: float
+
+Emit the event e.g. in the :func:`worker` function of the Task API::
+
+    async def worker(ctx: WorkContext, tasks):
+        ... #  whatever
+        activity_score = await score_activity(ctx)  # Some app-specific logic
+        ctx.emit(ActivityEvaluated, activity_score=activity_score)
+
+And consume the event anywhere you want (e.g. in a MarketStrategy method)::
+
+    def event_consumer(event):
+        if isinstance(event, ActivityEvaluated):
+            if event.activity_score < 7:
+                print(f"Oh no! Activity {event.activity.id} is scored below 7!")
+
+    golem.add_event_consumer(event_consumer)
+
+
+
 List of event classes
 ---------------------
 
