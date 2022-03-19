@@ -509,7 +509,7 @@ class _Engine:
 
         async def _process_debit_note_wrapper(debit_note_id: str) -> None:
             try:
-                self._process_debit_note(debit_note_id)
+                await self._process_debit_note(debit_note_id)
             finally:
                 debit_note_processing_tasks.pop(debit_note_id, None)
                 semaphore.release()
