@@ -501,12 +501,22 @@ class _Engine:
 
     async def _process_debit_notes(self) -> None:
         """Process incoming debit notes."""
+        max_concurrent_notes = 10
         debit_note_processing_tasks = []
         loop = asyncio.get_event_loop()
 
+        semaphore = asyncio.Semaphore(max_concurrent_notes)
+
+        async def _process_debit_note_wrapper(debit_note_id: str) -> None:
+            try:
+                self._process_debit_note(debit_note_id)
+            finally:
+                semaphore.release()
+
         async for debit_note_id in self._payment_api.incoming_debit_note_ids():
+            await semaphore.acquire()
             debit_note_processing_tasks.append(
-                loop.create_task(self._process_debit_note(debit_note_id))
+                loop.create_task(_process_debit_note_wrapper(debit_note_id))
             )
             if self._payment_closing:
                 any_agreement_accepts = any(self._agreements_accepting_debit_notes.values())
