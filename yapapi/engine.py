@@ -501,52 +501,13 @@ class _Engine:
 
     async def _process_debit_notes(self) -> None:
         """Process incoming debit notes."""
+        debit_note_processing_tasks = []
+        loop = asyncio.get_event_loop()
 
-        async for debit_note in self._payment_api.incoming_debit_notes():
-            agr_id = debit_note.agreement_id
-            job_id = next(
-                (
-                    id
-                    for id in self._agreements_accepting_debit_notes
-                    if agr_id in self._agreements_accepting_debit_notes[id]
-                ),
-                None,
+        async for debit_note_id in self._payment_api.incoming_debit_note_ids():
+            debit_note_processing_tasks.append(
+                loop.create_task(self._process_debit_note(debit_note_id))
             )
-            if job_id is not None:
-                job = self._get_job_by_id(job_id)
-                agreement = self._get_agreement_by_id(agr_id)
-                job.emit(
-                    events.DebitNoteReceived,
-                    agreement=agreement,
-                    debit_note=debit_note,
-                )
-
-                # We ignore debit notes we can't accept, since rejection is not implemented in yagna
-
-                # The most we risk by not accepting a debit note would be a termination of the
-                # agreement by the provider which is not an issue here
-                # because in all of these cases the agreement had already been terminated or
-                # we have just terminated it in the course of interval enforcement
-                if not await self._enforce_debit_note_intervals(job, debit_note):
-                    continue
-
-                try:
-                    allocation = self._get_allocation(debit_note)
-                    await debit_note.accept(
-                        amount=debit_note.total_amount_due, allocation=allocation
-                    )
-                    job.emit(
-                        events.DebitNoteAccepted,
-                        agreement=agreement,
-                        debit_note=debit_note,
-                    )
-                except CancelledError:
-                    raise
-                except Exception:
-                    job.emit(
-                        events.PaymentFailed, agreement=agreement, exc_info=sys.exc_info()  # type: ignore
-                    )
-
             if self._payment_closing:
                 any_agreement_accepts = any(self._agreements_accepting_debit_notes.values())
                 if not any_agreement_accepts:
@@ -554,6 +515,53 @@ class _Engine:
                     #   and we're shutting down, so there will never be any again
                     #   -> we can safely ignore all further incoming debit notes
                     break
+
+        if debit_note_processing_tasks:
+            await asyncio.gather(*debit_note_processing_tasks)
+
+    async def _process_debit_note(self, debit_note_id: str) -> None:
+        debit_note = await self._payment_api.debit_note(debit_note_id)
+        agr_id = debit_note.agreement_id
+        job_id = next(
+            (
+                id
+                for id in self._agreements_accepting_debit_notes
+                if agr_id in self._agreements_accepting_debit_notes[id]
+            ),
+            None,
+        )
+        if job_id is not None:
+            job = self._get_job_by_id(job_id)
+            agreement = self._get_agreement_by_id(agr_id)
+            job.emit(
+                events.DebitNoteReceived,
+                agreement=agreement,
+                debit_note=debit_note,
+            )
+
+            # We ignore debit notes we can't accept, since rejection is not implemented in yagna
+
+            # The most we risk by not accepting a debit note would be a termination of the
+            # agreement by the provider which is not an issue here
+            # because in all of these cases the agreement had already been terminated or
+            # we have just terminated it in the course of interval enforcement
+            if not await self._enforce_debit_note_intervals(job, debit_note):
+                return
+
+            try:
+                allocation = self._get_allocation(debit_note)
+                await debit_note.accept(amount=debit_note.total_amount_due, allocation=allocation)
+                job.emit(
+                    events.DebitNoteAccepted,
+                    agreement=agreement,
+                    debit_note=debit_note,
+                )
+            except CancelledError:
+                raise
+            except Exception:
+                job.emit(
+                    events.PaymentFailed, agreement=agreement, exc_info=sys.exc_info()  # type: ignore
+                )
 
     def accept_debit_notes_for_agreement(self, job_id: str, agreement_id: str) -> None:
         """Add given agreement to the set of agreements for which debit notes should be accepted."""
