@@ -1,3 +1,15 @@
+"""
+Local HTTP Proxy
+^^^^^^^^^^^^^^^^
+
+A local HTTP proxy that enables easy connection to any VPN-enabled, HTTP-based services launched on
+Golem providers using yapapi's Services API.
+
+For usage in a complete requestor agent app, see the
+`http-proxy <https://github.com/golemfactory/yapapi/tree/master/examples/http-proxy>`_ and
+`webapp <https://github.com/golemfactory/yapapi/tree/master/examples/webapp>`_ examples in the
+yapapi repository.
+"""
 import abc
 import aiohttp
 from aiohttp import web, client_ws
