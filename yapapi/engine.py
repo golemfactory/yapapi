@@ -24,7 +24,7 @@ from typing import (
     Type,
     Union,
 )
-from typing_extensions import AsyncGenerator
+from typing_extensions import AsyncGenerator, Final
 
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
@@ -56,6 +56,7 @@ DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "erc20").lower()
 DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "rinkeby").lower()
 DEFAULT_SUBNET: Optional[str] = os.getenv("YAGNA_SUBNET", "devnet-beta")
 
+MAX_CONCURRENTLY_PROCESSED_DEBIT_NOTES: Final[int] = 10
 
 logger = logging.getLogger("yapapi.executor")
 
@@ -501,11 +502,10 @@ class _Engine:
 
     async def _process_debit_notes(self) -> None:
         """Process incoming debit notes."""
-        max_concurrent_notes = 10
         debit_note_processing_tasks: Dict[str, asyncio.Task] = {}
         loop = asyncio.get_event_loop()
 
-        semaphore = asyncio.Semaphore(max_concurrent_notes)
+        semaphore = asyncio.Semaphore(MAX_CONCURRENTLY_PROCESSED_DEBIT_NOTES)
 
         async def _process_debit_note_wrapper(debit_note_id: str) -> None:
             try:
