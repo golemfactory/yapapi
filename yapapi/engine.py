@@ -511,7 +511,7 @@ class _Engine:
             try:
                 await self._process_debit_note(debit_note_id)
             finally:
-                debit_note_processing_tasks.pop(debit_note_id, None)
+                debit_note_processing_tasks.pop(debit_note_id)
                 semaphore.release()
 
         async for debit_note_id in self._payment_api.incoming_debit_note_ids():
