@@ -95,7 +95,7 @@ class WorkContext:
         activity: Activity,
         agreement: Agreement,
         storage: StorageProvider,
-        emitter: Optional[WorkContextEmitter] = None,
+        emitter: WorkContextEmitter,
     ):
         self._activity = activity
         self._agreement = agreement
@@ -108,11 +108,14 @@ class WorkContext:
         self.__script: Script = self.new_script()
 
     def emit(self, event_class: Type[ActivityEventType], **kwargs) -> ActivityEventType:
-        if not self._emitter:
-            #   TODO - why is this possible?
-            raise RuntimeError("This is a WorkContext without emitter, so it won't emit")
         return self._emitter(
             event_class, activity=self._activity, agreement=self._agreement, **kwargs
+        )
+
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}"
+            f"(id={self.id}, activity={self._activity}, provider={self.provider_id})"
         )
 
     @property
@@ -149,7 +152,7 @@ class WorkContext:
 
     @property
     def _agreement_details(self) -> AgreementDetails:
-        return self._agreement.cached_details
+        return self._agreement.details
 
     def new_script(
         self, timeout: Optional[timedelta] = None, wait_for_results: bool = True
