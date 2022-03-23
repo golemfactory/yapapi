@@ -831,7 +831,7 @@ class Job:
             logger.warning(
                 f"Score offer call failed {ex}"
             )
-            return await reject_proposal("Score failed due to error in score_offer method")
+            raise ex
 
         logger.debug(
             "Scored offer %s, provider: %s, strategy: %s, score: %f",
