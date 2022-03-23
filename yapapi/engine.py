@@ -825,7 +825,14 @@ class Job:
             await proposal.reject(reason)
             return self.emit(events.ProposalRejected, proposal=proposal, reason=reason)
 
-        score = await self.engine._strategy.score_offer(proposal)
+        try:
+            score = await self.engine._strategy.score_offer(proposal)
+        except Exception as ex:
+            logger.warning(
+                f"Score offer call failed {ex}"
+            )
+            return await reject_proposal("Score failed due to error in score_offer method")
+
         logger.debug(
             "Scored offer %s, provider: %s, strategy: %s, score: %f",
             proposal.id,
