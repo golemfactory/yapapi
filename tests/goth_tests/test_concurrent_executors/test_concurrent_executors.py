@@ -38,13 +38,13 @@ async def test_concurrent_executors(
         ) as (_cmd_task, cmd_monitor, _process_monitor):
 
             # Wait for job ALEF summary
-            await cmd_monitor.wait_for_pattern(".*ALEF.* Computation finished", timeout=60)
+            await cmd_monitor.wait_for_pattern(".*ALEF.* Job finished", timeout=60)
             await cmd_monitor.wait_for_pattern(".*ALEF.* Negotiated 2 agreements", timeout=5)
             await cmd_monitor.wait_for_pattern(".*ALEF.* Provider .* computed 8 tasks", timeout=5)
             await cmd_monitor.wait_for_pattern(".*ALEF.* Activity failed 1 time", timeout=5)
 
             # Wait for job BET summary
-            await cmd_monitor.wait_for_pattern(".*BET.* Computation finished", timeout=60)
+            await cmd_monitor.wait_for_pattern(".*BET.* Job finished", timeout=60)
             await cmd_monitor.wait_for_pattern(".*BET.* Negotiated 1 agreement", timeout=5)
             await cmd_monitor.wait_for_pattern(".*BET.* Provider .* computed 8 tasks", timeout=5)
 

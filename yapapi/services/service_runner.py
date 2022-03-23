@@ -352,6 +352,9 @@ class ServiceRunner(AsyncContextManager):
 
                 work_context.emit(events.ServiceFinished, service=service)
                 work_context.emit(events.WorkerFinished)
+            except Exception:
+                work_context.emit(events.WorkerFinished, exc_info=sys.exc_info())
+                raise
             finally:
                 await self._job.engine.accept_payments_for_agreement(self._job.id, agreement.id)
                 await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
@@ -371,11 +374,7 @@ class ServiceRunner(AsyncContextManager):
                 else:
                     break
             except Exception:
-                if agreement:
-                    self._job.emit(
-                        events.WorkerFinished, agreement=agreement, exc_info=sys.exc_info()
-                    )
-                else:
+                if not agreement:
                     # This shouldn't happen, we may log and return as well
                     logger.error("Failed to spawn instance", exc_info=True)
                     return

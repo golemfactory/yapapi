@@ -185,14 +185,37 @@ class Executor:
             with work_queue.new_consumer() as consumer:
                 try:
 
-                    async def task_generator() -> AsyncIterator[Task[D, R]]:
+                    # the `task_generator` here is passed as the `tasks` argument to the user's
+                    # `worker` function
+                    #
+                    # because it's an `AsyncGenerator`, we're able to throw exceptions its way
+                    # so that we can terminate it explicitly when an exception happens within
+                    # the worker's generator
+                    #
+                    # otherwise, the user can signal the generator to finish by sending it an
+                    # `aclose()`, which triggers a `GeneratorExit`, which,
+                    # in turn, sets a `finished` status on the `consumer` so that the consumer
+                    # stops pulling new task handles from the queue.
+                    #
+                    # later, the `finished` status is used to throw `StopAsyncIteration`, which
+                    # signals the engine to terminate the agreement when the worker finishes.
+                    #
+                    # if that wasn't done, the engine could just restart the worker on the same
+                    # agreement.
+
+                    async def task_generator() -> AsyncGenerator[Task[D, R], None]:
                         async for handle in consumer:
                             task = Task.for_handle(handle, work_queue, work_context.emit)
                             task.emit(events.TaskStarted)
-                            yield task
+                            try:
+                                yield task
+                            except GeneratorExit:
+                                consumer.finish()
+
                             task.emit(events.TaskFinished)
 
-                    batch_generator = worker(work_context, task_generator())
+                    task_gen = task_generator()
+                    batch_generator = worker(work_context, task_gen)
 
                     if self._implicit_init:
                         await self._perform_implicit_init(
@@ -206,11 +229,14 @@ class Executor:
                     except StopAsyncIteration:
                         pass
                     work_context.emit(events.WorkerFinished)
-                except Exception:
+                except Exception as e:
                     work_context.emit(events.WorkerFinished, exc_info=sys.exc_info())  # type: ignore
+                    await task_gen.athrow(type(e), e)
                     raise
                 finally:
                     await self._engine.accept_payments_for_agreement(job.id, agreement.id)
+                    if consumer.finished:
+                        raise StopAsyncIteration()
 
         async def worker_starter() -> None:
             while True:
@@ -254,7 +280,7 @@ class Executor:
 
                 now = datetime.now(timezone.utc)
                 if now > job.expiration_time:
-                    raise TimeoutError(f"Computation timed out after {self._timeout}")
+                    raise TimeoutError(f"Job timed out after {self._timeout}")
                 if now > get_offers_deadline and job.proposals_confirmed == 0:
                     job.emit(events.NoProposalsConfirmed, timeout=DEFAULT_GET_OFFERS_TIMEOUT)
                     get_offers_deadline += DEFAULT_GET_OFFERS_TIMEOUT

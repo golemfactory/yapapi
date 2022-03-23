@@ -40,11 +40,9 @@ class AgreementsPool:
 
     def __init__(
         self,
-        job_id: str,
         emitter: Callable[..., events.Event],
         offer_recycler: Callable[[OfferProposal], None],
     ):
-        self.job_id = job_id
         self.emitter = emitter
         self.offer_recycler = offer_recycler
         self._offer_buffer: Dict[str, _BufferedProposal] = {}  # provider_id -> Proposal
@@ -130,7 +128,7 @@ class AgreementsPool:
             emit(events.ProposalFailed, proposal=offer.proposal, exc_info=exc_info)
             raise
         try:
-            agreement_details = await agreement.details()
+            agreement_details = await agreement.get_details()
             provider_activity = agreement_details.provider_view.extract(Activity)
             requestor_activity = agreement_details.requestor_view.extract(Activity)
             node_info = agreement_details.provider_view.extract(NodeInfo)
@@ -183,13 +181,7 @@ class AgreementsPool:
             return
 
         buffered_agreement = self._agreements[agreement_id]
-
-        try:
-            agreement_details = await buffered_agreement.agreement.details()
-            provider = agreement_details.provider_view.extract(NodeInfo).name
-        except (ApiException, asyncio.TimeoutError, aiohttp.ClientOSError):
-            logger.debug("Cannot get details for agreement %s", agreement_id, exc_info=True)
-            provider = "<couldn't get provider name>"
+        provider = buffered_agreement.agreement.details.provider_view.extract(NodeInfo).name
 
         logger.debug(
             "Terminating agreement. id: %s, reason: %s, provider: %s",
@@ -238,6 +230,7 @@ class AgreementsPool:
             except KeyError:
                 return
             buffered_agreement.worker_task and buffered_agreement.worker_task.cancel()
+            buffered_agreement.agreement._terminated = True
             del self._agreements[agr_id]
             self.emitter(
                 events.AgreementTerminated, agreement=buffered_agreement.agreement, reason=reason

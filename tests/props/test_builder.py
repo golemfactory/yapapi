@@ -17,3 +17,14 @@ async def test_autodecorating_model():
     await foo.decorate_demand(demand)
     assert demand.properties == {"some.bar": "a nice one"}
     assert demand.constraints == "(baz<=50)"
+
+
+def test_add_properties():
+    demand = DemandBuilder()
+    assert demand.properties == {}
+    demand.add_properties({"golem.foo": 667})
+    demand.add_properties({"golem.bar": "blah"})
+    assert demand.properties == {
+        "golem.foo": 667,
+        "golem.bar": "blah",
+    }

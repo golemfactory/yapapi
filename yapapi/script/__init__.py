@@ -1,3 +1,4 @@
+from asyncio import InvalidStateError
 from datetime import timedelta
 import itertools
 from typing import Any, Awaitable, Callable, Dict, Iterator, Optional, List, Type, TYPE_CHECKING
@@ -60,6 +61,12 @@ class Script:
         self._commands: List[Command] = []
         self._id: int = next(script_ids)
 
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}"
+            f"(id={self._id}, ctx={self._ctx}, commands={self._commands})"
+        )
+
     def emit(self, event_class: Type[ScriptEventType], **kwargs) -> ScriptEventType:
         return self._ctx.emit(event_class, script=self, **kwargs)
 
@@ -75,9 +82,16 @@ class Script:
             if event.success:
                 command._result.set_result(event)
             else:
-                command_str = str(command.evaluate(self._ctx))  # TODO -> Command.`__repr__`
-                raise CommandExecutionError(command_str, event.message, event.stderr)
-        return event  # type: ignore # -> TODO #786
+                raise CommandExecutionError(str(command), event.message, event.stderr)
+        return event
+
+    @property
+    def results(self) -> List[CommandExecuted]:
+        """List of all results of the script commands. Available only after the script execution finished."""
+        try:
+            return [command._result.result() for command in self._commands]
+        except InvalidStateError:
+            raise AttributeError("Script results are available only after all commands finished")
 
     @property
     def id(self) -> int:
@@ -92,18 +106,18 @@ class Script:
         """Evaluate and serialize this script to a list of batch commands."""
         batch: List[BatchCommand] = []
         for cmd in self._commands:
-            batch.append(cmd.evaluate(self._ctx))
+            batch.append(cmd.evaluate())
         return batch
 
     async def _after(self):
         """Hook which is executed after the script has been run on the provider."""
         for cmd in self._commands:
-            await cmd.after(self._ctx)
+            await cmd.after()
 
     async def _before(self):
         """Hook which is executed before the script is evaluated and sent to the provider."""
         for cmd in self._commands:
-            await cmd.before(self._ctx)
+            await cmd.before()
 
     def add(self, cmd: Command) -> Awaitable[CommandExecuted]:
         """Add a :class:`yapapi.script.command.Command` to the :class:`Script`"""
