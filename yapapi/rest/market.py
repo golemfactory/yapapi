@@ -64,28 +64,30 @@ class Agreement(object):
         self._subscription = subscription
         self._id = agreement_id
         self._details: Optional[AgreementDetails] = None
+        self._terminated = False
 
     @property
     def id(self) -> str:
         return self._id
 
-    async def details(self, force_refresh=False) -> AgreementDetails:
-        """Retrieve and cache the details of the Agreement.
-        :param force_refresh: if set to True, the API call to get the details will always be made
-        """
-        if not self._details or force_refresh:
+    def __repr__(self):
+        return f"{self.__class__.__name__}(id={self.id})"
+
+    async def get_details(self) -> AgreementDetails:
+        """Retrieve and cache the details of the Agreement."""
+        if not self._details:
             self._details = AgreementDetails(_ref=await self._api.get_agreement(self._id))
         return self._details
 
     @property
-    def cached_details(self) -> AgreementDetails:
-        """Return cached details after prior call to `await self.details()` or raise RuntimeError.
+    def details(self) -> AgreementDetails:
+        """Return cached details.
 
-        The only purpose is to provide a sync interface to the details."""
+        Requires a prior call to `await self.get_details().
+        Raises RuntimeError if the details had not been retrieved.
+        """
         if not self._details:
-            raise RuntimeError(
-                "Method cached_details() can be called only after prior `await details()`"
-            )
+            raise RuntimeError("Can't retrieve details, call `get_details()` first.")
         return self._details
 
     async def confirm(self) -> bool:
@@ -109,13 +111,23 @@ class Agreement(object):
         try:
             await self._api.terminate_agreement(self._id, request_body=reason)
             logger.debug("terminateAgreement(%s) returned successfully", self._id)
+            self._terminated = True
             return True
         except (ApiException, asyncio.TimeoutError, aiohttp.ClientOSError):
             logger.debug("terminateAgreement(%s) failed", self._id, exc_info=True)
             return False
 
-    def __repr__(self):
-        return f"Agreement(id={self.id})"
+    @property
+    def terminated(self):
+        return self._terminated
+
+    def get_provider_property(self, prop_key):
+        """Retrieve a value of a provider-side (Offer) property of the Agreement."""
+        return self.details.provider_view.properties.get(prop_key)
+
+    def get_requestor_property(self, prop_key):
+        """Retrieve a value of a requestor-side (Demand) property of the Agreement."""
+        return self.details.requestor_view.properties.get(prop_key)
 
 
 class OfferProposal(object):

@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 import math
 import os
@@ -63,9 +64,12 @@ async def test_run_yacat(
 
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
+        logfile = f"hashcat-yapapi-{datetime.now().strftime('%Y-%m-%d_%H.%M.%S')}.log"
+
         async with requestor.run_command_on_host(
             f"{yacat_path} --mask ?a?a --hash $P$5ZDzPE45CigTC6EY4cXbyJSLj/pGee0 "
-            f"--subnet-tag goth --chunk-size {CHUNK_SIZE} --max-workers {PROVIDER_COUNT}",
+            f"--subnet-tag goth --chunk-size {CHUNK_SIZE} --max-workers {PROVIDER_COUNT} "
+            f"--log-file {(log_dir /  logfile).resolve()}",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor, _process_monitor):
 
