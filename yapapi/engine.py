@@ -51,6 +51,7 @@ from yapapi.strategy import (
     DEBIT_NOTE_INTERVAL_GRACE_PERIOD,
 )
 from yapapi.invoice_manager import InvoiceManager
+import traceback
 
 DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "erc20").lower()
 DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "rinkeby").lower()
@@ -827,11 +828,11 @@ class Job:
 
         try:
             score = await self.engine._strategy.score_offer(proposal)
-        except Exception as ex:
+        except Exception as e:
             logger.warning(
-                f"Score offer call failed {ex}"
+                f"Strategy error: score_offer(proposal) failed when calling with proposal: {proposal.id}:\n{traceback.format_exc()}"
             )
-            raise ex
+            return await reject_proposal("Unknown error in score offer")
 
         logger.debug(
             "Scored offer %s, provider: %s, strategy: %s, score: %f",
