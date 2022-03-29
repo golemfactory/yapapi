@@ -127,8 +127,6 @@ Events inheritance tree
                 DebitNoteEvent
                     DebitNoteReceived
                     DebitNoteAccepted
-                PaymentPrepared
-                PaymentQueued
                 PaymentFailed
         ExecutionInterrupted
         ShutdownFinished
@@ -439,14 +437,6 @@ class DebitNoteReceived(DebitNoteEvent):
 
 
 class DebitNoteAccepted(DebitNoteEvent):
-    pass
-
-
-class PaymentPrepared(AgreementEvent):
-    pass
-
-
-class PaymentQueued(AgreementEvent):
     pass
 
 
