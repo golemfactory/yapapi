@@ -22,6 +22,7 @@ async def check_debit_note_freq(events):
     freq = None
     expected_note_num = 1
     total_time = 0
+    note_num = None
     async for line in events:
         if freq is None:
             m = re.search(r"Debit notes interval: ([0-9]+)", line)
