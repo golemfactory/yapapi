@@ -100,9 +100,6 @@ Script
 Market strategies
 ==========================
 
-.. autoclass:: yapapi.strategy.BaseMarketStrategy
-    :members: decorate_demand, score_offer, respond_to_provider_offer
-
 .. autoclass:: yapapi.strategy.MarketStrategy
     :members: decorate_demand, score_offer, respond_to_provider_offer, acceptable_prop_value_range_overrides, acceptable_prop_value_ranges
 

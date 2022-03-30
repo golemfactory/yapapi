@@ -31,6 +31,11 @@ MID_AGREEMENT_PAYMENTS_PROPS = [PROP_DEBIT_NOTE_INTERVAL_SEC, PROP_PAYMENT_TIMEO
 
 @dataclass
 class PropValueRange:
+    """Range definition for a negotiable property.
+
+    Used in :func:`yapapi.strategy.MarketStrategy.acceptable_prop_value_ranges`
+    """
+
     min: Optional[float] = None
     max: Optional[float] = None
 
