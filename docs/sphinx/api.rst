@@ -110,6 +110,7 @@ Market strategies
     :members: __init__, base_strategy
 
 .. autoclass:: yapapi.strategy.LeastExpensiveLinearPayuMS
+    :members: score_offer
 
 .. autoclass:: yapapi.strategy.DecreaseScoreForUnconfirmedAgreement
     :members: on_event

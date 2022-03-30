@@ -25,6 +25,11 @@ class DecreaseScoreForUnconfirmedAgreement(WrappingMarketStrategy):
         self._rejecting_providers: Set[str] = set()
 
     def on_event(self, event: events.Event) -> None:
+        """Add or remove from the list of providers that should have their scores downgraded.
+
+        When a provider rejects an agreement, their score will be downgraded.
+        They're removed from the list and agreement with them is successfully accepted.
+        """
         if isinstance(event, events.AgreementConfirmed):
             self._rejecting_providers.discard(event.provider_id)
         elif isinstance(event, events.AgreementRejected):
