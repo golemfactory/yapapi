@@ -1,8 +1,9 @@
-from typing import Dict, Set, TYPE_CHECKING
+from typing import Dict, Optional, Set, TYPE_CHECKING
 from decimal import Decimal
 from collections import defaultdict
 import logging
-from random import gauss
+
+import aiohttp
 
 from yapapi.strategy import WrappingMarketStrategy
 from yapapi import events
@@ -18,12 +19,21 @@ ActivityId = str
 AgreementId = str
 
 
-async def get_provider_score(provider_id: str) -> float:
-    #   This is a mock.
-    #   In the final (alpha1) version this will query the API for the provider score,
-    #   but the score received will have the same "meaning", i.e.: how this provider
-    #   differs from the average provider quality, expressed in the number of SDs.
-    return gauss(0, 1)
+PROVIDER_STANDARD_SCORE_URL = "http://reputation.dev.golem.network/standard_score/provider/{}"
+
+
+async def get_provider_standard_score(provider_id: str) -> Optional[float]:
+    url = PROVIDER_STANDARD_SCORE_URL.format(provider_id)
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status != 200:
+                    return None
+                return (await response.json())['score']
+    except aiohttp.client_exceptions.ClientError:
+        logger.exception("Reputation service is down")
+        return None
 
 
 class RepA1(WrappingMarketStrategy):
@@ -38,7 +48,7 @@ class RepA1(WrappingMarketStrategy):
     #   OFFER SCORING
     async def score_offer(self, offer: "OfferProposal") -> float:
         offer_score = await super().score_offer(offer)
-        provider_score = await get_provider_score(offer.issuer)
+        provider_score = await get_provider_standard_score(offer.issuer)
         combined_score = self._final_score(offer_score, provider_score)
 
         provider_name = offer._proposal.proposal.properties['golem.node.id.name']
@@ -48,8 +58,11 @@ class RepA1(WrappingMarketStrategy):
         )
         return combined_score
 
-    def _final_score(self, base_score: float, provider_score: float) -> float:
+    def _final_score(self, base_score: float, provider_score: Optional[float]) -> float:
         #   NOTE: this logic is just a POC
+        if provider_score is None:
+            provider_score = 0
+
         if provider_score < -1.5:
             return -1
         return base_score + provider_score
