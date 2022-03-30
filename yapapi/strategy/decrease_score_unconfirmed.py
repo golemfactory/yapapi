@@ -9,7 +9,7 @@ from .wrapping_strategy import WrappingMarketStrategy
 
 
 class DecreaseScoreForUnconfirmedAgreement(WrappingMarketStrategy):
-    """A market strategy that modifies a base strategy based on history of agreements."""
+    """A market strategy wrapper that modifies a base strategy based on history of agreements."""
 
     factor: float
 

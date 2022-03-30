@@ -100,14 +100,24 @@ Script
 Market strategies
 ==========================
 
-.. autoclass:: yapapi.strategy.MarketStrategy
-    :members: decorate_demand, score_offer
+.. autoclass:: yapapi.strategy.BaseMarketStrategy
+    :members: decorate_demand, score_offer, respond_to_provider_offer
 
-.. autoclass:: yapapi.strategy.DummyMS
+.. autoclass:: yapapi.strategy.MarketStrategy
+    :members: decorate_demand, score_offer, respond_to_provider_offer, acceptable_prop_value_range_overrides, acceptable_prop_value_ranges
+
+.. autoclass:: yapapi.strategy.WrappingMarketStrategy
+    :members: __init__, base_strategy
 
 .. autoclass:: yapapi.strategy.LeastExpensiveLinearPayuMS
 
 .. autoclass:: yapapi.strategy.DecreaseScoreForUnconfirmedAgreement
+    :members: on_event
+
+.. autoclass:: yapapi.strategy.PropValueRange
+    :members: __init__, min, max, __contains__, clamp
+
+.. autoclass:: yapapi.strategy.DummyMS
 
 Events
 ==========
