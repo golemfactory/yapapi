@@ -9,7 +9,13 @@ from .wrapping_strategy import WrappingMarketStrategy
 
 
 class DecreaseScoreForUnconfirmedAgreement(WrappingMarketStrategy):
-    """A market strategy that modifies a base strategy based on history of agreements."""
+    """A market strategy wrapper that modifies scoring of providers based on history of agreements.
+
+    It decreases the scores for providers that rejected our agreements.
+
+    The strategy keeps an internal list of providers who have rejected proposed agreements and
+    removes them from this list when they accept one.
+    """
 
     factor: float
 
@@ -25,6 +31,10 @@ class DecreaseScoreForUnconfirmedAgreement(WrappingMarketStrategy):
         self._rejecting_providers: Set[str] = set()
 
     def on_event(self, event: events.Event) -> None:
+        """Modify the internal `_rejecting_providers` list on `AgreementConfirmed/Rejected`.
+
+        This method needs to be added as an event consumer in :func:`yapapi.Golem.add_event_consumer`.
+        """
         if isinstance(event, events.AgreementConfirmed):
             self._rejecting_providers.discard(event.provider_id)
         elif isinstance(event, events.AgreementRejected):
