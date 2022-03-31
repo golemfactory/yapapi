@@ -239,7 +239,7 @@ class Payment(object):
 
         return fetch(ts)
 
-    def incoming_debit_notes(self) -> AsyncIterator[DebitNote]:
+    def incoming_debit_note_ids(self) -> AsyncIterator[str]:
         ts = datetime.now(timezone.utc)
 
         async def fetch(init_ts: datetime):
@@ -255,8 +255,7 @@ class Payment(object):
                         if not ev.debit_note_id:
                             logger.error("Empty debit note id in event: %r", ev)
                             continue
-                        debit_note = await self.debit_note(ev.debit_note_id)
-                        yield debit_note
+                        yield ev.debit_note_id
                 if not events:
                     await asyncio.sleep(1)
 
