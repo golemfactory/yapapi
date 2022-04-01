@@ -18,6 +18,8 @@ from .base import MarketStrategy, SCORE_REJECTED, SCORE_NEUTRAL
 class DummyMS(MarketStrategy, object):
     """A default market strategy implementation.
 
+    [ DEPRECATED, use `LeastExpensiveLinearPayuMS` instead ]
+
     Its :func:`score_offer()` method returns :const:`SCORE_NEUTRAL` for every offer with prices
     that do not exceed maximum prices specified for each counter.
     For other offers, returns :const:`SCORE_REJECTED`.

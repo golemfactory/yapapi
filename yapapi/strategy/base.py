@@ -32,6 +32,11 @@ MID_AGREEMENT_PAYMENTS_PROPS = [PROP_DEBIT_NOTE_INTERVAL_SEC, PROP_PAYMENT_TIMEO
 
 @dataclass
 class PropValueRange:
+    """Range definition for a negotiable property.
+
+    Used in :func:`yapapi.strategy.MarketStrategy.acceptable_prop_value_ranges`
+    """
+
     min: Optional[float] = None
     max: Optional[float] = None
 
@@ -47,6 +52,7 @@ class PropValueRange:
     def clamp(self, item: float) -> float:
         """
         Return a value closest to the given one, within the acceptable range.
+
         :param item: the value to clamp
         :return: clamped value
 
@@ -123,10 +129,13 @@ class MarketStrategy(BaseMarketStrategy, abc.ABC):
     """Abstract market strategy."""
 
     acceptable_prop_value_range_overrides: Dict[str, PropValueRange]
+    """Optional overrides to the acceptable property value ranges."""
+
     __acceptable_prop_value_ranges: Dict[str, PropValueRange]
 
     @property
     def acceptable_prop_value_ranges(self) -> Dict[str, PropValueRange]:
+        """The range of acceptable property values for negotiable properties."""
         if not hasattr(self, "__acceptable_prop_value_ranges"):
             # initialize with the overrides
             self.__acceptable_prop_value_ranges = getattr(
@@ -144,6 +153,10 @@ class MarketStrategy(BaseMarketStrategy, abc.ABC):
         our_demand: DemandBuilder,
         provider_offer: rest.market.OfferProposal,
     ) -> DemandBuilder:
+        """Respond to the provider's OfferProposal with acceptable values for negotiable properties.
+
+        Includes negotiation of the properties required for mid-agreement payments.
+        """
         # Create a new DemandBuilder with a response to a provider offer.
         updated_demand = deepcopy(our_demand)
 
