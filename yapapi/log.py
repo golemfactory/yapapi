@@ -314,9 +314,6 @@ class SummaryLogger:
     # Total time waiting for the first proposal
     time_waiting_for_proposals: timedelta
 
-    # Enable no activity warning
-    no_activity_warning_enabled = os.getenv("YAPAPI_NO_ACTIVITY_WARNING_ENABLED", "1") == "1"
-
     def __init__(self, wrapped_emitter: Optional[Callable[[events.Event], None]] = None):
         """Create a SummaryLogger."""
 
@@ -434,7 +431,7 @@ class SummaryLogger:
         elif isinstance(event, events.ProposalConfirmed):
             self.confirmed_proposals.add(event.prop_id)
 
-        elif isinstance(event, events.NoProposalsConfirmed) and self.no_activity_warning_enabled:
+        elif isinstance(event, events.NoProposalsConfirmed):
             self.time_waiting_for_proposals += event.timeout
             offers_collected = event.job.offers_collected
             if offers_collected == 0:
