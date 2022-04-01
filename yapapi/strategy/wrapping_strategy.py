@@ -14,9 +14,12 @@ class WrappingMarketStrategy(BaseMarketStrategy, abc.ABC):
 
     WrappingMarketStrategy classes are unusable on their own and always have to wrap some base
     strategy.
+
+    By default all attributes and method calls are forwarded to the `base_strategy`.
     """
 
     base_strategy: BaseMarketStrategy
+    """base strategy wrapped by this wrapper."""
 
     def __init__(self, base_strategy: BaseMarketStrategy):
         """
