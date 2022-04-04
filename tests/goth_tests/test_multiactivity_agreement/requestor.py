@@ -20,8 +20,9 @@ async def main():
     async def worker(work_ctx, tasks):
         """Compute just one task and exit."""
         async for task in tasks:
-            work_ctx.run("/bin/sleep", "1")
-            yield work_ctx.commit()
+            script = work_ctx.new_script()
+            script.run("/bin/sleep", "1")
+            yield script
             task.accept_result()
             return
 

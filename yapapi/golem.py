@@ -312,11 +312,10 @@ class Golem:
 
             async def worker(context: WorkContext, tasks: AsyncIterable[Task]):
                 async for task in tasks:
-                    context.run("/bin/sh", "-c", "date")
-
-                    future_results = yield context.commit()
-                    results = await future_results
-                    task.accept_result(result=results[-1])
+                    script = context.new_script()
+                    future_result = script.run("/bin/sh", "-c", "date")
+                    yield script
+                    task.accept_result(result=await future_result)
 
             package = await vm.repo(
                 image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",

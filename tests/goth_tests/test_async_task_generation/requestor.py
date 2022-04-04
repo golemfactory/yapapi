@@ -20,9 +20,10 @@ async def main():
 
     async def worker(work_ctx, tasks):
         async for task in tasks:
+            script = work_ctx.new_script()
             print("task data:", task.data, file=sys.stderr)
-            work_ctx.run("/bin/sleep", "1")
-            yield work_ctx.commit()
+            script.run("/bin/sleep", "1")
+            yield script
             task.accept_result(result=task.data)
 
     async with Golem(

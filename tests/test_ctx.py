@@ -73,8 +73,8 @@ class TestWorkContext:
         }
         ctx = self._get_work_context(storage)
 
-        ctx.send_json(dst_path, data)
-        script = ctx.commit()
+        script = ctx.new_script()
+        script.send_json(dst_path, data)
         await script._before()
 
         storage.upload_bytes.assert_called_with(json.dumps(data).encode("utf-8"))
@@ -87,8 +87,8 @@ class TestWorkContext:
         data = b"some byte string"
         ctx = self._get_work_context(storage)
 
-        ctx.send_bytes(dst_path, data)
-        script = ctx.commit()
+        script = ctx.new_script()
+        script.send_bytes(dst_path, data)
         await script._before()
 
         storage.upload_bytes.assert_called_with(data)
@@ -102,8 +102,8 @@ class TestWorkContext:
         src_path = "/test/path"
         ctx = self._get_work_context(storage)
 
-        ctx.download_bytes(src_path, partial(self._on_download, expected))
-        script = ctx.commit()
+        script = ctx.new_script()
+        script.download_bytes(src_path, partial(self._on_download, expected))
         await script._before()
         await script._after()
 
@@ -120,8 +120,8 @@ class TestWorkContext:
         src_path = "/test/path"
         ctx = self._get_work_context(storage)
 
-        ctx.download_json(src_path, partial(self._on_download, expected))
-        script = ctx.commit()
+        script = ctx.new_script()
+        script.download_json(src_path, partial(self._on_download, expected))
         await script._before()
         await script._after()
 
@@ -137,8 +137,8 @@ class TestWorkContext:
     )
     def test_start(self, args):
         ctx = self._get_work_context()
-        ctx.start(*args)
-        script = ctx.commit()
+        script = ctx.new_script()
+        script.start(*args)
 
         batch = script._evaluate()
 
@@ -153,8 +153,8 @@ class TestWorkContext:
     )
     def test_deploy(self, kwargs):
         ctx = self._get_work_context()
-        ctx.deploy(**kwargs)
-        script = ctx.commit()
+        script = ctx.new_script()
+        script.deploy(**kwargs)
 
         batch = script._evaluate()
 
@@ -162,8 +162,8 @@ class TestWorkContext:
 
     def test_terminate(self):
         ctx = self._get_work_context(None)
-        ctx.terminate()
-        script = ctx.commit()
+        script = ctx.new_script()
+        script.terminate()
 
         batch = script._evaluate()
 
