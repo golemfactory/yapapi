@@ -7,7 +7,7 @@ import sys
 
 from yapapi import Golem, Task
 from yapapi.log import enable_default_logger, log_event_repr
-from yapapi.package import vm
+from yapapi.payload import vm
 
 
 async def main():
