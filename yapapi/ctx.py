@@ -1,4 +1,3 @@
-import abc
 from dataclasses import dataclass, field
 from datetime import timedelta, datetime
 import enum
@@ -25,25 +24,6 @@ from yapapi.rest.activity import Activity
 from yapapi.utils import get_local_timezone
 
 logger = logging.getLogger(__name__)
-
-
-class Work(abc.ABC):
-    async def prepare(self):
-        """A hook to be executed on requestor's end before the script is sent to the provider."""
-        pass
-
-    def register(self, commands: CommandContainer):
-        """A hook which adds the required command to the exescript."""
-        pass
-
-    async def post(self):
-        """A hook to be executed on requestor's end after the script has finished."""
-        pass
-
-    @property
-    def timeout(self) -> Optional[timedelta]:
-        """Return the optional timeout set for execution of this work."""
-        return None
 
 
 @dataclass
@@ -77,8 +57,6 @@ class WorkContext:
         self._agreement = agreement
         self._storage: StorageProvider = storage
         self._emitter = emitter
-
-        self._pending_steps: List[Work] = []
 
         self.__payment_model: Optional[ComLinear] = None
         self.__script: Script = self.new_script()
