@@ -1,7 +1,6 @@
 import abc
 from dataclasses import dataclass, field
 from datetime import timedelta, datetime
-from deprecated import deprecated  # type: ignore
 import enum
 import logging
 from typing import Callable, Optional, Dict, List, Any, Awaitable, Type
@@ -26,29 +25,6 @@ from yapapi.rest.activity import Activity
 from yapapi.utils import get_local_timezone
 
 logger = logging.getLogger(__name__)
-
-
-@deprecated(version="0.7.0", reason="replaced by Script._commands")
-class CommandContainer:
-    def __init__(self):
-        self._commands = []
-
-    def commands(self):
-        return self._commands
-
-    def __repr__(self):
-        return f"commands: {self._commands}"
-
-    def __getattr__(self, item):
-        def add_command(**kwargs) -> int:
-            kwargs = dict(
-                (key[1:] if key[0] == "_" else key, value) for key, value in kwargs.items()
-            )
-            idx = len(self._commands)
-            self._commands.append({item: kwargs})
-            return idx
-
-        return add_command
 
 
 class Work(abc.ABC):
@@ -163,119 +139,6 @@ class WorkContext:
         direct link between the two object instances.
         """
         return Script(self, timeout=timeout, wait_for_results=wait_for_results)
-
-    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
-    def deploy(self, **kwargs) -> Awaitable[CommandExecuted]:
-        """Schedule a Deploy command."""
-        return self.__script.deploy(**kwargs)
-
-    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
-    def start(self, *args: str) -> Awaitable[CommandExecuted]:
-        """Schedule a Start command."""
-        return self.__script.start(*args)
-
-    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
-    def terminate(self) -> Awaitable[CommandExecuted]:
-        """Schedule a Terminate command."""
-        return self.__script.terminate()
-
-    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
-    def send_json(self, json_path: str, data: dict) -> Awaitable[CommandExecuted]:
-        """Schedule sending JSON data to the provider.
-
-        :param json_path: remote (provider) path
-        :param data: dictionary representing JSON data
-        :return: None
-        """
-        return self.__script.upload_json(data, json_path)
-
-    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
-    def send_bytes(self, dst_path: str, data: bytes) -> Awaitable[CommandExecuted]:
-        """Schedule sending bytes data to the provider.
-
-        :param dst_path: remote (provider) path
-        :param data: bytes to send
-        :return: None
-        """
-        return self.__script.upload_bytes(data, dst_path)
-
-    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
-    def send_file(self, src_path: str, dst_path: str) -> Awaitable[CommandExecuted]:
-        """Schedule sending file to the provider.
-
-        :param src_path: local (requestor) path
-        :param dst_path: remote (provider) path
-        :return: None
-        """
-        return self.__script.upload_file(src_path, dst_path)
-
-    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
-    def run(
-        self,
-        cmd: str,
-        *args: str,
-        env: Optional[Dict[str, str]] = None,
-    ) -> Awaitable[CommandExecuted]:
-        """Schedule running a command.
-
-        :param cmd: command to run on the provider, e.g. /my/dir/run.sh
-        :param args: command arguments, e.g. "input1.txt", "output1.txt"
-        :param env: optional dictionary with environmental variables
-        """
-        return self.__script.run(cmd, *args, env=env)
-
-    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
-    def download_file(self, src_path: str, dst_path: str) -> Awaitable[CommandExecuted]:
-        """Schedule downloading remote file from the provider.
-
-        :param src_path: remote (provider) path
-        :param dst_path: local (requestor) path
-        """
-        return self.__script.download_file(src_path, dst_path)
-
-    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
-    def download_bytes(
-        self,
-        src_path: str,
-        on_download: Callable[[bytes], Awaitable],
-        limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
-    ) -> Awaitable[CommandExecuted]:
-        """Schedule downloading a remote file as bytes
-
-        :param src_path: remote (provider) path
-        :param on_download: the callable to run on the received data
-        :param limit: the maximum length of the expected byte string
-        """
-        return self.__script.download_bytes(src_path, on_download, limit)
-
-    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
-    def download_json(
-        self,
-        src_path: str,
-        on_download: Callable[[Any], Awaitable],
-        limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
-    ) -> Awaitable[CommandExecuted]:
-        """Schedule downloading a remote file as JSON
-
-        :param src_path: remote (provider) path
-        :param on_download: the callable to run on the received JSON data
-        :param limit: the maximum length of the expected remote file
-        """
-        return self.__script.download_json(src_path, on_download, limit)
-
-    @deprecated(version="0.7.0", reason="please use a Script object via WorkContext.new_script")
-    def commit(self, timeout: Optional[timedelta] = None) -> Script:
-        """Creates a sequence of commands to be sent to provider.
-
-        :return: Script object containing the sequence of commands
-                 scheduled within this work context before calling this method
-        """
-        assert self.__script._commands, "commit called with no commands scheduled"
-        if timeout:
-            self.__script.timeout = timeout
-        script_to_commit = self.__script
-        self.__script = self.new_script()
-        return script_to_commit
 
     async def get_raw_usage(self) -> yaa_ActivityUsage:
         """Get the raw usage vector for the activity bound to this work context.
