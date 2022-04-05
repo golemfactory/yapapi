@@ -225,16 +225,22 @@ class Payment(object):
                 events = []
                 async with SuppressedExceptions(is_intermittent_error):
                     events = await self._api.get_invoice_events(after_timestamp=ts)
+
+                #   TODO
+                #   This `new_ts` thing is ugly, we don't want it. This is a temporary fix, waiting for
+                #   https://github.com/golemfactory/yapapi/issues/921
+                new_ts = False
                 for ev in events:
                     logger.debug("Received invoice event: %r, type: %s", ev, ev.__class__)
                     if isinstance(ev, yap.InvoiceReceivedEvent):
+                        new_ts = True
                         ts = ev.event_date
                         if not ev.invoice_id:
                             logger.error("Empty invoice id in event: %r", ev)
                             continue
                         invoice = await self.invoice(ev.invoice_id)
                         yield invoice
-                if not events:
+                if not events or not new_ts:
                     await asyncio.sleep(1)
 
         return fetch(ts)
