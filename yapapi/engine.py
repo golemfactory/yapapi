@@ -840,7 +840,16 @@ class Job:
             await proposal.reject(reason)
             return self.emit(events.ProposalRejected, proposal=proposal, reason=reason)
 
-        score = await self.engine._strategy.score_offer(proposal)
+        try:
+            score = await self.engine._strategy.score_offer(proposal)
+        except Exception:
+            logger.warning(
+                f"Strategy error: score_offer(proposal) failed when calling with proposal: %s",
+                proposal.id,
+                exc_info=True,
+            )
+            return await reject_proposal("Unknown error in score offer")
+
         logger.debug(
             "Scored offer %s, provider: %s, strategy: %s, score: %f",
             proposal.id,
