@@ -31,7 +31,6 @@ from yapapi.payload import Payload
 from yapapi.props import com
 from yapapi.script import Script
 from yapapi.services import Cluster, ServiceType
-from yapapi.utils import warn_deprecated, Deprecated
 from yapapi.strategy import DecreaseScoreForUnconfirmedAgreement, LeastExpensiveLinearPayuMS
 
 
@@ -82,9 +81,7 @@ class Golem:
         budget: Union[float, Decimal],
         strategy: Optional["yapapi.strategy.BaseMarketStrategy"] = None,
         subnet_tag: Optional[str] = None,
-        driver: Optional[str] = None,
         payment_driver: Optional[str] = None,
-        network: Optional[str] = None,
         payment_network: Optional[str] = None,
         event_consumer: Optional[Callable[[events.Event], None]] = None,
         stream_output: bool = False,
@@ -97,11 +94,9 @@ class Golem:
             (e.g. :class:`yapapi.strategy.LeastExpensiveLinearPayuMS` or :class:`yapapi.strategy.DummyMS`)
         :param subnet_tag: use only providers in the subnet with the subnet_tag name.
             Uses `YAGNA_SUBNET` environment variable, defaults to `None`
-        :param driver: deprecated, please use `payment_driver` instead
         :param payment_driver: name of the payment driver to use. Uses `YAGNA_PAYMENT_DRIVER`
             environment variable, defaults to `erc20`. Only payment platforms with
             the specified driver will be used
-        :param network: deprecated, please use `payment_network` instead
         :param payment_network: name of the network to use. Uses `YAGNA_NETWORK` environment
             variable, defaults to `rinkeby`. Only payment platforms with the specified
             network will be used
@@ -111,13 +106,6 @@ class Golem:
         :param app_key: optional Yagna application key. If not provided, the default is to
                         get the value from `YAGNA_APPKEY` environment variable
         """
-        if driver:
-            warn_deprecated("driver", "payment_driver", "0.7.0", Deprecated.parameter)
-            payment_driver = payment_driver if payment_driver else driver
-        if network:
-            warn_deprecated("network", "payment_network", "0.7.0", Deprecated.parameter)
-            payment_network = payment_network if payment_network else network
-
         self._event_dispatcher = AsyncEventDispatcher()
 
         self.add_event_consumer(event_consumer or self._default_event_consumer())
@@ -188,27 +176,9 @@ class Golem:
                 )
 
     @property
-    def driver(self) -> str:
-        """Name of the payment driver.
-
-        This property is deprecated, please use `payment_driver` instead.
-        """
-        warn_deprecated("driver", "payment_driver", "0.7.0", Deprecated.property)
-        return self._engine.payment_driver
-
-    @property
     def payment_driver(self) -> str:
         """Name of the payment driver to be used by this instance."""
         return self._engine.payment_driver
-
-    @property
-    def network(self) -> str:
-        """Name of the payment network.
-
-        This property is deprecated, please use `payment_network` instead.
-        """
-        warn_deprecated("network", "payment_network", "0.7.0", Deprecated.property)
-        return self._engine.payment_network
 
     @property
     def payment_network(self) -> str:
@@ -342,11 +312,10 @@ class Golem:
 
             async def worker(context: WorkContext, tasks: AsyncIterable[Task]):
                 async for task in tasks:
-                    context.run("/bin/sh", "-c", "date")
-
-                    future_results = yield context.commit()
-                    results = await future_results
-                    task.accept_result(result=results[-1])
+                    script = context.new_script()
+                    future_result = script.run("/bin/sh", "-c", "date")
+                    yield script
+                    task.accept_result(result=await future_result)
 
             package = await vm.repo(
                 image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",

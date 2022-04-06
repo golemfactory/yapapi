@@ -38,16 +38,18 @@ async def main():
 
             nonlocal first_task
 
+            script = work_ctx.new_script()
+
             if first_task:
                 first_task = False
-                work_ctx.run("/bin/sleep", "1")
-                work_ctx.run("/command/not/found")
+                script.run("/bin/sleep", "1")
+                script.run("/command/not/found")
 
-            work_ctx.run("/bin/sleep", "1")
-            work_ctx.run("/bin/echo", task.data, task.data)
-            future_result = yield work_ctx.commit()
+            script.run("/bin/sleep", "1")
+            future_result = script.run("/bin/echo", task.data, task.data)
+            yield script
             result = await future_result
-            output = result[-1].stdout.strip()
+            output = result.stdout.strip()
             task.accept_result(output)
 
     async with Golem(budget=1.0, subnet_tag="goth") as golem:

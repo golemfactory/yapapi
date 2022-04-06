@@ -337,10 +337,11 @@ class Service:
         **Example**::
 
             async def shutdown(self):
-                self._ctx.run("/golem/run/dump_state")
-                self._ctx.download_file("/golem/output/state", "/some/local/path/state")
-                self._ctx.terminate()
-                yield self._ctx.commit()
+                script = self._ctx.new_script()
+                script.run("/golem/run/dump_state")
+                script.download_file("/golem/output/state", "/some/local/path/state")
+                script.terminate()
+                yield script
 
         **Default implementation**
 
@@ -350,8 +351,9 @@ class Service:
         """
         assert self._ctx is not None
 
-        self._ctx.terminate()
-        yield self._ctx.commit()
+        s = self._ctx.new_script()
+        s.terminate()
+        yield s
 
     async def reset(self) -> None:
         """Reset the service to the initial state.
