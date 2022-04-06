@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from .common import (
     repeat_on_error,
     is_intermittent_error,
-    is_non_existing_allocation_error,
+    is_nonexistent_allocation,
     SuppressedExceptions,
 )
 from .resource import ResourceCtx
@@ -113,7 +113,7 @@ class _AllocationTask(ResourceCtx[Allocation]):
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if self._id:
-            async with SuppressedExceptions(is_non_existing_allocation_error):
+            async with SuppressedExceptions(is_nonexistent_allocation):
                 await self._api.release_allocation(self._id)
 
 
