@@ -76,16 +76,15 @@ async def main(
             try:
                 yield script
 
-                import random
-                r = random.random()
-                if r < 0.1:
-                    # Activity failed
-                    raise Exception("oops")
-                # if r < 0.3:
-                #     # Task failed
-                #     task.reject_result(retry=True)
-                else:
-                    task.accept_result()
+                #   FAIL ON SOME PROVIDERS
+                if (subnet_tag == "repunet" and ctx.provider_name.startswith("invalid")) or (
+                    subnet_tag != "repunet" and ctx.provider_name[0] < "m"
+                ):
+                    script = ctx.new_script(timeout=timedelta(seconds=5))
+                    script.run("/bin/sleep", "7")
+                    yield script
+
+                task.accept_result()
             except BatchTimeoutError:
                 print(
                     f"{TEXT_COLOR_RED}"
@@ -110,7 +109,7 @@ async def main(
                 )
 
     # Iterator over the frame indices that we want to render
-    frames: range = range(0, 60000, 10)
+    frames: range = range(0, 60, 10)
     # Worst-case overhead, in minutes, for initialization (negotiation, file transfer etc.)
     # TODO: make this dynamic, e.g. depending on the size of files to transfer
     init_overhead = 3
@@ -135,6 +134,17 @@ async def main(
     golem.strategy = strategy
     golem.add_event_consumer(strategy.on_event)
 
+    #   DEMO ADHOC (repunet)
+    ids = {
+        "invalid.2": "0x90eacb12dcae10db807bfc5ddbe935992a0dac9f",
+        "valid.3": "0x5a01f933772a2f7018592dbd6a4ddf3ef08f8890",
+        "valid.4": "0xfcd0586df42eea63e6bc0fe987e2fe483026b136",
+        "valid.5": "0x3a0e00a91ff11f698565124c20c1363b3247c786",
+    }
+    from yapapi.contrib.strategy import ProviderFilter
+    bad_ids = [ids['valid.3']]
+    golem.strategy = ProviderFilter(golem.strategy, lambda id_: id_ not in bad_ids)
+
     async with golem:
         print_env_info(golem)
 
@@ -145,7 +155,7 @@ async def main(
             worker,
             [Task(data=frame) for frame in frames],
             payload=package,
-            max_workers=3,
+            max_workers=5,
             timeout=timeout,
         )
         async for task in completed_tasks:
