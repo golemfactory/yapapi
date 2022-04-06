@@ -29,6 +29,10 @@ def is_intermittent_error(e: Exception) -> bool:
     )
 
 
+def is_404_410_error(e: Exception) -> bool:
+    return isinstance(e, ya_payment.ApiException) and e.status in (404, 410)
+
+
 class SuppressedExceptions:
     """An async context manager for suppressing exceptions satisfying given condition."""
 
