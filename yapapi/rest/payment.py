@@ -7,7 +7,12 @@ from typing import Optional, AsyncIterator, cast, Iterable, Union, List
 from decimal import Decimal
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass
-from .common import repeat_on_error, is_intermittent_error, is_404_410_error, SuppressedExceptions
+from .common import (
+    repeat_on_error,
+    is_intermittent_error,
+    is_non_existing_allocation_error,
+    SuppressedExceptions,
+)
 from .resource import ResourceCtx
 
 
@@ -108,7 +113,7 @@ class _AllocationTask(ResourceCtx[Allocation]):
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if self._id:
-            async with SuppressedExceptions(is_404_410_error):
+            async with SuppressedExceptions(is_non_existing_allocation_error):
                 await self._api.release_allocation(self._id)
 
 
