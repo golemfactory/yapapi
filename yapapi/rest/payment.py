@@ -130,12 +130,12 @@ class Payment(object):
         """Creates new allocation.
 
         - `amount`:  Allocation amount.
-        - `expires`: expiration timestamp. by default 30 minutes from now.
+        - `expires`: expiration timestamp. default: no expiration limit
         - `make_deposit`: (unimplemented).
 
         """
         now = datetime.now(timezone.utc)
-        allocation_timeout: datetime = expires or now + timedelta(minutes=30)
+        allocation_timeout: datetime = expires or datetime.max
         return _AllocationTask(
             _api=self._api,
             model=yap.Allocation(
