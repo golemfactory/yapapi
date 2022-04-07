@@ -130,7 +130,7 @@ class Payment(object):
         """Creates new allocation.
 
         - `amount`:  Allocation amount.
-        - `expires`: expiration timestamp. by default 10 years.
+        - `expires`: expiration timestamp. set to default 10 years as a work-around.
         - `make_deposit`: (unimplemented).
 
         """
