@@ -101,8 +101,8 @@ class RepA1(WrappingMarketStrategy):
 
         provider_name = event.provider_info.name
         provider_id = event.agreement.details.raw_details.offer.provider_id
-        msg = "Activity on %s (%s) failed (reason: %s), already accepted: %s"
-        log(msg, provider_name, provider_id, reason, self._accepted_amounts[activity_id])
+        msg = "Activity on %s (%s) failed, refusing further debit notes/invoices"
+        log(msg, provider_name, provider_id)
 
     async def debit_note_accepted_amount(self, debit_note: "DebitNote") -> Decimal:
         activity_id = debit_note.activity_id

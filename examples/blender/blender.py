@@ -77,10 +77,12 @@ async def main(
                 yield script
 
                 #   FAIL ON SOME PROVIDERS
-                if (subnet_tag == "repunet" and ctx.provider_name.startswith("invalid")) or (
-                    subnet_tag != "repunet" and ctx.provider_name[0] < "m"
+                import random
+                if (subnet_tag == "repunet" and ctx.provider_name.endswith("5")) or (
+                    # subnet_tag != "repunet" and ctx.provider_name[0] < "m"
+                    subnet_tag != "repunet" and random.random() > 0.9
                 ):
-                    script = ctx.new_script(timeout=timedelta(seconds=5))
+                    script = ctx.new_script(timeout=timedelta(seconds=1))
                     script.run("/bin/sleep", "7")
                     yield script
 
@@ -136,14 +138,17 @@ async def main(
 
     #   DEMO ADHOC (repunet)
     ids = {
-        "invalid.2": "0x90eacb12dcae10db807bfc5ddbe935992a0dac9f",
-        "valid.3": "0x5a01f933772a2f7018592dbd6a4ddf3ef08f8890",
-        "valid.4": "0xfcd0586df42eea63e6bc0fe987e2fe483026b136",
-        "valid.5": "0x3a0e00a91ff11f698565124c20c1363b3247c786",
+        "invalid.4": "0x99db4c4d3b087284624195c4a379fcb574acb6ee",
+        "invalid.6": "0xe5927c77adad86e66d1fab7152f162ed74e455f3",
+        "invalid.7": "0xec6f8999e50dcd847d237e0f41b364d658ece102",
+        "valid.2": "0xb08aa3b6a066337442a09b80a65c6f23a9170b99",
+        "valid.3": "0x12d8b1d36aae011be3f4235fc5088787ce32098c",
+        "valid.5": "0x1dc1c83790ae48e4585448d7550cebd3dc445f59",
     }
     from yapapi.contrib.strategy import ProviderFilter
-    bad_ids = [ids['valid.3']]
-    golem.strategy = ProviderFilter(golem.strategy, lambda id_: id_ not in bad_ids)
+    good_ids = [val for key, val in ids.items() if int(key[-1]) in (2, 3, 5)]
+    if subnet_tag == 'repunet':
+        golem.strategy = ProviderFilter(golem.strategy, lambda id_: id_ in good_ids)
 
     async with golem:
         print_env_info(golem)
