@@ -135,6 +135,8 @@ class Payment(object):
 
         """
         now = datetime.now(timezone.utc)
+        # as a work-around, we're setting the allocation timeout into far future
+        # @todo http://link-to-the-issue
         allocation_timeout: datetime = expires or now + timedelta(days=365 * 10)
         return _AllocationTask(
             _api=self._api,
