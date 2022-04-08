@@ -360,6 +360,7 @@ class ServiceRunner(AsyncContextManager):
                 await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
 
         def on_agreement_ready(agreement_ready: Agreement) -> None:
+            nonlocal agreement
             agreement = agreement_ready
 
         while not self._stopped:
