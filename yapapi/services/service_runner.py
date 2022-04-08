@@ -328,7 +328,8 @@ class ServiceRunner(AsyncContextManager):
         instance = service.service_instance
 
         async def _worker(work_context: WorkContext) -> None:
-            nonlocal agreement, instance
+            nonlocal instance
+            assert agreement is not None
 
             activity = work_context._activity
 
