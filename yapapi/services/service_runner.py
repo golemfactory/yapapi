@@ -330,7 +330,6 @@ class ServiceRunner(AsyncContextManager):
         async def _worker(work_context: WorkContext) -> None:
             nonlocal agreement, instance
 
-            agreement = work_context._agreement
             activity = work_context._activity
 
             work_context.emit(events.ServiceStarted, service=service)
