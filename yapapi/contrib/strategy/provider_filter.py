@@ -72,7 +72,7 @@ class ProviderFilter(WrappingMarketStrategy):
 
     async def score_offer(self, offer: OfferProposal) -> float:
         if inspect.iscoroutinefunction(self._is_allowed):
-            allowed = await self._is_allowed(offer.issuer)
+            allowed = await self._is_allowed(offer.issuer) # type: ignore
         else:
             allowed = self._is_allowed(offer.issuer)
 
