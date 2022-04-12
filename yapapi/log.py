@@ -154,8 +154,6 @@ event_type_to_string = {
     events.DebitNoteAccepted: "Debit note accepted",
     events.DebitNoteReceived: "Debit note received",
     events.PaymentFailed: "Payment failed",
-    events.PaymentPrepared: "Payment prepared",
-    events.PaymentQueued: "Payment queued",
     events.InvoiceAccepted: "Invoice accepted",
     events.InvoiceReceived: "Invoice received",
     events.WorkerStarted: "Worker started for agreement",

@@ -6,7 +6,7 @@ from typing import cast, List
 import pytest
 
 from goth.configuration import Override
-from yapapi.package import vm
+from yapapi.payload import vm
 
 
 #  `pytest-rerunfailures` and `pytest-asyncio` don't work together

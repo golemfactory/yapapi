@@ -40,14 +40,15 @@ async def main(subnet_tag, payment_driver=None, payment_network=None):
     async def worker(ctx: WorkContext, tasks):
         async for task in tasks:
             output_file = f"output_{datetime.now()}_{random.random()}.txt"
-            ctx.run("/usr/bin/stress-ng", "--cpu", "1", "--timeout", "1")
-            ctx.run("/golem/task.sh", "-o", "1024", "-t", "5")
-            ctx.run("/golem/task.sh", "-f", "/golem/output/output.txt,1048576")
-            ctx.download_file(f"/golem/output/output.txt", output_file)
-            ctx.run("/golem/task.sh", "-e", "1024", "-t", "5")
+            script = ctx.new_script(timeout=timedelta(minutes=10))
+            script.run("/usr/bin/stress-ng", "--cpu", "1", "--timeout", "1")
+            script.run("/golem/task.sh", "-o", "1024", "-t", "5")
+            script.run("/golem/task.sh", "-f", "/golem/output/output.txt,1048576")
+            script.download_file(f"/golem/output/output.txt", output_file)
+            script.run("/golem/task.sh", "-e", "1024", "-t", "5")
 
             try:
-                yield ctx.commit(timeout=timedelta(minutes=10))
+                yield script
                 task.accept_result(result=output_file)
             except BatchTimeoutError:
                 print(

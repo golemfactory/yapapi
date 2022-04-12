@@ -168,8 +168,9 @@ async def test_demand_resubscription(log_dir: Path, goth_config_path: Path, monk
 
         async def worker(work_ctx, tasks):
             async for task in tasks:
-                work_ctx.run("/bin/sleep", "5")
-                yield work_ctx.commit()
+                script = work_ctx.new_script()
+                script.run("/bin/sleep", "5")
+                yield script
                 task.accept_result()
 
         async with Golem(
