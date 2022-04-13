@@ -80,7 +80,7 @@ async def main(
                 import random
                 if (subnet_tag == "repunet" and ctx.provider_name.endswith("5")) or (
                     # subnet_tag != "repunet" and ctx.provider_name[0] < "m"
-                    subnet_tag != "repunet" and random.random() > 0.9
+                    subnet_tag != "repunet" and random.random() > 0.95
                 ):
                     script = ctx.new_script(timeout=timedelta(seconds=1))
                     script.run("/bin/sleep", "7")
