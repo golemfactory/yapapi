@@ -22,6 +22,11 @@ AgreementId = str
 PROVIDER_STANDARD_SCORE_URL = "http://reputation.dev.golem.network/standard_score/provider/{}"
 
 
+def log(msg, *args, **kwargs):
+    msg = "\033[94m" + msg + "\033[0m"
+    logger.info(msg, *args, **kwargs)
+
+
 async def get_provider_standard_score(provider_id: str) -> Optional[float]:
     url = PROVIDER_STANDARD_SCORE_URL.format(provider_id)
 
@@ -30,7 +35,9 @@ async def get_provider_standard_score(provider_id: str) -> Optional[float]:
             async with session.get(url) as response:
                 if response.status != 200:
                     return None
-                return (await response.json())['score']
+                score_str = (await response.json())['score']
+                score = float(score_str) if score_str is not None else None
+                return score
     except aiohttp.client_exceptions.ClientError:
         logger.exception("Reputation service is down")
         return None
@@ -52,7 +59,7 @@ class RepA1(WrappingMarketStrategy):
         combined_score = self._final_score(offer_score, provider_score)
 
         provider_name = offer._proposal.proposal.properties['golem.node.id.name']
-        logger.info(
+        log(
             "Scored %s -  base: %s, provider: %s, combined: %s",
             provider_name, offer_score, provider_score, combined_score
         )
@@ -84,7 +91,7 @@ class RepA1(WrappingMarketStrategy):
             prev_accepted_amount = self._accepted_amounts[activity_id]
             new_accepted_amount = max(prev_accepted_amount, Decimal(event.debit_note.total_amount_due))
             self._accepted_amounts[activity_id] = new_accepted_amount
-            logger.warning("Accepted debit note for %s, total accepted amount: %s", activity_id, new_accepted_amount)
+            log("Accepted debit note, total accepted amount: %s", new_accepted_amount)
 
     def _activity_failed(self, event: events.ActivityEvent, reason: str):
         activity_id = event.activity.id
@@ -92,8 +99,9 @@ class RepA1(WrappingMarketStrategy):
         self._failed_activities.add(activity_id)
 
         provider_name = event.provider_info.name
-        msg = "Activity %s on %s failed (reason: %s), we'll pay only the already accepted amount %s"
-        logger.warning(msg, activity_id, provider_name, reason, self._accepted_amounts[activity_id])
+        provider_id = event.agreement.details.raw_details.offer.provider_id
+        msg = "Activity on %s (%s) failed, refusing further debit notes/invoices"
+        log(msg, provider_name, provider_id)
 
     async def debit_note_accepted_amount(self, debit_note: "DebitNote") -> Decimal:
         activity_id = debit_note.activity_id
@@ -111,11 +119,11 @@ class RepA1(WrappingMarketStrategy):
 
             #   NOTE: this will (currently) always be true for a failed activity, but there is no rule
             #   saying provider must send invoice for more than the accepted amount
-            if accepted_amount > Decimal(invoice.amount):
-                logger.warning("REJECTED INVOICE FOR %s, we accept only %s", invoice.amount, accepted_amount)
+            if accepted_amount < Decimal(invoice.amount):
+                log("REJECTED INVOICE FOR %s, we accept only %s", invoice.amount, accepted_amount)
                 return accepted_amount
 
-        logger.warning("ACCEPTED INVOICE FOR %s", invoice.amount)
+        log("ACCEPTED INVOICE FOR %s", invoice.amount)
         return Decimal(invoice.amount)
 
     def _agreement_has_failed_activity(self, agreement_id: str) -> bool:
