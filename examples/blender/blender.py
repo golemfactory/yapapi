@@ -75,9 +75,17 @@ async def main(
             script.download_file(f"/golem/output/out{frame:04d}.png", output_file)
             try:
                 yield script
-                # TODO: Check if job results are valid
-                # and reject by: task.reject_task(reason = 'invalid file')
-                task.accept_result(result=output_file)
+
+                import random
+                r = random.random()
+                if r < 0.1:
+                    # Activity failed
+                    raise Exception("oops")
+                # if r < 0.3:
+                #     # Task failed
+                #     task.reject_result(retry=True)
+                else:
+                    task.accept_result()
             except BatchTimeoutError:
                 print(
                     f"{TEXT_COLOR_RED}"
@@ -102,7 +110,7 @@ async def main(
                 )
 
     # Iterator over the frame indices that we want to render
-    frames: range = range(0, 60, 10)
+    frames: range = range(0, 60000, 10)
     # Worst-case overhead, in minutes, for initialization (negotiation, file transfer etc.)
     # TODO: make this dynamic, e.g. depending on the size of files to transfer
     init_overhead = 3
@@ -113,12 +121,21 @@ async def main(
 
     timeout = timedelta(minutes=max(min(init_overhead + len(frames) * 2, max_timeout), min_timeout))
 
-    async with Golem(
+    from yapapi.contrib.strategy.rep_a1 import RepA1
+
+    golem = Golem(
         budget=10.0,
         subnet_tag=subnet_tag,
         payment_driver=payment_driver,
         payment_network=payment_network,
-    ) as golem:
+    )
+
+    #   Wrap the default Golem strategy
+    strategy = RepA1(golem.strategy)
+    golem.strategy = strategy
+    golem.add_event_consumer(strategy.on_event)
+
+    async with golem:
         print_env_info(golem)
 
         num_tasks = 0

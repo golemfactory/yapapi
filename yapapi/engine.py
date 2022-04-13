@@ -400,7 +400,9 @@ class _Engine:
 
     async def _agreement_payment_attempt(self, agreement_id: str) -> None:
         invoice_manager = self._invoice_manager
-        paid = await invoice_manager.attempt_payment(agreement_id, self._get_allocation)
+        paid = await invoice_manager.attempt_payment(
+            agreement_id, self._get_allocation, self._strategy.invoice_accepted_amount
+        )
         if paid:
             #   We've accepted the final invoice, so we can ignore debit notes
             job_id = invoice_manager.agreement_job(agreement_id).id
@@ -561,12 +563,25 @@ class _Engine:
 
             try:
                 allocation = self._get_allocation(debit_note)
-                await debit_note.accept(amount=debit_note.total_amount_due, allocation=allocation)
-                job.emit(
-                    events.DebitNoteAccepted,
-                    agreement=agreement,
-                    debit_note=debit_note,
-                )
+                accepted_amount = await self._strategy.debit_note_accepted_amount(debit_note)
+                if accepted_amount >= Decimal(debit_note.total_amount_due):
+                    await debit_note.accept(
+                        amount=debit_note.total_amount_due, allocation=allocation
+                    )
+                    job.emit(
+                        events.DebitNoteAccepted,
+                        agreement=agreement,
+                        debit_note=debit_note,
+                    )
+                else:
+                    #   We should reject the debit note, but it's not implemented in yagna,
+                    #   so we just ignore it now
+                    logger.warning(
+                        "Ignored debit note %s for %s, we accept only %s",
+                        debit_note.debit_note_id,
+                        debit_note.total_amount_due,
+                        accepted_amount,
+                    )
             except CancelledError:
                 raise
             except Exception:
