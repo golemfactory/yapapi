@@ -1,5 +1,5 @@
 from dns.exception import DNSException
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 import logging
 import sys
@@ -87,7 +87,15 @@ class _VmPackage(Package):
         demand.add(VmRequest(package_url=image_url, package_format=VmPackageFormat.GVMKIT_SQUASH))
 
 
-async def repo(
+async def repo(*args, **kwargs) -> Package:
+    """Async alternative to vm.sync_repo, deprecated now.
+
+    Check the :function:`vm.sync_repo` for details.
+    """
+    return sync_repo(*args, **kwargs)
+
+
+def sync_repo(
     *,
     image_hash: str,
     image_url: Optional[str] = None,
@@ -109,7 +117,7 @@ async def repo(
 
     example usage::
 
-        package = await vm.repo(
+        package = vm.sync_repo(
             # if we provide only the image hash, the image will be
             # automatically pulled from Golem's image repository
             image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
@@ -117,7 +125,7 @@ async def repo(
 
     example usage with an explicit GVMI image URL (useful to host images outside the Golem repository)::
 
-        package = await vm.repo(
+        package = vm.sync_repo(
             # we still need to provide the image's hash because
             # the image's integrity is validated by the runtime on the provider node
             #
@@ -131,7 +139,7 @@ async def repo(
 
     example usage with additional constraints::
 
-        package = await vm.repo(
+        package = vm.sync_repo(
             image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
             # only run on provider nodes that have more than 0.5gb of RAM available
             min_mem_gib=0.5,
