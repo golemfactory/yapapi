@@ -328,9 +328,9 @@ class ServiceRunner(AsyncContextManager):
         instance = service.service_instance
 
         async def _worker(work_context: WorkContext) -> None:
-            nonlocal agreement, instance
+            nonlocal instance
+            assert agreement is not None
 
-            agreement = work_context._agreement
             activity = work_context._activity
 
             work_context.emit(events.ServiceStarted, service=service)
@@ -359,10 +359,14 @@ class ServiceRunner(AsyncContextManager):
                 await self._job.engine.accept_payments_for_agreement(self._job.id, agreement.id)
                 await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
 
+        def on_agreement_ready(agreement_ready: Agreement) -> None:
+            nonlocal agreement
+            agreement = agreement_ready
+
         while not self._stopped:
             agreement = None
             await asyncio.sleep(1.0)
-            task = await self._job.engine.start_worker(self._job, _worker)
+            task = await self._job.engine.start_worker(self._job, _worker, on_agreement_ready)
             if not task:
                 continue
             try:
