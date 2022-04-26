@@ -102,7 +102,7 @@ class _AllocationTask(ResourceCtx[Allocation]):
             id=self._id,
             payment_platform=model.payment_platform,
             payment_address=model.address,
-            amount=model.total_amount,
+            amount=Decimal(model.total_amount),
             expires=model.timeout,
         )
 

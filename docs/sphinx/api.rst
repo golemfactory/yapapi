@@ -39,6 +39,7 @@ ServiceState
 ------------
 
 .. autoclass:: yapapi.services.ServiceState
+    :members: pending, starting, running, stopping, terminated, AVAILABLE
 
 Network API
 ===========

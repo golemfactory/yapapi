@@ -19,6 +19,12 @@ from typing import (
 )
 from typing_extensions import AsyncGenerator
 
+if sys.version_info > (3, 8):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
+
+
 import yapapi
 from yapapi import events
 from yapapi.event_dispatcher import AsyncEventDispatcher
@@ -41,6 +47,17 @@ if TYPE_CHECKING:
 
 D = TypeVar("D")  # Type var for task data
 R = TypeVar("R")  # Type var for task result
+
+
+class _EngineKwargs(TypedDict):
+    budget: Union[float, Decimal]
+    strategy: "BaseMarketStrategy"
+    event_consumer: Callable[[events.Event], None]
+    subnet_tag: Optional[str]
+    payment_driver: Optional[str]
+    payment_network: Optional[str]
+    stream_output: bool
+    app_key: Optional[str]
 
 
 class Golem:
@@ -125,7 +142,7 @@ class Golem:
         if not strategy:
             strategy = self._initialize_default_strategy()
 
-        self._engine_args = {
+        self._engine_kwargs: _EngineKwargs = {
             "budget": budget,
             "strategy": strategy,
             "event_consumer": self._event_dispatcher.emit,
@@ -230,7 +247,7 @@ class Golem:
                 "Strategy replacement is possible only when Golem is not operative"
             )
 
-        self._engine_args["strategy"] = strategy
+        self._engine_kwargs["strategy"] = strategy
         self._engine._strategy = strategy
 
     @property
@@ -302,7 +319,7 @@ class Golem:
         return res
 
     def _get_new_engine(self):
-        return _Engine(**self._engine_args)
+        return _Engine(**self._engine_kwargs)
 
     async def execute_tasks(
         self,
