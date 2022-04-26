@@ -47,26 +47,15 @@ class ServiceState(statemachine.StateMachine):
 
     # transitions
     start: statemachine.Transition = pending.to(starting)
-    """
-    Transition from :attr:`~ServiceState.pending` to :attr:`~ServiceState.starting`.
-    """
     ready: statemachine.Transition = starting.to(running)
-    """
-    Transition from :attr:`~ServiceState.starting` to :attr:`~ServiceState.running`.
-    """
     stop: statemachine.Transition = running.to(stopping)
-    """
-    Transition from :attr:`~ServiceState.running` to :attr:`~ServiceState.stopping`.
-    """
     terminate: statemachine.Transition = terminated.from_(starting, running, stopping, terminated)
-    """Mark the instance as :attr:`~ServiceState.terminated`."""
     mark_unresponsive: statemachine.Transition = unresponsive.from_(
         starting, running, stopping, terminated
     )
     restart: statemachine.Transition = pending.from_(
         pending, starting, running, stopping, terminated, unresponsive
     )
-    """Move the instance back to :attr:`~ServiceState.pending` state."""
 
     lifecycle = start | ready | stop | terminate
     """Transition performed when handler for the current state terminates normally.

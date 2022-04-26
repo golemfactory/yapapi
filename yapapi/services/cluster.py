@@ -149,8 +149,8 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
             there are too few elements in the `instance_params` iterable, it will
             result in an error.
         :param network_addresses: optional list of network addresses in case the
-            :class:`Cluster` is attached to VPN. If the list is not provided (or if the
-            number of elements is less than the number of spawned instances), any
+            :class:`Cluster` is attached to VPN. If the list is not provided
+            (or if there are fewer elements than the number of spawned instances), any
             instances for which the addresses have not been given, will be assigned an
             address automatically.
         """
