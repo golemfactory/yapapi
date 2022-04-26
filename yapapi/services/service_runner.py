@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from yapapi.engine import Job
 
+import yapapi
 from yapapi import events
 
 from .service import Service, ServiceType, ServiceInstance
@@ -44,7 +45,7 @@ class ControlSignal(enum.Enum):
 
 
 class ServiceRunner(AsyncContextManager):
-    def __init__(self, job: "Job"):
+    def __init__(self, job: "yapapi.engine.Job"):
         self._job = job
         self._instances: List[Service] = []
         self._instance_tasks: List[asyncio.Task] = []
