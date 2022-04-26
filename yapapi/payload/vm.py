@@ -20,7 +20,7 @@ from yapapi.payload.package import (
     resolve_package_repo_url,
 )
 from yapapi.props import base as prop_base
-from yapapi.props.builder import DemandBuilder
+from yapapi.props.builder import DemandBuilder, Model
 from yapapi.props import inf
 from yapapi.props.inf import InfBase, INF_CORES, RUNTIME_VM, ExeUnitRequest
 
@@ -54,7 +54,7 @@ class VmRequest(ExeUnitRequest):
 
 
 @dataclass(frozen=True)
-class _VmConstraints:
+class _VmConstraints(Model):
     min_mem_gib: float = prop_base.constraint(inf.INF_MEM, operator=">=")
     min_storage_gib: float = prop_base.constraint(inf.INF_STORAGE, operator=">=")
     min_cpu_threads: int = prop_base.constraint(inf.INF_THREADS, operator=">=")

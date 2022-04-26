@@ -63,7 +63,9 @@ class SmartQueue(Generic[Item]):
 
         self._buffer: "asyncio.Queue[Item]" = asyncio.Queue(maxsize=1)
         self._incoming_finished = False
-        self._buffer_task = asyncio.get_event_loop().create_task(self._fill_buffer(items))
+        self._buffer_task: Optional[asyncio.Task] = asyncio.get_event_loop().create_task(
+            self._fill_buffer(items)
+        )
 
         """The items scheduled for reassignment to another consumer"""
         self._rescheduled_items: Set[Handle[Item]] = set()
