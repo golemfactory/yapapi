@@ -101,7 +101,8 @@ Market strategies
 ==========================
 
 .. autoclass:: yapapi.strategy.MarketStrategy
-    :members: decorate_demand, score_offer, respond_to_provider_offer, acceptable_prop_value_range_overrides, acceptable_prop_value_ranges
+    :members: decorate_demand, score_offer, respond_to_provider_offer, acceptable_prop_value_range_overrides, acceptable_prop_value_ranges,
+              invoice_accepted_amount, debit_note_accepted_amount
 
 .. autoclass:: yapapi.strategy.WrappingMarketStrategy
     :members: __init__, base_strategy
