@@ -3,6 +3,7 @@
 import abc
 from copy import deepcopy
 from datetime import datetime, timezone
+from decimal import Decimal
 import logging
 from typing import Dict, Optional
 
@@ -106,6 +107,23 @@ class BaseMarketStrategy(DemandDecorator, abc.ABC):
         """Respond with a modified `DemandBuilder` object to an offer coming from a provider."""
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    async def invoice_accepted_amount(self, invoice: rest.payment.Invoice) -> Decimal:
+        """Return the amount we accept to pay for the invoice.
+
+        Current Golem Engine implementation accepts the invoice if returned amount is not lower than
+        `invoice.amount` and ignores the invoice otherwise. This will change in the future."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    async def debit_note_accepted_amount(self, debit_note: rest.payment.DebitNote) -> Decimal:
+        """Return the amount we accept to pay for the debit note.
+
+        Current Golem Engine implementation accepts the debit note if returned amount is not lower than
+        `debit_note.total_amount_due` and ignores the debit note otherwise.
+        This will change in the future."""
+        raise NotImplementedError()
+
 
 class MarketStrategy(BaseMarketStrategy, abc.ABC):
     """Abstract market strategy."""
@@ -207,3 +225,11 @@ class MarketStrategy(BaseMarketStrategy, abc.ABC):
 
     async def decorate_demand(self, demand: DemandBuilder) -> None:
         """Optionally add relevant constraints to a Demand."""
+
+    async def invoice_accepted_amount(self, invoice: rest.payment.Invoice) -> Decimal:
+        """Accept full invoice amount."""
+        return Decimal(invoice.amount)
+
+    async def debit_note_accepted_amount(self, debit_note: rest.payment.DebitNote) -> Decimal:
+        """Accept full debit note amount."""
+        return Decimal(debit_note.total_amount_due)
