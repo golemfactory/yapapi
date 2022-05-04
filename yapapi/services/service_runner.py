@@ -189,6 +189,14 @@ class ServiceRunner(AsyncContextManager):
 
         if isinstance(event, tuple):
             instance.service._exc_info = event
+
+        if instance.state != prev_state:
+            ctx = instance.service._ctx
+            assert ctx is not None  # This is None only while pending
+            ctx.emit(
+                events.ServiceStateChanged, service=instance, old=prev_state, new=instance.state
+            )
+
         return instance.state != prev_state
 
     async def _run_instance(self, instance: ServiceInstance):
@@ -333,9 +341,8 @@ class ServiceRunner(AsyncContextManager):
             agreement = work_context._agreement
             activity = work_context._activity
 
-            work_context.emit(events.ServiceStarted, service=service)
-            self._change_state(instance)  # pending -> starting
             service._set_ctx(work_context)
+            self._change_state(instance)  # pending -> starting
             if network:
                 service._set_network_node(
                     await network.add_node(work_context.provider_id, network_address)
