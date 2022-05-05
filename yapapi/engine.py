@@ -637,7 +637,7 @@ class _Engine:
         self,
         job: "Job",
         run_worker: Callable[[WorkContext], Awaitable],
-        on_agreement_ready: Callable[[Agreement], None] = None,
+        on_agreement_ready: Optional[Callable[[Agreement], None]] = None,
     ) -> Optional[asyncio.Task]:
         loop = asyncio.get_event_loop()
 
