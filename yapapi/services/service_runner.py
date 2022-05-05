@@ -92,7 +92,14 @@ class ServiceRunner(AsyncContextManager):
         logger.debug("Starting new %s", self)
 
         loop = asyncio.get_event_loop()
-        self.__services.add(loop.create_task(self._job.find_offers()))
+        task = loop.create_task(self._job.find_offers())
+
+        def raise_if_failed(task):
+            if not task.cancelled() and task.exception():
+                raise task.exception()
+
+        task.add_done_callback(raise_if_failed)
+        self.__services.add(task)
 
         async def agreements_pool_cycler():
             # shouldn't this be part of the Agreement pool itself? (or a task within Job?)
