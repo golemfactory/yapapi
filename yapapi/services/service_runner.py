@@ -192,7 +192,7 @@ class ServiceRunner(AsyncContextManager):
 
         if instance.state != prev_state:
             ctx = instance.service._ctx
-            assert ctx is not None  # This is None only while pending
+            assert ctx is not None  # This is None only while pending for the first time
             ctx.emit(
                 events.ServiceStateChanged, service=instance, old=prev_state, new=instance.state
             )
