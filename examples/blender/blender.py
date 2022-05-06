@@ -38,6 +38,7 @@ async def main(
         # only run on provider nodes which a certain number of CPU threads (logical CPU cores) available
         min_cpu_threads=min_cpu_threads,
     )
+    print("a")
 
     async def worker(ctx: WorkContext, tasks):
         script_dir = pathlib.Path(__file__).resolve().parent
