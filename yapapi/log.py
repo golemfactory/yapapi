@@ -161,7 +161,7 @@ event_type_to_string = {
     events.ActivityCreateFailed: "Failed to create activity",
     events.TaskStarted: "Task started",
     events.TaskFinished: "Task finished",
-    events.ServiceStarted: "Work on a service started",
+    events.ServiceStateChanged: "State of a service changed",
     events.ServiceFinished: "Work on a service started",
     events.ScriptSent: "Script sent to provider",
     events.CommandStarted: "Command started",

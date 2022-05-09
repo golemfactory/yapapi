@@ -33,6 +33,11 @@ async def test_run_ssh(
     ssh_verify_connection: bool,
 ) -> None:
 
+    websocat_check = pexpect.spawn("/usr/bin/which websocat")
+    exit_code = websocat_check.wait()
+    if exit_code != 0:
+        raise ProcessLookupError("websocat binary not found, please install it or check your PATH.")
+
     configure_logging(log_dir)
 
     # This is the default configuration with 2 wasm/VM providers
