@@ -456,7 +456,10 @@ class SummaryLogger:
         elif isinstance(event, events.AgreementCreated):
             provider_name = event.provider_info.name or event.provider_id
             self.logger.info(
-                "Agreement proposed to provider '%s'", provider_name, job_id=event.job_id
+                "Agreement proposed to provider '%s' (%s)",
+                provider_name,
+                event.provider_id,
+                job_id=event.job_id,
             )
             self.agreement_provider_info[event.agr_id] = ProviderInfo(
                 event.provider_id, provider_name, event.provider_info.subnet_tag
