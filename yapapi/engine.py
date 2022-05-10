@@ -653,6 +653,8 @@ class _Engine:
 
             job.emit(events.WorkerStarted, agreement=agreement)
 
+            activity_start_time = datetime.now()
+
             try:
                 activity = await self.create_activity(agreement.id)
             except Exception:
@@ -662,7 +664,7 @@ class _Engine:
             work_context = WorkContext(activity, agreement, self.storage_manager, emitter=job.emit)
             work_context.emit(events.ActivityCreated)
 
-            self._activity_created_at[activity.id] = datetime.now()
+            self._activity_created_at[activity.id] = activity_start_time
 
             async with activity:
                 self.accept_debit_notes_for_agreement(job.id, agreement.id)
