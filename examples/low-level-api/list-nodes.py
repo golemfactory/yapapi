@@ -37,8 +37,16 @@ async def list_offers(conf: Configuration, subnet_tag: str) -> AsyncIterator[Off
 
 
 async def list_nodes(conf: Configuration, subnet_tag: str) -> AsyncIterator[List[NodeInfo]]:
+    nodes = set()
     async for offer in list_offers(conf, subnet_tag):
-        yield NodeInfo(offer)
+        node = NodeInfo(offer)
+
+        def equal(node_in_set: NodeInfo):
+            return node.node_id == node_in_set.node_id
+
+        if not any([equal(n) for n in nodes]):
+            nodes.add(node)
+            yield node
 
 
 async def print_nodes(conf: Configuration, subnet_tag: str):
