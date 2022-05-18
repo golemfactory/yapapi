@@ -131,7 +131,7 @@ async def manifest(
 
 async def repo(
     *,
-    image_hash: str = None,
+    image_hash: Optional[str] = None,
     image_url: Optional[str] = None,
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,
