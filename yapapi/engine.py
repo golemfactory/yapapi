@@ -798,6 +798,7 @@ class Job:
 
         self.engine = engine
         self.offers_collected: int = 0
+        self.unscored_offers: asyncio.Queue[OfferProposal] = asyncio.Queue()
         self.proposals_confirmed: int = 0
         self.expiration_time: datetime = expiration_time
         self.payload: Payload = payload
@@ -893,14 +894,7 @@ class Job:
         self,
         subscription: Subscription,
     ) -> None:
-        """Create a market subscription and repeatedly collect offer proposals for it.
-
-        Collected proposals are processed concurrently using a bounded number
-        of asyncio tasks.
-
-        :param state: A state related to a call to `Executor.submit()`
-        """
-        max_number_of_tasks = 5
+        """Create a market subscription and repeatedly collect offer proposals for it."""
 
         try:
             proposals = subscription.events()
@@ -908,13 +902,17 @@ class Job:
             self.emit(events.CollectFailed, subscription=subscription, reason=str(ex))
             raise
 
-        # A semaphore is used to limit the number of handler tasks
-        semaphore = asyncio.Semaphore(max_number_of_tasks)
-
         async for proposal in proposals:
-
             self.emit(events.ProposalReceived, proposal=proposal)
             self.offers_collected += 1
+            self.unscored_offers.put_nowait(proposal)
+
+    async def _handle_all_proposals(self) -> None:
+        max_number_of_tasks = 5
+        semaphore = asyncio.Semaphore(max_number_of_tasks)
+
+        while True:
+            proposal = await self.unscored_offers.get()
 
             async def handler(proposal_):
                 """Wrap `_handle_proposal()` method with error handling."""
@@ -945,15 +943,21 @@ class Job:
                 self.expiration_time, self.payload
             )
 
-        while True:
-            try:
-                subscription = await self._demand_builder.subscribe(self.engine._market_api)
-                self.emit(events.SubscriptionCreated, subscription=subscription)
-            except Exception as ex:
-                self.emit(events.SubscriptionFailed, reason=str(ex))
-                raise
-            async with subscription:
-                await self._find_offers_for_subscription(subscription)
+        offer_handler_task = asyncio.get_event_loop().create_task(self._handle_all_proposals())
+
+        try:
+            while True:
+                try:
+                    subscription = await self._demand_builder.subscribe(self.engine._market_api)
+                    self.emit(events.SubscriptionCreated, subscription=subscription)
+                except Exception as ex:
+                    self.emit(events.SubscriptionFailed, reason=str(ex))
+                    raise
+                async with subscription:
+                    await self._find_offers_for_subscription(subscription)
+        except (Exception, CancelledError):
+            offer_handler_task.cancel()
+            raise
 
     # TODO: move to Golem
     def _get_common_payment_platforms(self, proposal: rest.market.OfferProposal) -> Set[str]:
