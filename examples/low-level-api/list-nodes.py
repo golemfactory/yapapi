@@ -2,7 +2,6 @@
 import asyncio
 from asyncio import TimeoutError
 from datetime import datetime, timezone
-import json
 import sys
 import pathlib
 from typing import AsyncIterator, List
@@ -58,7 +57,11 @@ def main():
     parser = utils.build_parser("List Nodes")
     args = parser.parse_args()
 
-    subnet = args.subnet_tag
+    if args.subnet_tag is None:
+        subnet = "devnet-beta"
+    else:
+        subnet = args.subnet_tag
+
     sys.stderr.write(f"Using subnet: {utils.TEXT_COLOR_YELLOW}{subnet}{utils.TEXT_COLOR_DEFAULT}\n")
 
     enable_default_logger()
@@ -69,7 +72,7 @@ def main():
                     Configuration(),
                     subnet_tag=subnet,
                 ),
-                timeout=4,
+                timeout=10,
             )
         )
     except TimeoutError:
