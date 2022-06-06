@@ -33,15 +33,23 @@ async def test_run_ssh(
     ssh_verify_connection: bool,
 ) -> None:
 
-    websocat_check = pexpect.spawn("/usr/bin/which websocat")
-    exit_code = websocat_check.wait()
-    if exit_code != 0:
-        raise ProcessLookupError("websocat binary not found, please install it or check your PATH.")
+    if ssh_verify_connection:
+        websocat_check = pexpect.spawn("/usr/bin/which websocat")
+        exit_code = websocat_check.wait()
+        if exit_code != 0:
+            raise ProcessLookupError(
+                "websocat binary not found, please install it or check your PATH. "
+                "You may also skip the connection check by omitting `--ssh-verify-connection`."
+            )
 
     configure_logging(log_dir)
 
     # This is the default configuration with 2 wasm/VM providers
     goth_config = load_yaml(goth_config_path, config_overrides)
+
+    # override the requestor node not to use proxy for API calls
+    requestor = [c for c in goth_config.containers if c.name == "requestor"][0]
+    requestor.use_proxy = False
 
     requestor_path = project_dir / "examples" / "ssh" / "ssh.py"
 
@@ -72,13 +80,7 @@ async def test_run_ssh(
             for i in range(2):
                 ssh_string = await cmd_monitor.wait_for_pattern("ssh -o ProxyCommand", timeout=120)
                 matches = re.match("ssh -o ProxyCommand=('.*') (root@.*)", ssh_string)
-
-                # the default API port goes through a proxy that logs REST requests
-                # but does not support websocket connections
-                # hence, we're replacing it with a port that connects directly
-                # to the daemon's port in the requestor's Docker container
-                proxy_cmd = re.sub(":16(\\d\\d\\d)", ":6\\1", matches.group(1))
-
+                proxy_cmd = matches.group(1)
                 auth_str = matches.group(2)
                 password = re.sub("password: ", "", await cmd_monitor.wait_for_pattern("password:"))
 
