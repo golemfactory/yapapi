@@ -79,7 +79,7 @@ async def test_run_yacat(
             all_sent = cmd_monitor.add_assertion(assert_all_tasks_started)
             all_computed = cmd_monitor.add_assertion(assert_all_tasks_computed)
 
-            await cmd_monitor.wait_for_pattern(".*Received proposals from 2", timeout=10)
+            await cmd_monitor.wait_for_pattern(".*Received proposals", timeout=30)
             logger.info("Received proposals")
 
             await cmd_monitor.wait_for_pattern(
