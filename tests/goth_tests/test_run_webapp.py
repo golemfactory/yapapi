@@ -38,7 +38,8 @@ async def test_run_webapp(
     # This is the default configuration with 2 wasm/VM providers
     goth_config = load_yaml(goth_config_path, config_overrides)
 
-    # override the requestor node not to use proxy for API calls
+    # disable the mitm proxy used to capture the requestor agent -> daemon API calls
+    # because it doesn't support websockets which are needed by the VPN (and the Local HTTP Proxy)
     requestor = [c for c in goth_config.containers if c.name == "requestor"][0]
     requestor.use_proxy = False
 
@@ -67,7 +68,7 @@ async def test_run_webapp(
 
             logger.info("Waiting for the instances to start")
 
-            # # A longer timeout to account for downloading a VM image
+            # A longer timeout to account for downloading a VM image
             await cmd_monitor.wait_for_pattern("DB instance started.*", timeout=240)
             logger.info("Db instance started")
 
