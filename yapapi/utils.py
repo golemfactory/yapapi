@@ -67,6 +67,7 @@ class AsyncWrapper(AsyncContextManager):
             return
 
         # Set self._task to None so we don't accept any more calls in `async_call()`
+        assert self._task  # satisfy `worker_task` type check
         worker_task = self._task
         self._task = None
 

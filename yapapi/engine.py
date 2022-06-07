@@ -626,7 +626,10 @@ class _Engine:
         )
 
     async def start_worker(
-        self, job: "Job", run_worker: Callable[[WorkContext], Awaitable]
+        self,
+        job: "Job",
+        run_worker: Callable[[WorkContext], Awaitable],
+        on_agreement_ready: Optional[Callable[[Agreement], None]] = None,
     ) -> Optional[asyncio.Task]:
         loop = asyncio.get_event_loop()
 
@@ -636,10 +639,14 @@ class _Engine:
             It creates an Activity for a given Agreement, then creates a WorkContext for this Activity
             and then executes `run_worker` with this WorkContext.
             """
+            if on_agreement_ready:
+                on_agreement_ready(agreement)
             self._all_agreements[agreement.id] = agreement
             self._invoice_manager.add_agreement(job, agreement)
 
             job.emit(events.WorkerStarted, agreement=agreement)
+
+            activity_start_time = datetime.now()
 
             try:
                 activity = await self.create_activity(agreement.id)
@@ -650,7 +657,7 @@ class _Engine:
             work_context = WorkContext(activity, agreement, self.storage_manager, emitter=job.emit)
             work_context.emit(events.ActivityCreated)
 
-            self._activity_created_at[activity.id] = datetime.now()
+            self._activity_created_at[activity.id] = activity_start_time
 
             async with activity:
                 self.accept_debit_notes_for_agreement(job.id, agreement.id)

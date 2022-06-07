@@ -133,21 +133,26 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
     ) -> None:
         """Spawn new instances within this :class:`Cluster`.
 
-        :param num_instances: optional number of service instances to run. Defaults to a single
-            instance, unless `instance_params` is given, in which case, the :class:`Cluster` will spawn
-            as many instances as there are elements in the `instance_params` iterable.
-            if `num_instances` is not None and < 1, the method will immediately return and log a warning.
-        :param instance_params: optional list of dictionaries of keyword arguments that will be passed
-            to consecutive, spawned instances. The number of elements in the iterable determines the
-            number of instances spawned, unless `num_instances` is given, in which case the latter takes
+        :param num_instances: optional number of service instances to run. Defaults to
+            a single instance, unless `instance_params` is given, in which case,
+            the :class:`Cluster` will spawn as many instances as there are elements in
+            the `instance_params` iterable.
+            if `num_instances` is not None and < 1, the method will immediately return
+            and log a warning.
+        :param instance_params: optional list of dictionaries of keyword arguments that
+            will be passed to the `__init__` of the consecutive, spawned instances.
+            The number of elements in the iterable determines the number of instances
+            spawned, unless `num_instances` is given, in which case the latter takes
             precedence.
             In other words, if both `num_instances` and `instance_params` are provided,
-            the number of instances spawned will be equal to `num_instances` and if there are
-            too few elements in the `instance_params` iterable, it will results in an error.
-        :param network_addresses: optional list of network addresses in case the :class:`Cluster` is
-            attached to VPN. If the list is not provided (or if the number of elements is less
-            than the number of spawned instances), any instances for which the addresses have not
-            been given, will be assigned an address automatically.
+            the number of instances spawned will be equal to `num_instances` and if
+            there are too few elements in the `instance_params` iterable, it will
+            result in an error.
+        :param network_addresses: optional list of network addresses in case the
+            :class:`Cluster` is attached to VPN. If the list is not provided
+            (or if there are fewer elements than the number of spawned instances), any
+            instances for which the addresses have not been given, will be assigned an
+            address automatically.
         """
 
         instance_param_gen = self._resolve_instance_params(num_instances, instance_params)
