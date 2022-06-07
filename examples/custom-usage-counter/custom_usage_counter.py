@@ -75,7 +75,11 @@ async def main(running_time_sec, subnet_tag, driver=None, network=None):
     )
 
     async with Golem(
-        budget=10.0, subnet_tag=subnet_tag, driver=driver, network=network, strategy=strategy
+        budget=10.0,
+        subnet_tag=subnet_tag,
+        payment_driver=driver,
+        payment_network=network,
+        strategy=strategy,
     ) as golem:
         instance_params = [{"running_time_sec": running_time_sec}]
         cluster = await golem.run_service(CustomCounterService, instance_params=instance_params)
