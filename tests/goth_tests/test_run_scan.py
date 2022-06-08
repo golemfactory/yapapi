@@ -60,7 +60,9 @@ async def test_run_scan(
             tasks = set()
 
             for i in range(2):
-                output = await cmd_monitor.wait_for_pattern(".*Task finished by provider", timeout=120)
+                output = await cmd_monitor.wait_for_pattern(
+                    ".*Task finished by provider", timeout=120
+                )
                 matches = re.match(".*by provider 'provider-(\d)', task data: (\d)", output)
                 providers.add(matches.group(1))
                 tasks.add(matches.group(2))
@@ -85,5 +87,5 @@ async def test_run_scan(
 
             logger.info("SIGINT sent...")
 
-            await cmd_monitor.wait_for_pattern(".*All jobs have finished", timeout=120)
+            await cmd_monitor.wait_for_pattern(".*All jobs have finished", timeout=20)
             logger.info(f"Requestor script finished.")
