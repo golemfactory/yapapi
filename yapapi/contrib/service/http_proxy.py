@@ -218,7 +218,7 @@ class LocalHttpProxy:
         self._request_lock = asyncio.Lock()
         self._cluster = cluster
         self._port = port
-        self._site = None
+        self._site: Optional[web.TCPSite] = None
 
     async def _request_handler(self, request: web.Request) -> web.Response:
         logger.info("Received a local HTTP request: %s %s", request.method, request.path_qs)
@@ -250,4 +250,5 @@ class LocalHttpProxy:
         self._site = site
 
     async def stop(self):
+        assert self._site, "Not started, call `run` first."
         await self._site.stop()

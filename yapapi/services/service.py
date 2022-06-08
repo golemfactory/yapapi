@@ -57,7 +57,7 @@ class Service:
     _network_node: Optional[Node] = None
 
     def __init__(self):
-        self.__id = uuid.uuid4()
+        self.__id = str(uuid.uuid4())
 
         self.__inqueue: asyncio.Queue[ServiceSignal] = asyncio.Queue()
         self.__outqueue: asyncio.Queue[ServiceSignal] = asyncio.Queue()

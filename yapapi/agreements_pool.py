@@ -58,7 +58,7 @@ class AgreementsPool:
         for agreement_id in frozenset(self._agreements):
             try:
                 buffered_agreement = self._agreements[agreement_id]
-            except IndexError:
+            except KeyError:
                 continue
             task = buffered_agreement.worker_task
             if task is not None and task.done():
@@ -88,7 +88,7 @@ class AgreementsPool:
     async def _set_worker(self, agreement_id: str, task: asyncio.Task) -> None:
         try:
             buffered_agreement = self._agreements[agreement_id]
-        except IndexError:
+        except KeyError:
             return
         assert buffered_agreement.worker_task is None
         buffered_agreement.worker_task = task

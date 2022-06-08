@@ -92,7 +92,14 @@ class ServiceRunner(AsyncContextManager):
         logger.debug("Starting new %s", self)
 
         loop = asyncio.get_event_loop()
-        self.__services.add(loop.create_task(self._job.find_offers()))
+        task = loop.create_task(self._job.find_offers())
+
+        def raise_if_failed(task):
+            if not task.cancelled() and task.exception():
+                raise task.exception()
+
+        task.add_done_callback(raise_if_failed)
+        self.__services.add(task)
 
         async def agreements_pool_cycler():
             # shouldn't this be part of the Agreement pool itself? (or a task within Job?)
@@ -109,7 +116,7 @@ class ServiceRunner(AsyncContextManager):
         logger.debug("%s is shutting down...", self)
 
         if exc_type is not None:
-            self.job.set_exc_info((exc_type, exc_val, exc_tb))
+            self._job.set_exc_info((exc_type, exc_val, exc_tb))
 
         # Give the instance tasks some time to terminate gracefully.
         # Then cancel them without mercy!
@@ -336,9 +343,9 @@ class ServiceRunner(AsyncContextManager):
         instance = service.service_instance
 
         async def _worker(work_context: WorkContext) -> None:
-            nonlocal agreement, instance
+            nonlocal instance
+            assert agreement is not None
 
-            agreement = work_context._agreement
             activity = work_context._activity
 
             service._set_ctx(work_context)
@@ -366,10 +373,14 @@ class ServiceRunner(AsyncContextManager):
                 await self._job.engine.accept_payments_for_agreement(self._job.id, agreement.id)
                 await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
 
+        def on_agreement_ready(agreement_ready: Agreement) -> None:
+            nonlocal agreement
+            agreement = agreement_ready
+
         while not self._stopped:
             agreement = None
             await asyncio.sleep(1.0)
-            task = await self._job.engine.start_worker(self._job, _worker)
+            task = await self._job.engine.start_worker(self._job, _worker, on_agreement_ready)
             if not task:
                 continue
             try:
