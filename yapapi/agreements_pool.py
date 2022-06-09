@@ -141,7 +141,20 @@ class AgreementsPool:
             return None
         if not await agreement.confirm():
             emit(events.AgreementRejected, agreement=agreement)
-            self.offer_recycler(offer.proposal)
+            #   TODO
+            #   Should we have here a call to
+            #       self.offer_recycler(offer.proposal)
+            #   ?
+            #
+            #   PRO: If we don't have it, we'll never trade with a provider who didn't confirm the agreement 
+            #        (e.g because they confirmed some other agreement with other requestor first).
+            #        This is why offer recycling was added here, as a fix for:
+            #        https://github.com/golemfactory/yagna-triage/issues/156
+            #
+            #   CON: If the the provider just always rejects (e.g. because they have some internal problem),
+            #        and strategy doesn't discount the rejections (i.e. a strategy that doesn't include
+            #        any logic similar to yapapi.strategy.DecreaseScoreForUnconfirmedAgreement), we'll keep
+            #        proposing agreements to the same provider forever, and have them all rejected.
             return None
         self._agreements[agreement.id] = BufferedAgreement(
             agreement=agreement,
