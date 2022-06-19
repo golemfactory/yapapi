@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import asyncio
 import pathlib
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from yapapi import Golem
 from yapapi.services import Service
@@ -12,8 +12,28 @@ from yapapi.payload import vm
 class ChainlinkService(Service):
     @staticmethod
     async def get_payload():
-        return await vm.repo(
-            image_hash="bdcd10f2cc95e296174975d9a1a170ee0d0efd01b5ff8316aa9a65fa",
+        manifest = "eyJ2ZXJzaW9uIjoiMC4xLjAiLCJjcmVhdGVkQXQiOiIyMDIxLTExLTA5VDE5OjE5OjQxL" \
+                   "jA1Mzc1MjI4MFoiLCJleHBpcmVzQXQiOiIyMDMxLTExLTA3VDE5OjE5OjQxLjA1Mzc1NV" \
+                   "oiLCJtZXRhZGF0YSI6eyJuYW1lIjoiZXhhbXBsZSBtYW5pZmVzdCIsImRlc2NyaXB0aW9" \
+                   "uIjoiZXhhbXBsZSBkZXNjcmlwdGlvbiIsInZlcnNpb24iOiIwLjEuMCJ9LCJwYXlsb2Fk" \
+                   "IjpbeyJwbGF0Zm9ybSI6eyJhcmNoIjoieDg2XzY0Iiwib3MiOiJsaW51eCJ9LCJ1cmxzI" \
+                   "jpbImh0dHA6Ly95YWNuMi5kZXYuZ29sZW0ubmV0d29yazo4MDAwL2RvY2tlci1jaGFpbm" \
+                   "xpbmstbGF0ZXN0LTEzZDQxOWEyMjcuZ3ZtaSJdLCJoYXNoIjoic2hhMzo1NWFhMTkwOWY" \
+                   "wM2I1N2UyNWEyZjExNzkyZGVkMTAwYzQzMDI5NjMzNWVkMmNjZjk1NTRkY2Y5ZCJ9XSwi" \
+                   "Y29tcE1hbmlmZXN0Ijp7InZlcnNpb24iOiIwLjEuMCIsInNjcmlwdCI6eyJjb21tYW5kc" \
+                   "yI6WyJydW4gLioiLCJ0cmFuc2ZlciAuKiJdLCJtYXRjaCI6InJlZ2V4In0sIm5ldCI6ey" \
+                   "JpbmV0Ijp7Im91dCI6eyJwcm90b2NvbHMiOlsiaHR0cCIsImh0dHBzIiwid3MiLCJ3c3M" \
+                   "iXX19fX19"
+
+        manifest_sig = "006df8d9f48cf9a25d7faeb6c113b1c85c7a1afc929d440d940327c34b6cae9b4" \
+                       "128d570fc59d22b28e9eced5a57140e0e9f411682272f76c5b67b8d0b3f95b286"
+
+        return await vm.manifest(
+            manifest=manifest,
+            manifest_sig=manifest_sig,
+            min_mem_gib=2.,
+            min_cpu_threads=1,
+            capabilities=["inet"]
         )
 
     async def start(self):
