@@ -19,9 +19,16 @@ print(objects)
 
 async def main():
     async with golem:
-        for obj, *args in objects:
-            await obj.load(*args)
-            print(obj.data)
+        for allocation in await golem.allocations():
+            old_data = allocation.data.to_dict()
+            await allocation.load()
+            assert old_data == allocation.data.to_dict()
+            print(allocation)
+        # for obj, *args in objects:
+        #     print("OBJ", obj)
+        #     print("OBJ", obj)
+        #     await obj.load(*args)
+        #     print(obj.data)
 
 
 if __name__ == '__main__':

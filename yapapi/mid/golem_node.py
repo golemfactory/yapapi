@@ -1,4 +1,5 @@
 import asyncio
+from typing import Tuple
 
 from yapapi import rest
 from yapapi.engine import DEFAULT_DRIVER, DEFAULT_NETWORK, DEFAULT_SUBNET
@@ -14,6 +15,8 @@ class GolemNode:
         self.payment_network = DEFAULT_NETWORK
         self.subnet = DEFAULT_SUBNET
 
+    ########################
+    #   Start/stop interface
     async def __aenter__(self):
         await self.start()
 
@@ -36,6 +39,8 @@ class GolemNode:
             self._ya_net_api.close(),
         )
 
+    ###########################
+    #   Single object factories
     def allocation(self, allocation_id) -> Allocation:
         return Allocation(self, allocation_id)
 
@@ -48,6 +53,13 @@ class GolemNode:
     def agreement(self, agreement_id) -> Agreement:
         return Agreement(self, agreement_id)
 
+    ##########################
+    #   Multi-object factories
+    async def allocations(self) -> Tuple[Allocation]:
+        return await Allocation.get_all(self)
+
+    #########
+    #   Other
     def __str__(self):
         lines = [
             f"{type(self).__name__}(",

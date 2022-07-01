@@ -15,6 +15,10 @@ class PaymentApiObject(GolemObject, ABC):
         my_name = type(self).__name__
         return ya_models.getattr(my_name)
 
+    @classmethod
+    def requestor_api(cls, node):
+        return RequestorApi(node._ya_payment_api)
+
 
 class Allocation(PaymentApiObject):
     pass
