@@ -1,7 +1,8 @@
 from yapapi import rest
 from yapapi.engine import DEFAULT_DRIVER, DEFAULT_NETWORK, DEFAULT_SUBNET
 
-from .allocation import Allocation
+from .payment import Allocation
+from .market import Demand
 
 
 class GolemNode:
@@ -33,6 +34,9 @@ class GolemNode:
 
     def allocation(self, allocation_id) -> Allocation:
         return Allocation(self, allocation_id)
+
+    def demand(self, demand_id) -> Demand:
+        return Demand(self, demand_id)
 
     def __str__(self):
         lines = [
