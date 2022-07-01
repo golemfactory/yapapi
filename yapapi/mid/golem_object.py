@@ -16,9 +16,9 @@ class GolemObject(ABC):
         self._id = id_
         self._data = None
 
-    async def load(self):
+    async def load(self, *args, **kwargs):
         try:
-            await self._load_no_wrap()
+            await self._load_no_wrap(*args, **kwargs)
         except PaymentApiException as e:
             if e.status == 404:
                 raise ObjectNotFound(type(self).__name__, self._id)

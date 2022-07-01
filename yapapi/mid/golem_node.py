@@ -1,8 +1,10 @@
+import asyncio
+
 from yapapi import rest
 from yapapi.engine import DEFAULT_DRIVER, DEFAULT_NETWORK, DEFAULT_SUBNET
 
 from .payment import Allocation
-from .market import Demand
+from .market import Demand, Offer, Agreement
 
 
 class GolemNode:
@@ -27,16 +29,24 @@ class GolemNode:
         self._ya_net_api = self._api_config.net()
 
     async def close(self):
-        await self._ya_market_api.close()
-        await self._ya_activity_api.close()
-        await self._ya_payment_api.close()
-        await self._ya_net_api.close()
+        await asyncio.gather(
+            self._ya_market_api.close(),
+            self._ya_activity_api.close(),
+            self._ya_payment_api.close(),
+            self._ya_net_api.close(),
+        )
 
     def allocation(self, allocation_id) -> Allocation:
         return Allocation(self, allocation_id)
 
     def demand(self, demand_id) -> Demand:
         return Demand(self, demand_id)
+
+    def offer(self, offer_id) -> Offer:
+        return Offer(self, offer_id)
+
+    def agreement(self, agreement_id) -> Agreement:
+        return Agreement(self, agreement_id)
 
     def __str__(self):
         lines = [

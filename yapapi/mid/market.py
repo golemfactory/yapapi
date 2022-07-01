@@ -27,3 +27,12 @@ class Demand(PaymentApiObject):
             self._data = this_demands[0]
         except IndexError:
             raise ObjectNotFound('Demand', self.id)
+
+
+class Offer(PaymentApiObject):
+    async def _load_no_wrap(self, demand_id):
+        self._data = await self.api.get_proposal_offer(demand_id, self.id)
+
+
+class Agreement(PaymentApiObject):
+    pass

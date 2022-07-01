@@ -2,25 +2,26 @@ import asyncio
 
 from yapapi.mid.golem_node import GolemNode
 
-
-allocation_id = '32db9173-87ed-4e47-84b8-7f4fbf78ebce'
-demand_id = '5144990311f747118741619d0b1b5d98-f53acd52eb5ddc288763a4f150add508e0dd5960b9c7f11a7b1f7ad3526ee6de'
-demand_id = 'fd68851603d44ddd8ebc276bea8f30a5-f9e4759598c733a49498448b86da8930274649573d3568600c3e65bf421d1094'
-demand_id = '9a390c02b18a46169844d3fa3dffa3e1-5aed623d93a82ef036797d107c04ed9cec04f97af5dbfc9a244c8899df5829ed'
-demand_id = '0e60c5fdde294ec4b8bc38508618fe7e-a141625ffc65fb64167f4467716c4441586af17ed3b3543b7ee64e481269b499'
+conf = [
+    ('allocation', '0f04a294-5495-4084-93c7-65c11e05e873'),
+    ('demand', '8e79ea564857484a99a3976b77bffb4c-c8a1f15e8b0c905474b57cf64b7316c0fe4ee5412c455ae7ad8d7cda89b18597'),
+    ('offer', 'R-eb82848f412e880b220057ac2feac0eec5d97f0455912c24cff373012e19422a', '8e79ea564857484a99a3976b77bffb4c-c8a1f15e8b0c905474b57cf64b7316c0fe4ee5412c455ae7ad8d7cda89b18597'),
+    ('agreement', '348e55cd4d6dc7bb89c5745142ec748c00e8d73f2da84228a12ba16be34517a1'),
+]
 
 golem = GolemNode()
-allocation = golem.allocation(allocation_id)
-demand = golem.demand(demand_id)
+
+objects = []
+for name, id_, *args in conf:
+    objects.append([getattr(golem, name)(id_), *args])
+print(objects)
 
 
 async def main():
-    print(demand)
     async with golem:
-        await allocation.load()
-        await demand.load()
-    print(demand.data)
-    print(allocation.data)
+        for obj, *args in objects:
+            await obj.load(*args)
+            print(obj.data)
 
 
 if __name__ == '__main__':
