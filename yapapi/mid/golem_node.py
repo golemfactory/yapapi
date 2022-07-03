@@ -21,7 +21,7 @@ class GolemNode:
         await self.start()
 
     async def __aexit__(self, *exc_info):
-        await self.close()
+        await self.stop()
 
     async def start(self):
         #   TODO: in yapapi.Engine all APIs are wrapped in an AsyncExitStack,
@@ -31,7 +31,7 @@ class GolemNode:
         self._ya_payment_api = self._api_config.payment()
         self._ya_net_api = self._api_config.net()
 
-    async def close(self):
+    async def stop(self):
         await asyncio.gather(
             self._ya_market_api.close(),
             self._ya_activity_api.close(),
@@ -41,6 +41,8 @@ class GolemNode:
 
     ###########################
     #   Single object factories
+    #   TODO: decide - should we have a caching logic here and return always the same
+    #         object for the same ID? I'd say: yes, but maybe not really?
     def allocation(self, allocation_id) -> Allocation:
         return Allocation(self, allocation_id)
 
@@ -57,6 +59,9 @@ class GolemNode:
     #   Multi-object factories
     async def allocations(self) -> Tuple[Allocation]:
         return await Allocation.get_all(self)
+
+    async def demands(self) -> Tuple[Demand]:
+        return await Demand.get_all(self)
 
     #########
     #   Other

@@ -48,8 +48,9 @@ class GolemObject(ABC):
     @classmethod
     @capture_api_exception
     async def get_all(cls, node: "GolemNode"):
-        get_method = getattr(cls.requestor_api(node), cls._get_all_method_name())
-        data = await get_method()
+        api = cls(node, '').api
+        get_all_method = getattr(api, cls._get_all_method_name())
+        data = await get_all_method()
 
         objects = []
         id_field = f'{cls.__name__.lower()}_id'
