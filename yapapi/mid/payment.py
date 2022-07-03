@@ -15,5 +15,8 @@ class PaymentApiObject(GolemObject, ABC):
         my_name = type(self).__name__
         return ya_models.getattr(my_name)
 
+
 class Allocation(PaymentApiObject):
-    pass
+    @property
+    def _delete_method_name(self) -> str:
+        return 'release_allocation'

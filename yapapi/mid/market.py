@@ -28,6 +28,10 @@ class Demand(PaymentApiObject):
         except IndexError:
             raise ObjectNotFound('Demand', self.id)
 
+    @property
+    def _delete_method_name(self) -> str:
+        return 'unsubscribe_demand'
+
 
 class Offer(PaymentApiObject):
     async def _load_no_wrap(self, demand_id):

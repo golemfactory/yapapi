@@ -26,6 +26,10 @@ def capture_api_exception(f):
             if e.status == 404:
                 assert isinstance(self_or_cls, GolemObject)
                 raise ObjectNotFound(type(self_or_cls).__name__, self_or_cls._id)
+            elif e.status == 410:
+                #   DELETE on something that was already deleted
+                #   TODO: Is silencing OK? Log this maybe?
+                pass
             else:
                 raise
     return wrapper
@@ -41,9 +45,17 @@ class GolemObject(ABC):
     async def load(self, *args, **kwargs) -> None:
         await self._load_no_wrap(*args, **kwargs)
 
+    @capture_api_exception
+    async def delete(self) -> None:
+        await self._delete_no_wrap()
+
     async def _load_no_wrap(self) -> None:
         get_method = getattr(self.api, self._get_method_name)
         self._data = await get_method(self._id)
+
+    async def _delete_no_wrap(self) -> None:
+        delete_method = getattr(self.api, self._delete_method_name)
+        await delete_method(self._id)
 
     @classmethod
     @capture_api_exception

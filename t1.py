@@ -32,8 +32,21 @@ async def test_collections():
                 assert old_data == obj.data.to_dict()
 
 
+async def test_delete():
+    names = ['demand', 'allocation']
+    async with golem:
+        for name in names:
+            fname = name + 's'
+            func = getattr(golem, fname)
+            objects = await func()
+            for obj in objects:
+                print("DELETE", obj)
+                await obj.delete()
+            assert not (await func())
+    
+
 async def main():
-    await test_collections()
+    await test_delete()
 
 
 if __name__ == '__main__':
