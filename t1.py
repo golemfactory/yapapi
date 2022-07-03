@@ -43,9 +43,18 @@ async def test_delete():
                 print("DELETE", obj)
                 await obj.delete()
             assert not (await func())
+
+async def test_allocation_create():
+    async with golem:
+        allocation = await golem.create_allocation(amount=1)
+        print("CREATED ALLOCATION", allocation)
+        print(allocation.data)
+        await allocation.delete()
     
 
 async def main():
+    await test_allocation_create()
+    await test_collections()
     await test_delete()
 
 

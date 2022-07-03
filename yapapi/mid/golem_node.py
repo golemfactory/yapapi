@@ -24,8 +24,6 @@ class GolemNode:
         await self.stop()
 
     async def start(self):
-        #   TODO: in yapapi.Engine all APIs are wrapped in an AsyncExitStack,
-        #         we probably should have it here as well
         self._ya_market_api = self._api_config.market()
         self._ya_activity_api = self._api_config.activity()
         self._ya_payment_api = self._api_config.payment()
@@ -40,7 +38,16 @@ class GolemNode:
         )
 
     ###########################
-    #   Single object factories
+    #   Create new objects
+    async def create_allocation(self, amount: float) -> Allocation:
+        #   TODO: This creates an Allocation for a matching requestor account
+        #         (or raises an exception if there is none).
+        #         Can we have more than a single matching account?
+        #         If yes - how to approach this? Add `create_allocations`?
+        return await Allocation.create_any_account(self, amount)
+
+    ###########################
+    #   Single-object factories for already existing objects
     #   TODO: decide - should we have a caching logic here and return always the same
     #         object for the same ID? I'd say: yes, but maybe not really?
     def allocation(self, allocation_id) -> Allocation:
@@ -56,7 +63,7 @@ class GolemNode:
         return Agreement(self, agreement_id)
 
     ##########################
-    #   Multi-object factories
+    #   Multi-object factories for already existing objects
     async def allocations(self) -> Tuple[Allocation]:
         return await Allocation.get_all(self)
 
