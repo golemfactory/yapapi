@@ -77,6 +77,6 @@ class Allocation(PaymentApiObject):
 
     @classmethod
     async def create(cls, node: "GolemNode", model: ya_models.Allocation) -> "Allocation":
-        api = RequestorApi(node._ya_payment_api)
+        api = cls._get_api(node)
         created = await api.create_allocation(model)
         return cls(node, created.allocation_id, created)

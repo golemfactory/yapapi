@@ -28,6 +28,7 @@ def capture_api_exception(f):
                 raise ObjectNotFound(type(self_or_cls).__name__, self_or_cls._id)
             elif e.status == 410:
                 #   DELETE on something that was already deleted
+                #   (on some of the objects only)
                 #   TODO: Is silencing OK? Log this maybe?
                 pass
             else:
@@ -60,7 +61,7 @@ class GolemObject(ABC):
     @classmethod
     @capture_api_exception
     async def get_all(cls, node: "GolemNode"):
-        api = cls(node, '').api
+        api = cls._get_api(node)
         get_all_method = getattr(api, cls._get_all_method_name())
         data = await get_all_method()
 
@@ -86,6 +87,10 @@ class GolemObject(ABC):
     @classmethod
     def _get_all_method_name(cls):
         return f'get_{cls.__name__.lower()}s'
+
+    @classmethod
+    def _get_api(cls, node: "GolemNode"):
+        return cls(node, '').api
 
     def __str__(self):
         return f'{type(self).__name__}({self._id})'
