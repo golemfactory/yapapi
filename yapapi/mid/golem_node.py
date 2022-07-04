@@ -3,6 +3,8 @@ from typing import Tuple
 
 from yapapi import rest
 from yapapi.engine import DEFAULT_DRIVER, DEFAULT_NETWORK, DEFAULT_SUBNET
+from yapapi.payload import Payload
+from yapapi.props.builder import DemandBuilder
 
 from .payment import Allocation
 from .market import Demand, Offer, Agreement
@@ -45,6 +47,11 @@ class GolemNode:
         #         Can we have more than a single matching account?
         #         If yes - how to approach this? Add `create_allocations`?
         return await Allocation.create_any_account(self, amount)
+
+    async def create_demand(self, payload: Payload) -> Demand:
+        builder = DemandBuilder()
+        await builder.decorate(payload)
+        return await Demand.create_from_properties_constraints(self, builder.properties, builder.constraints)
 
     ###########################
     #   Single-object factories for already existing objects

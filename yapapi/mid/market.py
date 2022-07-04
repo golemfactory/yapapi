@@ -1,9 +1,12 @@
 from abc import ABC
+from typing import TYPE_CHECKING
 
 from ya_market import RequestorApi, models as ya_models
-
 from .golem_object import GolemObject
 from .exceptions import ObjectNotFound
+
+if TYPE_CHECKING:
+    from .golem_node import GolemNode
 
 
 class PaymentApiObject(GolemObject, ABC):
@@ -20,13 +23,27 @@ class PaymentApiObject(GolemObject, ABC):
 class Demand(PaymentApiObject):
     async def _load_no_wrap(self):
         #   NOTE: this method is required because there is no get_demand(id)
-        #         in ya_market
+        #         in ya_market (as there is no matching endpoint in yagna)
         all_demands = await self.api.get_demands()
         try:
             this_demands = [d for d in all_demands if d.demand_id == self.id]
             self._data = this_demands[0]
         except IndexError:
             raise ObjectNotFound('Demand', self.id)
+    
+    @classmethod
+    async def create_from_properties_constraints(cls, node: "GolemNode", properties, constraints) -> "Demand":
+        model = ya_models.DemandOfferBase(
+            properties=properties,
+            constraints=constraints,
+        )
+        return await cls.create(node, model)
+    
+    @classmethod
+    async def create(cls, node: "GolemNode", model: ya_models.DemandOfferBase) -> "Demand":
+        api = cls._get_api(node)
+        demand_id = await api.subscribe_demand(model)
+        return cls(node, demand_id)
 
     @property
     def _delete_method_name(self) -> str:

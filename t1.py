@@ -1,5 +1,7 @@
 import asyncio
 
+from yapapi.payload import vm
+
 from yapapi.mid.golem_node import GolemNode
 
 # conf = [
@@ -49,10 +51,21 @@ async def test_allocation_create():
         allocation = await golem.create_allocation(amount=1)
         print("CREATED ALLOCATION", allocation)
         print(allocation.data)
-        await allocation.delete()
-    
+
+
+async def test_demand_create():
+    payload = await vm.repo(
+        image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+    )
+    async with golem:
+        demand = await golem.create_demand(payload)
+        print("CREATED DEMAND", demand)
+        await demand.load()
+        print(demand.data)
+
 
 async def main():
+    await test_demand_create()
     await test_allocation_create()
     await test_collections()
     await test_delete()
