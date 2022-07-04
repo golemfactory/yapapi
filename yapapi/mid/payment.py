@@ -1,6 +1,6 @@
 from abc import ABC
 from datetime import datetime, timedelta, timezone
-from typing import Tuple, TYPE_CHECKING
+from typing import Dict, List, Tuple, TYPE_CHECKING
 
 from ya_payment import RequestorApi, models as ya_models
 
@@ -80,3 +80,7 @@ class Allocation(PaymentApiObject):
         api = cls._get_api(node)
         created = await api.create_allocation(model)
         return cls(node, created.allocation_id, created)
+
+    async def demand_properties_constraints(self) -> Tuple[List[Dict[str, str]], List[str]]:
+        data = await self.api.get_demand_decorations([self.id])
+        return data.properties, data.constraints

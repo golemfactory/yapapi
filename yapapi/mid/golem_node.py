@@ -1,5 +1,5 @@
 import asyncio
-from typing import Tuple
+from typing import Iterable, Tuple
 
 from yapapi import rest
 from yapapi.engine import DEFAULT_DRIVER, DEFAULT_NETWORK, DEFAULT_SUBNET
@@ -48,9 +48,20 @@ class GolemNode:
         #         If yes - how to approach this? Add `create_allocations`?
         return await Allocation.create_any_account(self, amount)
 
-    async def create_demand(self, payload: Payload) -> Demand:
+    async def create_demand(self, payload: Payload, allocations: Iterable[Allocation] = ()) -> Demand:
         builder = DemandBuilder()
         await builder.decorate(payload)
+
+        for allocation in allocations:
+            properties, constraints = await allocation.demand_properties_constraints()
+            for constraint in constraints:
+                builder.ensure(constraint)
+
+            #   TODO: what if we already have such properties in builder?
+            #         E.g. we have different address in allocations?
+            #         (Now this should work just as in `yapapi.Engine`, but there we
+            #         can't have different addresses I guess?)
+            builder.properties.update({p.key: p.value for p in properties})
         return await Demand.create_from_properties_constraints(self, builder.properties, builder.constraints)
 
     ###########################
