@@ -1,6 +1,8 @@
 from abc import ABC
+import asyncio
+from collections import defaultdict
 from functools import wraps
-from typing import TYPE_CHECKING
+from typing import Any, Awaitable, DefaultDict, List, Optional, TYPE_CHECKING
 
 from ya_payment import ApiException as PaymentApiException
 from ya_market import ApiException as MarketApiException
@@ -42,6 +44,9 @@ class GolemObject(ABC):
         self._id = id_
         self._data = data
 
+        self._collect_events_task: Optional[asyncio.Task] = None
+        self._events: DefaultDict[type, List[Any]] = defaultdict(list)
+
     @capture_api_exception
     async def load(self, *args, **kwargs) -> None:
         await self._load_no_wrap(*args, **kwargs)
@@ -79,6 +84,30 @@ class GolemObject(ABC):
     @property
     def data(self):
         return self._data
+
+    @property
+    def node(self):
+        return self._node
+
+    def start_collecting_events(self, get_events: Awaitable, *args, **kwargs) -> None:
+        assert self._collect_events_task is None
+        coroutine = self._get_events(get_events, *args, **kwargs)
+        self._collect_events_task = asyncio.create_task(coroutine)
+
+    async def _get_events(self, get_events: Awaitable, *args, **kwargs) -> None:
+        while True:
+            events = await get_events(*args, **kwargs)
+            for event in events:
+                self._events[type(event)].append(event)
+
+            if not events:
+                await asyncio.sleep(1)
+
+    def stop_collecting_events(self) -> None:
+        if not self._collect_events_task:
+            return
+        self._collect_events_task.cancel()
+        self._collect_events_task = None
 
     @property
     def _get_method_name(self):

@@ -55,7 +55,27 @@ async def test_demand_create():
             print(demand.data)
 
 
+async def test_get_offers():
+    payload = await vm.repo(
+        image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+    )
+    async with golem:
+        allocation = await golem.create_allocation(amount=2)
+        demand = await golem.create_demand(payload, [allocation])
+        await demand.load()
+
+        i = 0
+        async for offer in demand.offers():
+            print("GOT OFFER", offer)
+            # print(offer.data)
+
+            i += 1
+            if i > 7:
+                break
+
+
 async def main():
+    await test_get_offers()
     await test_demand_create()
     await test_allocation_create()
     await test_collections()

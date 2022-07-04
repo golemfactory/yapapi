@@ -1,10 +1,12 @@
 import asyncio
 from typing import Iterable, Tuple
+from datetime import datetime, timedelta, timezone
 
 from yapapi import rest
 from yapapi.engine import DEFAULT_DRIVER, DEFAULT_NETWORK, DEFAULT_SUBNET
 from yapapi.payload import Payload
 from yapapi.props.builder import DemandBuilder
+from yapapi import props
 
 from .payment import Allocation
 from .market import Demand, Offer, Agreement
@@ -51,7 +53,16 @@ class GolemNode:
     async def create_demand(self, payload: Payload, allocations: Iterable[Allocation] = ()) -> Demand:
         builder = DemandBuilder()
         await builder.decorate(payload)
+        self._add_builder_params(builder)
+        await self._add_builder_allocations(builder, allocations)
+        return await Demand.create_from_properties_constraints(self, builder.properties, builder.constraints)
 
+    def _add_builder_params(self, builder: DemandBuilder) -> None:
+        expiration_time = datetime.now(timezone.utc) + timedelta(seconds=1800)
+        builder.add(props.Activity(expiration=expiration_time, multi_activity=True))
+        builder.add(props.NodeInfo(subnet_tag=self.subnet))
+
+    async def _add_builder_allocations(self, builder: DemandBuilder, allocations: Iterable[Allocation]) -> None:
         for allocation in allocations:
             properties, constraints = await allocation.demand_properties_constraints()
             for constraint in constraints:
@@ -62,7 +73,6 @@ class GolemNode:
             #         (Now this should work just as in `yapapi.Engine`, but there we
             #         can't have different addresses I guess?)
             builder.properties.update({p.key: p.value for p in properties})
-        return await Demand.create_from_properties_constraints(self, builder.properties, builder.constraints)
 
     ###########################
     #   Single-object factories for already existing objects
