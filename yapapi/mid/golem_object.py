@@ -45,6 +45,8 @@ class GolemObject(ABC):
 
         self._event_collector: Optional[EventCollector] = None
 
+        node._add_object(self)
+
     @capture_api_exception
     async def load(self, *args, **kwargs) -> None:
         await self._load_no_wrap(*args, **kwargs)
@@ -91,6 +93,10 @@ class GolemObject(ABC):
         assert self._event_collector is None
         self._event_collector = EventCollector(get_events, args, kwargs)
         self._event_collector.start()
+
+    async def stop_collecting_events(self) -> None:
+        if self._event_collector is not None:
+            await self._event_collector.stop()
 
     @property
     def _get_method_name(self):

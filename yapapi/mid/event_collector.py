@@ -15,7 +15,12 @@ class EventCollector:
 
     def start(self):
         assert self._task is None
-        self._collect_events_task = asyncio.create_task(self._collect_events())
+        self._task = asyncio.create_task(self._collect_events())
+
+    async def stop(self):
+        if self._task:
+            self._task.cancel()
+            self._task = None
 
     async def _collect_events(self):
         while True:

@@ -1,5 +1,6 @@
 import asyncio
-from typing import Iterable, Tuple
+from collections import defaultdict
+from typing import DefaultDict, Dict, Iterable, Tuple, Type
 from datetime import datetime, timedelta, timezone
 
 from yapapi import rest
@@ -10,6 +11,7 @@ from yapapi import props
 
 from .payment import Allocation
 from .market import Demand, Offer, Agreement
+from .golem_object import GolemObject
 
 
 class GolemNode:
@@ -18,6 +20,8 @@ class GolemNode:
         self.payment_driver = DEFAULT_DRIVER
         self.payment_network = DEFAULT_NETWORK
         self.subnet = DEFAULT_SUBNET
+
+        self._objects: DefaultDict[Type[GolemObject], Dict[str, GolemObject]] = defaultdict(dict)
 
     ########################
     #   Start/stop interface
@@ -34,12 +38,18 @@ class GolemNode:
         self._ya_net_api = self._api_config.net()
 
     async def stop(self):
-        await asyncio.gather(
+        stop_collecting_events_tasks = []
+        for objects in self._objects.values():
+            stop_collecting_events_tasks += [obj.stop_collecting_events() for obj in objects.values()]
+        await asyncio.gather(*stop_collecting_events_tasks)
+
+        close_api_tasks = [
             self._ya_market_api.close(),
             self._ya_activity_api.close(),
             self._ya_payment_api.close(),
             self._ya_net_api.close(),
-        )
+        ]
+        await asyncio.gather(*close_api_tasks)
 
     ###########################
     #   Create new objects
@@ -100,6 +110,11 @@ class GolemNode:
 
     #########
     #   Other
+    def _add_object(self, obj: GolemObject) -> None:
+        objects = self._objects[type(obj)]
+        # assert obj.id not in objects  # TODO
+        objects[obj.id] = obj
+
     def __str__(self):
         lines = [
             f"{type(self).__name__}(",
