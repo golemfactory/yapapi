@@ -4,8 +4,9 @@ from typing import Dict, List, Tuple, TYPE_CHECKING
 
 from ya_payment import RequestorApi, models as ya_models
 
-from .golem_object import GolemObject
+from .api_call_wrapper import api_call_wrapper
 from .exceptions import NoMatchingAccount
+from .golem_object import GolemObject
 
 if TYPE_CHECKING:
     from .golem_node import GolemNode
@@ -34,9 +35,9 @@ class PaymentApiObject(GolemObject, ABC):
 
 
 class Allocation(PaymentApiObject):
-    @property
-    def _delete_method_name(self) -> str:
-        return 'release_allocation'
+    @api_call_wrapper
+    async def release(self) -> None:
+        await self.api.release_allocation(self.id)
 
     @classmethod
     async def create_any_account(cls, node: "GolemNode", amount: float) -> "Allocation":
@@ -81,6 +82,7 @@ class Allocation(PaymentApiObject):
         created = await api.create_allocation(model)
         return cls(node, created.allocation_id, created)
 
+    @api_call_wrapper
     async def demand_properties_constraints(self) -> Tuple[List[Dict[str, str]], List[str]]:
         data = await self.api.get_demand_decorations([self.id])
         return data.properties, data.constraints

@@ -56,8 +56,8 @@ async def example_3(golem):
             print(offer)
             break
 
-        await allocation.delete()
-        await demand.delete()
+        await allocation.release()
+        await demand.unsubscribe()
 
 
 async def main():

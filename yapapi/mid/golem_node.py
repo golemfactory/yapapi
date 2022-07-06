@@ -29,6 +29,7 @@ class GolemNode:
     #   Start/stop interface
     async def __aenter__(self):
         await self.start()
+        return self
 
     async def __aexit__(self, *exc_info):
         await self.stop()

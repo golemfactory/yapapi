@@ -3,6 +3,8 @@ import asyncio
 from typing import AsyncIterator, TYPE_CHECKING
 
 from ya_market import RequestorApi, models as ya_models
+
+from .api_call_wrapper import api_call_wrapper
 from .golem_object import GolemObject
 from .exceptions import ObjectNotFound
 
@@ -46,9 +48,9 @@ class Demand(PaymentApiObject):
         demand_id = await api.subscribe_demand(model)
         return cls(node, demand_id)
 
-    @property
-    def _delete_method_name(self) -> str:
-        return 'unsubscribe_demand'
+    @api_call_wrapper
+    async def unsubscribe(self) -> None:
+        await self.api.unsubscribe_demand(self.id)
 
     async def offers(self) -> AsyncIterator["Offer"]:
         if self._event_collector is None:
