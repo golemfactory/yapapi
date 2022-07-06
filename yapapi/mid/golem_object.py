@@ -37,15 +37,21 @@ def capture_api_exception(f):
     return wrapper
 
 
-class GolemObject(ABC):
+class CachedSingletonId(type(ABC)):
+    def __call__(cls, node: "GolemNode", id_: str, *args, **kwargs):
+        if id_ not in node._objects[cls]:
+            obj = super(CachedSingletonId, cls).__call__(node, id_, *args, **kwargs)
+            node._objects[cls][id_] = obj
+        return node._objects[cls][id_]
+
+
+class GolemObject(ABC, metaclass=CachedSingletonId):
     def __init__(self, node: "GolemNode", id_: str, data=None):
         self._node = node
         self._id = id_
         self._data = data
 
         self._event_collector: Optional[EventCollector] = None
-
-        node._add_object(self)
 
     @capture_api_exception
     async def load(self, *args, **kwargs) -> None:

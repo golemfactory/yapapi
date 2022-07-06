@@ -4,8 +4,8 @@ from yapapi.payload import vm
 
 from yapapi.mid.golem_node import GolemNode
 
-allocation_id = "76a130ff-a334-4d17-9e92-14edf4dc0d78"
-demand_id = "21fd7ad974fd4451b855674cf197f552-0cc8747670fab54e120c063087a72114b08e8d60eafb6993158436ecbea1a43b"
+allocation_id = "a5f7be7b-2890-4a5f-a93e-d109849de7fb"
+demand_id = "32d198f1565f46aa917d704125b8e8ca-28e70eade4bffc91c3ab0b15b522878b47649169b27ae7659dffab4bb89ad0c0"
 image_hash = "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"
 
 golem = GolemNode()
@@ -26,6 +26,10 @@ async def example_1(golem):
 
     print(allocation.data)
     print(demand.data)
+
+    #   All objects are singletons
+    assert allocation == golem.allocation(allocation_id)
+    assert demand == golem.demand(demand_id)
 
 
 async def example_2(golem):
@@ -57,8 +61,11 @@ async def example_3(golem):
 
 
 async def main():
+    print("\n---------- EXAMPLE 1 -------------\n")
     await example_1(golem)
+    print("\n---------- EXAMPLE 2 -------------\n")
     await example_2(golem)
+    print("\n---------- EXAMPLE 3 -------------\n")
     await example_3(golem)
 
 
