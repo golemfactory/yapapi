@@ -1,8 +1,6 @@
 from abc import ABC
-import asyncio
-from collections import defaultdict
 from functools import wraps
-from typing import Any, Awaitable, DefaultDict, List, Optional, TYPE_CHECKING
+from typing import Awaitable, Optional, TYPE_CHECKING
 
 from ya_payment import ApiException as PaymentApiException
 from ya_market import ApiException as MarketApiException
@@ -10,6 +8,7 @@ from ya_activity import ApiException as ActivityApiException
 from ya_net import ApiException as NetApiException
 
 from .exceptions import ObjectNotFound
+from .event_collector import EventCollector
 
 
 if TYPE_CHECKING:
@@ -44,8 +43,7 @@ class GolemObject(ABC):
         self._id = id_
         self._data = data
 
-        self._collect_events_task: Optional[asyncio.Task] = None
-        self._events: DefaultDict[type, List[Any]] = defaultdict(list)
+        self._event_collector: Optional[EventCollector] = None
 
     @capture_api_exception
     async def load(self, *args, **kwargs) -> None:
@@ -90,24 +88,9 @@ class GolemObject(ABC):
         return self._node
 
     def start_collecting_events(self, get_events: Awaitable, *args, **kwargs) -> None:
-        assert self._collect_events_task is None
-        coroutine = self._get_events(get_events, *args, **kwargs)
-        self._collect_events_task = asyncio.create_task(coroutine)
-
-    async def _get_events(self, get_events: Awaitable, *args, **kwargs) -> None:
-        while True:
-            events = await get_events(*args, **kwargs)
-            for event in events:
-                self._events[type(event)].append(event)
-
-            if not events:
-                await asyncio.sleep(1)
-
-    def stop_collecting_events(self) -> None:
-        if not self._collect_events_task:
-            return
-        self._collect_events_task.cancel()
-        self._collect_events_task = None
+        assert self._event_collector is None
+        self._event_collector = EventCollector(get_events, args, kwargs)
+        self._event_collector.start()
 
     @property
     def _get_method_name(self):

@@ -51,18 +51,16 @@ class Demand(PaymentApiObject):
         return 'unsubscribe_demand'
 
     async def offers(self) -> AsyncIterator["Offer"]:
-        if self._collect_events_task is None:
+        if self._event_collector is None:
             get_events = self.api.collect_offers
             self.start_collecting_events(get_events, self.id, timeout=5, max_events=10)
 
-        event_ix = 0
-        event_list = self._events[ya_models.ProposalEvent]
+        queue: asyncio.Queue = self._event_collector.event_queue()
+
         while True:
-            if event_ix < len(event_list):
-                yield Offer.from_proposal_event(self.node, event_list[event_ix])
-                event_ix += 1
-            else:
-                await asyncio.sleep(0.1)
+            event = await queue.get()
+            if isinstance(event, ya_models.ProposalEvent):
+                yield Offer.from_proposal_event(self.node, event)
 
 
 class Offer(PaymentApiObject):
