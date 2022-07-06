@@ -11,6 +11,11 @@ if TYPE_CHECKING:
 
 class CachedSingletonId(type(ABC)):
     def __call__(cls, node: "GolemNode", id_: str, *args, **kwargs):
+        if args:
+            #   Sanity check: when data is passed, it must be a new object
+            #   (TODO: maybe we should only check if we got the same data?)
+            assert id_ not in node._objects[cls]
+
         if id_ not in node._objects[cls]:
             obj = super(CachedSingletonId, cls).__call__(node, id_, *args, **kwargs)
             node._objects[cls][id_] = obj
