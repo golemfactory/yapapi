@@ -9,6 +9,7 @@ import click
 from yapapi.payload import Payload
 from yapapi.props.base import constraint
 from yapapi.props import inf
+from yapapi.engine import DEFAULT_NETWORK
 
 from yapapi.mid.golem_node import GolemNode
 from yapapi.mid.payment import Allocation
@@ -54,17 +55,18 @@ def allocation():
 @async_golem_wrapper
 async def allocation_list(golem):
     allocations = await golem.allocations()
-    for allocation in allocations:
-        click.echo(allocation)
+    click.echo(_format_allocations(allocations))
 
 
 @allocation.command("new")
+@click.argument("amount", type=int)
+@click.option("--network", type=str, default=DEFAULT_NETWORK)
 @async_golem_wrapper
-async def allocation_new(golem):
+async def allocation_new(golem, amount, network):
     #   TODO
     #   (waits for: does GolemNode know the network etc?)
     #   yapapi allocation new 50 --network polygon
-    click.echo("ALLOCATION NEW")
+    click.echo(f"TODO - ALLOCATION NEW {amount} {network}")
 
 
 @allocation.command("clean")
@@ -100,6 +102,8 @@ async def status(golem):
 async def find_node(golem, runtime, timeout):
     #   TODO: subnet? etc?
     #   (waits for: does GolemNode know the network etc?)
+
+    #   TODO: example has "60s" here we have just "60" --> worth doing?
     click.echo(f"Looking for offers for runtime {runtime} on the subnet {golem.subnet}")
 
     async def get_nodes():
