@@ -75,8 +75,8 @@ async def example_4(golem):
 
 
 async def main():
-    print("\n---------- EXAMPLE 1 -------------\n")
-    await example_1(golem)
+    # print("\n---------- EXAMPLE 1 -------------\n")
+    # await example_1(golem)
     print("\n---------- EXAMPLE 2 -------------\n")
     await example_2(golem)
     print("\n---------- EXAMPLE 3 -------------\n")

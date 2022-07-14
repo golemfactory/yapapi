@@ -2,7 +2,7 @@ from abc import ABC
 from typing import Awaitable, Optional, TYPE_CHECKING
 
 from .api_call_wrapper import api_call_wrapper
-from .event_collector import EventCollector
+from .yagna_event_collector import YagnaEventCollector
 
 
 if TYPE_CHECKING:
@@ -28,7 +28,7 @@ class Resource(ABC, metaclass=CachedSingletonId):
         self._id = id_
         self._data = data
 
-        self._event_collector: Optional[EventCollector] = None
+        self._event_collector: Optional[YagnaEventCollector] = None
 
     @api_call_wrapper
     async def load(self, *args, **kwargs) -> None:
@@ -66,7 +66,7 @@ class Resource(ABC, metaclass=CachedSingletonId):
 
     def start_collecting_events(self, get_events: Awaitable, *args, **kwargs) -> None:
         assert self._event_collector is None
-        self._event_collector = EventCollector(get_events, args, kwargs)
+        self._event_collector = YagnaEventCollector(get_events, args, kwargs)
         self._event_collector.start()
 
     async def stop_collecting_events(self) -> None:

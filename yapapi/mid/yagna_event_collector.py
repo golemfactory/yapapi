@@ -3,7 +3,11 @@ import asyncio
 from typing import Any, Awaitable, Dict, List, Optional
 
 
-class EventCollector:
+class YagnaEventCollector:
+    """Utility class that listens for yagna events on a given endpoint
+
+    and puts them in queue(s).
+    NOTE: this has nothing to do with "internal" yapapi events."""
     def __init__(self, func: Awaitable, func_args: List[Any], func_kwargs: Dict[Any, Any]):
         self.func = func
         self.func_args = func_args
