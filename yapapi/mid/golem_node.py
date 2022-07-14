@@ -17,13 +17,6 @@ from .resource import Resource
 
 class GolemNode:
     def __init__(self):
-        try:
-            asyncio.get_running_loop()
-        except RuntimeError:
-            #   TODO: this is not really a fundamental constraint (we can drop it by replacing
-            #         `_start()` with lazy builds), but now this will just make the code more complex
-            raise RuntimeError("GolemNode must be created from inside of the async code")
-
         self._api_config = rest.Configuration()
         self.payment_driver = DEFAULT_DRIVER
         self.payment_network = DEFAULT_NETWORK
@@ -34,27 +27,23 @@ class GolemNode:
         self._resources: DefaultDict[Type[Resource], Dict[str, Resource]] = defaultdict(dict)
         self._event_bus = EventBus()
 
-        self._start()
+    ########################
+    #   Start/stop interface
+    async def __aenter__(self):
+        await self.start()
+        return self
 
-    def _start(self):
+    async def __aexit__(self, *exc_info):
+        await self.aclose()
+
+    async def start(self):
         self._event_bus.start()
         self._ya_market_api = self._api_config.market()
         self._ya_activity_api = self._api_config.activity()
         self._ya_payment_api = self._api_config.payment()
         self._ya_net_api = self._api_config.net()
 
-    ########################
-    #   Start/stop interface
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *exc_info):
-        await self.aclose()
-
     async def aclose(self):
-        #   TODO: Consider some solution that will make calls to aclose redundant (atexit?).
-        #         E.g. `httpx` somehow does this. Note: solution would probably require
-        #         tests with different python versions/different OS/etc.
         await self._stop_collecting_events()
         await self._close_apis()
         await self._event_bus.stop()
