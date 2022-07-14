@@ -39,7 +39,7 @@ class ResourceChanged(ResourceEvent):
     """Emitted when we first notice a change in an already known resource.
 
     Change might be caused by us or by some party.
-    Second argument is the old model (before the change), so comparing
+    Second argument is the old data (before the change), so comparing
     event.resource.data with event.old_data shows what changed.
 
     NULL (i.e. empty) change is not a change, even if we explicitly sent a resource-changing call.

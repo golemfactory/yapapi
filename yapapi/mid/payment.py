@@ -28,11 +28,6 @@ class PaymentApiObject(GolemObject, ABC):
     def api(self) -> RequestorApi:
         return RequestorApi(self._node._ya_payment_api)
 
-    @property
-    def model(self):
-        my_name = type(self).__name__
-        return ya_models.getattr(my_name)
-
 
 class Allocation(PaymentApiObject):
     @api_call_wrapper
@@ -58,7 +53,7 @@ class Allocation(PaymentApiObject):
         timestamp = datetime.now(timezone.utc)
         timeout = timestamp + timedelta(days=365 * 10)
 
-        model = ya_models.Allocation(
+        data = ya_models.Allocation(
             address=account.address,
             payment_platform=account.platform,
             total_amount=str(amount),
@@ -74,12 +69,12 @@ class Allocation(PaymentApiObject):
             remaining_amount="",
         )
 
-        return await cls.create(node, model)
+        return await cls.create(node, data)
 
     @classmethod
-    async def create(cls, node: "GolemNode", model: ya_models.Allocation) -> "Allocation":
+    async def create(cls, node: "GolemNode", data: ya_models.Allocation) -> "Allocation":
         api = cls._get_api(node)
-        created = await api.create_allocation(model)
+        created = await api.create_allocation(data)
         return cls(node, created.allocation_id, created)
 
     @api_call_wrapper

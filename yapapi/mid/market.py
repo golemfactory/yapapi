@@ -17,11 +17,6 @@ class PaymentApiObject(GolemObject, ABC):
     def api(self) -> RequestorApi:
         return RequestorApi(self._node._ya_market_api)
 
-    @property
-    def model(self):
-        my_name = type(self).__name__
-        return ya_models.getattr(my_name)
-
 
 class Demand(PaymentApiObject):
     async def _load_no_wrap(self):
@@ -36,16 +31,16 @@ class Demand(PaymentApiObject):
 
     @classmethod
     async def create_from_properties_constraints(cls, node: "GolemNode", properties, constraints) -> "Demand":
-        model = ya_models.DemandOfferBase(
+        data = ya_models.DemandOfferBase(
             properties=properties,
             constraints=constraints,
         )
-        return await cls.create(node, model)
+        return await cls.create(node, data)
 
     @classmethod
-    async def create(cls, node: "GolemNode", model: ya_models.DemandOfferBase) -> "Demand":
+    async def create(cls, node: "GolemNode", data: ya_models.DemandOfferBase) -> "Demand":
         api = cls._get_api(node)
-        demand_id = await api.subscribe_demand(model)
+        demand_id = await api.subscribe_demand(data)
         return cls(node, demand_id)
 
     @api_call_wrapper
