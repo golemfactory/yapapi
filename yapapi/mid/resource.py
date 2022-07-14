@@ -30,7 +30,7 @@ class Resource(ABC, metaclass=CachedSingletonId):
 
         self._event_collector: Optional[YagnaEventCollector] = None
 
-    @api_call_wrapper
+    @api_call_wrapper()
     async def load(self, *args, **kwargs) -> None:
         await self._load_no_wrap(*args, **kwargs)
 
@@ -39,7 +39,7 @@ class Resource(ABC, metaclass=CachedSingletonId):
         self._data = await get_method(self._id)
 
     @classmethod
-    @api_call_wrapper
+    @api_call_wrapper()
     async def get_all(cls, node: "GolemNode"):
         api = cls._get_api(node)
         get_all_method = getattr(api, cls._get_all_method_name())

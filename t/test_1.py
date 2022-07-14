@@ -52,9 +52,6 @@ async def test_allocation(golem):
         with pytest.raises(ResourceNotFound):
             await allocation.load()
 
-        #   This returns 410, so is "OK" from our POV
-        await allocation.release()
-
         with pytest.raises(NoMatchingAccount):
             await golem.create_allocation(1, 'no_such_network_oops')
 
@@ -74,5 +71,21 @@ async def test_demand(any_payload, golem):
         with pytest.raises(ResourceNotFound):
             await demand.load()
 
-        with pytest.raises(ResourceNotFound):
+@pytest.mark.asyncio
+@pytest.mark.parametrize("autoclose", (True, False))
+async def test_autoclose(any_payload, golem, autoclose):
+    async with golem:
+        allocation = await golem.create_allocation(1, autoclose=autoclose)
+        demand = await golem.create_demand(any_payload, allocations=[allocation], autoclose=autoclose)
+        
+    async with golem:
+        if autoclose:
+            with pytest.raises(ResourceNotFound):
+                await demand.load()
+            with pytest.raises(ResourceNotFound):
+                await allocation.load()
+        else:
+            await demand.load()
             await demand.unsubscribe()
+            await allocation.load()
+            await allocation.release()

@@ -25,6 +25,7 @@ class GolemNode:
         #   All created Resources will be stored here
         #   (This is done internally by the metaclass of the Resource)
         self._resources: DefaultDict[Type[Resource], Dict[str, Resource]] = defaultdict(dict)
+        self._autoclose_resources: set(Resource) = set()
         self._event_bus = EventBus()
 
     ########################
@@ -45,6 +46,7 @@ class GolemNode:
 
     async def aclose(self):
         await self._stop_collecting_events()
+        await self._close_autoclose_resources()
         await self._close_apis()
         await self._event_bus.stop()
 
@@ -62,6 +64,14 @@ class GolemNode:
             self._ya_net_api.close(),
         )
 
+    async def _close_autoclose_resources(self):
+        demand_tasks = [r.unsubscribe() for r in self._autoclose_resources if isinstance(r, Demand)]
+        allocation_tasks = [r.release() for r in self._autoclose_resources if isinstance(r, Allocation)]
+        if demand_tasks:
+            await asyncio.gather(*demand_tasks)
+        if allocation_tasks:
+            await asyncio.gather(*allocation_tasks)
+
     ###########################
     #   Create new resources
     async def create_allocation(
@@ -69,12 +79,16 @@ class GolemNode:
         amount: float,
         network: str = DEFAULT_NETWORK,
         driver: str = DEFAULT_DRIVER,
+        autoclose: bool = True,
     ) -> Allocation:
         #   TODO: This creates an Allocation for a matching requestor account
         #         (or raises an exception if there is none).
         #         Can we have more than a single matching account?
         #         If yes - how to approach this? Add `create_allocations`?
-        return await Allocation.create_any_account(self, amount, network, driver)
+        allocation = await Allocation.create_any_account(self, amount, network, driver)
+        if autoclose:
+            self._autoclose_resources.add(allocation)
+        return allocation
 
     async def create_demand(
         self,
@@ -82,6 +96,7 @@ class GolemNode:
         subnet: str = DEFAULT_SUBNET,
         expiration: Optional[datetime] = None,
         allocations: Iterable[Allocation] = (),
+        autoclose: bool = True,
     ) -> Demand:
         if expiration is None:
             expiration = datetime.now(timezone.utc) + DEFAULT_EXPIRATION_TIMEOUT
@@ -92,7 +107,11 @@ class GolemNode:
 
         await builder.decorate(payload)
         await self._add_builder_allocations(builder, allocations)
-        return await Demand.create_from_properties_constraints(self, builder.properties, builder.constraints)
+
+        demand = await Demand.create_from_properties_constraints(self, builder.properties, builder.constraints)
+        if autoclose:
+            self._autoclose_resources.add(demand)
+        return demand
 
     async def _add_builder_allocations(self, builder: DemandBuilder, allocations: Iterable[Allocation]) -> None:
         for allocation in allocations:

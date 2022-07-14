@@ -19,7 +19,7 @@ class PaymentApiResource(Resource, ABC):
 
 
 class Allocation(PaymentApiResource):
-    @api_call_wrapper
+    @api_call_wrapper(ignored_errors=[404, 410])
     async def release(self) -> None:
         await self.api.release_allocation(self.id)
 
@@ -73,7 +73,7 @@ class Allocation(PaymentApiResource):
         created = await api.create_allocation(data)
         return cls(node, created.allocation_id, created)
 
-    @api_call_wrapper
+    @api_call_wrapper()
     async def demand_properties_constraints(self) -> Tuple[List[Dict[str, str]], List[str]]:
         data = await self.api.get_demand_decorations([self.id])
         return data.properties, data.constraints

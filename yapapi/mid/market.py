@@ -43,7 +43,7 @@ class Demand(PaymentApiResource):
         demand_id = await api.subscribe_demand(data)
         return cls(node, demand_id)
 
-    @api_call_wrapper
+    @api_call_wrapper(ignored_errors=[404, 410])
     async def unsubscribe(self) -> None:
         await self.api.unsubscribe_demand(self.id)
 
