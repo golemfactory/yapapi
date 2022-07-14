@@ -12,17 +12,17 @@ if TYPE_CHECKING:
 class CachedSingletonId(type(ABC)):
     def __call__(cls, node: "GolemNode", id_: str, *args, **kwargs):
         if args:
-            #   Sanity check: when data is passed, it must be a new object
+            #   Sanity check: when data is passed, it must be a new resource
             #   (TODO: maybe we should only check if we got the same data?)
-            assert id_ not in node._objects[cls]
+            assert id_ not in node._resources[cls]
 
-        if id_ not in node._objects[cls]:
+        if id_ not in node._resources[cls]:
             obj = super(CachedSingletonId, cls).__call__(node, id_, *args, **kwargs)
-            node._objects[cls][id_] = obj
-        return node._objects[cls][id_]
+            node._resources[cls][id_] = obj
+        return node._resources[cls][id_]
 
 
-class GolemObject(ABC, metaclass=CachedSingletonId):
+class Resource(ABC, metaclass=CachedSingletonId):
     def __init__(self, node: "GolemNode", id_: str, data=None):
         self._node = node
         self._id = id_
@@ -45,12 +45,12 @@ class GolemObject(ABC, metaclass=CachedSingletonId):
         get_all_method = getattr(api, cls._get_all_method_name())
         data = await get_all_method()
 
-        objects = []
+        resources = []
         id_field = f'{cls.__name__.lower()}_id'
         for raw in data:
             id_ = getattr(raw, id_field)
-            objects.append(cls(node, id_, raw))
-        return tuple(objects)
+            resources.append(cls(node, id_, raw))
+        return tuple(resources)
 
     @property
     def id(self):

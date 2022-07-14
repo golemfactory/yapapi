@@ -5,20 +5,20 @@ from typing import AsyncIterator, TYPE_CHECKING
 from ya_market import RequestorApi, models as ya_models
 
 from .api_call_wrapper import api_call_wrapper
-from .golem_object import GolemObject
-from .exceptions import ObjectNotFound
+from .exceptions import ResourceNotFound
+from .resource import Resource
 
 if TYPE_CHECKING:
     from .golem_node import GolemNode
 
 
-class PaymentApiObject(GolemObject, ABC):
+class PaymentApiResource(Resource, ABC):
     @property
     def api(self) -> RequestorApi:
         return RequestorApi(self._node._ya_market_api)
 
 
-class Demand(PaymentApiObject):
+class Demand(PaymentApiResource):
     async def _load_no_wrap(self):
         #   NOTE: this method is required because there is no get_demand(id)
         #         in ya_market (as there is no matching endpoint in yagna)
@@ -27,7 +27,7 @@ class Demand(PaymentApiObject):
             this_demands = [d for d in all_demands if d.demand_id == self.id]
             self._data = this_demands[0]
         except IndexError:
-            raise ObjectNotFound('Demand', self.id)
+            raise ResourceNotFound('Demand', self.id)
 
     @classmethod
     async def create_from_properties_constraints(cls, node: "GolemNode", properties, constraints) -> "Demand":
@@ -60,7 +60,7 @@ class Demand(PaymentApiObject):
                 yield Offer.from_proposal_event(self.node, event)
 
 
-class Offer(PaymentApiObject):
+class Offer(PaymentApiResource):
     async def _load_no_wrap(self, demand_id):
         self._data = await self.api.get_proposal_offer(demand_id, self.id)
 
@@ -70,5 +70,5 @@ class Offer(PaymentApiObject):
         return Offer(node, data.proposal_id, data)
 
 
-class Agreement(PaymentApiObject):
+class Agreement(PaymentApiResource):
     pass

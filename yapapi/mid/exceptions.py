@@ -4,7 +4,7 @@ if TYPE_CHECKING:
     from yapapi.mid.golem_node import GolemNode
 
 
-class ObjectNotFound(Exception):
+class ResourceNotFound(Exception):
     def __init__(self, name, id_):
         self.name = name
         self.id = id_

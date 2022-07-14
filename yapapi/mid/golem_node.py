@@ -12,7 +12,7 @@ from yapapi import props
 from .event_bus import EventBus
 from .payment import Allocation
 from .market import Demand, Offer, Agreement
-from .golem_object import GolemObject
+from .resource import Resource
 
 
 class GolemNode:
@@ -22,9 +22,9 @@ class GolemNode:
         self.payment_network = DEFAULT_NETWORK
         self.subnet = DEFAULT_SUBNET
 
-        #   All created GolemObjects will be stored here
-        #   (This is done internally by the metaclass of the GolemObject)
-        self._objects: DefaultDict[Type[GolemObject], Dict[str, GolemObject]] = defaultdict(dict)
+        #   All created Resources will be stored here
+        #   (This is done internally by the metaclass of the Resource)
+        self._resources: DefaultDict[Type[Resource], Dict[str, Resource]] = defaultdict(dict)
         self._event_bus = EventBus()
 
     ########################
@@ -50,8 +50,8 @@ class GolemNode:
 
     async def _stop_collecting_events(self):
         tasks = []
-        for objects in self._objects.values():
-            tasks += [obj.stop_collecting_events() for obj in objects.values()]
+        for resources in self._resources.values():
+            tasks += [obj.stop_collecting_events() for obj in resources.values()]
         await asyncio.gather(*tasks)
 
     async def _close_apis(self):
@@ -63,7 +63,7 @@ class GolemNode:
         )
 
     ###########################
-    #   Create new objects
+    #   Create new resources
     async def create_allocation(self, amount: float) -> Allocation:
         #   TODO: This creates an Allocation for a matching requestor account
         #         (or raises an exception if there is none).
@@ -96,7 +96,7 @@ class GolemNode:
             builder.properties.update({p.key: p.value for p in properties})
 
     ###########################
-    #   Single-object factories for already existing objects
+    #   Single-resource factories for already existing resources
     def allocation(self, allocation_id) -> Allocation:
         return Allocation(self, allocation_id)
 
@@ -110,7 +110,7 @@ class GolemNode:
         return Agreement(self, agreement_id)
 
     ##########################
-    #   Multi-object factories for already existing objects
+    #   Multi-resource factories for already existing resources
     async def allocations(self) -> Tuple[Allocation]:
         return await Allocation.get_all(self)
 

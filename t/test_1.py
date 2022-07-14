@@ -4,7 +4,7 @@ from random import random
 from yapapi.payload import vm
 
 from yapapi.mid.golem_node import GolemNode
-from yapapi.mid.exceptions import ObjectNotFound
+from yapapi.mid.exceptions import ResourceNotFound
 
 
 
@@ -49,7 +49,7 @@ async def test_allocation(golem):
         assert allocation.data == old_data
 
         await allocation.release()
-        with pytest.raises(ObjectNotFound):
+        with pytest.raises(ResourceNotFound):
             await allocation.load()
 
         #   This returns 410, so is "OK" from our POV
@@ -68,8 +68,8 @@ async def test_demand(any_payload, golem):
         await demand.load()
 
         await demand.unsubscribe()
-        with pytest.raises(ObjectNotFound):
+        with pytest.raises(ResourceNotFound):
             await demand.load()
 
-        with pytest.raises(ObjectNotFound):
+        with pytest.raises(ResourceNotFound):
             await demand.unsubscribe()

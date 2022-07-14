@@ -6,7 +6,7 @@ from ya_payment import RequestorApi, models as ya_models
 
 from .api_call_wrapper import api_call_wrapper
 from .exceptions import NoMatchingAccount
-from .golem_object import GolemObject
+from .resource import Resource
 
 if TYPE_CHECKING:
     from .golem_node import GolemNode
@@ -23,13 +23,13 @@ async def matching_accounts(node: "GolemNode") -> Tuple[ya_models.Account]:
             yield account
 
 
-class PaymentApiObject(GolemObject, ABC):
+class PaymentApiResource(Resource, ABC):
     @property
     def api(self) -> RequestorApi:
         return RequestorApi(self._node._ya_payment_api)
 
 
-class Allocation(PaymentApiObject):
+class Allocation(PaymentApiResource):
     @api_call_wrapper
     async def release(self) -> None:
         await self.api.release_allocation(self.id)
