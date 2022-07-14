@@ -1,6 +1,6 @@
 import asyncio
 from collections import defaultdict
-from typing import DefaultDict, Dict, Iterable, Optional, Tuple, Type
+from typing import DefaultDict, Dict, Iterable, Optional, List, Type
 from datetime import datetime, timedelta, timezone
 
 from yapapi import rest
@@ -30,33 +30,33 @@ class GolemNode:
 
     ########################
     #   Start/stop interface
-    async def __aenter__(self):
+    async def __aenter__(self) -> "GolemNode":
         await self.start()
         return self
 
-    async def __aexit__(self, *exc_info):
+    async def __aexit__(self, *exc_info) -> None:
         await self.aclose()
 
-    async def start(self):
+    async def start(self) -> None:
         self._event_bus.start()
         self._ya_market_api = self._api_config.market()
         self._ya_activity_api = self._api_config.activity()
         self._ya_payment_api = self._api_config.payment()
         self._ya_net_api = self._api_config.net()
 
-    async def aclose(self):
+    async def aclose(self) -> None:
         await self._stop_collecting_events()
         await self._close_autoclose_resources()
         await self._close_apis()
         await self._event_bus.stop()
 
-    async def _stop_collecting_events(self):
+    async def _stop_collecting_events(self) -> None:
         tasks = []
         for resources in self._resources.values():
             tasks += [obj.stop_collecting_events() for obj in resources.values()]
         await asyncio.gather(*tasks)
 
-    async def _close_apis(self):
+    async def _close_apis(self) -> None:
         await asyncio.gather(
             self._ya_market_api.close(),
             self._ya_activity_api.close(),
@@ -64,7 +64,7 @@ class GolemNode:
             self._ya_net_api.close(),
         )
 
-    async def _close_autoclose_resources(self):
+    async def _close_autoclose_resources(self) -> None:
         demand_tasks = [r.unsubscribe() for r in self._autoclose_resources if isinstance(r, Demand)]
         allocation_tasks = [r.release() for r in self._autoclose_resources if isinstance(r, Allocation)]
         if demand_tasks:
@@ -141,10 +141,10 @@ class GolemNode:
 
     ##########################
     #   Multi-resource factories for already existing resources
-    async def allocations(self) -> Tuple[Allocation]:
+    async def allocations(self) -> List[Allocation]:
         return await Allocation.get_all(self)
 
-    async def demands(self) -> Tuple[Demand]:
+    async def demands(self) -> List[Demand]:
         return await Demand.get_all(self)
 
     ##########################

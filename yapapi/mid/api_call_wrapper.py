@@ -1,5 +1,5 @@
 from functools import wraps
-from typing import List
+from typing import Callable, List
 
 from ya_payment import ApiException as PaymentApiException
 from ya_market import ApiException as MarketApiException
@@ -12,17 +12,18 @@ from .exceptions import ResourceNotFound
 all_api_exceptions = (PaymentApiException, MarketApiException, ActivityApiException, NetApiException)
 
 
-def api_call_wrapper(ignored_errors: List[int] = []):
-    def outer_wrapper(f):
+def api_call_wrapper(ignored_errors: List[int] = []) -> Callable[[Callable], Callable]:
+    def outer_wrapper(f) -> Callable:
         @wraps(f)
-        async def wrapper(self_or_cls, *args, **kwargs):
+        async def wrapper(*args, **kwargs):
             try:
-                return await f(self_or_cls, *args, **kwargs)
+                return await f(*args, **kwargs)
             except all_api_exceptions as e:
                 if e.status in ignored_errors:
                     pass
                 elif e.status == 404:
-                    raise ResourceNotFound(type(self_or_cls).__name__, self_or_cls._id)
+                    self = args[0]
+                    raise ResourceNotFound(type(self).__name__, self.id)
                 else:
                     raise
         return wrapper

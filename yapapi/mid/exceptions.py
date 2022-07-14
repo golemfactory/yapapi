@@ -1,8 +1,5 @@
-from typing import TYPE_CHECKING
-
-
 class ResourceNotFound(Exception):
-    def __init__(self, name, id_):
+    def __init__(self, name: str, id_: str):
         self.name = name
         self.id = id_
 

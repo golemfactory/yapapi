@@ -41,11 +41,11 @@ class EventBus:
 
         self._task: Optional[asyncio.Task] = None
 
-    def start(self):
+    def start(self) -> None:
         assert self._task is None
         self._task = asyncio.create_task(self._emit_events())
 
-    async def stop(self):
+    async def stop(self) -> None:
         if self._task:
             await self.queue.join()
             self._task.cancel()

@@ -1,6 +1,6 @@
 from abc import ABC
 import asyncio
-from typing import AsyncIterator, TYPE_CHECKING
+from typing import AsyncIterator, Dict, TYPE_CHECKING
 
 from ya_market import RequestorApi, models as ya_models
 
@@ -12,14 +12,14 @@ if TYPE_CHECKING:
     from .golem_node import GolemNode
 
 
-class PaymentApiResource(Resource, ABC):
+class MarketApiResource(Resource, ABC):
     @property
     def api(self) -> RequestorApi:
         return RequestorApi(self._node._ya_market_api)
 
 
-class Demand(PaymentApiResource):
-    async def _load_no_wrap(self):
+class Demand(MarketApiResource):
+    async def _load_no_wrap(self) -> None:
         #   NOTE: this method is required because there is no get_demand(id)
         #         in ya_market (as there is no matching endpoint in yagna)
         all_demands = await self.api.get_demands()
@@ -30,7 +30,12 @@ class Demand(PaymentApiResource):
             raise ResourceNotFound('Demand', self.id)
 
     @classmethod
-    async def create_from_properties_constraints(cls, node: "GolemNode", properties, constraints) -> "Demand":
+    async def create_from_properties_constraints(
+        cls,
+        node: "GolemNode",
+        properties: Dict[str, str],
+        constraints: str,
+    ) -> "Demand":
         data = ya_models.DemandOfferBase(
             properties=properties,
             constraints=constraints,
@@ -61,8 +66,8 @@ class Demand(PaymentApiResource):
                 yield Offer.from_proposal_event(self.node, event)
 
 
-class Offer(PaymentApiResource):
-    async def _load_no_wrap(self, demand_id):
+class Offer(MarketApiResource):
+    async def _load_no_wrap(self, demand_id: str) -> None:  # type: ignore
         self._data = await self.api.get_proposal_offer(demand_id, self.id)
 
     @classmethod
@@ -72,5 +77,5 @@ class Offer(PaymentApiResource):
         return Offer(node, data.proposal_id, data)
 
 
-class Agreement(PaymentApiResource):
+class Agreement(MarketApiResource):
     pass

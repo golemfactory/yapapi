@@ -1,5 +1,5 @@
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Callable, Optional, TYPE_CHECKING
+from typing import Any, Callable, List, Optional, TYPE_CHECKING
 
 from .api_call_wrapper import api_call_wrapper
 from .yagna_event_collector import YagnaEventCollector
@@ -24,7 +24,7 @@ class CachedSingletonId(ABCMeta):
 
 
 class Resource(ABC, metaclass=CachedSingletonId):
-    def __init__(self, node: "GolemNode", id_: str, data=None):
+    def __init__(self, node: "GolemNode", id_: str, data: Any = None):
         self._node = node
         self._id = id_
         self._data = data
@@ -46,7 +46,7 @@ class Resource(ABC, metaclass=CachedSingletonId):
 
     @classmethod
     @api_call_wrapper()
-    async def get_all(cls, node: "GolemNode"):
+    async def get_all(cls, node: "GolemNode") -> List["Resource"]:
         api = cls._get_api(node)
         get_all_method = getattr(api, cls._get_all_method_name())
         data = await get_all_method()
@@ -56,18 +56,18 @@ class Resource(ABC, metaclass=CachedSingletonId):
         for raw in data:
             id_ = getattr(raw, id_field)
             resources.append(cls(node, id_, raw))
-        return tuple(resources)
+        return resources
 
     @property
-    def id(self):
+    def id(self) -> str:
         return self._id
 
     @property
-    def data(self):
+    def data(self) -> Any:
         return self._data
 
     @property
-    def node(self):
+    def node(self) -> "GolemNode":
         return self._node
 
     def start_collecting_events(self, get_events: Callable, *args, **kwargs) -> None:
@@ -80,11 +80,11 @@ class Resource(ABC, metaclass=CachedSingletonId):
             await self._event_collector.stop()
 
     @property
-    def _get_method_name(self):
+    def _get_method_name(self) -> str:
         return f'get_{type(self).__name__.lower()}'
 
     @classmethod
-    def _get_all_method_name(cls):
+    def _get_all_method_name(cls) -> str:
         return f'get_{cls.__name__.lower()}s'
 
     @classmethod

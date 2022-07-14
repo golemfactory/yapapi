@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass, MISSING
 from functools import wraps
 
-from typing import Tuple
+from typing import Callable, List
 
 import click
 
@@ -16,11 +16,11 @@ from yapapi.mid.payment import Allocation
 from yapapi.mid.market import Demand
 
 
-def _format_allocations(allocations: Tuple[Allocation]) -> str:
+def _format_allocations(allocations: List[Allocation]) -> str:
     return "\n".join(["Allocations"] + [a.id for a in allocations])
 
 
-def _format_demands(demands: Tuple[Demand]) -> str:
+def _format_demands(demands: List[Demand]) -> str:
     return "\n".join(["Demands"] + [d.id for d in demands])
 
 
@@ -29,7 +29,7 @@ class _CliPayload(Payload):
     runtime: str = constraint(inf.INF_RUNTIME_NAME, default=MISSING)
 
 
-def async_golem_wrapper(f):
+def async_golem_wrapper(f) -> Callable:
     @wraps(f)
     def wrapper(*args, **kwargs):
         async def with_golem():
@@ -53,16 +53,16 @@ def allocation():
 
 @allocation.command("list")
 @async_golem_wrapper
-async def allocation_list(golem):
+async def allocation_list(golem: GolemNode):
     allocations = await golem.allocations()
     click.echo(_format_allocations(allocations))
 
 
 @allocation.command("new")
-@click.argument("amount", type=int)
+@click.argument("amount", type=float)
 @click.option("--network", type=str, default=DEFAULT_NETWORK)
 @async_golem_wrapper
-async def allocation_new(golem, amount, network):
+async def allocation_new(golem: GolemNode, amount: float, network: str):
     #   TODO
     #   (waits for: does GolemNode know the network etc?)
     #   yapapi allocation new 50 --network polygon
@@ -71,7 +71,7 @@ async def allocation_new(golem, amount, network):
 
 @allocation.command("clean")
 @async_golem_wrapper
-async def allocation_clean(golem):
+async def allocation_clean(golem: GolemNode):
     for allocation in await golem.allocations():
         await allocation.release()
         click.echo(allocation.id)
@@ -79,7 +79,7 @@ async def allocation_clean(golem):
 
 @cli.command()
 @async_golem_wrapper
-async def status(golem):
+async def status(golem: GolemNode):
     allocations = await golem.allocations()
     demands = await golem.demands()
     click.echo(_format_allocations(allocations))
@@ -99,12 +99,12 @@ async def status(golem):
     required=False,
 )
 @async_golem_wrapper
-async def find_node(golem, runtime, timeout):
+async def find_node(golem: GolemNode, runtime: str, timeout: int):
     #   TODO: subnet? etc?
     #   (waits for: does GolemNode know the network etc?)
 
     #   TODO: example has "60s" here we have just "60" --> worth doing?
-    click.echo(f"Looking for offers for runtime {runtime} on the subnet {golem.subnet}")
+    click.echo(f"Looking for offers for runtime {runtime}")
 
     async def get_nodes():
         payload = _CliPayload(runtime)

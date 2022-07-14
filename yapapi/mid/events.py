@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Any, Dict
+from typing import Any
 
 from yapapi.mid.resource import Resource
 
@@ -45,7 +45,7 @@ class ResourceChanged(ResourceEvent):
     NULL (i.e. empty) change is not a change, even if we explicitly sent a resource-changing call.
     """
 
-    def __init__(self, resource: Resource, old_data: Dict[str, Any]):
+    def __init__(self, resource: Resource, old_data: Any):
         super().__init__(resource)
         self.old_data = old_data
 
