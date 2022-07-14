@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from . import GolemNode
+    from yapapi.mid.golem_node import GolemNode
 
 
 class ObjectNotFound(Exception):

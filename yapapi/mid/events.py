@@ -1,4 +1,7 @@
 from abc import ABC
+from typing import Any, Dict
+
+from yapapi.mid.golem_object import GolemObject
 
 
 class Event(ABC):
@@ -6,7 +9,7 @@ class Event(ABC):
 
 
 class ResourceEvent(ABC):
-    def __init__(self, resource):
+    def __init__(self, resource: GolemObject):
         self.resource = resource
 
 
@@ -39,7 +42,7 @@ class ResourceChanged(ResourceEvent):
     NULL (i.e. empty) change is not a change, even if we explicitly sent a resource-changing call.
     """
 
-    def __init__(self, resource, old_data):
+    def __init__(self, resource: GolemObject, old_data: Dict[str, Any]):
         super().__init__(resource)
         self.old_data = old_data
 
