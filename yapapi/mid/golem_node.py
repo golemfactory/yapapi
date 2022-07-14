@@ -34,7 +34,7 @@ class GolemNode:
         return self
 
     async def __aexit__(self, *exc_info):
-        await self.stop()
+        await self.aclose()
 
     async def start(self):
         self._event_bus.start()
@@ -43,7 +43,7 @@ class GolemNode:
         self._ya_payment_api = self._api_config.payment()
         self._ya_net_api = self._api_config.net()
 
-    async def stop(self):
+    async def aclose(self):
         await self._stop_collecting_events()
         await self._close_apis()
         await self._event_bus.stop()
