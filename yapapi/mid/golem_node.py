@@ -1,6 +1,6 @@
 import asyncio
 from collections import defaultdict
-from typing import DefaultDict, Dict, Iterable, Tuple, Type
+from typing import DefaultDict, Dict, Iterable, Optional, Tuple, Type
 from datetime import datetime, timedelta, timezone
 
 from yapapi import rest
@@ -15,10 +15,12 @@ from .market import Demand, Offer, Agreement
 from .resource import Resource
 
 
+DEFAULT_EXPIRATION_TIMEOUT = timedelta(seconds=1800)
+
+
 class GolemNode:
     def __init__(self):
         self._api_config = rest.Configuration()
-        self.subnet = DEFAULT_SUBNET
 
         #   All created Resources will be stored here
         #   (This is done internally by the metaclass of the Resource)
@@ -74,17 +76,23 @@ class GolemNode:
         #         If yes - how to approach this? Add `create_allocations`?
         return await Allocation.create_any_account(self, amount, network, driver)
 
-    async def create_demand(self, payload: Payload, allocations: Iterable[Allocation] = ()) -> Demand:
+    async def create_demand(
+        self,
+        payload: Payload,
+        subnet: str = DEFAULT_SUBNET,
+        expiration: Optional[datetime] = None,
+        allocations: Iterable[Allocation] = (),
+    ) -> Demand:
+        if expiration is None:
+            expiration = datetime.now(timezone.utc) + DEFAULT_EXPIRATION_TIMEOUT
+
         builder = DemandBuilder()
+        builder.add(props.Activity(expiration=expiration, multi_activity=True))
+        builder.add(props.NodeInfo(subnet_tag=subnet))
+
         await builder.decorate(payload)
-        self._add_builder_params(builder)
         await self._add_builder_allocations(builder, allocations)
         return await Demand.create_from_properties_constraints(self, builder.properties, builder.constraints)
-
-    def _add_builder_params(self, builder: DemandBuilder) -> None:
-        expiration_time = datetime.now(timezone.utc) + timedelta(seconds=1800)
-        builder.add(props.Activity(expiration=expiration_time, multi_activity=True))
-        builder.add(props.NodeInfo(subnet_tag=self.subnet))
 
     async def _add_builder_allocations(self, builder: DemandBuilder, allocations: Iterable[Allocation]) -> None:
         for allocation in allocations:

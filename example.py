@@ -49,7 +49,7 @@ async def example_3(golem):
         print(allocation)
 
         payload = await vm.repo(image_hash=image_hash)
-        demand = await golem.create_demand(payload, [allocation])
+        demand = await golem.create_demand(payload, allocations=[allocation])
         print(demand)
 
         async for offer in demand.offers():
