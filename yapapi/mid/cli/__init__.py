@@ -9,7 +9,7 @@ import click
 from yapapi.payload import Payload
 from yapapi.props.base import constraint
 from yapapi.props import inf
-from yapapi.engine import DEFAULT_NETWORK
+from yapapi.engine import DEFAULT_NETWORK, DEFAULT_DRIVER
 
 from yapapi.mid.golem_node import GolemNode
 from yapapi.mid.payment import Allocation
@@ -61,12 +61,21 @@ async def allocation_list(golem: GolemNode):
 @allocation.command("new")
 @click.argument("amount", type=float)
 @click.option("--network", type=str, default=DEFAULT_NETWORK)
+@click.option("--driver", type=str, default=DEFAULT_DRIVER)
 @async_golem_wrapper
-async def allocation_new(golem: GolemNode, amount: float, network: str):
-    #   TODO
-    #   (waits for: does GolemNode know the network etc?)
-    #   yapapi allocation new 50 --network polygon
-    click.echo(f"TODO - ALLOCATION NEW {amount} {network}")
+async def allocation_new(
+    golem: GolemNode,
+    amount: float,
+    network: str,
+    driver: str,
+):
+    allocation = await golem.create_allocation(
+        amount,
+        network=network,
+        driver=driver,
+        autoclose=False
+    )
+    click.echo(f"NEW ALLOCATION {allocation}")
 
 
 @allocation.command("clean")
