@@ -46,8 +46,8 @@ class EventBus:
         self._task = asyncio.create_task(self._emit_events())
 
     async def stop(self):
-        #   TODO (maybe): add an option to flush all current events
         if self._task:
+            await self.queue.join()
             self._task.cancel()
             self._task = None
 
@@ -83,3 +83,4 @@ class EventBus:
                 tasks += [callback(event) for callback in callbacks]
         if tasks:
             await asyncio.gather(*tasks)
+        self.queue.task_done()

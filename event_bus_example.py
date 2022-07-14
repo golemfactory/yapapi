@@ -22,7 +22,6 @@ async def main():
     event = events.ResourceCreated(Offer(GolemNode(), 'aaa'))
     eb.start()
     eb.emit(event)
-    await asyncio.sleep(0.1)
     await eb.stop()
 
 
