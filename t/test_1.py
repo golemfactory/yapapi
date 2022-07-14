@@ -4,8 +4,7 @@ from random import random
 from yapapi.payload import vm
 
 from yapapi.mid.golem_node import GolemNode
-from yapapi.mid.exceptions import ResourceNotFound
-
+from yapapi.mid.exceptions import NoMatchingAccount, ResourceNotFound
 
 
 @pytest.fixture
@@ -19,6 +18,7 @@ async def golem():
                 await demand.unsubscribe()
             for allocation in await golem.allocations():
                 await allocation.release()
+
 
 @pytest.fixture
 async def any_payload():
@@ -55,13 +55,16 @@ async def test_allocation(golem):
         #   This returns 410, so is "OK" from our POV
         await allocation.release()
 
+        with pytest.raises(NoMatchingAccount):
+            await golem.create_allocation(1, 'no_such_network_oops')
+
 
 @pytest.mark.asyncio
 async def test_demand(any_payload, golem):
     async with golem:
         allocation = await golem.create_allocation(1)
         demand = await golem.create_demand(any_payload, [allocation])
-        
+
         async for offer in demand.offers():
             break
 

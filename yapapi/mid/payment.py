@@ -12,17 +12,6 @@ if TYPE_CHECKING:
     from .golem_node import GolemNode
 
 
-async def matching_accounts(node: "GolemNode") -> Tuple[ya_models.Account]:
-    api = RequestorApi(node._ya_payment_api)
-    for account in await api.get_requestor_accounts():
-        if (
-            account.driver.lower() == node.payment_driver
-            and account.network.lower() == node.payment_network
-            and account.send  # TODO: this is not checked in yapapi now? why?
-        ):
-            yield account
-
-
 class PaymentApiResource(Resource, ABC):
     @property
     def api(self) -> RequestorApi:
@@ -35,11 +24,18 @@ class Allocation(PaymentApiResource):
         await self.api.release_allocation(self.id)
 
     @classmethod
-    async def create_any_account(cls, node: "GolemNode", amount: float) -> "Allocation":
-        try:
-            account = await matching_accounts(node).__anext__()
-        except StopAsyncIteration:
-            raise NoMatchingAccount(node)
+    async def create_any_account(
+        cls, node: "GolemNode", amount: float, network: str, driver: str,
+    ) -> "Allocation":
+        for account in await cls._get_api(node).get_requestor_accounts():
+            if (
+                account.driver.lower() == driver.lower()
+                and account.network.lower() == network.lower()
+                and account.send  # TODO: this is not checked in yapapi now? why?
+            ):
+                break
+        else:
+            raise NoMatchingAccount(network, driver)
 
         return await cls.create_with_account(node, account, amount)
 

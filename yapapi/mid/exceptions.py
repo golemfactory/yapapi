@@ -1,8 +1,5 @@
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from yapapi.mid.golem_node import GolemNode
-
 
 class ResourceNotFound(Exception):
     def __init__(self, name, id_):
@@ -14,10 +11,8 @@ class ResourceNotFound(Exception):
 
 
 class NoMatchingAccount(Exception):
-    def __init__(self, node: "GolemNode"):
-        self.node = node
-
+    def __init__(self, network: str, driver: str):
         #   TODO: do we care about this sort of compatibility?
         from yapapi.engine import NoPaymentAccountError
-        msg = str(NoPaymentAccountError(node.payment_driver, node.payment_network))
+        msg = str(NoPaymentAccountError(driver, network))
         super().__init__(msg)

@@ -64,7 +64,7 @@ async def example_4(golem):
     """EventBus usage"""
     from yapapi.mid import events
     from yapapi.mid.market import Offer
-    
+
     async def event_emitter(event) -> None:
         print("GOT EVENT", event)
 

@@ -18,8 +18,6 @@ from .resource import Resource
 class GolemNode:
     def __init__(self):
         self._api_config = rest.Configuration()
-        self.payment_driver = DEFAULT_DRIVER
-        self.payment_network = DEFAULT_NETWORK
         self.subnet = DEFAULT_SUBNET
 
         #   All created Resources will be stored here
@@ -64,12 +62,17 @@ class GolemNode:
 
     ###########################
     #   Create new resources
-    async def create_allocation(self, amount: float) -> Allocation:
+    async def create_allocation(
+        self,
+        amount: float,
+        network: str = DEFAULT_NETWORK,
+        driver: str = DEFAULT_DRIVER,
+    ) -> Allocation:
         #   TODO: This creates an Allocation for a matching requestor account
         #         (or raises an exception if there is none).
         #         Can we have more than a single matching account?
         #         If yes - how to approach this? Add `create_allocations`?
-        return await Allocation.create_any_account(self, amount)
+        return await Allocation.create_any_account(self, amount, network, driver)
 
     async def create_demand(self, payload: Payload, allocations: Iterable[Allocation] = ()) -> Demand:
         builder = DemandBuilder()
@@ -130,9 +133,6 @@ class GolemNode:
         lines = [
             f"{type(self).__name__}(",
             f"  app_key = {self._api_config.app_key},",
-            f"  subnet = {self.subnet},",
-            f"  payment_driver = {self.payment_driver},",
-            f"  payment_network = {self.payment_network},",
             f"  market_url = {self._api_config.market_url},",
             f"  payment_url = {self._api_config.payment_url},",
             f"  activity_url = {self._api_config.activity_url},",
