@@ -12,6 +12,9 @@ class ResourceEvent(ABC):
     def __init__(self, resource: GolemObject):
         self.resource = resource
 
+    def __repr__(self):
+        return f'{type(self).__name__}({self.resource})'
+
 
 class ResourceFound(ResourceEvent):
     """Emitted on a first contact of the GolemNode with some already existing resource.

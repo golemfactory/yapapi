@@ -9,6 +9,7 @@ from yapapi.payload import Payload
 from yapapi.props.builder import DemandBuilder
 from yapapi import props
 
+from .event_bus import EventBus
 from .payment import Allocation
 from .market import Demand, Offer, Agreement
 from .golem_object import GolemObject
@@ -24,6 +25,7 @@ class GolemNode:
         #   All created GolemObjects will be stored here
         #   (This is done internally by the metaclass of the GolemObject)
         self._objects: DefaultDict[Type[GolemObject], Dict[str, GolemObject]] = defaultdict(dict)
+        self._event_bus = EventBus()
 
     ########################
     #   Start/stop interface
@@ -35,6 +37,7 @@ class GolemNode:
         await self.stop()
 
     async def start(self):
+        self._event_bus.start()
         self._ya_market_api = self._api_config.market()
         self._ya_activity_api = self._api_config.activity()
         self._ya_payment_api = self._api_config.payment()
@@ -43,6 +46,7 @@ class GolemNode:
     async def stop(self):
         await self._stop_collecting_events()
         await self._close_apis()
+        await self._event_bus.stop()
 
     async def _stop_collecting_events(self):
         tasks = []
@@ -112,6 +116,13 @@ class GolemNode:
 
     async def demands(self) -> Tuple[Demand]:
         return await Demand.get_all(self)
+
+    ##########################
+    #   Events
+    #   (TODO: do we want the whole EventBus API repeated here? "listen" etc?)
+    @property
+    def event_bus(self) -> EventBus:
+        return self._event_bus
 
     #########
     #   Other

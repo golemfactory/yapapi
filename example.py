@@ -60,6 +60,20 @@ async def example_3(golem):
         await demand.unsubscribe()
 
 
+async def example_4(golem):
+    """EventBus usage"""
+    from yapapi.mid import events
+    from yapapi.mid.market import Offer
+    
+    async def event_emitter(event) -> None:
+        print("GOT EVENT", event)
+
+    event_bus = golem.event_bus
+    event_bus.listen(event_emitter)
+    async with golem:
+        event_bus.emit(events.ResourceCreated(Offer(golem, 'aaa')))
+
+
 async def main():
     print("\n---------- EXAMPLE 1 -------------\n")
     await example_1(golem)
@@ -67,6 +81,8 @@ async def main():
     await example_2(golem)
     print("\n---------- EXAMPLE 3 -------------\n")
     await example_3(golem)
+    print("\n---------- EXAMPLE 4 -------------\n")
+    await example_4(golem)
 
 
 if __name__ == '__main__':
