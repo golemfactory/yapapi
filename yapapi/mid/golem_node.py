@@ -93,7 +93,7 @@ class GolemNode:
     async def create_demand(
         self,
         payload: Payload,
-        subnet: str = DEFAULT_SUBNET,
+        subnet: Optional[str] = DEFAULT_SUBNET,
         expiration: Optional[datetime] = None,
         allocations: Iterable[Allocation] = (),
         autoclose: bool = True,

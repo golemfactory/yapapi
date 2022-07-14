@@ -1,6 +1,6 @@
 import asyncio
 
-from typing import Any, Awaitable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 
 class YagnaEventCollector:
@@ -8,7 +8,7 @@ class YagnaEventCollector:
 
     and puts them in queue(s).
     NOTE: this has nothing to do with "internal" yapapi events."""
-    def __init__(self, func: Awaitable, func_args: List[Any], func_kwargs: Dict[Any, Any]):
+    def __init__(self, func: Callable, func_args: List[Any], func_kwargs: Dict[Any, Any]):
         self.func = func
         self.func_args = func_args
         self.func_kwargs = func_kwargs

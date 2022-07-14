@@ -52,6 +52,7 @@ class Demand(PaymentApiResource):
             get_events = self.api.collect_offers
             self.start_collecting_events(get_events, self.id, timeout=5, max_events=10)
 
+        assert self._event_collector is not None  # mypy
         queue: asyncio.Queue = self._event_collector.event_queue()
 
         while True:
@@ -67,6 +68,7 @@ class Offer(PaymentApiResource):
     @classmethod
     def from_proposal_event(cls, node: "GolemNode", event: ya_models.ProposalEvent) -> "Offer":
         data = event.proposal
+        assert data.proposal_id is not None  # mypy
         return Offer(node, data.proposal_id, data)
 
 

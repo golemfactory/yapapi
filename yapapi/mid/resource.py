@@ -1,5 +1,5 @@
-from abc import ABC
-from typing import Awaitable, Optional, TYPE_CHECKING
+from abc import ABC, ABCMeta, abstractmethod
+from typing import Callable, Optional, TYPE_CHECKING
 
 from .api_call_wrapper import api_call_wrapper
 from .yagna_event_collector import YagnaEventCollector
@@ -9,15 +9,16 @@ if TYPE_CHECKING:
     from .golem_node import GolemNode
 
 
-class CachedSingletonId(type(ABC)):
-    def __call__(cls, node: "GolemNode", id_: str, *args, **kwargs):
+class CachedSingletonId(ABCMeta):
+    def __call__(cls, node: "GolemNode", id_: str, *args, **kwargs):  # type: ignore
+        assert isinstance(cls, type(Resource))  # mypy
         if args:
             #   Sanity check: when data is passed, it must be a new resource
             #   (TODO: maybe we should only check if we got the same data?)
             assert id_ not in node._resources[cls]
 
         if id_ not in node._resources[cls]:
-            obj = super(CachedSingletonId, cls).__call__(node, id_, *args, **kwargs)
+            obj = super(CachedSingletonId, cls).__call__(node, id_, *args, **kwargs)  # type: ignore
             node._resources[cls][id_] = obj
         return node._resources[cls][id_]
 
@@ -30,9 +31,14 @@ class Resource(ABC, metaclass=CachedSingletonId):
 
         self._event_collector: Optional[YagnaEventCollector] = None
 
+    @property
+    @abstractmethod
+    def api(self):
+        pass
+
     @api_call_wrapper()
     async def load(self, *args, **kwargs) -> None:
-        await self._load_no_wrap(*args, **kwargs)
+        await self._load_no_wrap(*args, **kwargs)  # type: ignore  # subclass can override _load_no_wrap
 
     async def _load_no_wrap(self) -> None:
         get_method = getattr(self.api, self._get_method_name)
@@ -64,9 +70,9 @@ class Resource(ABC, metaclass=CachedSingletonId):
     def node(self):
         return self._node
 
-    def start_collecting_events(self, get_events: Awaitable, *args, **kwargs) -> None:
+    def start_collecting_events(self, get_events: Callable, *args, **kwargs) -> None:
         assert self._event_collector is None
-        self._event_collector = YagnaEventCollector(get_events, args, kwargs)
+        self._event_collector = YagnaEventCollector(get_events, list(args), kwargs)
         self._event_collector.start()
 
     async def stop_collecting_events(self) -> None:
