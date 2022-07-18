@@ -1,7 +1,8 @@
 import asyncio
 from collections import defaultdict
-from typing import DefaultDict, Dict, Iterable, Optional, List, Type
+from typing import DefaultDict, Dict, Iterable, Optional, List, Type, Union
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 
 from yapapi import rest
 from yapapi.engine import DEFAULT_DRIVER, DEFAULT_NETWORK, DEFAULT_SUBNET
@@ -77,14 +78,16 @@ class GolemNode:
     #   Create new resources
     async def create_allocation(
         self,
-        amount: float,
+        amount: Union[Decimal, float],
         network: str = DEFAULT_NETWORK,
         driver: str = DEFAULT_DRIVER,
         autoclose: bool = True,
     ) -> Allocation:
+        decimal_amount = Decimal(amount)
+
         #   TODO (?): It is assumed we have only a single account for (network, driver).
         #             In the future this assumption might not be true, but we don't care now.
-        allocation = await Allocation.create_any_account(self, amount, network, driver)
+        allocation = await Allocation.create_any_account(self, decimal_amount, network, driver)
         if autoclose:
             self._autoclose_resources.add(allocation)
         return allocation

@@ -1,6 +1,7 @@
 from abc import ABC
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Tuple, TYPE_CHECKING
+from decimal import Decimal
 
 from ya_payment import RequestorApi, models as ya_models
 
@@ -25,7 +26,7 @@ class Allocation(PaymentApiResource):
 
     @classmethod
     async def create_any_account(
-        cls, node: "GolemNode", amount: float, network: str, driver: str,
+        cls, node: "GolemNode", amount: Decimal, network: str, driver: str,
     ) -> "Allocation":
         for account in await cls._get_api(node).get_requestor_accounts():
             if (
@@ -43,7 +44,7 @@ class Allocation(PaymentApiResource):
         cls,
         node: "GolemNode",
         account: ya_models.Account,
-        amount: float,
+        amount: Decimal,
     ) -> "Allocation":
         timestamp = datetime.now(timezone.utc)
         timeout = timestamp + timedelta(days=365 * 10)
