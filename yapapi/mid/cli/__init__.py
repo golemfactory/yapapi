@@ -5,7 +5,7 @@ import click
 from yapapi.engine import DEFAULT_NETWORK, DEFAULT_DRIVER, DEFAULT_SUBNET
 
 from yapapi.mid.golem_node import GolemNode
-from .utils import _format_allocations, _format_demands, _CliPayload, async_golem_wrapper
+from .utils import format_allocations, format_demands, CliPayload, async_golem_wrapper, parse_timedelta_str
 
 
 @click.group()
@@ -22,7 +22,7 @@ def allocation():
 @async_golem_wrapper
 async def allocation_list(golem: GolemNode):
     allocations = await golem.allocations()
-    click.echo(_format_allocations(allocations))
+    click.echo(format_allocations(allocations))
 
 
 @allocation.command("new")
@@ -42,7 +42,7 @@ async def allocation_new(
         driver=driver,
         autoclose=False,
     )
-    click.echo(_format_allocations([allocation]))
+    click.echo(format_allocations([allocation]))
 
 
 @allocation.command("clean")
@@ -60,10 +60,10 @@ async def status(golem: GolemNode):
     demands = await golem.demands()
     msg_parts = [
         "ALLOCATIONS",
-        _format_allocations(allocations),
+        format_allocations(allocations),
         "",
         "DEMANDS",
-        _format_demands(demands),
+        format_demands(demands),
     ]
     click.echo("\n".join(msg_parts))
 
@@ -71,13 +71,13 @@ async def status(golem: GolemNode):
 @cli.command()
 @click.option("--runtime", type=str, required=True)
 @click.option("--subnet", type=str, default=DEFAULT_SUBNET)
-@click.option("--timeout", type=int, required=False)
+@click.option("--timeout", "timeout_str", type=str, required=False)
 @async_golem_wrapper
-async def find_node(golem: GolemNode, runtime: str, subnet: str, timeout: int):
-    click.echo(f"Looking for offers for runtime {runtime}")
+async def find_node(golem: GolemNode, runtime: str, subnet: str, timeout_str: str):
+    timeout = parse_timedelta_str(timeout_str)
 
     async def get_nodes():
-        payload = _CliPayload(runtime)
+        payload = CliPayload(runtime)
         demand = await golem.create_demand(payload, subnet=subnet)
         async for offer in demand.offers():
             click.echo(offer)

@@ -2,6 +2,7 @@ import asyncio
 from dataclasses import dataclass, MISSING
 from typing import Callable, List
 from functools import wraps
+import re
 
 from prettytable import PrettyTable
 
@@ -14,7 +15,7 @@ from yapapi.mid.market import Demand
 from yapapi.mid.golem_node import GolemNode
 
 
-def _format_allocations(allocations: List[Allocation]) -> str:
+def format_allocations(allocations: List[Allocation]) -> str:
     x = PrettyTable()
     x.field_names = ["id", "address", "network", "driver", "total", "remaining", "timeout"]
     for allocation in allocations:
@@ -33,7 +34,7 @@ def _format_allocations(allocations: List[Allocation]) -> str:
     return x.get_string()
 
 
-def _format_demands(demands: List[Demand]) -> str:
+def format_demands(demands: List[Demand]) -> str:
     x = PrettyTable()
     x.field_names = ["id", "subnet", "created"]
     for demand in demands:
@@ -49,8 +50,24 @@ def _format_demands(demands: List[Demand]) -> str:
 
 
 @dataclass
-class _CliPayload(Payload):
+class CliPayload(Payload):
     runtime: str = constraint(inf.INF_RUNTIME_NAME, default=MISSING)
+
+
+def parse_timedelta_str(timedelta_str: str) -> float:
+    """Accepted formats: [float_or_int][|s|m|h|d]"""
+    #   TODO: make this compatible with some standard (e.g. "123sec" should be ok maybe?)
+
+    regexp = r'^(\d+|\d+\.\d+)([smhd])?$'
+    match = re.search(regexp, timedelta_str)
+    if not match:
+        raise ValueError(f"timeout doesn't match the expected format")
+
+    num = float(match.groups()[0])
+    what = match.groups()[1] or "s"
+
+    as_seconds = {"s": 1, "m": 60, "h": 60 * 60, "d": 60 * 60 * 24}
+    return num * as_seconds[what]
 
 
 def async_golem_wrapper(f) -> Callable:
