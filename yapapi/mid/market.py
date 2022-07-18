@@ -19,14 +19,14 @@ class MarketApiResource(Resource, ABC):
 
 
 class Demand(MarketApiResource):
-    async def _load_no_wrap(self) -> None:
+    @api_call_wrapper()
+    async def _get_data(self) -> ya_models.Demand:
         #   NOTE: this method is required because there is no get_demand(id)
         #         in ya_market (as there is no matching endpoint in yagna)
         all_demands = await self.api.get_demands()
         try:
-            this_demands = [d for d in all_demands if d.demand_id == self.id]
-            self._data = this_demands[0]
-        except IndexError:
+            return next(d for d in all_demands if d.demand_id == self.id)
+        except StopIteration:
             raise ResourceNotFound('Demand', self.id)
 
     @classmethod
@@ -67,8 +67,9 @@ class Demand(MarketApiResource):
 
 
 class Offer(MarketApiResource):
-    async def _load_no_wrap(self, demand_id: str) -> None:  # type: ignore
-        self._data = await self.api.get_proposal_offer(demand_id, self.id)
+    @api_call_wrapper()
+    async def _get_data(self, demand_id: str) -> ya_models.Offer:
+        return await self.api.get_proposal_offer(demand_id, self.id)
 
     @classmethod
     def from_proposal_event(cls, node: "GolemNode", event: ya_models.ProposalEvent) -> "Offer":

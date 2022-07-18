@@ -36,13 +36,15 @@ class Resource(ABC, metaclass=CachedSingletonId):
     def api(self):
         pass
 
-    @api_call_wrapper()
     async def load(self, *args, **kwargs) -> None:
-        await self._load_no_wrap(*args, **kwargs)  # type: ignore  # subclass can override _load_no_wrap
+        self._data = await self._get_data(*args, **kwargs)
 
-    async def _load_no_wrap(self) -> None:
+    @api_call_wrapper()
+    async def _get_data(self) -> Any:
+        #   NOTE: this method is often overwritten in subclasses
+        #   TODO: typing? self._data typing?
         get_method = getattr(self.api, self._get_method_name)
-        self._data = await get_method(self._id)
+        return await get_method(self._id)
 
     @classmethod
     @api_call_wrapper()

@@ -4,8 +4,9 @@ from yapapi.payload import vm
 
 from yapapi.mid.golem_node import GolemNode
 
-allocation_id = "a5f7be7b-2890-4a5f-a93e-d109849de7fb"
-demand_id = "32d198f1565f46aa917d704125b8e8ca-28e70eade4bffc91c3ab0b15b522878b47649169b27ae7659dffab4bb89ad0c0"
+allocation_id = "dbd84126-2836-4c8c-a265-274b47b0d744"
+demand_id = "cd5e4cadaac74378bcc2f980c364faea-ba9d7b574660d17d7bc31ac35fc6cd18a62191af8a538b711e49c4b7fdc02e8d"
+offer_id = "R-45fecc117f64a8d0e307d875977e4f3ebd6e2bd6aad75642fc19aeab59e40ac5"
 image_hash = "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"
 
 golem = GolemNode()
@@ -16,20 +17,25 @@ async def example_1(golem):
     """Show existing allocation/demand"""
     allocation = golem.allocation(allocation_id)
     demand = golem.demand(demand_id)
+    offer = golem.offer(offer_id)
 
     print(allocation)
     print(demand)
+    print(offer)
 
     async with golem:
         await allocation.load()
         await demand.load()
+        await offer.load(demand_id)
 
     print(allocation.data)
     print(demand.data)
+    print(offer.data)
 
     #   All objects are singletons
     assert allocation == golem.allocation(allocation_id)
     assert demand == golem.demand(demand_id)
+    assert offer == golem.offer(offer_id)
 
 
 async def example_2(golem):
