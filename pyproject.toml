@@ -37,6 +37,8 @@ colorama = "^0.4.4"
 semantic-version = "^2.8"
 attrs = ">=19.3"
 
+prettytable = "^3.3.0"
+
 # Adding `goth` to dependencies causes > 40 additional packages to be installed. Given
 # that dependency resolution in `poetry` is rather slow, we'd like to avoid installing
 # `goth` for example in a CI pipeline that only runs linters/unit tests, not integration

@@ -3,6 +3,8 @@ from dataclasses import dataclass, MISSING
 from typing import Callable, List
 from functools import wraps
 
+from prettytable import PrettyTable
+
 from yapapi.payload import Payload
 from yapapi.props.base import constraint
 from yapapi.props import inf
@@ -13,11 +15,37 @@ from yapapi.mid.golem_node import GolemNode
 
 
 def _format_allocations(allocations: List[Allocation]) -> str:
-    return "\n".join(["Allocations"] + [a.id for a in allocations])
+    x = PrettyTable()
+    x.field_names = ["id", "address", "network", "driver", "total", "remaining", "timeout"]
+    for allocation in allocations:
+        data = allocation.data
+        network, driver, _ = data.payment_platform.split('-')
+        x.add_row([
+            allocation.id,
+            data.address,
+            network,
+            driver,
+            data.total_amount,
+            data.remaining_amount,
+            data.timeout.isoformat(" ", "seconds"),
+        ])
+
+    return x.get_string()
 
 
 def _format_demands(demands: List[Demand]) -> str:
-    return "\n".join(["Demands"] + [d.id for d in demands])
+    x = PrettyTable()
+    x.field_names = ["id", "subnet", "created"]
+    for demand in demands:
+        data = demand.data
+        subnet = data.properties['golem.node.debug.subnet']
+        created = data.timestamp.isoformat(" ", "seconds")
+        x.add_row([
+            demand.id,
+            subnet,
+            created,
+        ])
+    return x.get_string()
 
 
 @dataclass

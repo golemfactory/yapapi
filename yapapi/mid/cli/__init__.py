@@ -40,9 +40,9 @@ async def allocation_new(
         amount,
         network=network,
         driver=driver,
-        autoclose=False
+        autoclose=False,
     )
-    click.echo(f"NEW ALLOCATION {allocation}")
+    click.echo(_format_allocations([allocation]))
 
 
 @allocation.command("clean")
@@ -58,9 +58,14 @@ async def allocation_clean(golem: GolemNode):
 async def status(golem: GolemNode):
     allocations = await golem.allocations()
     demands = await golem.demands()
-    click.echo(_format_allocations(allocations))
-    click.echo()
-    click.echo(_format_demands(demands))
+    msg_parts = [
+        "ALLOCATIONS",
+        _format_allocations(allocations),
+        "",
+        "DEMANDS",
+        _format_demands(demands),
+    ]
+    click.echo("\n".join(msg_parts))
 
 
 @cli.command()

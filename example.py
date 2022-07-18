@@ -56,6 +56,8 @@ async def example_3(golem):
             print(offer)
             break
 
+        #   NOTE: these are redundant because both demand and allocation were
+        #         created in autoclose=True mode
         await demand.unsubscribe()
         await allocation.release()
 
