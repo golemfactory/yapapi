@@ -20,6 +20,7 @@ DEFAULT_EXPIRATION_TIMEOUT = timedelta(seconds=1800)
 
 class GolemNode:
     def __init__(self):
+        #   TODO: add args - `app_key` and `base_url` (maybe also optional other URLs?)
         self._api_config = rest.Configuration()
 
         #   All created Resources will be stored here
@@ -81,10 +82,8 @@ class GolemNode:
         driver: str = DEFAULT_DRIVER,
         autoclose: bool = True,
     ) -> Allocation:
-        #   TODO: This creates an Allocation for a matching requestor account
-        #         (or raises an exception if there is none).
-        #         Can we have more than a single matching account?
-        #         If yes - how to approach this? Add `create_allocations`?
+        #   TODO (?): It is assumed we have only a single account for (network, driver).
+        #             In the future this assumption might not be true, but we don't care now.
         allocation = await Allocation.create_any_account(self, amount, network, driver)
         if autoclose:
             self._autoclose_resources.add(allocation)
@@ -119,10 +118,8 @@ class GolemNode:
             for constraint in constraints:
                 builder.ensure(constraint)
 
-            #   TODO: what if we already have such properties in builder?
-            #         E.g. we have different address in allocations?
-            #         (Now this should work just as in `yapapi.Engine`, but there we
-            #         can't have different addresses I guess?)
+            #   TODO (?): It is assumed there are no conflicts here (i.e. allocations for different addresses
+            #             for the same network/driver pair). One day we might need to change this.
             builder.properties.update({p.key: p.value for p in properties})
 
     ###########################
@@ -164,7 +161,6 @@ class GolemNode:
             f"  payment_url = {self._api_config.payment_url},",
             f"  activity_url = {self._api_config.activity_url},",
             f"  net_url = {self._api_config.net_url},",
-            f"  gsb_url = TODO? this is used by yagna only, but is part of the config?",
             f")",
         ]
         return "\n".join(lines)

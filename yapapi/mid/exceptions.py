@@ -9,7 +9,8 @@ class ResourceNotFound(Exception):
 
 class NoMatchingAccount(Exception):
     def __init__(self, network: str, driver: str):
-        #   TODO: do we care about this sort of compatibility?
+        #   NOTE: we don't really care about this sort of compatibility, but this is
+        #         a message developers are used to so maybe it's worth reusing
         from yapapi.engine import NoPaymentAccountError
         msg = str(NoPaymentAccountError(driver, network))
         super().__init__(msg)

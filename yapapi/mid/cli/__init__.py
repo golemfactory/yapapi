@@ -111,15 +111,11 @@ async def status(golem: GolemNode):
 async def find_node(golem: GolemNode, runtime: str, timeout: int):
     #   TODO: subnet? etc?
     #   (waits for: does GolemNode know the network etc?)
-
-    #   TODO: example has "60s" here we have just "60" --> worth doing?
     click.echo(f"Looking for offers for runtime {runtime}")
 
     async def get_nodes():
         payload = _CliPayload(runtime)
 
-        #   TODO: demand-as-contextmanager
-        #   (waits for: interface?)
         demand = await golem.create_demand(payload)
         async for offer in demand.offers():
             click.echo(offer)

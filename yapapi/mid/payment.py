@@ -31,7 +31,6 @@ class Allocation(PaymentApiResource):
             if (
                 account.driver.lower() == driver.lower()
                 and account.network.lower() == network.lower()
-                and account.send  # TODO: this is not checked in yapapi now? why?
             ):
                 break
         else:
@@ -56,10 +55,10 @@ class Allocation(PaymentApiResource):
             timestamp=timestamp,
             timeout=timeout,
 
-            #   TODO: what is this deposit thing?
+            #   This will probably be removed one day (consent-related thing)
             make_deposit=False,
 
-            #   TODO: why do we have to set this here?
+            #   We must set this here because of the ya_client interface
             allocation_id="",
             spent_amount="",
             remaining_amount="",
