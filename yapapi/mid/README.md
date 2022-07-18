@@ -11,8 +11,8 @@ python3 -m yapapi status
 
 python3 -m yapapi find-node --runtime vm
 python3 -m yapapi find-node --runtime vm --subnet public-beta 
-python3 -m yapapi find-node --runtime vm --timeout 7  # 7  seconds
-python3 -m yapapi find-node --runtime vm --timeout 1m # 60 seconds
+python3 -m yapapi find-node --runtime vm --timeout 7  # stops after 7  seconds
+python3 -m yapapi find-node --runtime vm --timeout 1m # stops after 60 seconds
 
 python3 -m yapapi allocation list
 

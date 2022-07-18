@@ -1,4 +1,5 @@
 import asyncio
+from typing import Optional
 
 import click
 
@@ -73,8 +74,8 @@ async def status(golem: GolemNode):
 @click.option("--subnet", type=str, default=DEFAULT_SUBNET)
 @click.option("--timeout", "timeout_str", type=str, required=False)
 @async_golem_wrapper
-async def find_node(golem: GolemNode, runtime: str, subnet: str, timeout_str: str):
-    timeout = parse_timedelta_str(timeout_str)
+async def find_node(golem: GolemNode, runtime: str, subnet: str, timeout_str: Optional[str]):
+    timeout = parse_timedelta_str(timeout_str) if timeout_str is not None else None
 
     async def get_nodes():
         payload = CliPayload(runtime)
