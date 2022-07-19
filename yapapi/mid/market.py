@@ -1,8 +1,8 @@
 from abc import ABC
 import asyncio
-from typing import AsyncIterator, Dict, Optional, TYPE_CHECKING
+from typing import AsyncIterator, Dict, List, Optional, TYPE_CHECKING, Union
 
-from ya_market import RequestorApi, models as ya_models
+from ya_market import RequestorApi, models as ya_models, exceptions
 
 from .api_call_wrapper import api_call_wrapper
 from .exceptions import ResourceNotFound
@@ -64,7 +64,7 @@ class Demand(MarketApiResource):
             event = await queue.get()
             if isinstance(event, ya_models.ProposalEvent):
                 offer = Offer.from_proposal_event(self.node, event)
-                offer.demand = self
+                offer.parent = self
                 yield offer
 
     def offer(self, offer_id: str) -> "Offer":
@@ -74,16 +74,49 @@ class Demand(MarketApiResource):
 
 
 class Offer(MarketApiResource):
-    _demand: Optional["Demand"] = None
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._parent: Optional[Union["Demand", "Offer"]] = None
+        self._child_offers: List["Offer"] = []
+
+    ##############################
+    #   State-related properties
+    @property
+    def initial(self):
+        assert self.data is not None
+        return self.data.state == 'Initial'
 
     @property
-    def demand(self) -> Optional["Demand"]:
-        return self._demand
+    def draft(self):
+        assert self.data is not None
+        return self.data.state == 'Draft'
 
-    @demand.setter
-    def demand(self, demand: "Demand") -> None:
-        self._demand = demand
+    ###########################
+    #   Tree-related methods
+    @property
+    def parent(self) -> Union["Demand", "Offer"]:
+        assert self._parent is not None
+        return self._parent
 
+    @parent.setter
+    def parent(self, parent: Union["Demand", "Offer"]) -> None:
+        assert self._parent is None
+        self._parent = parent
+
+    @property
+    def demand(self) -> "Demand":
+        return self.parent if isinstance(self.parent, Demand) else self.parent.demand
+
+    @property
+    def child_offers(self) -> List["Offer"]:
+        return self._child_offers.copy()
+
+    def add_child(self, offer: "Offer") -> None:
+        offer.parent = self
+        self._child_offers.append(offer)
+
+    ##########################
+    #   Other
     @api_call_wrapper()
     async def _get_data(self) -> ya_models.Offer:
         assert self.demand is not None
@@ -94,6 +127,26 @@ class Offer(MarketApiResource):
         data = event.proposal
         assert data.proposal_id is not None  # mypy
         return Offer(node, data.proposal_id, data)
+
+    async def respond(self) -> "Offer":
+        assert self.demand is not None
+
+        data = await self._response_data()
+        try:
+            new_offer_id = await self.api.counter_proposal_demand(self.demand.id, self.id, data, _request_timeout=5)
+        except exceptions.ApiException:
+            raise  # TODO what is going on with this missing subscription?
+
+        new_offer = type(self)(self.node, new_offer_id)
+        self.add_child(new_offer)
+
+        return new_offer
+
+    async def _response_data(self) -> ya_models.DemandOfferBase:
+        # FIXME: this is a mock
+        demand_data = await self.demand.load()
+        data = ya_models.DemandOfferBase(properties=demand_data.properties, constraints=demand_data.constraints)
+        return data
 
 
 class Agreement(MarketApiResource):

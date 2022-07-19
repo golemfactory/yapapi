@@ -29,16 +29,21 @@ async def main():
     async with golem:
         allocation = await golem.create_allocation(1)
         payload = await vm.repo(image_hash=image_hash)
-        demand = await golem.create_demand(payload, subnet='public-beta')
+        demand = await golem.create_demand(payload, allocations=[allocation])
 
-        simple_scorer = SimpleScorer(demand.offers(), score_offer, min_offers=100)
+        print(demand.id)
+
+        simple_scorer = SimpleScorer(demand.offers(), score_offer, min_offers=2)
         offers = simple_scorer.offers()
-        while True:
-            offer, score = await offers.__anext__()
-            print(score)
-            await asyncio.sleep(1)
+        
+        async for offer in offers:
+            if offer.initial:
+                response = await offer.respond()
+                print("INITIAL", response)
+            elif offer.draft:
+                print("RESPONSE", response, response.parent)
 
-        await SimpleScorer.aclose()
+        await simple_scorer.aclose()
 
 
 if __name__ == '__main__':

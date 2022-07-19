@@ -35,7 +35,7 @@ class SimpleScorer:
         while True:
             try:
                 scored_offer = heapq.heappop(self._scored_offers)
-                yield scored_offer.offer, scored_offer.score * -1
+                yield scored_offer.offer
             except IndexError:
                 await asyncio.sleep(0.1)
 
