@@ -64,13 +64,26 @@ class Demand(MarketApiResource):
             event = await queue.get()
             if isinstance(event, ya_models.ProposalEvent):
                 offer = Offer.from_proposal_event(self.node, event)
-                offer.parent = self
+                await self._set_offer_parent(offer)
                 yield offer
 
     def offer(self, offer_id: str) -> "Offer":
         offer = Offer(self.node, offer_id)
         offer.demand = self
         return offer
+
+    async def _set_offer_parent(self, offer: "Offer") -> None:
+        if offer.initial:
+            parent = self
+        else:
+            parent_offer_id = offer.data.prev_proposal_id
+            parent = Offer(self.node, parent_offer_id)
+            assert parent._parent is not None
+        parent.add_child(offer)
+
+    def add_child(self, offer: "Offer") -> None:
+        #   TODO
+        offer.parent = self
 
 
 class Offer(MarketApiResource):

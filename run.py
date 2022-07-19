@@ -38,10 +38,10 @@ async def main():
         
         async for offer in offers:
             if offer.initial:
+                print("INITIAL", offer, offer.parent)
                 response = await offer.respond()
-                print("INITIAL", response)
             elif offer.draft:
-                print("RESPONSE", response, response.parent)
+                print("RESPONSE", offer, offer.parent)
 
         await simple_scorer.aclose()
 
