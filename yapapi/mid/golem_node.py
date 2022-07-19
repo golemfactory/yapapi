@@ -51,6 +51,7 @@ class GolemNode:
         await self._close_autoclose_resources()
         await self._close_apis()
         await self._event_bus.stop()
+        print("Clean shutdown finished")
 
     async def _stop_collecting_events(self) -> None:
         tasks = []
