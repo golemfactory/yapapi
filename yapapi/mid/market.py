@@ -1,6 +1,6 @@
 from abc import ABC
 import asyncio
-from typing import AsyncIterator, Dict, TYPE_CHECKING
+from typing import AsyncIterator, Dict, Optional, TYPE_CHECKING
 
 from ya_market import RequestorApi, models as ya_models
 
@@ -63,13 +63,31 @@ class Demand(MarketApiResource):
         while True:
             event = await queue.get()
             if isinstance(event, ya_models.ProposalEvent):
-                yield Offer.from_proposal_event(self.node, event)
+                offer = Offer.from_proposal_event(self.node, event)
+                offer.demand = self
+                yield offer
+
+    def offer(self, offer_id: str) -> "Offer":
+        offer = Offer(self.node, offer_id)
+        offer.demand = self
+        return offer
 
 
 class Offer(MarketApiResource):
+    _demand: Optional["Demand"] = None
+
+    @property
+    def demand(self) -> Optional["Demand"]:
+        return self._demand
+
+    @demand.setter
+    def demand(self, demand: "Demand") -> None:
+        self._demand = demand
+
     @api_call_wrapper()
-    async def _get_data(self, demand_id: str) -> ya_models.Offer:
-        return await self.api.get_proposal_offer(demand_id, self.id)
+    async def _get_data(self) -> ya_models.Offer:
+        assert self.demand is not None
+        return await self.api.get_proposal_offer(self.demand.id, self.id)
 
     @classmethod
     def from_proposal_event(cls, node: "GolemNode", event: ya_models.ProposalEvent) -> "Offer":

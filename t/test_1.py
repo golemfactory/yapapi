@@ -31,7 +31,7 @@ async def test_singletons(golem):
     async with golem:
         assert golem.allocation('foo') is golem.allocation('foo')
         assert golem.demand('foo') is golem.demand('foo')
-        assert golem.offer('foo') is golem.offer('foo')
+        assert golem.offer('foo', 'bar') is golem.offer('foo', 'bar') is golem.demand('bar').offer('foo')
 
         allocation = await golem.create_allocation(1)
         assert allocation is golem.allocation(allocation.id)
@@ -71,13 +71,14 @@ async def test_demand(any_payload, golem):
         with pytest.raises(ResourceNotFound):
             await demand.load()
 
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("autoclose", (True, False))
 async def test_autoclose(any_payload, golem, autoclose):
     async with golem:
         allocation = await golem.create_allocation(1, autoclose=autoclose)
         demand = await golem.create_demand(any_payload, allocations=[allocation], autoclose=autoclose)
-        
+
     async with golem:
         if autoclose:
             with pytest.raises(ResourceNotFound):

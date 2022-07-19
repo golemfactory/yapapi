@@ -128,16 +128,17 @@ class GolemNode:
 
     ###########################
     #   Single-resource factories for already existing resources
-    def allocation(self, allocation_id) -> Allocation:
+    def allocation(self, allocation_id: str) -> Allocation:
         return Allocation(self, allocation_id)
 
-    def demand(self, demand_id) -> Demand:
+    def demand(self, demand_id: str) -> Demand:
         return Demand(self, demand_id)
 
-    def offer(self, offer_id) -> Offer:
-        return Offer(self, offer_id)
+    def offer(self, offer_id: str, demand_id: str) -> Offer:
+        demand = self.demand(demand_id)
+        return demand.offer(offer_id)
 
-    def agreement(self, agreement_id) -> Agreement:
+    def agreement(self, agreement_id: str) -> Agreement:
         return Agreement(self, agreement_id)
 
     ##########################
