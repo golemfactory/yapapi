@@ -36,8 +36,10 @@ class Resource(ABC, metaclass=CachedSingletonId):
     def api(self):
         pass
 
-    async def load(self, *args, **kwargs) -> None:
-        self._data = await self._get_data(*args, **kwargs)
+    async def load(self, *args, force=False, **kwargs) -> Any:
+        if self._data is None or force:
+            self._data = await self._get_data(*args, **kwargs)
+        return self._data
 
     @api_call_wrapper()
     async def _get_data(self) -> Any:
