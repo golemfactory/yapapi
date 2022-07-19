@@ -24,6 +24,19 @@ async def score_offer(offer: Offer) -> float:
     return await strategy.score_offer(compat_offer)
 
 
+async def get_offer(offers):
+    offer_1 = await offers.__anext__()
+    print(offer_1, offer_1.parent)
+    assert offer_1.initial
+
+    offer_2 = await offer_1.respond()
+    print(offer_2, offer_2.parent)
+
+    offer_3 = await offer_2.offers().__anext__()
+    print(offer_3, offer_3.parent)
+    return offer_3
+
+
 async def main():
     """Create new allocation, demand, fetch a single offer, cleanup"""
     async with golem:
@@ -36,14 +49,20 @@ async def main():
         simple_scorer = SimpleScorer(demand.offers(), score_offer, min_offers=2)
         offers = simple_scorer.offers()
         
-        async for offer in offers:
-            if offer.initial:
-                print("INITIAL", offer, offer.parent)
-                response = await offer.respond()
-            elif offer.draft:
-                print("RESPONSE", offer, offer.parent)
-
+        while True:
+            task = asyncio.create_task(get_offer(offers))
+            try:
+                proposal = await asyncio.wait_for(task, 5)
+                break
+            except asyncio.TimeoutError:
+                print("TIMEOUT")
+        print("GOT PROPOSAL", proposal)
         await simple_scorer.aclose()
+
+        agreement = await proposal.create_agreement()
+        await agreement.confirm()
+
+
 
 
 if __name__ == '__main__':

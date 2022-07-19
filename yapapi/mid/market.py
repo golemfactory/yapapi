@@ -120,13 +120,18 @@ class Offer(MarketApiResource):
     def demand(self) -> "Demand":
         return self.parent if isinstance(self.parent, Demand) else self.parent.demand
 
-    @property
-    def child_offers(self) -> List["Offer"]:
-        return self._child_offers.copy()
-
     def add_child(self, offer: "Offer") -> None:
         offer.parent = self
         self._child_offers.append(offer)
+
+    async def offers(self) -> AsyncIterator["Offer"]:
+        cnt = 0
+        while True:
+            if cnt < len(self._child_offers):
+                yield self._child_offers[cnt]
+                cnt += 1
+            else:
+                await asyncio.sleep(0.1)
 
     ##########################
     #   Other
@@ -154,6 +159,17 @@ class Offer(MarketApiResource):
         self.add_child(new_offer)
 
         return new_offer
+
+    async def create_agreement(self) -> "Agreement":
+        raise NotImplementedError
+        # """Create an Agreement based on this Proposal."""
+        # proposal = models.AgreementProposal(
+        #     proposal_id=self.id,
+        #     valid_to=datetime.now(timezone.utc) + timeout,
+        # )
+        # api: RequestorApi = self._subscription._api
+        # agreement_id = await api.create_agreement(proposal)
+        # return Agreement(api, self._subscription, agreement_id)
 
     async def _response_data(self) -> ya_models.DemandOfferBase:
         # FIXME: this is a mock
