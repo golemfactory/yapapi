@@ -69,7 +69,6 @@ class Demand(MarketApiResource):
 
     def offer(self, offer_id: str) -> "Offer":
         offer = Offer(self.node, offer_id)
-        offer.demand = self
         return offer
 
     async def _set_offer_parent(self, offer: "Offer") -> None:
@@ -173,7 +172,7 @@ class Offer(MarketApiResource):
 
     async def _response_data(self) -> ya_models.DemandOfferBase:
         # FIXME: this is a mock
-        demand_data = await self.demand.load()
+        demand_data = await self.demand.get_data()
         data = ya_models.DemandOfferBase(properties=demand_data.properties, constraints=demand_data.constraints)
         return data
 

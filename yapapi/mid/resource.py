@@ -36,9 +36,9 @@ class Resource(ABC, metaclass=CachedSingletonId):
     def api(self):
         pass
 
-    async def load(self, *args, force=False, **kwargs) -> Any:
+    async def get_data(self, force=False) -> Any:
         if self._data is None or force:
-            self._data = await self._get_data(*args, **kwargs)
+            self._data = await self._get_data()
         return self._data
 
     @api_call_wrapper()
@@ -68,6 +68,8 @@ class Resource(ABC, metaclass=CachedSingletonId):
 
     @property
     def data(self) -> Any:
+        if self._data is None:
+            raise RuntimeError(f"Unknown {type(self).__name__} data - call get_data() first")
         return self._data
 
     @property

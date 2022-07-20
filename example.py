@@ -22,9 +22,9 @@ async def example_1():
     print(offer)
 
     async with golem:
-        await allocation.load()
-        await demand.load()
-        await offer.load()
+        await allocation.get_data()
+        await demand.get_data()
+        await offer.get_data()
 
     print(allocation.data)
     print(demand.data)

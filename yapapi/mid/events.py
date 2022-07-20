@@ -22,7 +22,7 @@ class ResourceFound(ResourceEvent):
     This happens:
     * When we find resource created by others, e.g. an Offer on the market.
     * When we find resource created by our node, but not in this run, e.g.
-      await golem.allocation(allocation_id).load().
+      await golem.allocation(allocation_id).get_data().
     """
 
 
