@@ -62,6 +62,9 @@ async def main():
 
         agreement = await proposal.create_agreement()
         await agreement.confirm()
+        await agreement.wait_for_approval()
+        await agreement.get_data(force=True)
+        print(agreement.data)
 
 
 if __name__ == '__main__':

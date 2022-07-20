@@ -1,6 +1,7 @@
 from abc import ABC
 import asyncio
 from typing import AsyncIterator, Dict, Optional, TYPE_CHECKING, Union
+from datetime import datetime, timedelta, timezone
 
 from ya_market import RequestorApi, models as ya_models, exceptions
 
@@ -169,8 +170,9 @@ class Offer(MarketApiResource):
             self.set_no_more_children()
 
     async def responses(self) -> AsyncIterator["Offer"]:
-        async for response in self.child_aiter():
-            yield response
+        async for child in self.child_aiter():
+            if isinstance(child, Offer):
+                yield child
 
     ##########################
     #   Other
@@ -192,26 +194,25 @@ class Offer(MarketApiResource):
 
     async def respond(self) -> "Offer":
         data = await self._response_data()
-        try:
-            new_offer_id = await self.api.counter_proposal_demand(self.demand.id, self.id, data, _request_timeout=5)
-        except exceptions.ApiException:
-            raise
+        new_offer_id = await self.api.counter_proposal_demand(self.demand.id, self.id, data, _request_timeout=5)
 
         new_offer = type(self)(self.node, new_offer_id)
         self.add_child(new_offer)
 
         return new_offer
 
-    async def create_agreement(self) -> "Agreement":
-        raise NotImplementedError
-        # """Create an Agreement based on this Proposal."""
-        # proposal = models.AgreementProposal(
-        #     proposal_id=self.id,
-        #     valid_to=datetime.now(timezone.utc) + timeout,
-        # )
-        # api: RequestorApi = self._subscription._api
-        # agreement_id = await api.create_agreement(proposal)
-        # return Agreement(api, self._subscription, agreement_id)
+    async def create_agreement(self, autoclose=True, timeout: timedelta = timedelta(seconds=60)) -> "Agreement":
+        proposal = ya_models.AgreementProposal(
+            proposal_id=self.id,
+            valid_to=datetime.now(timezone.utc) + timeout,
+        )
+        agreement_id = await self.api.create_agreement(proposal)
+        agreement = Agreement(self.node, agreement_id)
+        self.add_child(agreement)
+        if autoclose:
+            self.node.add_autoclose_resource(agreement)
+
+        return agreement
 
     async def _response_data(self) -> ya_models.DemandOfferBase:
         # FIXME: this is a mock
@@ -221,4 +222,25 @@ class Offer(MarketApiResource):
 
 
 class Agreement(MarketApiResource):
-    pass
+    @api_call_wrapper()
+    async def confirm(self) -> None:
+        await self.api.confirm_agreement(self.id)
+
+    @api_call_wrapper()
+    async def wait_for_approval(self) -> bool:
+        try:
+            await self.api.wait_for_approval(self.id, timeout=15, _request_timeout=16)
+            return True
+        except exceptions.ApiException as e:
+            if e.status == 410:
+                await self.load()
+                return False
+            elif e.status == 408:
+                #   TODO: maybe this should be in api_call_wrapper?
+                return await self.wait_for_approval()
+            else:
+                raise
+
+    @api_call_wrapper()
+    async def terminate(self, reason: str = ''):
+        await self.api.terminate_agreement(self.id, request_body={"message": reason})

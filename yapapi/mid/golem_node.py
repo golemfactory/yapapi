@@ -67,8 +67,12 @@ class GolemNode:
         )
 
     async def _close_autoclose_resources(self) -> None:
+        agreement_msg = "Work finished"
+        agreement_tasks = [r.terminate(agreement_msg) for r in self._autoclose_resources if isinstance(r, Agreement)]
         demand_tasks = [r.unsubscribe() for r in self._autoclose_resources if isinstance(r, Demand)]
         allocation_tasks = [r.release() for r in self._autoclose_resources if isinstance(r, Allocation)]
+        if agreement_tasks:
+            await asyncio.gather(*agreement_tasks)
         if demand_tasks:
             await asyncio.gather(*demand_tasks)
         if allocation_tasks:
@@ -89,7 +93,7 @@ class GolemNode:
         #             In the future this assumption might not be true, but we don't care now.
         allocation = await Allocation.create_any_account(self, decimal_amount, network, driver)
         if autoclose:
-            self._autoclose_resources.add(allocation)
+            self.add_autoclose_resource(allocation)
         return allocation
 
     async def create_demand(
@@ -112,7 +116,7 @@ class GolemNode:
 
         demand = await Demand.create_from_properties_constraints(self, builder.properties, builder.constraints)
         if autoclose:
-            self._autoclose_resources.add(demand)
+            self.add_autoclose_resource(demand)
         return demand
 
     async def _add_builder_allocations(self, builder: DemandBuilder, allocations: Iterable[Allocation]) -> None:
@@ -157,6 +161,9 @@ class GolemNode:
 
     #########
     #   Other
+    def add_autoclose_resource(self, resource: Union["Allocation", "Demand", "Agreement"]) -> None:
+        self._autoclose_resources.add(resource)
+
     def __str__(self):
         lines = [
             f"{type(self).__name__}(",
