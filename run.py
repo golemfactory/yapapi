@@ -32,7 +32,7 @@ async def get_offer(offers):
     offer_2 = await offer_1.respond()
     print(offer_2, offer_2.parent)
 
-    offer_3 = await offer_2.offers().__anext__()
+    offer_3 = await offer_2.responses().__anext__()
     print(offer_3, offer_3.parent)
     return offer_3
 
@@ -43,8 +43,6 @@ async def main():
         allocation = await golem.create_allocation(1)
         payload = await vm.repo(image_hash=image_hash)
         demand = await golem.create_demand(payload, allocations=[allocation])
-
-        print(demand.id)
 
         simple_scorer = SimpleScorer(demand.initial_offers(), score_offer, min_offers=2)
         offers = simple_scorer.offers()

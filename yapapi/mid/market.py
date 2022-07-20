@@ -158,8 +158,7 @@ class Offer(MarketApiResource):
         else:
             self.demand = demand
 
-    async def offers(self) -> AsyncIterator["Offer"]:
-        #   TODO: rename to "responses"?
+    async def responses(self) -> AsyncIterator["Offer"]:
         async for offer in self.child_aiter():
             yield offer
 
@@ -177,13 +176,11 @@ class Offer(MarketApiResource):
         return Offer(node, data.proposal_id, data)
 
     async def respond(self) -> "Offer":
-        assert self.demand is not None
-
         data = await self._response_data()
         try:
             new_offer_id = await self.api.counter_proposal_demand(self.demand.id, self.id, data, _request_timeout=5)
         except exceptions.ApiException:
-            raise  # TODO what is going on with this missing subscription?
+            raise
 
         new_offer = type(self)(self.node, new_offer_id)
         self.add_child(new_offer)
