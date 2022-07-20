@@ -46,13 +46,13 @@ async def main():
 
         print(demand.id)
 
-        simple_scorer = SimpleScorer(demand.offers(), score_offer, min_offers=2)
+        simple_scorer = SimpleScorer(demand.initial_offers(), score_offer, min_offers=2)
         offers = simple_scorer.offers()
-        
+
         while True:
             task = asyncio.create_task(get_offer(offers))
             try:
-                proposal = await asyncio.wait_for(task, 5)
+                proposal = await asyncio.wait_for(task, 10)
                 break
             except asyncio.TimeoutError:
                 print("TIMEOUT")
@@ -61,8 +61,6 @@ async def main():
 
         agreement = await proposal.create_agreement()
         await agreement.confirm()
-
-
 
 
 if __name__ == '__main__':

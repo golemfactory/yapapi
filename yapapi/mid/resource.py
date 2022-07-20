@@ -1,8 +1,8 @@
+import asyncio
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Any, Callable, List, Optional, TYPE_CHECKING
+from typing import Any, AsyncIterator, List, Optional, TYPE_CHECKING
 
 from .api_call_wrapper import api_call_wrapper
-from .yagna_event_collector import YagnaEventCollector
 
 
 if TYPE_CHECKING:
@@ -28,7 +28,38 @@ class Resource(ABC, metaclass=CachedSingletonId):
         self._id = id_
         self._data = data
 
-        self._event_collector: Optional[YagnaEventCollector] = None
+        self._parent: Optional[Resource] = None
+        self._children: List[Resource] = []
+
+    ####################
+    #   RESOURCE TREE
+    @property
+    def parent(self) -> "Resource":
+        assert self._parent is not None
+        return self._parent
+
+    @parent.setter
+    def parent(self, parent: "Resource") -> None:
+        assert self._parent is None
+        self._parent = parent
+
+    def add_child(self, child: "Resource") -> None:
+        child.parent = self
+        self._children.append(child)
+
+    def children(self) -> List["Resource"]:
+        return self._children.copy()
+
+    async def child_aiter(self) -> AsyncIterator["Resource"]:
+        #   TODO: make this more efficient (remove sleep)
+        #         (e.g. by setting some awaitable to ready in add_child)
+        cnt = 0
+        while True:
+            if cnt < len(self._children):
+                yield self._children[cnt]
+                cnt += 1
+            else:
+                await asyncio.sleep(0.1)
 
     ####################
     #   PROPERTIES
@@ -79,19 +110,12 @@ class Resource(ABC, metaclass=CachedSingletonId):
             resources.append(cls(node, id_, raw))
         return resources
 
-    ##################
-    #   EVENTS (TODO: this should be removed maybe?)
-    def start_collecting_events(self, get_events: Callable, *args, **kwargs) -> None:
-        assert self._event_collector is None
-        self._event_collector = YagnaEventCollector(get_events, list(args), kwargs)
-        self._event_collector.start()
-
-    async def stop_collecting_events(self) -> None:
-        if self._event_collector is not None:
-            await self._event_collector.stop()
-
     ###################
     #   OTHER
+    async def stop_collecting_events(self) -> None:
+        #   NOTE: this is ugly, but provides compatible interfaces.
+        pass
+
     @property
     def _get_method_name(self) -> str:
         return f'get_{type(self).__name__.lower()}'

@@ -58,7 +58,7 @@ async def example_3():
         demand = await golem.create_demand(payload, allocations=[allocation])
         print(demand)
 
-        async for offer in demand.offers():
+        async for offer in demand.initial_offers():
             print(offer)
             break
 

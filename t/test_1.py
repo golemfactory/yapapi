@@ -62,7 +62,7 @@ async def test_demand(any_payload, golem):
         allocation = await golem.create_allocation(1)
         demand = await golem.create_demand(any_payload, allocations=[allocation])
 
-        async for offer in demand.offers():
+        async for offer in demand.initial_offers():
             break
 
         await demand.get_data()

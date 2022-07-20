@@ -80,7 +80,7 @@ async def find_node(golem: GolemNode, runtime: str, subnet: str, timeout_str: Op
     async def get_nodes():
         payload = CliPayload(runtime)
         demand = await golem.create_demand(payload, subnet=subnet)
-        async for offer in demand.offers():
+        async for offer in demand.initial_offers():
             click.echo(offer)
 
     try:

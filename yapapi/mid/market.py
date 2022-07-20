@@ -1,12 +1,13 @@
 from abc import ABC
 import asyncio
-from typing import AsyncIterator, Dict, List, Optional, TYPE_CHECKING, Union
+from typing import AsyncIterator, Dict, Optional, TYPE_CHECKING, Union
 
 from ya_market import RequestorApi, models as ya_models, exceptions
 
 from .api_call_wrapper import api_call_wrapper
 from .exceptions import ResourceNotFound
 from .resource import Resource
+from .yagna_event_collector import YagnaEventCollector
 
 if TYPE_CHECKING:
     from .golem_node import GolemNode
@@ -19,6 +20,12 @@ class MarketApiResource(Resource, ABC):
 
 
 class Demand(MarketApiResource):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        task = asyncio.get_event_loop().create_task(self._collect_offers())
+        self._offer_collecting_task: Optional[asyncio.Task] = task
+
     @api_call_wrapper()
     async def _get_data(self) -> ya_models.Demand:
         #   NOTE: this method is required because there is no get_demand(id)
@@ -50,46 +57,66 @@ class Demand(MarketApiResource):
 
     @api_call_wrapper(ignored_errors=[404, 410])
     async def unsubscribe(self) -> None:
+        await self.stop_collecting_events()
         await self.api.unsubscribe_demand(self.id)
 
-    async def offers(self) -> AsyncIterator["Offer"]:
-        if self._event_collector is None:
-            get_events = self.api.collect_offers
-            self.start_collecting_events(get_events, self.id, timeout=5, max_events=10)
+    async def stop_collecting_events(self):
+        if self._offer_collecting_task is not None:
+            task = self._offer_collecting_task
+            self._offer_collecting_task = None
+            task.cancel()
 
-        assert self._event_collector is not None  # mypy
-        queue: asyncio.Queue = self._event_collector.event_queue()
-
-        while True:
-            event = await queue.get()
-            if isinstance(event, ya_models.ProposalEvent):
-                offer = Offer.from_proposal_event(self.node, event)
-                await self._set_offer_parent(offer)
+    async def initial_offers(self) -> AsyncIterator["Offer"]:
+        async for offer in self.child_aiter():
+            if offer.initial:
                 yield offer
 
-    def offer(self, offer_id: str) -> "Offer":
-        offer = Offer(self.node, offer_id)
-        return offer
+    async def _collect_offers(self):
+        event_collector = YagnaEventCollector(
+            self.api.collect_offers,
+            [self.id],
+            {"timeout": 5, "max_events": 10},
+        )
+        event_collector.start()
+        queue: asyncio.Queue = event_collector.event_queue()
 
-    async def _set_offer_parent(self, offer: "Offer") -> None:
+        try:
+            while True:
+                event = await queue.get()
+                if isinstance(event, ya_models.ProposalEvent):
+                    offer = Offer.from_proposal_event(self.node, event)
+                    parent = self._get_offer_parent(offer)
+                    parent.add_child(offer)
+        except asyncio.CancelledError:
+            await event_collector.stop()
+
+    def _get_offer_parent(self, offer: "Offer") -> Union["Demand", "Offer"]:
         if offer.initial:
             parent = self
         else:
             parent_offer_id = offer.data.prev_proposal_id
             parent = Offer(self.node, parent_offer_id)
-            assert parent._parent is not None
-        parent.add_child(offer)
 
-    def add_child(self, offer: "Offer") -> None:
-        #   TODO
-        offer.parent = self
+            #   Sanity check - this should be true in all "expected" workflows,
+            #   and we really want to detect any situation when it's not
+            assert parent._parent is not None
+        return parent
+
+    def offer(self, offer_id: str) -> "Offer":
+        offer = Offer(self.node, offer_id)
+
+        #   NOTE: we don't know the parent, so we don't set it, but demand is known
+        if offer._demand is None:
+            offer.demand = self
+
+        return offer
 
 
 class Offer(MarketApiResource):
+    _demand: Optional["Demand"] = None
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._parent: Optional[Union["Demand", "Offer"]] = None
-        self._child_offers: List["Offer"] = []
 
     ##############################
     #   State-related properties
@@ -106,31 +133,35 @@ class Offer(MarketApiResource):
     ###########################
     #   Tree-related methods
     @property
-    def parent(self) -> Union["Demand", "Offer"]:
+    def demand(self) -> "Demand":
+        assert self._demand is not None
+        return self._demand
+
+    @demand.setter
+    def demand(self, demand: "Demand") -> None:
+        assert self._demand is None
+        self._demand = demand
+
+    @property
+    def parent(self) -> Union["Offer", "Demand"]:
         assert self._parent is not None
         return self._parent
 
     @parent.setter
-    def parent(self, parent: Union["Demand", "Offer"]) -> None:
+    def parent(self, parent: Union["Offer", "Demand"]) -> None:
         assert self._parent is None
         self._parent = parent
 
-    @property
-    def demand(self) -> "Demand":
-        return self.parent if isinstance(self.parent, Demand) else self.parent.demand
-
-    def add_child(self, offer: "Offer") -> None:
-        offer.parent = self
-        self._child_offers.append(offer)
+        demand = parent if isinstance(parent, Demand) else parent.demand
+        if self._demand is not None:
+            assert self._demand is demand
+        else:
+            self.demand = demand
 
     async def offers(self) -> AsyncIterator["Offer"]:
-        cnt = 0
-        while True:
-            if cnt < len(self._child_offers):
-                yield self._child_offers[cnt]
-                cnt += 1
-            else:
-                await asyncio.sleep(0.1)
+        #   TODO: rename to "responses"?
+        async for offer in self.child_aiter():
+            yield offer
 
     ##########################
     #   Other

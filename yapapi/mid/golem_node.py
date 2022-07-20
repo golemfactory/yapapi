@@ -54,6 +54,10 @@ class GolemNode:
         print("Clean shutdown finished")
 
     async def _stop_collecting_events(self) -> None:
+        #   TODO: we'll have a lot of resources and at most few of them will be collecting events.
+        #         Is this important from the efficiency POV?
+        #         BUT: _stop_collecting_events (etc) might change significantly once we have more
+        #         event collectors (e.g. invoices, debit notes etc) - let's wait until then with any changes.
         tasks = []
         for resources in self._resources.values():
             tasks += [obj.stop_collecting_events() for obj in resources.values()]
