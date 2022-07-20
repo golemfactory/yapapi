@@ -33,7 +33,9 @@ async def get_offer(initial_offers):
         print(f"They responded with {their_response} to {our_response}")
         return their_response
 
+    await our_response.get_data()
     assert our_response.rejected
+
     print(f"Our response {our_response} was rejected")
     return None
 

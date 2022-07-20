@@ -47,21 +47,16 @@ class GolemNode:
         self._ya_net_api = self._api_config.net()
 
     async def aclose(self) -> None:
-        await self._stop_collecting_events()
+        self._set_no_more_children()
         await self._close_autoclose_resources()
         await self._close_apis()
         await self._event_bus.stop()
         print("Clean shutdown finished")
 
-    async def _stop_collecting_events(self) -> None:
-        #   TODO: we'll have a lot of resources and at most few of them will be collecting events.
-        #         Is this important from the efficiency POV?
-        #         BUT: _stop_collecting_events (etc) might change significantly once we have more
-        #         event collectors (e.g. invoices, debit notes etc) - let's wait until then with any changes.
-        tasks = []
+    def _set_no_more_children(self) -> None:
         for resources in self._resources.values():
-            tasks += [obj.stop_collecting_events() for obj in resources.values()]
-        await asyncio.gather(*tasks)
+            for resource in resources.values():
+                resource.set_no_more_children()
 
     async def _close_apis(self) -> None:
         await asyncio.gather(

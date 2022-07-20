@@ -32,6 +32,11 @@ class Resource(ABC, metaclass=CachedSingletonId):
         self._children: List[Resource] = []
         self._events: List[Any] = []
 
+        #   When this is done, we know self._children will never change again
+        #   This is set by particular resources depending on their internal logic,
+        #   and consumed in Resource.child_aiter().
+        self._no_more_children = asyncio.Future()
+
     ##########################
     #   RESOURCE TREE & EVENTS
     @property
@@ -53,15 +58,24 @@ class Resource(ABC, metaclass=CachedSingletonId):
         return self._children.copy()
 
     async def child_aiter(self) -> AsyncIterator["Resource"]:
-        #   TODO: make this more efficient (remove sleep)
-        #         (e.g. by setting some awaitable to ready in add_child)
+        async def no_more_children():
+            await self._no_more_children
+
+        stop_task = asyncio.create_task(no_more_children())
+
         cnt = 0
         while True:
             if cnt < len(self._children):
                 yield self._children[cnt]
                 cnt += 1
             else:
-                await asyncio.sleep(0.1)
+                #   TODO: make this more efficient (remove sleep)
+                #         (e.g. by setting some awaitable to done in add_child)
+                wait_task = asyncio.create_task(asyncio.sleep(0.1))
+                await asyncio.wait((wait_task, stop_task), return_when=asyncio.FIRST_COMPLETED)
+                if stop_task.done():
+                    wait_task.cancel()
+                    break
 
     def add_event(self, event: Any) -> None:
         self._events.append(event)
@@ -121,8 +135,12 @@ class Resource(ABC, metaclass=CachedSingletonId):
 
     ###################
     #   OTHER
-    async def stop_collecting_events(self) -> None:
-        #   NOTE: this is ugly, but provides compatible interfaces.
+    def set_no_more_children(self) -> None:
+        if not self._no_more_children.done():
+            self._no_more_children.set_result(None)
+            self._close_children_generators()
+
+    def _close_children_generators(self) -> None:
         pass
 
     @property
