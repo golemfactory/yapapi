@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 import heapq
 
-from typing import AsyncIterator, Awaitable, Callable, List, Optional, Tuple
+from typing import AsyncIterator, Awaitable, Callable, List, Optional
 
 from yapapi.mid.market import Offer
 
@@ -17,7 +17,6 @@ class ScoredOffer:
 class SimpleScorer:
     def __init__(
         self,
-        offer_stream: AsyncIterator[Offer],
         score_offer: Callable[[Offer], Awaitable[float]],
         min_offers: Optional[int] = None,
         max_wait: Optional[timedelta] = None,
@@ -27,12 +26,21 @@ class SimpleScorer:
         self._max_wait = max_wait
 
         self._scored_offers: List[ScoredOffer] = []
-        self._offer_scorer_task = asyncio.get_event_loop().create_task(self._process_stream(offer_stream))
 
-    async def offers(self) -> AsyncIterator[Tuple[Offer, float]]:
+    async def __call__(self, offers: AsyncIterator[Offer]) -> AsyncIterator[Offer]:
+        self._no_more_offers = False
+        offer_scorer_task = asyncio.get_event_loop().create_task(self._process_stream(offers))
+        try:
+            async for offer in self._offers():
+                yield offer
+        except asyncio.CancelledError:
+            offer_scorer_task.cancel()
+            self._no_more_offers = True
+
+    async def _offers(self):
         await self._wait_until_ready()
 
-        while self._scored_offers or not self._offer_scorer_task.done():
+        while self._scored_offers or not self._no_more_offers:
             try:
                 scored_offer = heapq.heappop(self._scored_offers)
                 yield scored_offer.offer
@@ -41,12 +49,6 @@ class SimpleScorer:
 
     async def score_offer(self, offer: Offer) -> float:
         return await self._score_offer(offer)
-
-    async def aclose(self) -> None:
-        #   NOTE: calling this is necessary only if (for whatever reason)
-        #         self.offer_stream does not end. In most usecases
-        #         it should end cleanly (e.g. Demand.initial_offers() ends on GolemNode.__aexit__)
-        self._offer_scorer_task.cancel()
 
     async def _process_stream(self, offer_stream: AsyncIterator[Offer]):
         async for offer in offer_stream:

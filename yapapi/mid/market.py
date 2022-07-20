@@ -243,4 +243,10 @@ class Agreement(MarketApiResource):
 
     @api_call_wrapper()
     async def terminate(self, reason: str = ''):
+        #   FIXME: check our state first
         await self.api.terminate_agreement(self.id, request_body={"message": reason})
+
+    @property
+    async def activity_possible(self) -> bool:
+        #   FIXME
+        return True
