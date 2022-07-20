@@ -14,7 +14,6 @@ class CachedSingletonId(ABCMeta):
         assert isinstance(cls, type(Resource))  # mypy
         if args:
             #   Sanity check: when data is passed, it must be a new resource
-            #   (TODO: maybe we should only check if we got the same data?)
             assert id_ not in node._resources[cls]
 
         if id_ not in node._resources[cls]:
@@ -31,11 +30,29 @@ class Resource(ABC, metaclass=CachedSingletonId):
 
         self._event_collector: Optional[YagnaEventCollector] = None
 
+    ####################
+    #   PROPERTIES
     @property
     @abstractmethod
     def api(self):
         pass
 
+    @property
+    def id(self) -> str:
+        return self._id
+
+    @property
+    def data(self) -> Any:
+        if self._data is None:
+            raise RuntimeError(f"Unknown {type(self).__name__} data - call get_data() first")
+        return self._data
+
+    @property
+    def node(self) -> "GolemNode":
+        return self._node
+
+    ####################
+    #   DATA LOADING
     async def get_data(self, force=False) -> Any:
         if self._data is None or force:
             self._data = await self._get_data()
@@ -62,20 +79,8 @@ class Resource(ABC, metaclass=CachedSingletonId):
             resources.append(cls(node, id_, raw))
         return resources
 
-    @property
-    def id(self) -> str:
-        return self._id
-
-    @property
-    def data(self) -> Any:
-        if self._data is None:
-            raise RuntimeError(f"Unknown {type(self).__name__} data - call get_data() first")
-        return self._data
-
-    @property
-    def node(self) -> "GolemNode":
-        return self._node
-
+    ##################
+    #   EVENTS (TODO: this should be removed maybe?)
     def start_collecting_events(self, get_events: Callable, *args, **kwargs) -> None:
         assert self._event_collector is None
         self._event_collector = YagnaEventCollector(get_events, list(args), kwargs)
@@ -85,6 +90,8 @@ class Resource(ABC, metaclass=CachedSingletonId):
         if self._event_collector is not None:
             await self._event_collector.stop()
 
+    ###################
+    #   OTHER
     @property
     def _get_method_name(self) -> str:
         return f'get_{type(self).__name__.lower()}'
