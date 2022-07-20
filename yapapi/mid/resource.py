@@ -30,9 +30,10 @@ class Resource(ABC, metaclass=CachedSingletonId):
 
         self._parent: Optional[Resource] = None
         self._children: List[Resource] = []
+        self._events: List[Any] = []
 
-    ####################
-    #   RESOURCE TREE
+    ##########################
+    #   RESOURCE TREE & EVENTS
     @property
     def parent(self) -> "Resource":
         assert self._parent is not None
@@ -47,6 +48,7 @@ class Resource(ABC, metaclass=CachedSingletonId):
         child.parent = self
         self._children.append(child)
 
+    @property
     def children(self) -> List["Resource"]:
         return self._children.copy()
 
@@ -60,6 +62,13 @@ class Resource(ABC, metaclass=CachedSingletonId):
                 cnt += 1
             else:
                 await asyncio.sleep(0.1)
+
+    def add_event(self, event: Any) -> None:
+        self._events.append(event)
+
+    @property
+    def events(self) -> List[Any]:
+        return self._events.copy()
 
     ####################
     #   PROPERTIES

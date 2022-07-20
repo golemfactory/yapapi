@@ -24,17 +24,18 @@ async def score_offer(offer: Offer) -> float:
     return await strategy.score_offer(compat_offer)
 
 
-async def get_offer(offers):
-    offer_1 = await offers.__anext__()
-    print(offer_1, offer_1.parent)
-    assert offer_1.initial
+async def get_offer(initial_offers):
+    initial_offer = await initial_offers.__anext__()
+    our_response = await initial_offer.respond()
+    print(f"Responded with {our_response} to initial offer {initial_offer}")
 
-    offer_2 = await offer_1.respond()
-    print(offer_2, offer_2.parent)
+    async for their_response in our_response.responses():
+        print(f"They responded with {their_response} to {our_response}")
+        return their_response
 
-    offer_3 = await offer_2.responses().__anext__()
-    print(offer_3, offer_3.parent)
-    return offer_3
+    assert our_response.rejected
+    print(f"Our response {our_response} was rejected")
+    return None
 
 
 async def main():
@@ -51,7 +52,8 @@ async def main():
             task = asyncio.create_task(get_offer(offers))
             try:
                 proposal = await asyncio.wait_for(task, 10)
-                break
+                if proposal is not None:
+                    break
             except asyncio.TimeoutError:
                 print("TIMEOUT")
         print("GOT PROPOSAL", proposal)

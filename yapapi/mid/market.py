@@ -87,6 +87,9 @@ class Demand(MarketApiResource):
                     offer = Offer.from_proposal_event(self.node, event)
                     parent = self._get_offer_parent(offer)
                     parent.add_child(offer)
+                elif isinstance(event, ya_models.ProposalRejectedEvent):
+                    offer = self.offer(event.proposal_id)
+                    offer.add_event(event)
         except asyncio.CancelledError:
             await event_collector.stop()
 
@@ -118,17 +121,32 @@ class Offer(MarketApiResource):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self._rejected_fut = asyncio.Future()
+
     ##############################
     #   State-related properties
     @property
     def initial(self):
+        if self._rejected_fut.done():
+            return False
         assert self.data is not None
         return self.data.state == 'Initial'
 
     @property
     def draft(self):
+        if self._rejected_fut.done():
+            return False
         assert self.data is not None
         return self.data.state == 'Draft'
+
+    @property
+    def rejected(self):
+        if self._rejected_fut.done():
+            return True
+        elif self.data is not None:
+            return self.data.state == "Rejected"
+        else:
+            return False
 
     ###########################
     #   Tree-related methods
@@ -158,9 +176,27 @@ class Offer(MarketApiResource):
         else:
             self.demand = demand
 
+    def add_event(self, event: Union[ya_models.ProposalEvent, ya_models.ProposalRejectedEvent]) -> None:
+        super().add_event(event)
+        if isinstance(event, ya_models.ProposalRejectedEvent):
+            self._rejected_fut.set_result(None)
+
     async def responses(self) -> AsyncIterator["Offer"]:
-        async for offer in self.child_aiter():
-            yield offer
+        child_aiter = self.child_aiter()
+
+        async def wait_until_rejected():
+            await self._rejected_fut
+
+        rejected_task = asyncio.create_task(wait_until_rejected())
+
+        while True:
+            new_response_task = asyncio.create_task(child_aiter.__anext__())
+            await asyncio.wait((new_response_task, rejected_task), return_when=asyncio.FIRST_COMPLETED)
+            if new_response_task.done():
+                yield new_response_task.result()
+            else:
+                new_response_task.cancel()
+                break
 
     ##########################
     #   Other
@@ -173,7 +209,9 @@ class Offer(MarketApiResource):
     def from_proposal_event(cls, node: "GolemNode", event: ya_models.ProposalEvent) -> "Offer":
         data = event.proposal
         assert data.proposal_id is not None  # mypy
-        return Offer(node, data.proposal_id, data)
+        offer = Offer(node, data.proposal_id, data)
+        offer.add_event(event)
+        return offer
 
     async def respond(self) -> "Offer":
         data = await self._response_data()
