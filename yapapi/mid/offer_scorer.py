@@ -32,7 +32,7 @@ class SimpleScorer:
     async def offers(self) -> AsyncIterator[Tuple[Offer, float]]:
         await self._wait_until_ready()
 
-        while True:
+        while self._scored_offers or not self._offer_scorer_task.done():
             try:
                 scored_offer = heapq.heappop(self._scored_offers)
                 yield scored_offer.offer
@@ -43,6 +43,9 @@ class SimpleScorer:
         return await self._score_offer(offer)
 
     async def aclose(self) -> None:
+        #   NOTE: calling this is necessary only if (for whatever reason)
+        #         self.offer_stream does not end. In most usecases
+        #         it should end cleanly (e.g. Demand.initial_offers() ends on GolemNode.__aexit__)
         self._offer_scorer_task.cancel()
 
     async def _process_stream(self, offer_stream: AsyncIterator[Offer]):

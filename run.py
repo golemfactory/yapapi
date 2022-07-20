@@ -59,7 +59,6 @@ async def main():
             except asyncio.TimeoutError:
                 print("TIMEOUT")
         print("GOT PROPOSAL", proposal)
-        await simple_scorer.aclose()
 
         agreement = await proposal.create_agreement()
         await agreement.confirm()
