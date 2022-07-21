@@ -6,7 +6,7 @@ from yapapi.payload import vm
 from yapapi.mid.golem_node import GolemNode
 from yapapi.mid.market import Offer
 
-from yapapi.mid.chain import Chain, SimpleScorer, DummyNegotiator, AgreementPool
+from yapapi.mid.chain import Chain, SimpleScorer, DummyNegotiator, AgreementCreator
 
 
 IMAGE_HASH = "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"
@@ -14,6 +14,15 @@ IMAGE_HASH = "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"
 
 async def score_offer(offer: Offer):
     return random()
+
+
+async def max_3(resources):
+    cnt = 0
+    async for resource in resources:
+        yield resource
+        cnt += 1
+        if cnt == 3:
+            break
 
 
 async def main():
@@ -27,10 +36,10 @@ async def main():
             demand.initial_offers(),
             SimpleScorer(score_offer, min_offers=7),
             DummyNegotiator(buffor_size=5),
-            AgreementPool(size=2),
+            AgreementCreator(),
         )
-        async for resource in chain:
-            print("GOT!", resource)
+        async for agreement in chain:
+            print("AGREEMENT", agreement)
 
 
 if __name__ == '__main__':

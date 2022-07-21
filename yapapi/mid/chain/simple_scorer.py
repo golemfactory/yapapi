@@ -31,7 +31,8 @@ class SimpleScorer:
         self._no_more_offers = False
         offer_scorer_task = asyncio.get_event_loop().create_task(self._process_stream(offers))
         try:
-            async for offer in self._offers():
+            async for offer, score in self._offers():
+                print(f"Yielding offer with score {-1 * score}")
                 yield offer
         except asyncio.CancelledError:
             offer_scorer_task.cancel()
@@ -43,7 +44,7 @@ class SimpleScorer:
         while self._scored_offers or not self._no_more_offers:
             try:
                 scored_offer = heapq.heappop(self._scored_offers)
-                yield scored_offer.offer
+                yield scored_offer.offer, scored_offer.score
             except IndexError:
                 await asyncio.sleep(0.1)
 
@@ -55,6 +56,7 @@ class SimpleScorer:
             score = await self.score_offer(offer)
             score = score * -1  # heap -> smallest values first -> reverse
             heapq.heappush(self._scored_offers, ScoredOffer(score, offer))
+        self._no_more_offers = True
 
     async def _wait_until_ready(self) -> None:
         start = datetime.now()

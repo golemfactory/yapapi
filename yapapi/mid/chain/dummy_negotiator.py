@@ -6,36 +6,46 @@ from yapapi.mid.market import Offer
 
 class DummyNegotiator:
     def __init__(self, buffor_size: int = 1):
-        self.buffor_size = buffor_size
-
         self.main_task: Optional[asyncio.Task] = None
         self.tasks: List[asyncio.Task] = []
         self.queue: asyncio.Queue[Offer] = asyncio.Queue()
+
+        #   Acquire to start negotiations. Release:
+        #   A) after failed negotiations
+        #   B) when yielding offer
+        #   --> we always have (current_negotiations + offers_ready) == buffer_size
+        self.semaphore = asyncio.BoundedSemaphore(buffor_size)
 
     async def __call__(self, offers: AsyncIterator[Offer]) -> AsyncIterator[Offer]:
         self._no_more_offers = False
         self.main_task = asyncio.create_task(self._process_offers(offers))
 
-        while not self.queue.empty() or not self._no_more_offers:
-            yield await self.queue.get()
+        while not self.queue.empty() or not self._no_more_offers or self._has_running_tasks:
+            proposal = await self.queue.get()
+            self.semaphore.release()
+            yield proposal
+
+    @property
+    def _has_running_tasks(self) -> bool:
+        return not all(task.done() for task in self.tasks)
 
     async def _process_offers(self, offers: AsyncIterator[Offer]) -> None:
-        semaphore = asyncio.Semaphore(self.buffor_size)
-
         async for offer in offers:
-            await semaphore.acquire()
-            self.tasks.append(asyncio.create_task(self._negotiate_offer(offer, semaphore)))
+            await self.semaphore.acquire()
+            self.tasks.append(asyncio.create_task(self._negotiate_offer(offer)))
 
         self._no_more_offers = True
         self._main_task = None
 
-    async def _negotiate_offer(self, offer: Offer, semaphore: asyncio.Semaphore) -> None:
+    async def _negotiate_offer(self, offer: Offer) -> None:
         try:
             proposal = await self._get_proposal(offer)
             if proposal is not None:
                 self.queue.put_nowait(proposal)
-        finally:
-            semaphore.release()
+            else:
+                self.semaphore.release()
+        except Exception:
+            self.semaphore.release()
 
     async def _get_proposal(self, offer: Offer) -> Optional[Offer]:
         our_response = await offer.respond()

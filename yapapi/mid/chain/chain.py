@@ -1,15 +1,18 @@
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 
 class Chain:
-    def __init__(self, *args):
-        self.chain_parts = args
+    def __init__(self, *chain_parts):
+        aiter = chain_parts[0]
 
-    async def __aiter__(self) -> AsyncIterator[Any]:
-        iterator = self.chain_parts[0]
+        for pipe in chain_parts[1:]:
+            aiter = pipe(aiter)
 
-        for pipe in self.chain_parts[1:]:
-            iterator = pipe(iterator)
+        self._aiter = aiter
 
-        async for x in iterator:
-            yield x
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        return await self._aiter.__anext__()
