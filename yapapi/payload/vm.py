@@ -22,7 +22,7 @@ from yapapi.payload.package import (
 from yapapi.props import base as prop_base
 from yapapi.props.builder import DemandBuilder, Model
 from yapapi.props import inf
-from yapapi.props.inf import InfBase, INF_CORES, RUNTIME_VM, ExeUnitRequest
+from yapapi.props.inf import InfBase, INF_CORES, RUNTIME_VM, ExeUnitRequest, ExeUnitManifestRequest
 
 _DEFAULT_REPO_SRV: Final = "_girepo._tcp.dev.golem.network"
 _FALLBACK_REPO_URL: Final = "http://girepo.dev.golem.network:8000"
@@ -31,8 +31,7 @@ logger = logging.getLogger(__name__)
 
 VM_CAPS_VPN: str = "vpn"
 
-VmCaps = Literal["vpn"]
-
+VmCaps = Literal["vpn", "inet", "manifest-support"]
 
 @dataclass
 class InfVm(InfBase):
@@ -52,6 +51,11 @@ class VmPackageFormat(Enum):
 class VmRequest(ExeUnitRequest):
     package_format: VmPackageFormat = prop_base.prop("golem.srv.comp.vm.package_format")
 
+@dataclass
+class VmManifestRequest(ExeUnitManifestRequest):
+    package_format: VmPackageFormat = prop_base.prop(
+        "golem.srv.comp.vm.package_format", default=VmPackageFormat.GVMKIT_SQUASH
+    )
 
 @dataclass(frozen=True)
 class _VmConstraints(Model):
@@ -68,6 +72,48 @@ class _VmConstraints(Model):
     def __str__(self):
         return prop_base.join_str_constraints(prop_base.constraint_model_serialize(self))
 
+@dataclass
+class _VmManifestPackage(Package):
+    manifest: str
+    manifest_sig: str
+    manifest_sig_algorithm: str
+    manifest_cert: str
+    constraints: _VmConstraints
+
+    async def resolve_url(self) -> str:
+        return ""
+
+    async def decorate_demand(self, demand: DemandBuilder):
+        demand.ensure(str(self.constraints))
+        demand.add(VmManifestRequest(
+            manifest=self.manifest,
+            manifest_sig=self.manifest_sig,
+            manifest_sig_algorithm=self.manifest_sig_algorithm,
+            manifest_cert=self.manifest_cert,
+            package_format=VmPackageFormat.GVMKIT_SQUASH
+        ))
+
+
+async def manifest(
+    manifest: str = None,
+    manifest_sig: str = None,
+    manifest_sig_algorithm: str = None,
+    manifest_cert: str = None,
+    min_mem_gib: float = 0.5,
+    min_storage_gib: float = 2.0,
+    min_cpu_threads: int = 1,
+    capabilities: Optional[List[VmCaps]] = None,
+) -> Package:
+    capabilities = capabilities or list()
+    constraints = _VmConstraints(min_mem_gib, min_storage_gib, min_cpu_threads, capabilities)
+
+    return _VmManifestPackage(
+        manifest=manifest,
+        manifest_sig=manifest_sig,
+        manifest_sig_algorithm=manifest_sig_algorithm,
+        manifest_cert=manifest_cert,
+        constraints=constraints
+    )
 
 @dataclass
 class _VmPackage(Package):
@@ -89,7 +135,7 @@ class _VmPackage(Package):
 
 async def repo(
     *,
-    image_hash: str,
+    image_hash: Optional[str] = None,
     image_url: Optional[str] = None,
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,

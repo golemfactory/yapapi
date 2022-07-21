@@ -36,6 +36,14 @@ class ExeUnitRequest(Model):
     package_url: str = prop("golem.srv.comp.task_package")
 
 
+@dataclass
+class ExeUnitManifestRequest(Model):
+    manifest: str = prop("golem.srv.comp.payload")
+    manifest_sig: str = prop("golem.srv.comp.payload.sig")
+    manifest_sig_algorithm: Optional[str] = prop("golem.srv.comp.payload.sig.algorithm", default=None)
+    manifest_cert: Optional[str] = prop("golem.srv.comp.payload.cert", default=None)
+
+
 @deprecated(version="0.6.0", reason="this is part of yapapi.payload.vm now")
 class VmPackageFormat(Enum):
     UNKNOWN = None
