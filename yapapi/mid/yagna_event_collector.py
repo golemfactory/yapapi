@@ -17,14 +17,13 @@ class YagnaEventCollector:
         self._events: List[Any] = []
         self._queues: List[asyncio.Queue] = []
 
-    def start(self) -> None:
-        assert self._task is None
+    async def __aenter__(self):
         self._task = asyncio.create_task(self._collect_events())
+        return self
 
-    async def stop(self) -> None:
-        if self._task:
-            self._task.cancel()
-            self._task = None
+    async def __aexit__(self, *exc_info):
+        self._task.cancel()
+        self._task = None
 
     async def _collect_events(self) -> None:
         while True:
@@ -36,7 +35,7 @@ class YagnaEventCollector:
                     queue.put_nowait(event)
 
             if not events:
-                await asyncio.sleep(1)
+                await asyncio.sleep(0.1)
 
     def event_queue(self, past_events: bool = True) -> asyncio.Queue:
         queue: asyncio.Queue[Any] = asyncio.Queue()

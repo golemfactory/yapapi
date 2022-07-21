@@ -48,10 +48,17 @@ class GolemNode:
 
     async def aclose(self) -> None:
         self._set_no_more_children()
+        await self._stop_event_collectors()
         await self._close_autoclose_resources()
         await self._close_apis()
         await self._event_bus.stop()
         print("Clean shutdown finished")
+
+    async def _stop_event_collectors(self) -> None:
+        demands = self._resources[Demand].values()
+        tasks = [demand.stop_collecting_events() for demand in demands]
+        if tasks:
+            await asyncio.gather(*tasks)
 
     def _set_no_more_children(self) -> None:
         for resources in self._resources.values():
@@ -115,6 +122,11 @@ class GolemNode:
         await self._add_builder_allocations(builder, allocations)
 
         demand = await Demand.create_from_properties_constraints(self, builder.properties, builder.constraints)
+
+        #   TODO: add an option **not** to collect events?
+        #         or maybe GolemNode should collect events?
+        demand.start_collecting_events()
+
         if autoclose:
             self.add_autoclose_resource(demand)
         return demand

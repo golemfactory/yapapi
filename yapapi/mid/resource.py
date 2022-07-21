@@ -138,10 +138,6 @@ class Resource(ABC, metaclass=CachedSingletonId):
     def set_no_more_children(self) -> None:
         if not self._no_more_children.done():
             self._no_more_children.set_result(None)
-            self._close_children_generators()
-
-    def _close_children_generators(self) -> None:
-        pass
 
     @property
     def _get_method_name(self) -> str:

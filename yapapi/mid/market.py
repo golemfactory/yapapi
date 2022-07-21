@@ -21,11 +21,12 @@ class MarketApiResource(Resource, ABC):
 
 
 class Demand(MarketApiResource):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    _event_collecting_task: Optional[asyncio.Task] = None
 
-        task = asyncio.get_event_loop().create_task(self._collect_offers())
-        self._offer_collecting_task: Optional[asyncio.Task] = task
+    def start_collecting_events(self):
+        assert self._event_collecting_task is None
+        task = asyncio.get_event_loop().create_task(self._process_yagna_events())
+        self._event_collecting_task = task
 
     @api_call_wrapper()
     async def _get_data(self) -> ya_models.Demand:
@@ -59,29 +60,27 @@ class Demand(MarketApiResource):
     @api_call_wrapper(ignore=[404, 410])
     async def unsubscribe(self) -> None:
         self.set_no_more_children()
+        await self.stop_collecting_events()
         await self.api.unsubscribe_demand(self.id)
 
-    def _close_children_generators(self):
-        if self._offer_collecting_task is not None:
-            task = self._offer_collecting_task
-            self._offer_collecting_task = None
-            task.cancel()
+    async def stop_collecting_events(self):
+        if self._event_collecting_task is not None:
+            self._event_collecting_task.cancel()
+            self._event_collecting_task = None
 
     async def initial_offers(self) -> AsyncIterator["Offer"]:
         async for offer in self.child_aiter():
             if offer.initial:
                 yield offer
 
-    async def _collect_offers(self):
+    async def _process_yagna_events(self):
         event_collector = YagnaEventCollector(
             self.api.collect_offers,
             [self.id],
             {"timeout": 5, "max_events": 10},
         )
-        event_collector.start()
-        queue: asyncio.Queue = event_collector.event_queue()
-
-        try:
+        async with event_collector:
+            queue: asyncio.Queue = event_collector.event_queue()
             while True:
                 event = await queue.get()
                 if isinstance(event, ya_models.ProposalEvent):
@@ -91,8 +90,6 @@ class Demand(MarketApiResource):
                 elif isinstance(event, ya_models.ProposalRejectedEvent):
                     offer = self.offer(event.proposal_id)
                     offer.add_event(event)
-        except asyncio.CancelledError:
-            await event_collector.stop()
 
     def _get_offer_parent(self, offer: "Offer") -> Union["Demand", "Offer"]:
         if offer.initial:
