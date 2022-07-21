@@ -18,6 +18,8 @@ async def score_offer(offer: Offer):
 
 
 async def max_3(resources):
+    #   This function can be inserted anywhere in the example chain
+    #   (except as the first element)
     cnt = 0
     async for resource in resources:
         yield resource

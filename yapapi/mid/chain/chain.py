@@ -1,8 +1,7 @@
 from collections.abc import AsyncIterator
-from typing import Any
 
 
-class Chain:
+class Chain(AsyncIterator):
     def __init__(self, *chain_parts):
         aiter = chain_parts[0]
 
