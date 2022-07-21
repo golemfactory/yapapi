@@ -12,14 +12,14 @@ from .exceptions import ResourceNotFound
 all_api_exceptions = (PaymentApiException, MarketApiException, ActivityApiException, NetApiException)
 
 
-def api_call_wrapper(ignored_errors: List[int] = []) -> Callable[[Callable], Callable]:
+def api_call_wrapper(ignore: List[int] = []) -> Callable[[Callable], Callable]:
     def outer_wrapper(f) -> Callable:
         @wraps(f)
         async def wrapper(*args, **kwargs):
             try:
                 return await f(*args, **kwargs)
             except all_api_exceptions as e:
-                if e.status in ignored_errors:
+                if e.status in ignore:
                     pass
                 elif e.status == 404:
                     self = args[0]

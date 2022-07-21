@@ -20,7 +20,7 @@ class PaymentApiResource(Resource, ABC):
 
 
 class Allocation(PaymentApiResource):
-    @api_call_wrapper(ignored_errors=[404, 410])
+    @api_call_wrapper(ignore=[404, 410])
     async def release(self) -> None:
         await self.api.release_allocation(self.id)
 

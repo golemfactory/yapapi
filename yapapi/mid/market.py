@@ -56,7 +56,7 @@ class Demand(MarketApiResource):
         demand_id = await api.subscribe_demand(data)
         return cls(node, demand_id)
 
-    @api_call_wrapper(ignored_errors=[404, 410])
+    @api_call_wrapper(ignore=[404, 410])
     async def unsubscribe(self) -> None:
         self.set_no_more_children()
         await self.api.unsubscribe_demand(self.id)
@@ -192,6 +192,7 @@ class Offer(MarketApiResource):
         offer.add_event(event)
         return offer
 
+    @api_call_wrapper()
     async def respond(self) -> "Offer":
         data = await self._response_data()
         new_offer_id = await self.api.counter_proposal_demand(self.demand.id, self.id, data, _request_timeout=5)
@@ -201,6 +202,7 @@ class Offer(MarketApiResource):
 
         return new_offer
 
+    @api_call_wrapper()
     async def create_agreement(self, autoclose=True, timeout: timedelta = timedelta(seconds=60)) -> "Agreement":
         proposal = ya_models.AgreementProposal(
             proposal_id=self.id,
@@ -233,7 +235,6 @@ class Agreement(MarketApiResource):
             return True
         except exceptions.ApiException as e:
             if e.status == 410:
-                await self.load()
                 return False
             elif e.status == 408:
                 #   TODO: maybe this should be in api_call_wrapper?
