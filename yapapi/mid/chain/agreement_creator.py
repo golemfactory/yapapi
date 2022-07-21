@@ -4,6 +4,8 @@ from yapapi.mid.market import Agreement, Offer
 
 
 class AgreementCreator:
+    #   TODO: this class doesn't really make much sense (e.g. because it negotiates only a single
+    #         agreement at a given time) - we'd rather have an AgreementPool instead
     async def __call__(self, offers: AsyncIterator[Offer]) -> AsyncIterator[Agreement]:
         async for offer in offers:
             agreement = await self._create_agreement(offer)

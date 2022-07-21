@@ -4,8 +4,8 @@ from typing import AsyncIterator, List, Optional
 from yapapi.mid.market import Offer
 
 
-class DummyNegotiator:
-    def __init__(self, buffor_size: int = 1):
+class DefaultNegotiator:
+    def __init__(self, buffer_size: int = 1):
         self.main_task: Optional[asyncio.Task] = None
         self.tasks: List[asyncio.Task] = []
         self.queue: asyncio.Queue[Offer] = asyncio.Queue()
@@ -14,7 +14,7 @@ class DummyNegotiator:
         #   A) after failed negotiations
         #   B) when yielding offer
         #   --> we always have (current_negotiations + offers_ready) == buffer_size
-        self.semaphore = asyncio.BoundedSemaphore(buffor_size)
+        self.semaphore = asyncio.BoundedSemaphore(buffer_size)
 
     async def __call__(self, offers: AsyncIterator[Offer]) -> AsyncIterator[Offer]:
         self._no_more_offers = False
@@ -35,7 +35,6 @@ class DummyNegotiator:
             self.tasks.append(asyncio.create_task(self._negotiate_offer(offer)))
 
         self._no_more_offers = True
-        self._main_task = None
 
     async def _negotiate_offer(self, offer: Offer) -> None:
         try:

@@ -86,7 +86,7 @@ async def test_autoclose(any_payload, golem, autoclose):
             with pytest.raises(ResourceNotFound):
                 await allocation.get_data(force=True)
         else:
-            await demand.get_data()
+            await demand.get_data(force=True)
             await demand.unsubscribe()
-            await allocation.get_data()
+            await allocation.get_data(force=True)
             await allocation.release()
