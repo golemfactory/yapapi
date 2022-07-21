@@ -48,8 +48,8 @@ async def example_2():
 
 
 async def example_3():
-    golem = GolemNode()
     """Create new allocation, demand, fetch a single offer, cleanup"""
+    golem = GolemNode()
     async with golem:
         allocation = await golem.create_allocation(1)
         print(allocation)
@@ -69,6 +69,33 @@ async def example_3():
 
 
 async def example_4():
+    """Reject some offer. Respond to another."""
+    golem = GolemNode()
+    async with golem:
+        allocation = await golem.create_allocation(1)
+        payload = await vm.repo(image_hash=image_hash)
+        demand = await golem.create_demand(payload, allocations=[allocation])
+
+        offer_1 = await demand.initial_offers().__anext__()
+        await offer_1.reject()
+        await offer_1.get_data(force=True)
+        assert offer_1.data.state == "Rejected"
+        print(f"We rejected offer {offer_1}")
+
+        offer_2 = await demand.initial_offers().__anext__()
+        offer_2_response = await offer_2.respond()
+        print(f"We responded to {offer_2} with {offer_2_response}")
+
+        async for their_response in offer_2_response.responses():
+            print(f"... and they responded with {their_response}")
+            break
+        else:
+            print("... and they rejected it")
+            await offer_2_response.get_data(force=True)
+            assert offer_2_response.data.state == "Rejected"
+
+
+async def example_5():
     """EventBus usage"""
     golem = GolemNode()
     from yapapi.mid import events
@@ -92,6 +119,8 @@ async def main():
     await example_3()
     print("\n---------- EXAMPLE 4 -------------\n")
     await example_4()
+    print("\n---------- EXAMPLE 5 -------------\n")
+    await example_5()
 
 
 if __name__ == '__main__':

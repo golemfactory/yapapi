@@ -171,6 +171,44 @@ class Offer(MarketApiResource):
             if isinstance(child, Offer):
                 yield child
 
+    ############################
+    #   Negotiations
+    @api_call_wrapper()
+    async def create_agreement(self, autoclose=True, timeout: timedelta = timedelta(seconds=60)) -> "Agreement":
+        proposal = ya_models.AgreementProposal(
+            proposal_id=self.id,
+            valid_to=datetime.now(timezone.utc) + timeout,
+        )
+        agreement_id = await self.api.create_agreement(proposal)
+        agreement = Agreement(self.node, agreement_id)
+        self.add_child(agreement)
+        if autoclose:
+            self.node.add_autoclose_resource(agreement)
+
+        return agreement
+
+    @api_call_wrapper()
+    async def reject(self, reason: str = '') -> None:
+        await self.api.reject_proposal_offer(
+            self.demand.id, self.id, request_body={"message": reason}, _request_timeout=5
+        )
+
+    @api_call_wrapper()
+    async def respond(self) -> "Offer":
+        data = await self._response_data()
+        new_offer_id = await self.api.counter_proposal_demand(self.demand.id, self.id, data, _request_timeout=5)
+
+        new_offer = type(self)(self.node, new_offer_id)
+        self.add_child(new_offer)
+
+        return new_offer
+
+    async def _response_data(self) -> ya_models.DemandOfferBase:
+        # FIXME: this is a mock
+        demand_data = await self.demand.get_data()
+        data = ya_models.DemandOfferBase(properties=demand_data.properties, constraints=demand_data.constraints)
+        return data
+
     ##########################
     #   Other
     @api_call_wrapper()
@@ -188,36 +226,6 @@ class Offer(MarketApiResource):
         offer = Offer(node, data.proposal_id, data)
         offer.add_event(event)
         return offer
-
-    @api_call_wrapper()
-    async def respond(self) -> "Offer":
-        data = await self._response_data()
-        new_offer_id = await self.api.counter_proposal_demand(self.demand.id, self.id, data, _request_timeout=5)
-
-        new_offer = type(self)(self.node, new_offer_id)
-        self.add_child(new_offer)
-
-        return new_offer
-
-    @api_call_wrapper()
-    async def create_agreement(self, autoclose=True, timeout: timedelta = timedelta(seconds=60)) -> "Agreement":
-        proposal = ya_models.AgreementProposal(
-            proposal_id=self.id,
-            valid_to=datetime.now(timezone.utc) + timeout,
-        )
-        agreement_id = await self.api.create_agreement(proposal)
-        agreement = Agreement(self.node, agreement_id)
-        self.add_child(agreement)
-        if autoclose:
-            self.node.add_autoclose_resource(agreement)
-
-        return agreement
-
-    async def _response_data(self) -> ya_models.DemandOfferBase:
-        # FIXME: this is a mock
-        demand_data = await self.demand.get_data()
-        data = ya_models.DemandOfferBase(properties=demand_data.properties, constraints=demand_data.constraints)
-        return data
 
 
 class Agreement(MarketApiResource):
