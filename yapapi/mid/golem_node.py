@@ -56,7 +56,7 @@ class GolemNode:
 
     async def _stop_event_collectors(self) -> None:
         demands = self._resources[Demand].values()
-        tasks = [demand.stop_collecting_events() for demand in demands]
+        tasks = [demand.stop_collecting_events() for demand in demands]  # type: ignore  # TODO: better typing?
         if tasks:
             await asyncio.gather(*tasks)
 

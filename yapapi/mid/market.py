@@ -70,6 +70,7 @@ class Demand(MarketApiResource):
 
     async def initial_offers(self) -> AsyncIterator["Offer"]:
         async for offer in self.child_aiter():
+            assert isinstance(offer, Offer)  # mypy
             if offer.initial:
                 yield offer
 
@@ -96,7 +97,7 @@ class Demand(MarketApiResource):
             parent = self
         else:
             parent_offer_id = offer.data.prev_proposal_id
-            parent = Offer(self.node, parent_offer_id)
+            parent = Offer(self.node, parent_offer_id)  # type: ignore
 
             #   Sanity check - this should be true in all "expected" workflows,
             #   and we really want to detect any situation when it's not
@@ -148,6 +149,7 @@ class Offer(MarketApiResource):
     @property
     def parent(self) -> Union["Offer", "Demand"]:
         assert self._parent is not None
+        assert isinstance(self._parent, Offer) or isinstance(self._parent, Demand)  # mypy
         return self._parent
 
     @parent.setter
@@ -177,7 +179,7 @@ class Offer(MarketApiResource):
     async def create_agreement(self, autoclose=True, timeout: timedelta = timedelta(seconds=60)) -> "Agreement":
         proposal = ya_models.AgreementProposal(
             proposal_id=self.id,
-            valid_to=datetime.now(timezone.utc) + timeout,
+            valid_to=datetime.now(timezone.utc) + timeout,  # type: ignore  # TODO: what is AgreementValidTo?
         )
         agreement_id = await self.api.create_agreement(proposal)
         agreement = Agreement(self.node, agreement_id)
