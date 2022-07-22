@@ -69,30 +69,36 @@ async def example_3():
 
 
 async def example_4():
-    """Reject some offer. Respond to another."""
+    """Respond to an offer. Receive a conuteroffer. Reject it."""
     golem = GolemNode()
     async with golem:
         allocation = await golem.create_allocation(1)
         payload = await vm.repo(image_hash=image_hash)
         demand = await golem.create_demand(payload, allocations=[allocation])
 
-        offer_1 = await demand.initial_offers().__anext__()
-        await offer_1.reject()
-        await offer_1.get_data(force=True)
-        assert offer_1.data.state == "Rejected"
-        print(f"We rejected offer {offer_1}")
+        #   Respond to offers until we get a counteroffer
+        async for offer in demand.initial_offers():
+            our_response = await offer.respond()
+            print(f"We responded to {offer} with {our_response}")
+            try:
+                their_response = await our_response.responses().__anext__()
+                print(f"... and they responded with {their_response}")
+                break
+            except StopAsyncIteration:
+                print("... and they rejected it")
+                await our_response.get_data(force=True)
+                assert our_response.data.state == "Rejected"
 
-        offer_2 = await demand.initial_offers().__anext__()
-        offer_2_response = await offer_2.respond()
-        print(f"We responded to {offer_2} with {offer_2_response}")
+        #   Reject their counteroffer
+        await their_response.reject()
+        await their_response.get_data(force=True)
+        assert their_response.data.state == "Rejected"
+        print(f"... and we rejected it")
 
-        async for their_response in offer_2_response.responses():
-            print(f"... and they responded with {their_response}")
-            break
-        else:
-            print("... and they rejected it")
-            await offer_2_response.get_data(force=True)
-            assert offer_2_response.data.state == "Rejected"
+        #   The offer tree
+        assert their_response.parent is our_response
+        assert our_response.parent is offer
+        assert offer.parent is demand
 
 
 async def example_5():
