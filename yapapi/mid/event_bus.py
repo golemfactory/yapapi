@@ -2,42 +2,66 @@ from abc import ABC, abstractmethod
 import asyncio
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Awaitable, Callable, DefaultDict, Iterable, List, Optional, Tuple, Type
+from typing import Awaitable, Callable, DefaultDict, Iterable, List, Optional, Type
 
 from yapapi.mid.events import Event, ResourceEvent
+from yapapi.mid.resource import Resource
 
 
-class EventTemplate(ABC):
+######################################
+#   GENERAL NOTE ABOUT EVENT FILTERS
+#
+#   Thanks to the EventFilters, event listeners listening for the same
+#   sort of events are kept together. Purpose:
+#   *   A little more efficient (less checks to execute on an single event)
+#   *   We might want to implement one day some  "this will never happen" logic
+#       - e.g. after we deleted a resource, it will never change again. This will not be
+#       possible with unstructured callables.
+#
+#   BUT: this might end up useless - but cleanup will be very easy, as this is internal to the EventBus.
+class EventFilter(ABC):
+    """Base class for all EventFilters"""
     @abstractmethod
     def includes(self, event: Event) -> bool:
         pass
 
 
 @dataclass(frozen=True)
-class AnyEventTemplate(EventTemplate):
-    event_classes: Tuple[Type[Event], ...]
+class AnyEventFilter(EventFilter):
+    """Selection based on the Event classes."""
+    event_classes: List[Type[Event]]
 
     def includes(self, event: Event) -> bool:
         return not self.event_classes or any(isinstance(event, cls) for cls in self.event_classes)
 
 
 @dataclass(frozen=True)
-class ResourceEventTemplate(EventTemplate):
-    event_classes: Tuple[Type[ResourceEvent], ...]
-    resource_ids: Tuple[str, ...]
+class ResourceEventFilter(EventFilter):
+    """ResourceEvents with optional filters by event class/resource type/resource id"""
+    event_classes: List[Type[ResourceEvent]]
+    resource_classes: List[Type[Resource]]
+    resource_ids: List[str]
 
     def includes(self, event: Event) -> bool:
         if not isinstance(event, ResourceEvent):
             return False
-        class_match = not self.event_classes or any(isinstance(event, cls) for cls in self.event_classes)
-        return class_match and \
-            not self.resource_ids or event.resource.id in self.resource_ids
+
+        event_class_match = not self.event_classes or any(isinstance(event, cls) for cls in self.event_classes)
+        if not event_class_match:
+            return False
+
+        resource_class_match = not self.resource_classes or \
+            any(isinstance(event.resource, cls) for cls in self.resource_classes)
+        if not resource_class_match:
+            return False
+
+        return not self.resource_ids or event.resource.id in self.resource_ids
 
 
 class EventBus:
     def __init__(self):
         self.queue: asyncio.Queue[Event] = asyncio.Queue()
-        self.consumers: DefaultDict[EventTemplate, List[Callable[[Event], Awaitable[None]]]] = defaultdict(list)
+        self.consumers: DefaultDict[EventFilter, List[Callable[[Event], Awaitable[None]]]] = defaultdict(list)
 
         self._task: Optional[asyncio.Task] = None
 
@@ -54,10 +78,11 @@ class EventBus:
     def resource_listen(
         self,
         callback: Callable[[Event], Awaitable[None]],
-        classes: Iterable[Type[ResourceEvent]] = (),
+        event_classes: Iterable[Type[ResourceEvent]] = (),
+        resource_classes: Iterable[Type[Resource]] = (),
         ids: Iterable[str] = (),
     ) -> None:
-        template = ResourceEventTemplate(tuple(classes), tuple(ids))
+        template = ResourceEventFilter(list(event_classes), list(resource_classes), list(ids))
         self.consumers[template].append(callback)
 
     def listen(
@@ -65,7 +90,7 @@ class EventBus:
         callback: Callable[[Event], Awaitable[None]],
         classes: Iterable[Type[Event]] = (),
     ) -> None:
-        template = AnyEventTemplate(tuple(classes))
+        template = AnyEventFilter(list(classes))
         self.consumers[template].append(callback)
 
     def emit(self, event: Event) -> None:
