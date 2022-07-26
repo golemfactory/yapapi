@@ -2,7 +2,7 @@ import asyncio
 from abc import ABC, ABCMeta, abstractmethod
 from typing import Any, AsyncIterator, List, Optional, TYPE_CHECKING
 
-from yapapi.mid.events import NewResource
+from yapapi.mid.events import NewResource, ResourceDataChanged
 from yapapi.mid.api_call_wrapper import api_call_wrapper
 
 
@@ -38,6 +38,10 @@ class Resource(ABC, metaclass=CachedSingletonId):
         #   This is set by particular resources depending on their internal logic,
         #   and consumed in Resource.child_aiter().
         self._no_more_children: asyncio.Future = asyncio.Future()
+
+        #   Lock for Resource.get_data calls. We don't want to update the same Resource in
+        #   multiple tasks at the same time.
+        self._get_data_lock = asyncio.Lock()
 
     ##########################
     #   RESOURCE TREE & EVENTS
@@ -110,8 +114,13 @@ class Resource(ABC, metaclass=CachedSingletonId):
     ####################
     #   DATA LOADING
     async def get_data(self, force=False) -> Any:
-        if self._data is None or force:
-            self._data = await self._get_data()
+        async with self._get_data_lock:
+            if self._data is None or force:
+                old_data = self._data
+                self._data = await self._get_data()
+                if old_data != self._data:
+                    self.node.event_bus.emit(ResourceDataChanged(self, old_data))
+
         return self._data
 
     @api_call_wrapper()

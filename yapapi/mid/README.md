@@ -18,6 +18,7 @@
 ## Code
 
 General note: code will be almost certainly reordered (also: namespace `yapapi/mid` is not final), this is TBD.
+For me, this looks more like a new, separate library than refreshed `yapapi`. This should be discussed before WO\_2.
 
 Important parts of the code:
 
