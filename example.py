@@ -4,13 +4,10 @@ from yapapi.payload import vm
 
 from yapapi.mid.golem_node import GolemNode
 
-allocation_id = "715e5db0-472e-4b93-a286-88e2015c1a2e"
-demand_id = "87cb58c918b4480fb13a1089e275cbde-1af4ea079292d70e9ab15b786098e70e01313a044903c4d4ec9deb6b28db9a20"
-offer_id = "R-786e99dbc162c910d904d882e700380ee1a51b946485eb3a9096095b56414e68"
-image_hash = "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"
+IMAGE_HASH = "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"
 
 
-async def example_1():
+async def example_1(allocation_id, demand_id, offer_id):
     """Show existing allocation/demand"""
     golem = GolemNode()
     allocation = golem.allocation(allocation_id)
@@ -31,9 +28,9 @@ async def example_1():
     print(offer.data)
 
     #   All objects are singletons
-    assert allocation == golem.allocation(allocation_id)
-    assert demand == golem.demand(demand_id)
-    assert offer == golem.offer(offer_id, demand_id)
+    assert allocation is golem.allocation(allocation_id)
+    assert demand is golem.demand(demand_id)
+    assert offer is golem.offer(offer_id, demand_id)
 
 
 async def example_2():
@@ -54,7 +51,7 @@ async def example_3():
         allocation = await golem.create_allocation(1)
         print(allocation)
 
-        payload = await vm.repo(image_hash=image_hash)
+        payload = await vm.repo(image_hash=IMAGE_HASH)
         demand = await golem.create_demand(payload, allocations=[allocation])
         print(demand)
 
@@ -73,7 +70,7 @@ async def example_4():
     golem = GolemNode()
     async with golem:
         allocation = await golem.create_allocation(1)
-        payload = await vm.repo(image_hash=image_hash)
+        payload = await vm.repo(image_hash=IMAGE_HASH)
         demand = await golem.create_demand(payload, allocations=[allocation])
 
         #   Respond to offers until we get a counteroffer
@@ -118,13 +115,20 @@ async def example_5():
 
 async def main():
     # print("\n---------- EXAMPLE 1 -------------\n")
-    # await example_1()
+    # allocation_id = "715e5db0-472e-4b93-a286-88e2015c1a2e"
+    # demand_id = "87cb58c918b4480fb13a1089e275cbde-1af4ea079292d70e9ab15b786098e70e01313a044903c4d4ec9deb6b28db9a20"
+    # offer_id = "R-786e99dbc162c910d904d882e700380ee1a51b946485eb3a9096095b56414e68"
+    # await example_1(allocation_id, demand_id, offer_id)
+
     print("\n---------- EXAMPLE 2 -------------\n")
     await example_2()
+
     print("\n---------- EXAMPLE 3 -------------\n")
     await example_3()
+
     print("\n---------- EXAMPLE 4 -------------\n")
     await example_4()
+
     print("\n---------- EXAMPLE 5 -------------\n")
     await example_5()
 
