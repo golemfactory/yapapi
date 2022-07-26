@@ -8,6 +8,7 @@ from yapapi.mid.golem_node import GolemNode
 from yapapi.mid.market import Offer
 
 from yapapi.mid.chain import Chain, SimpleScorer, DefaultNegotiator, AgreementCreator
+from yapapi.mid.default_logger import DefaultLogger
 
 
 IMAGE_HASH = "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"
@@ -30,6 +31,8 @@ async def max_3(resources):
 
 async def main():
     golem = GolemNode()
+    golem.event_bus.listen(DefaultLogger().on_event)
+
     async with golem:
         allocation = await golem.create_allocation(1)
         payload = await vm.repo(image_hash=IMAGE_HASH)

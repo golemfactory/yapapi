@@ -1,7 +1,8 @@
 from abc import ABC
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
-from yapapi.mid.resource import Resource
+if TYPE_CHECKING:
+    from yapapi.mid.resource import Resource
 
 
 class Event(ABC):
@@ -9,7 +10,7 @@ class Event(ABC):
 
 
 class ResourceEvent(Event, ABC):
-    def __init__(self, resource: Resource):
+    def __init__(self, resource: "Resource"):
         self.resource = resource
 
     def __repr__(self):
@@ -42,7 +43,7 @@ class ResourceDataChanged(ResourceEvent):
     NULL (i.e. empty) change is not a change, even if we explicitly sent a resource-changing call.
     """
 
-    def __init__(self, resource: Resource, old_data: Any):
+    def __init__(self, resource: "Resource", old_data: Any):
         super().__init__(resource)
         self.old_data = old_data
 

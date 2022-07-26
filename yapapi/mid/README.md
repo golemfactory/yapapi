@@ -35,6 +35,7 @@ Parts that will be important in the future, but now they are far-from-ready draf
 * yapapi/mid/event\_bus.py  - interface for emitting/receiving events
 * yapapi/mid/exceptions.py  - exceptions raised from the `yapapi/mid` code
 * yapapi/mid/api\_call\_wrapper.py - a wrapper for all API calls
+* yapapi/mid/default\_logger.py - listens for events, prints them to a file
 
 ## CLI
 

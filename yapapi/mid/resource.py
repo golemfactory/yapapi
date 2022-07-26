@@ -2,7 +2,8 @@ import asyncio
 from abc import ABC, ABCMeta, abstractmethod
 from typing import Any, AsyncIterator, List, Optional, TYPE_CHECKING
 
-from .api_call_wrapper import api_call_wrapper
+from yapapi.mid.events import NewResource
+from yapapi.mid.api_call_wrapper import api_call_wrapper
 
 
 if TYPE_CHECKING:
@@ -19,6 +20,7 @@ class CachedSingletonId(ABCMeta):
         if id_ not in node._resources[cls]:
             obj = super(CachedSingletonId, cls).__call__(node, id_, *args, **kwargs)  # type: ignore
             node._resources[cls][id_] = obj
+            node.event_bus.emit(NewResource(obj))
         return node._resources[cls][id_]
 
 

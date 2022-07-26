@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import asyncio
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Awaitable, Callable, DefaultDict, Iterable, List, Optional, Type
+from typing import Awaitable, Callable, DefaultDict, Iterable, List, Optional, Tuple, Type
 
 from yapapi.mid.events import Event, ResourceEvent
 from yapapi.mid.resource import Resource
@@ -29,7 +29,7 @@ class EventFilter(ABC):
 @dataclass(frozen=True)
 class AnyEventFilter(EventFilter):
     """Selection based on the Event classes."""
-    event_classes: List[Type[Event]]
+    event_classes: Tuple[Type[Event], ...]
 
     def includes(self, event: Event) -> bool:
         return not self.event_classes or any(isinstance(event, cls) for cls in self.event_classes)
@@ -38,9 +38,9 @@ class AnyEventFilter(EventFilter):
 @dataclass(frozen=True)
 class ResourceEventFilter(EventFilter):
     """ResourceEvents with optional filters by event class/resource type/resource id"""
-    event_classes: List[Type[ResourceEvent]]
-    resource_classes: List[Type[Resource]]
-    resource_ids: List[str]
+    event_classes: Tuple[Type[ResourceEvent], ...]
+    resource_classes: Tuple[Type[Resource], ...]
+    resource_ids: Tuple[str, ...]
 
     def includes(self, event: Event) -> bool:
         if not isinstance(event, ResourceEvent):
@@ -82,7 +82,7 @@ class EventBus:
         resource_classes: Iterable[Type[Resource]] = (),
         ids: Iterable[str] = (),
     ) -> None:
-        template = ResourceEventFilter(list(event_classes), list(resource_classes), list(ids))
+        template = ResourceEventFilter(tuple(event_classes), tuple(resource_classes), tuple(ids))
         self.consumers[template].append(callback)
 
     def listen(
@@ -90,7 +90,7 @@ class EventBus:
         callback: Callable[[Event], Awaitable[None]],
         classes: Iterable[Type[Event]] = (),
     ) -> None:
-        template = AnyEventFilter(list(classes))
+        template = AnyEventFilter(tuple(classes))
         self.consumers[template].append(callback)
 
     def emit(self, event: Event) -> None:
