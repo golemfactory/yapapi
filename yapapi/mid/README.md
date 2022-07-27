@@ -14,6 +14,7 @@
 2. `t/test_1.py` - few simple tests
 3. `cli_example.sh`
 4. `run.py` - POC of the higher-level interface
+5. After `run.py` was executed, `log.log` contains a POC of a log file
 
 ## Code
 

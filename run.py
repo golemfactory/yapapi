@@ -52,7 +52,10 @@ async def main():
             #   and thus (finally, after all current proposals are processed) whole chain
             demand.set_no_more_children()
 
-            #   Proposal state is not auto-updated, but we can update it manually
+            #   Low-level objects form a tree - each has a parent and children.
+            #   E.g. agreement.parent is the final proposal, and agreement.parent.parent
+            #   is our last response that lead us to the final proposal.
+            #   Proposal state is not auto-updated, but we can update it manually:
             assert agreement.parent.data.state == "Draft"
             await agreement.parent.get_data(force=True)
             assert agreement.parent.data.state == "Accepted"

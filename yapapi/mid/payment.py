@@ -8,7 +8,7 @@ from ya_payment import RequestorApi, models as ya_models
 from .api_call_wrapper import api_call_wrapper
 from .exceptions import NoMatchingAccount
 from .resource import Resource
-from .events import ResourceDeleted
+from .events import ResourceClosed
 
 if TYPE_CHECKING:
     from .golem_node import GolemNode
@@ -24,7 +24,7 @@ class Allocation(PaymentApiResource):
     @api_call_wrapper(ignore=[404, 410])
     async def release(self) -> None:
         await self.api.release_allocation(self.id)
-        self.node.event_bus.emit(ResourceDeleted(self))
+        self.node.event_bus.emit(ResourceClosed(self))
 
     @classmethod
     async def create_any_account(

@@ -116,7 +116,7 @@ async def example_5():
 
     from yapapi.mid import events
     assert isinstance(got_events[0], events.NewResource)
-    assert isinstance(got_events[1], events.ResourceDeleted)
+    assert isinstance(got_events[1], events.ResourceClosed)
 
 
 async def main():

@@ -61,13 +61,17 @@ class ResourceChangePossible(ResourceEvent):
     """
 
 
-class ResourceDeleted(ResourceEvent):
-    """Emitted when we discover than a resource was deleted.
+class ResourceClosed(ResourceEvent):
+    """Emitted when a resource is deleted or rendered unusable.
 
     Usual case is when we delete a resource (e.g. `await allocation.release()`),
+    or when the lifespan of a resource ends (e.g. `await agreement.terminate()`),
     but this can be also emitted when we notice that resource was deleted by someone
-    else (TODO: when? is this possible at all? e.g. expired proposal?)
+    else (TODO: when? is this possible at all? e.g. expired proposal?).
 
-    IOW, this is emitted whenever we start getting 404 instead of 200.
+    This is emitted only when something changes - when we create a new Resource object
+    for some closed resource (e.g. `GolemNode.agreement(id_of_a_past_agreement)`), this
+    will not be emitted.
+
     This event should never be emitted more than once for a given :class:`Resource`.
     """

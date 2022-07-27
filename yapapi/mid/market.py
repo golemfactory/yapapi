@@ -9,7 +9,7 @@ from .api_call_wrapper import api_call_wrapper
 from .exceptions import ResourceNotFound
 from .resource import Resource
 from .yagna_event_collector import YagnaEventCollector
-from .events import ResourceDeleted
+from .events import ResourceClosed
 
 if TYPE_CHECKING:
     from .golem_node import GolemNode
@@ -63,7 +63,7 @@ class Demand(MarketApiResource):
         self.set_no_more_children()
         await self.stop_collecting_events()
         await self.api.unsubscribe_demand(self.id)
-        self.node.event_bus.emit(ResourceDeleted(self))
+        self.node.event_bus.emit(ResourceClosed(self))
 
     async def stop_collecting_events(self):
         if self._event_collecting_task is not None:
@@ -255,6 +255,7 @@ class Agreement(MarketApiResource):
     async def terminate(self, reason: str = ''):
         #   FIXME: check our state first
         await self.api.terminate_agreement(self.id, request_body={"message": reason})
+        self.node.event_bus.emit(ResourceClosed(self))
 
     @property
     async def activity_possible(self) -> bool:
