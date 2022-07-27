@@ -110,6 +110,7 @@ class GolemNode:
         expiration: Optional[datetime] = None,
         allocations: Iterable[Allocation] = (),
         autoclose: bool = True,
+        autostart: bool = True,
     ) -> Demand:
         if expiration is None:
             expiration = datetime.now(timezone.utc) + DEFAULT_EXPIRATION_TIMEOUT
@@ -123,10 +124,8 @@ class GolemNode:
 
         demand = await Demand.create_from_properties_constraints(self, builder.properties, builder.constraints)
 
-        #   TODO: add an option **not** to collect events?
-        #         or maybe GolemNode should collect events?
-        demand.start_collecting_events()
-
+        if autostart:
+            demand.start_collecting_events()
         if autoclose:
             self.add_autoclose_resource(demand)
         return demand
