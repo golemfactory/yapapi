@@ -57,3 +57,88 @@ python3 -m yapapi allocation clean
 ```
 
 "Status" command is not really useful now, but we don't yet have components to make it good.
+
+## NEXT STEPS
+
+How I think we should continue with this project.
+
+### 1. Implement remaining low-level objects and create a first "working" app
+
+Current idea for the first app: capabilities similar to the current Task API.
+Purpose:
+
+* Ensure the low-level interface is good enough to write this sort of mid-level API
+  in a convenient way
+* Have some benchmark - e.g. it should not be slower then the current Task API
+* It's good to have some E2E piece of code as early as possible
+
+Details:
+
+* Code should be universal - implementation of the next apps should require changing only app-specific code.
+* "Happy path" is enough - we don't have to handle unusual/unexpected errors ...
+* ... but we should know how they should be handled in the future
+
+Rough estimate: 10 MD
+
+### 2. Implement few more apps, as diverse as possible
+
+Purpose: 
+* Writing/modifying apps with yapapi should be easy & fun. Here we try to find things that are not easy/fun
+  and make them easier/more fun.
+* We should try different "hard" things and ensure they are not that hard.
+  + E.g. activity/agreement recycyling
+
+App ideas:
+
+* Service API compatibility POC 
+  + We can run a service using the current Service class
+  + We accept some things might not work
+  + We don't have the Cluster/Network interface etc
+  + (Bonus option: add a switch that turns off the "work generator" pattern)
+* Verification-by-redundance POC
+  + We have something like Task API, but with tasks repeated on different providers,
+    task results from different providers are compared
+* Collatz conjecture
+  + Use as many activities as possible, with a simple cost limit (e.g. max estimated cost per hour)
+* An app that requires two different demands
+  + Purpose: ensure this is possible without much efforts
+  + Could be something simple/stupid, no specific idea now
+
+Details:
+
+* App quality should match the quality of the first app (--> provious step)
+* App code should be readable - without ugly hacks or weird patterns - developer should be able to understand
+  how the app works and how to modify it. This is important.
+
+Rough estimate: 2-3 MD per app.
+
+### 3. Smoothen the edges. Implement "known" missing parts.
+
+Details:
+
+* Support for "expected" unhappy paths
+* Missing parts of the negotiations
+* Missing parts of the interface
+* Network (just use the current `yapapi.network`?)
+* ... (details after step 2)
+* Maybe better docs?
+
+Purpose: 
+
+* Make it ready for internal tests. Ask Blue/Sieciech/Philip/etc to try it:
+  + Best scenario: they conceive an app that is hard to write in this framework, and we know what needs changes
+* Gather some feedback
+
+Rough estimate: 3-10 MD
+
+### 4. ...?
+
+Business decision needed.
+
+I see few different reasonable directions:
+
+1. Public Alpha(Beta?)-quality release
+2. More improvements, edge-smothing, going towards a "high quality" release
+3. Don't push for the release, but start using internally. 
+4. Create a first complete mainnet-production-grade app (cost management, reliability etc)
+5. Provide full compatibility with the "old" high-level API
