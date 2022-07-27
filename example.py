@@ -99,18 +99,24 @@ async def example_4():
 
 
 async def example_5():
-    """EventBus usage"""
+    """EventBus usage example"""
     golem = GolemNode()
-    from yapapi.mid import events
-    from yapapi.mid.market import Offer
+    got_events = []
 
-    async def event_emitter(event) -> None:
-        print("GOT EVENT", event)
+    async def on_event(event) -> None:
+        got_events.append(event)
 
-    event_bus = golem.event_bus
-    event_bus.listen(event_emitter)
+    golem.event_bus.listen(on_event)
     async with golem:
-        event_bus.emit(events.ResourceCreated(Offer(golem, 'aaa')))
+        allocation = await golem.create_allocation(1)
+
+    assert len(got_events) == 2
+    assert got_events[0].resource == allocation
+    assert got_events[1].resource == allocation
+
+    from yapapi.mid import events
+    assert isinstance(got_events[0], events.NewResource)
+    assert isinstance(got_events[1], events.ResourceDeleted)
 
 
 async def main():
