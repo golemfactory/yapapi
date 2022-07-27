@@ -43,6 +43,7 @@ async def main():
             SimpleScorer(score_offer, min_offers=10, max_wait=timedelta(seconds=1)),
             DefaultNegotiator(buffer_size=5),
             AgreementCreator(),
+            max_3,
         )
         async for agreement in chain:
             print(f"--> {agreement}")
@@ -50,6 +51,11 @@ async def main():
             #   This stops the demand.initial_offers() generator
             #   and thus (finally, after all current offers are processed) whole chain
             demand.set_no_more_children()
+
+            #   Proposal state is not auto-updated, but we can update it manually
+            assert agreement.parent.data.state == "Draft"
+            await agreement.parent.get_data(force=True)
+            assert agreement.parent.data.state == "Accepted"
 
 
 if __name__ == '__main__':
