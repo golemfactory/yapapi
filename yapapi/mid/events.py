@@ -66,7 +66,7 @@ class ResourceDeleted(ResourceEvent):
 
     Usual case is when we delete a resource (e.g. `await allocation.release()`),
     but this can be also emitted when we notice that resource was deleted by someone
-    else (TODO: when? is this possible at all? e.g. expired offer?)
+    else (TODO: when? is this possible at all? e.g. expired proposal?)
 
     IOW, this is emitted whenever we start getting 404 instead of 200.
     This event should never be emitted more than once for a given :class:`Resource`.

@@ -5,64 +5,64 @@ import heapq
 
 from typing import AsyncIterator, Awaitable, Callable, List, Optional
 
-from yapapi.mid.market import Offer
+from yapapi.mid.market import Proposal
 
 
 @dataclass(order=True)
-class ScoredOffer:
+class ScoredProposal:
     score: float
-    offer: Offer = field(compare=False)
+    proposal: Proposal = field(compare=False)
 
 
 class SimpleScorer:
     def __init__(
         self,
-        score_offer: Callable[[Offer], Awaitable[float]],
-        min_offers: Optional[int] = None,
+        score_proposal: Callable[[Proposal], Awaitable[float]],
+        min_proposals: Optional[int] = None,
         max_wait: Optional[timedelta] = None,
     ):
-        self._score_offer = score_offer
-        self._min_offers = min_offers
+        self._score_proposal = score_proposal
+        self._min_proposals = min_proposals
         self._max_wait = max_wait
 
-        self._scored_offers: List[ScoredOffer] = []
+        self._scored_proposals: List[ScoredProposal] = []
 
-    async def __call__(self, offers: AsyncIterator[Offer]) -> AsyncIterator[Offer]:
-        self._no_more_offers = False
-        offer_scorer_task = asyncio.get_event_loop().create_task(self._process_stream(offers))
+    async def __call__(self, proposals: AsyncIterator[Proposal]) -> AsyncIterator[Proposal]:
+        self._no_more_proposals = False
+        proposal_scorer_task = asyncio.get_event_loop().create_task(self._process_stream(proposals))
         try:
-            async for offer, score in self._offers():
-                print(f"Yielding offer with score {-1 * score}")
-                yield offer
+            async for proposal, score in self._proposals():
+                print(f"Yielding proposal with score {-1 * score}")
+                yield proposal
         except asyncio.CancelledError:
-            offer_scorer_task.cancel()
-            self._no_more_offers = True
+            proposal_scorer_task.cancel()
+            self._no_more_proposals = True
 
-    async def _offers(self):
+    async def _proposals(self):
         await self._wait_until_ready()
 
-        while self._scored_offers or not self._no_more_offers:
+        while self._scored_proposals or not self._no_more_proposals:
             try:
-                scored_offer = heapq.heappop(self._scored_offers)
-                yield scored_offer.offer, scored_offer.score
+                scored_proposal = heapq.heappop(self._scored_proposals)
+                yield scored_proposal.proposal, scored_proposal.score
             except IndexError:
                 await asyncio.sleep(0.1)
 
-    async def score_offer(self, offer: Offer) -> float:
-        return await self._score_offer(offer)
+    async def score_proposal(self, proposal: Proposal) -> float:
+        return await self._score_proposal(proposal)
 
-    async def _process_stream(self, offer_stream: AsyncIterator[Offer]):
-        async for offer in offer_stream:
-            score = await self.score_offer(offer)
+    async def _process_stream(self, proposal_stream: AsyncIterator[Proposal]):
+        async for proposal in proposal_stream:
+            score = await self.score_proposal(proposal)
             score = score * -1  # heap -> smallest values first -> reverse
-            heapq.heappush(self._scored_offers, ScoredOffer(score, offer))
-        self._no_more_offers = True
+            heapq.heappush(self._scored_proposals, ScoredProposal(score, proposal))
+        self._no_more_proposals = True
 
     async def _wait_until_ready(self) -> None:
         start = datetime.now()
 
         while True:
-            if self._min_offers is None or len(self._scored_offers) >= self._min_offers:
+            if self._min_proposals is None or len(self._scored_proposals) >= self._min_proposals:
                 break
             if self._max_wait is not None and datetime.now() - start >= self._max_wait:
                 break

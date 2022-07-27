@@ -70,11 +70,11 @@ class Demand(MarketApiResource):
             self._event_collecting_task.cancel()
             self._event_collecting_task = None
 
-    async def initial_offers(self) -> AsyncIterator["Offer"]:
-        async for offer in self.child_aiter():
-            assert isinstance(offer, Offer)  # mypy
-            if offer.initial:
-                yield offer
+    async def initial_proposals(self) -> AsyncIterator["Proposal"]:
+        async for proposal in self.child_aiter():
+            assert isinstance(proposal, Proposal)  # mypy
+            if proposal.initial:
+                yield proposal
 
     async def _process_yagna_events(self):
         event_collector = YagnaEventCollector(
@@ -87,36 +87,36 @@ class Demand(MarketApiResource):
             while True:
                 event = await queue.get()
                 if isinstance(event, ya_models.ProposalEvent):
-                    offer = Offer.from_proposal_event(self.node, event)
-                    parent = self._get_offer_parent(offer)
-                    parent.add_child(offer)
+                    proposal = Proposal.from_proposal_event(self.node, event)
+                    parent = self._get_proposal_parent(proposal)
+                    parent.add_child(proposal)
                 elif isinstance(event, ya_models.ProposalRejectedEvent):
-                    offer = self.offer(event.proposal_id)
-                    offer.add_event(event)
+                    proposal = self.proposal(event.proposal_id)
+                    proposal.add_event(event)
 
-    def _get_offer_parent(self, offer: "Offer") -> Union["Demand", "Offer"]:
-        if offer.initial:
+    def _get_proposal_parent(self, proposal: "Proposal") -> Union["Demand", "Proposal"]:
+        if proposal.initial:
             parent = self
         else:
-            parent_offer_id = offer.data.prev_proposal_id
-            parent = Offer(self.node, parent_offer_id)  # type: ignore
+            parent_proposal_id = proposal.data.prev_proposal_id
+            parent = Proposal(self.node, parent_proposal_id)  # type: ignore
 
             #   Sanity check - this should be true in all "expected" workflows,
             #   and we really want to detect any situation when it's not
             assert parent._parent is not None
         return parent
 
-    def offer(self, offer_id: str) -> "Offer":
-        offer = Offer(self.node, offer_id)
+    def proposal(self, proposal_id: str) -> "Proposal":
+        proposal = Proposal(self.node, proposal_id)
 
         #   NOTE: we don't know the parent, so we don't set it, but demand is known
-        if offer._demand is None:
-            offer.demand = self
+        if proposal._demand is None:
+            proposal.demand = self
 
-        return offer
+        return proposal
 
 
-class Offer(MarketApiResource):
+class Proposal(MarketApiResource):
     _demand: Optional["Demand"] = None
 
     ##############################
@@ -149,13 +149,13 @@ class Offer(MarketApiResource):
         self._demand = demand
 
     @property
-    def parent(self) -> Union["Offer", "Demand"]:
+    def parent(self) -> Union["Proposal", "Demand"]:
         assert self._parent is not None
-        assert isinstance(self._parent, Offer) or isinstance(self._parent, Demand)  # mypy
+        assert isinstance(self._parent, Proposal) or isinstance(self._parent, Demand)  # mypy
         return self._parent
 
     @parent.setter
-    def parent(self, parent: Union["Offer", "Demand"]) -> None:
+    def parent(self, parent: Union["Proposal", "Demand"]) -> None:
         assert self._parent is None
         self._parent = parent
 
@@ -170,9 +170,9 @@ class Offer(MarketApiResource):
         if isinstance(event, ya_models.ProposalRejectedEvent):
             self.set_no_more_children()
 
-    async def responses(self) -> AsyncIterator["Offer"]:
+    async def responses(self) -> AsyncIterator["Proposal"]:
         async for child in self.child_aiter():
-            if isinstance(child, Offer):
+            if isinstance(child, Proposal):
                 yield child
 
     ############################
@@ -198,14 +198,14 @@ class Offer(MarketApiResource):
         )
 
     @api_call_wrapper()
-    async def respond(self) -> "Offer":
+    async def respond(self) -> "Proposal":
         data = await self._response_data()
-        new_offer_id = await self.api.counter_proposal_demand(self.demand.id, self.id, data, _request_timeout=5)
+        new_proposal_id = await self.api.counter_proposal_demand(self.demand.id, self.id, data, _request_timeout=5)
 
-        new_offer = type(self)(self.node, new_offer_id)
-        self.add_child(new_offer)
+        new_proposal = type(self)(self.node, new_proposal_id)
+        self.add_child(new_proposal)
 
-        return new_offer
+        return new_proposal
 
     async def _response_data(self) -> ya_models.DemandOfferBase:
         # FIXME: this is a mock
@@ -216,7 +216,7 @@ class Offer(MarketApiResource):
     ##########################
     #   Other
     @api_call_wrapper()
-    async def _get_data(self) -> ya_models.Offer:
+    async def _get_data(self) -> ya_models.Proposal:
         assert self.demand is not None
         data = await self.api.get_proposal_offer(self.demand.id, self.id)
         if data.state == "Rejected":
@@ -224,12 +224,12 @@ class Offer(MarketApiResource):
         return data
 
     @classmethod
-    def from_proposal_event(cls, node: "GolemNode", event: ya_models.ProposalEvent) -> "Offer":
+    def from_proposal_event(cls, node: "GolemNode", event: ya_models.ProposalEvent) -> "Proposal":
         data = event.proposal
         assert data.proposal_id is not None  # mypy
-        offer = Offer(node, data.proposal_id, data)
-        offer.add_event(event)
-        return offer
+        proposal = Proposal(node, data.proposal_id, data)
+        proposal.add_event(event)
+        return proposal
 
 
 class Agreement(MarketApiResource):

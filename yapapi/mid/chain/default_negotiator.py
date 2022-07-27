@@ -1,26 +1,26 @@
 import asyncio
 from typing import AsyncIterator, List, Optional
 
-from yapapi.mid.market import Offer
+from yapapi.mid.market import Proposal
 
 
 class DefaultNegotiator:
     def __init__(self, buffer_size: int = 1):
         self.main_task: Optional[asyncio.Task] = None
         self.tasks: List[asyncio.Task] = []
-        self.queue: asyncio.Queue[Offer] = asyncio.Queue()
+        self.queue: asyncio.Queue[Proposal] = asyncio.Queue()
 
         #   Acquire to start negotiations. Release:
         #   A) after failed negotiations
-        #   B) when yielding offer
-        #   --> we always have (current_negotiations + offers_ready) == buffer_size
+        #   B) when yielding proposal
+        #   --> we always have (current_negotiations + proposals_ready) == buffer_size
         self.semaphore = asyncio.BoundedSemaphore(buffer_size)
 
-    async def __call__(self, offers: AsyncIterator[Offer]) -> AsyncIterator[Offer]:
-        self._no_more_offers = False
-        self.main_task = asyncio.create_task(self._process_offers(offers))
+    async def __call__(self, proposals: AsyncIterator[Proposal]) -> AsyncIterator[Proposal]:
+        self._no_more_proposals = False
+        self.main_task = asyncio.create_task(self._process_proposals(proposals))
 
-        while not self.queue.empty() or not self._no_more_offers or self._has_running_tasks:
+        while not self.queue.empty() or not self._no_more_proposals or self._has_running_tasks:
             proposal = await self.queue.get()
             self.semaphore.release()
             yield proposal
@@ -29,16 +29,16 @@ class DefaultNegotiator:
     def _has_running_tasks(self) -> bool:
         return not all(task.done() for task in self.tasks)
 
-    async def _process_offers(self, offers: AsyncIterator[Offer]) -> None:
-        async for offer in offers:
+    async def _process_proposals(self, proposals: AsyncIterator[Proposal]) -> None:
+        async for proposal in proposals:
             await self.semaphore.acquire()
-            self.tasks.append(asyncio.create_task(self._negotiate_offer(offer)))
+            self.tasks.append(asyncio.create_task(self._negotiate_proposal(proposal)))
 
-        self._no_more_offers = True
+        self._no_more_proposals = True
 
-    async def _negotiate_offer(self, offer: Offer) -> None:
+    async def _negotiate_proposal(self, proposal: Proposal) -> None:
         try:
-            proposal = await self._get_proposal(offer)
+            proposal = await self._get_proposal(proposal)
             if proposal is not None:
                 self.queue.put_nowait(proposal)
             else:
@@ -46,9 +46,9 @@ class DefaultNegotiator:
         except Exception:
             self.semaphore.release()
 
-    async def _get_proposal(self, offer: Offer) -> Optional[Offer]:
-        our_response = await offer.respond()
-        print(f"Responded to {offer} with {our_response}")
+    async def _get_proposal(self, proposal: Proposal) -> Optional[Proposal]:
+        our_response = await proposal.respond()
+        print(f"Responded to {proposal} with {our_response}")
 
         async for their_response in our_response.responses():
             print(f"They responded with {their_response} to {our_response}")

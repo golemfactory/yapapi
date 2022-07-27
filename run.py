@@ -5,7 +5,7 @@ from random import random
 from yapapi.payload import vm
 
 from yapapi.mid.golem_node import GolemNode
-from yapapi.mid.market import Offer
+from yapapi.mid.market import Proposal
 
 from yapapi.mid.chain import Chain, SimpleScorer, DefaultNegotiator, AgreementCreator
 from yapapi.mid.default_logger import DefaultLogger
@@ -14,7 +14,7 @@ from yapapi.mid.default_logger import DefaultLogger
 IMAGE_HASH = "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"
 
 
-async def score_offer(offer: Offer):
+async def score_proposal(proposal: Proposal):
     return random()
 
 
@@ -39,8 +39,8 @@ async def main():
         demand = await golem.create_demand(payload, allocations=[allocation])
 
         chain = Chain(
-            demand.initial_offers(),
-            SimpleScorer(score_offer, min_offers=10, max_wait=timedelta(seconds=1)),
+            demand.initial_proposals(),
+            SimpleScorer(score_proposal, min_proposals=10, max_wait=timedelta(seconds=1)),
             DefaultNegotiator(buffer_size=5),
             AgreementCreator(),
             max_3,
@@ -48,8 +48,8 @@ async def main():
         async for agreement in chain:
             print(f"--> {agreement}")
 
-            #   This stops the demand.initial_offers() generator
-            #   and thus (finally, after all current offers are processed) whole chain
+            #   This stops the demand.initial_proposals() generator
+            #   and thus (finally, after all current proposals are processed) whole chain
             demand.set_no_more_children()
 
             #   Proposal state is not auto-updated, but we can update it manually

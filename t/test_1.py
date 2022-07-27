@@ -31,7 +31,7 @@ async def test_singletons(golem):
     async with golem:
         assert golem.allocation('foo') is golem.allocation('foo')
         assert golem.demand('foo') is golem.demand('foo')
-        assert golem.offer('foo', 'bar') is golem.offer('foo', 'bar') is golem.demand('bar').offer('foo')
+        assert golem.proposal('foo', 'bar') is golem.proposal('foo', 'bar') is golem.demand('bar').proposal('foo')
 
         allocation = await golem.create_allocation(1)
         assert allocation is golem.allocation(allocation.id)
@@ -62,7 +62,7 @@ async def test_demand(any_payload, golem):
         allocation = await golem.create_allocation(1)
         demand = await golem.create_demand(any_payload, allocations=[allocation])
 
-        async for offer in demand.initial_offers():
+        async for proposal in demand.initial_proposals():
             break
 
         await demand.get_data()

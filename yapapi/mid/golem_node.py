@@ -12,7 +12,7 @@ from yapapi import props
 
 from .event_bus import EventBus
 from .payment import Allocation
-from .market import Demand, Offer, Agreement
+from .market import Demand, Proposal, Agreement
 from .resource import Resource
 
 
@@ -149,9 +149,9 @@ class GolemNode:
     def demand(self, demand_id: str) -> Demand:
         return Demand(self, demand_id)
 
-    def offer(self, offer_id: str, demand_id: str) -> Offer:
+    def proposal(self, proposal_id: str, demand_id: str) -> Proposal:
         demand = self.demand(demand_id)
-        return demand.offer(offer_id)
+        return demand.proposal(proposal_id)
 
     def agreement(self, agreement_id: str) -> Agreement:
         return Agreement(self, agreement_id)

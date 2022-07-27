@@ -4,14 +4,14 @@
 
 1. Things described in WO\_1 should be ready.
 2. Interface of WO\_1 objects is not super-polished, but there are few other things instead:
-    * `Offer` - except for mocked negotiations, it is quite ready
+    * `Proposal` - except for mocked negotiations, it is quite ready
     * `Agreement` - can be created/approved/terminated (only)
     * POC of the higher-level interface
 
 ## Examples
 
 1. `example.py` - simple functions demonstrating selected parts of the interface
-2. `t/test_1` - few simple tests
+2. `t/test_1.py` - few simple tests
 3. `cli_example.sh`
 4. `run.py` - POC of the higher-level interface
 
