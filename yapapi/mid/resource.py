@@ -10,7 +10,9 @@ if TYPE_CHECKING:
     from .golem_node import GolemNode
 
 
-class CachedSingletonId(ABCMeta):
+class ResourceMeta(ABCMeta):
+    """Resources metaclass. Ensures a single instance per resource id. Emits the NewResource event."""
+
     def __call__(cls, node: "GolemNode", id_: str, *args, **kwargs):  # type: ignore
         assert isinstance(cls, type(Resource))  # mypy
         if args:
@@ -18,13 +20,13 @@ class CachedSingletonId(ABCMeta):
             assert id_ not in node._resources[cls]
 
         if id_ not in node._resources[cls]:
-            obj = super(CachedSingletonId, cls).__call__(node, id_, *args, **kwargs)  # type: ignore
+            obj = super(ResourceMeta, cls).__call__(node, id_, *args, **kwargs)  # type: ignore
             node._resources[cls][id_] = obj
             node.event_bus.emit(NewResource(obj))
         return node._resources[cls][id_]
 
 
-class Resource(ABC, metaclass=CachedSingletonId):
+class Resource(ABC, metaclass=ResourceMeta):
     def __init__(self, node: "GolemNode", id_: str, data: Any = None):
         self._node = node
         self._id = id_
@@ -44,7 +46,14 @@ class Resource(ABC, metaclass=CachedSingletonId):
         self._get_data_lock = asyncio.Lock()
 
     ##########################
-    #   RESOURCE TREE & EVENTS
+    #   ABSTRACT METHODS
+    @classmethod
+    @abstractmethod
+    def _get_api(cls, node: "GolemNode") -> Any:
+        pass
+
+    ################################
+    #   RESOURCE TREE & YAGNA EVENTS
     @property
     def parent(self) -> "Resource":
         assert self._parent is not None
@@ -90,12 +99,15 @@ class Resource(ABC, metaclass=CachedSingletonId):
     def events(self) -> List[Any]:
         return self._events.copy()
 
+    def set_no_more_children(self) -> None:
+        if not self._no_more_children.done():
+            self._no_more_children.set_result(None)
+
     ####################
     #   PROPERTIES
     @property
-    @abstractmethod
-    def api(self):
-        pass
+    def api(self) -> Any:
+        return self._get_api(self.node)
 
     @property
     def id(self) -> str:
@@ -146,10 +158,6 @@ class Resource(ABC, metaclass=CachedSingletonId):
 
     ###################
     #   OTHER
-    def set_no_more_children(self) -> None:
-        if not self._no_more_children.done():
-            self._no_more_children.set_result(None)
-
     @property
     def _get_method_name(self) -> str:
         return f'get_{type(self).__name__.lower()}'
@@ -157,10 +165,6 @@ class Resource(ABC, metaclass=CachedSingletonId):
     @classmethod
     def _get_all_method_name(cls) -> str:
         return f'get_{cls.__name__.lower()}s'
-
-    @classmethod
-    def _get_api(cls, node: "GolemNode"):
-        return cls(node, '').api
 
     def __str__(self):
         return f'{type(self).__name__}({self._id})'

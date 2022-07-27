@@ -16,9 +16,9 @@ if TYPE_CHECKING:
 
 
 class MarketApiResource(Resource, ABC):
-    @property
-    def api(self) -> RequestorApi:
-        return RequestorApi(self._node._ya_market_api)
+    @classmethod
+    def _get_api(cls, node: "GolemNode") -> RequestorApi:
+        return RequestorApi(node._ya_market_api)
 
 
 class Demand(MarketApiResource):

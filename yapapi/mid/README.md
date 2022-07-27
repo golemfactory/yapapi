@@ -62,7 +62,7 @@ python3 -m yapapi allocation clean
 
 How I think we should continue with this project.
 
-### 1. Implement remaining low-level objects and create a first "working" app
+### 1. Implement necessary low-level objects and create a first "working" app
 
 Current idea for the first app: capabilities similar to the current Task API.
 Purpose:
@@ -119,7 +119,7 @@ Details:
 * Support for "expected" unhappy paths
 * Missing parts of the negotiations
 * Missing parts of the interface
-* Network (just use the current `yapapi.network`?)
+* Network (just use the current `yapapi.network`? But this should be Resource?)
 * ... (details after step 2)
 * Maybe better docs?
 

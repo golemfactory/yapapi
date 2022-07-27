@@ -15,9 +15,9 @@ if TYPE_CHECKING:
 
 
 class PaymentApiResource(Resource, ABC):
-    @property
-    def api(self) -> RequestorApi:
-        return RequestorApi(self._node._ya_payment_api)
+    @classmethod
+    def _get_api(cls, node: "GolemNode") -> RequestorApi:
+        return RequestorApi(node._ya_payment_api)
 
 
 class Allocation(PaymentApiResource):
