@@ -38,9 +38,9 @@ class DefaultNegotiator:
 
     async def _negotiate_proposal(self, proposal: Proposal) -> None:
         try:
-            proposal = await self._get_proposal(proposal)
-            if proposal is not None:
-                self.queue.put_nowait(proposal)
+            final_proposal = await self._get_proposal(proposal)
+            if final_proposal is not None:
+                self.queue.put_nowait(final_proposal)
             else:
                 self.semaphore.release()
         except Exception:
