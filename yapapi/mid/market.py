@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from .golem_node import GolemNode
 
 
-class Demand(Resource[RequestorApi, models.Demand]):
+class Demand(Resource[RequestorApi, models.Demand, None, "Proposal"]):
     _event_collecting_task: Optional[asyncio.Task] = None
 
     def start_collecting_events(self):
@@ -109,23 +109,23 @@ class Demand(Resource[RequestorApi, models.Demand]):
         return proposal
 
 
-class Proposal(Resource[RequestorApi, models.Proposal]):
+class Proposal(Resource[RequestorApi, models.Proposal, Union["Demand", "Proposal"], Union["Proposal", "Agreement"]]):
     _demand: Optional["Demand"] = None
 
     ##############################
     #   State-related properties
     @property
-    def initial(self):
+    def initial(self) -> bool:
         assert self.data is not None
         return self.data.state == 'Initial'
 
     @property
-    def draft(self):
+    def draft(self) -> bool:
         assert self.data is not None
         return self.data.state == 'Draft'
 
     @property
-    def rejected(self):
+    def rejected(self) -> bool:
         assert self.data is not None
         return self.data.state == 'Rejected'
 
@@ -143,9 +143,8 @@ class Proposal(Resource[RequestorApi, models.Proposal]):
 
     @property
     def parent(self) -> Union["Proposal", "Demand"]:
-        assert self._parent is not None
-        assert isinstance(self._parent, Proposal) or isinstance(self._parent, Demand)  # mypy
-        return self._parent
+        #   NOTE: We have this method here because we need @parent.setter
+        return super().parent
 
     @parent.setter
     def parent(self, parent: Union["Proposal", "Demand"]) -> None:
@@ -225,7 +224,7 @@ class Proposal(Resource[RequestorApi, models.Proposal]):
         return proposal
 
 
-class Agreement(Resource[RequestorApi, models.Agreement]):
+class Agreement(Resource[RequestorApi, models.Agreement, "Proposal", None]):
     @api_call_wrapper()
     async def confirm(self) -> None:
         await self.api.confirm_agreement(self.id)

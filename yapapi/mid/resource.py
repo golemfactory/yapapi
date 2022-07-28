@@ -4,7 +4,9 @@ from typing import Any, AsyncIterator, Generic, List, Optional, TYPE_CHECKING
 
 from yapapi.mid.events import NewResource, ResourceDataChanged
 from yapapi.mid.api_call_wrapper import api_call_wrapper
-from yapapi.mid.resource_internals import get_requestor_api, RequestorApiType, ModelType
+from yapapi.mid.resource_internals import (
+    get_requestor_api, RequestorApiType, ModelType, ParentType, ChildType
+)
 
 if TYPE_CHECKING:
     from .golem_node import GolemNode
@@ -26,14 +28,18 @@ class ResourceMeta(ABCMeta):
         return node._resources[cls][id_]
 
 
-class Resource(ABC, Generic[RequestorApiType, ModelType], metaclass=ResourceMeta):
+class Resource(
+    ABC,
+    Generic[RequestorApiType, ModelType, ParentType, ChildType],
+    metaclass=ResourceMeta
+):
     def __init__(self, node: "GolemNode", id_: str, data: Optional[ModelType] = None):
         self._node = node
         self._id = id_
         self._data: Optional[ModelType] = data
 
-        self._parent: Optional[Resource] = None
-        self._children: List[Resource] = []
+        self._parent: Optional[ParentType] = None
+        self._children: List[ChildType] = []
         self._events: List[Any] = []
 
         #   When this is done, we know self._children will never change again
@@ -48,24 +54,24 @@ class Resource(ABC, Generic[RequestorApiType, ModelType], metaclass=ResourceMeta
     ################################
     #   RESOURCE TREE & YAGNA EVENTS
     @property
-    def parent(self) -> "Resource":
+    def parent(self) -> ParentType:
         assert self._parent is not None
         return self._parent
 
     @parent.setter
-    def parent(self, parent: "Resource") -> None:
+    def parent(self, parent: ParentType) -> None:
         assert self._parent is None
         self._parent = parent
 
-    def add_child(self, child: "Resource") -> None:
-        child.parent = self
+    def add_child(self, child: ChildType) -> None:
+        child.parent = self  # type: ignore
         self._children.append(child)
 
     @property
-    def children(self) -> List["Resource"]:
+    def children(self) -> List[ChildType]:
         return self._children.copy()
 
-    async def child_aiter(self) -> AsyncIterator["Resource"]:
+    async def child_aiter(self) -> AsyncIterator[ChildType]:
         async def no_more_children():
             await self._no_more_children
 

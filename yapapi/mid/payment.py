@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from .golem_node import GolemNode
 
 
-class Allocation(Resource[RequestorApi, models.Allocation]):
+class Allocation(Resource[RequestorApi, models.Allocation, None, None]):
     @api_call_wrapper(ignore=[404, 410])
     async def release(self) -> None:
         await self.api.release_allocation(self.id)
