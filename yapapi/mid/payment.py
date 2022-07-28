@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from .golem_node import GolemNode
 
 
-class PaymentApiResource(Resource, ABC):
+class PaymentApiResource(Resource[RequestorApi], ABC):
     @classmethod
     def _get_api(cls, node: "GolemNode") -> RequestorApi:
         return RequestorApi(node._ya_payment_api)

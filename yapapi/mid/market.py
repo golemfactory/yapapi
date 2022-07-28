@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from .golem_node import GolemNode
 
 
-class MarketApiResource(Resource, ABC):
+class MarketApiResource(Resource[RequestorApi], ABC):
     @classmethod
     def _get_api(cls, node: "GolemNode") -> RequestorApi:
         return RequestorApi(node._ya_market_api)
