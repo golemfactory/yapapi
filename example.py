@@ -3,6 +3,7 @@ import asyncio
 from yapapi.payload import vm
 
 from yapapi.mid.golem_node import GolemNode
+from yapapi.mid.events import ResourceEvent
 
 IMAGE_HASH = "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"
 
@@ -103,10 +104,10 @@ async def example_5():
     golem = GolemNode()
     got_events = []
 
-    async def on_event(event) -> None:
+    async def on_event(event: ResourceEvent) -> None:
         got_events.append(event)
 
-    golem.event_bus.listen(on_event)
+    golem.event_bus.resource_listen(on_event)
     async with golem:
         allocation = await golem.create_allocation(1)
 

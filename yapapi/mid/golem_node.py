@@ -1,6 +1,6 @@
 import asyncio
 from collections import defaultdict
-from typing import DefaultDict, Dict, Iterable, Optional, List, Type, Union
+from typing import Any, DefaultDict, Dict, Iterable, Optional, List, Set, Type, Union
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
@@ -20,14 +20,14 @@ DEFAULT_EXPIRATION_TIMEOUT = timedelta(seconds=1800)
 
 
 class GolemNode:
-    def __init__(self):
+    def __init__(self) -> None:
         #   TODO: add args - `app_key` and `base_url` (maybe also optional other URLs?)
         self._api_config = rest.Configuration()
 
         #   All created Resources will be stored here
         #   (This is done internally by the metaclass of the Resource)
         self._resources: DefaultDict[Type[Resource], Dict[str, Resource]] = defaultdict(dict)
-        self._autoclose_resources: set(Resource) = set()
+        self._autoclose_resources: Set[Resource] = set()
         self._event_bus: EventBus = EventBus()
 
     ########################
@@ -36,7 +36,7 @@ class GolemNode:
         await self.start()
         return self
 
-    async def __aexit__(self, *exc_info) -> None:
+    async def __aexit__(self, *exc_info: Any) -> None:
         await self.aclose()
 
     async def start(self) -> None:
@@ -175,7 +175,7 @@ class GolemNode:
     def add_autoclose_resource(self, resource: Union["Allocation", "Demand", "Agreement"]) -> None:
         self._autoclose_resources.add(resource)
 
-    def __str__(self):
+    def __str__(self) -> str:
         lines = [
             f"{type(self).__name__}(",
             f"  app_key = {self._api_config.app_key},",

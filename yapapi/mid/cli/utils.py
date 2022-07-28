@@ -1,7 +1,7 @@
 import asyncio
 from dataclasses import dataclass, MISSING
 from datetime import datetime
-from typing import Awaitable, Callable, List
+from typing import Any, Awaitable, Callable, List, TypeVar
 from functools import wraps
 import re
 
@@ -77,17 +77,20 @@ def parse_timedelta_str(timedelta_str: str) -> float:
     return num * as_seconds[what]
 
 
-def async_golem_wrapper(f: Callable[..., Awaitable]) -> Callable:
+R = TypeVar("R")
+
+
+def async_golem_wrapper(f: Callable[..., Awaitable[R]]) -> Callable[..., R]:
     """Wraps an async function. Returns a sync function that:
 
     * starts a GolemNode and passes it as the first argument
     * executes the coroutine in a loop
     """
     @wraps(f)
-    def wrapper(*args, **kwargs):
-        async def with_golem_node():
+    def wrapper(*args: Any, **kwargs: Any) -> R:
+        async def with_golem_node() -> R:
             async with GolemNode() as golem:
-                await f(golem, *args, **kwargs)
+                return await f(golem, *args, **kwargs)
 
         loop = asyncio.get_event_loop()
         return loop.run_until_complete(with_golem_node())

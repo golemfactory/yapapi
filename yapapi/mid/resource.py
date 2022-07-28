@@ -72,7 +72,7 @@ class Resource(
         return self._children.copy()
 
     async def child_aiter(self) -> AsyncIterator[ChildType]:
-        async def no_more_children():
+        async def no_more_children() -> None:  # type: ignore  # missing return statement?
             await self._no_more_children
 
         stop_task = asyncio.create_task(no_more_children())
@@ -124,7 +124,7 @@ class Resource(
 
     ####################
     #   DATA LOADING
-    async def get_data(self, force=False) -> ModelType:
+    async def get_data(self, force: bool = False) -> ModelType:
         async with self._get_data_lock:
             if self._data is None or force:
                 old_data = self._data
@@ -170,5 +170,5 @@ class Resource(
     def _get_all_method_name(cls) -> str:
         return f'get_{cls.__name__.lower()}s'
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{type(self).__name__}({self._id})'

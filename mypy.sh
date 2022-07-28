@@ -1,12 +1,10 @@
 #   We include most of the --strict flags, but not all
 mypy \
-    --namespace-packages \
-    --install-types \
-    example.py      \
-    t/test_1.py     \
-    run.py          \
-    yapapi/mid      \
+    --namespace-packages            \
+    --install-types                 \
+    yapapi/mid                      \
     --warn-unused-configs           \
+    --disallow-incomplete-defs      \
     --disallow-subclassing-any      \
     --disallow-untyped-decorators   \
     --no-implicit-optional          \
@@ -15,12 +13,10 @@ mypy \
     --warn-return-any               \
     --strict-equality               \
     --strict-concatenate            \
+    --check-untyped-defs            \
+    --disallow-untyped-defs         \
 
-#   TODO
-    # --disallow-untyped-calls        \
-    # --disallow-incomplete-defs      \
-    # --check-untyped-defs            \
-#   DISABLED
-    # --disallow-untyped-defs         \
+    #   Disabled parts of --strict
     # --disallow-any-generics         \
     # --no-implicit-reexport          \
+    # --disallow-untyped-calls        \

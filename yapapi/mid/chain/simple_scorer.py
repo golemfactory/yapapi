@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 import heapq
 
-from typing import AsyncIterator, Awaitable, Callable, List, Optional
+from typing import AsyncIterator, Awaitable, Callable, List, Optional, Tuple
 
 from yapapi.mid.market import Proposal
 
@@ -38,7 +38,7 @@ class SimpleScorer:
             proposal_scorer_task.cancel()
             self._no_more_proposals = True
 
-    async def _proposals(self):
+    async def _proposals(self) -> AsyncIterator[Tuple[Proposal, float]]:
         await self._wait_until_ready()
 
         while self._scored_proposals or not self._no_more_proposals:
@@ -51,7 +51,7 @@ class SimpleScorer:
     async def score_proposal(self, proposal: Proposal) -> float:
         return await self._score_proposal(proposal)
 
-    async def _process_stream(self, proposal_stream: AsyncIterator[Proposal]):
+    async def _process_stream(self, proposal_stream: AsyncIterator[Proposal]) -> None:
         async for proposal in proposal_stream:
             score = await self.score_proposal(proposal)
             score = score * -1  # heap -> smallest values first -> reverse

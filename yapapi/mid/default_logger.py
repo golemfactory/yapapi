@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from yapapi.log import _YagnaDatetimeFormatter
 
@@ -7,11 +6,11 @@ from yapapi.mid.events import Event
 
 
 class DefaultLogger:
-    def __init__(self, log_file: Optional[str] = "log.log"):
+    def __init__(self, log_file: str = "log.log"):
         self.log_file = log_file
         self.logger = self._prepare_logger()
 
-    def _prepare_logger(self):
+    def _prepare_logger(self) -> logging.Logger:
         logger = logging.getLogger("yapapi")
         logger.setLevel(logging.DEBUG)
 
@@ -25,5 +24,5 @@ class DefaultLogger:
 
         return logger
 
-    async def on_event(self, event: Event):
+    async def on_event(self, event: Event) -> None:
         self.logger.info(event)

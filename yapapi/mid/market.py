@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 class Demand(Resource[RequestorApi, models.Demand, None, "Proposal"]):
     _event_collecting_task: Optional[asyncio.Task] = None
 
-    def start_collecting_events(self):
+    def start_collecting_events(self) -> None:
         assert self._event_collecting_task is None
         task = asyncio.get_event_loop().create_task(self._process_yagna_events())
         self._event_collecting_task = task
@@ -58,7 +58,7 @@ class Demand(Resource[RequestorApi, models.Demand, None, "Proposal"]):
         await self.api.unsubscribe_demand(self.id)
         self.node.event_bus.emit(ResourceClosed(self))
 
-    async def stop_collecting_events(self):
+    async def stop_collecting_events(self) -> None:
         if self._event_collecting_task is not None:
             self._event_collecting_task.cancel()
             self._event_collecting_task = None
@@ -69,7 +69,7 @@ class Demand(Resource[RequestorApi, models.Demand, None, "Proposal"]):
             if proposal.initial:
                 yield proposal
 
-    async def _process_yagna_events(self):
+    async def _process_yagna_events(self) -> None:
         event_collector = YagnaEventCollector(
             self.api.collect_offers,
             [self.id],
@@ -84,6 +84,7 @@ class Demand(Resource[RequestorApi, models.Demand, None, "Proposal"]):
                     parent = self._get_proposal_parent(proposal)
                     parent.add_child(proposal)
                 elif isinstance(event, models.ProposalRejectedEvent):
+                    assert event.proposal_id is not None  # mypy
                     proposal = self.proposal(event.proposal_id)
                     proposal.add_event(event)
 
@@ -170,7 +171,7 @@ class Proposal(Resource[RequestorApi, models.Proposal, Union["Demand", "Proposal
     ############################
     #   Negotiations
     @api_call_wrapper()
-    async def create_agreement(self, autoclose=True, timeout: timedelta = timedelta(seconds=60)) -> "Agreement":
+    async def create_agreement(self, autoclose: bool = True, timeout: timedelta = timedelta(seconds=60)) -> "Agreement":
         proposal = models.AgreementProposal(
             proposal_id=self.id,
             valid_to=datetime.now(timezone.utc) + timeout,  # type: ignore  # TODO: what is AgreementValidTo?
@@ -243,7 +244,7 @@ class Agreement(Resource[RequestorApi, models.Agreement, "Proposal", None]):
                 raise
 
     @api_call_wrapper()
-    async def terminate(self, reason: str = ''):
+    async def terminate(self, reason: str = '') -> None:
         #   FIXME: check our state first
         await self.api.terminate_agreement(self.id, request_body={"message": reason})
         self.node.event_bus.emit(ResourceClosed(self))

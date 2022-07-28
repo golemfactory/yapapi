@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import asyncio
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Awaitable, Callable, DefaultDict, Iterable, List, Optional, Tuple, Type
+from typing import Any, Awaitable, Callable, DefaultDict, Iterable, List, Optional, Tuple, Type
 
 from yapapi.mid.events import Event, ResourceEvent
 from yapapi.mid.resource import Resource
@@ -59,9 +59,9 @@ class ResourceEventFilter(EventFilter):
 
 
 class EventBus:
-    def __init__(self):
+    def __init__(self) -> None:
         self.queue: asyncio.Queue[Event] = asyncio.Queue()
-        self.consumers: DefaultDict[EventFilter, List[Callable[[Event], Awaitable[None]]]] = defaultdict(list)
+        self.consumers: DefaultDict[EventFilter, List[Callable[[Any], Awaitable[None]]]] = defaultdict(list)
 
         self._task: Optional[asyncio.Task] = None
 
@@ -77,7 +77,7 @@ class EventBus:
 
     def resource_listen(
         self,
-        callback: Callable[[Event], Awaitable[None]],
+        callback: Callable[[ResourceEvent], Awaitable[None]],
         event_classes: Iterable[Type[ResourceEvent]] = (),
         resource_classes: Iterable[Type[Resource]] = (),
         ids: Iterable[str] = (),

@@ -13,7 +13,7 @@ class ResourceEvent(Event, ABC):
     def __init__(self, resource: "Resource"):
         self.resource = resource
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'{type(self).__name__}({self.resource})'
 
 
