@@ -1,11 +1,11 @@
 import asyncio
 from abc import ABC, ABCMeta
-from typing import Any, AsyncIterator, Awaitable, Callable, Generic, List, Optional, TYPE_CHECKING, Type
+from typing import AsyncIterator, Awaitable, Callable, Generic, List, Optional, TYPE_CHECKING, Type
 
 from yapapi.mid.events import NewResource, ResourceDataChanged
 from yapapi.mid.api_call_wrapper import api_call_wrapper
 from yapapi.mid.resource_internals import (
-    get_requestor_api, ResourceType, RequestorApiType, ModelType, ParentType, ChildType
+    get_requestor_api, ResourceType, RequestorApiType, ModelType, ParentType, ChildType, EventType
 )
 
 if TYPE_CHECKING:
@@ -30,7 +30,7 @@ class ResourceMeta(ABCMeta):
 
 class Resource(
     ABC,
-    Generic[RequestorApiType, ModelType, ParentType, ChildType],
+    Generic[RequestorApiType, ModelType, ParentType, ChildType, EventType],
     metaclass=ResourceMeta
 ):
     def __init__(self, node: "GolemNode", id_: str, data: Optional[ModelType] = None):
@@ -40,7 +40,7 @@ class Resource(
 
         self._parent: Optional[ParentType] = None
         self._children: List[ChildType] = []
-        self._events: List[Any] = []
+        self._events: List[EventType] = []
 
         #   When this is done, we know self._children will never change again
         #   This is set by particular resources depending on their internal logic,
@@ -91,11 +91,11 @@ class Resource(
                     wait_task.cancel()
                     break
 
-    def add_event(self, event: Any) -> None:
+    def add_event(self, event: EventType) -> None:
         self._events.append(event)
 
     @property
-    def events(self) -> List[Any]:
+    def events(self) -> List[EventType]:
         return self._events.copy()
 
     def set_no_more_children(self) -> None:

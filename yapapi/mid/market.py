@@ -7,6 +7,7 @@ from ya_market import RequestorApi, models as models, exceptions
 from .api_call_wrapper import api_call_wrapper
 from .exceptions import ResourceNotFound
 from .resource import Resource
+from .resource_internals import _NULL
 from .yagna_event_collector import YagnaEventCollector
 from .events import ResourceClosed
 
@@ -14,7 +15,7 @@ if TYPE_CHECKING:
     from .golem_node import GolemNode
 
 
-class Demand(Resource[RequestorApi, models.Demand, None, "Proposal"]):
+class Demand(Resource[RequestorApi, models.Demand, _NULL, "Proposal", _NULL]):
     _event_collecting_task: Optional[asyncio.Task] = None
 
     def start_collecting_events(self) -> None:
@@ -110,7 +111,15 @@ class Demand(Resource[RequestorApi, models.Demand, None, "Proposal"]):
         return proposal
 
 
-class Proposal(Resource[RequestorApi, models.Proposal, Union["Demand", "Proposal"], Union["Proposal", "Agreement"]]):
+class Proposal(
+    Resource[
+        RequestorApi,
+        models.Proposal,
+        Union["Demand", "Proposal"],
+        Union["Proposal", "Agreement"],
+        Union[models.ProposalEvent, models.ProposalRejectedEvent]
+    ]
+):
     _demand: Optional["Demand"] = None
 
     ##############################
@@ -224,7 +233,7 @@ class Proposal(Resource[RequestorApi, models.Proposal, Union["Demand", "Proposal
         return proposal
 
 
-class Agreement(Resource[RequestorApi, models.Agreement, "Proposal", None]):
+class Agreement(Resource[RequestorApi, models.Agreement, "Proposal", _NULL, _NULL]):
     @api_call_wrapper()
     async def confirm(self) -> None:
         await self.api.confirm_agreement(self.id)

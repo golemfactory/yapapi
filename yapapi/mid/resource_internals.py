@@ -11,8 +11,15 @@ if TYPE_CHECKING:
     from yapapi.mid.resource import Resource
     from yapapi.mid import market
 
+
 #########################
 #   TYPING BLACK MAGIC
+class _NULL:
+    """Set this as a type to tell the typechecker that call is just invalid.
+
+    This might be ugly, but keeps Resource inheritance tree simple."""
+
+
 ResourceType = TypeVar("ResourceType", bound="Resource")
 RequestorApiType = TypeVar("RequestorApiType", PaymentApi, MarketApi)
 ModelType = TypeVar(
@@ -24,15 +31,20 @@ ModelType = TypeVar(
 )
 ParentType = TypeVar(
     "ParentType",
-    None,  # for the Allocation - it doesn't really fit in the "tree" structure
+    _NULL,
     "market.Proposal",
     Union["market.Demand", "market.Proposal"]
 )
 ChildType = TypeVar(
     "ChildType",
-    None,  # for the Allocation - it doesn't really fit in the "tree" structure
+    _NULL,
     "market.Proposal",
     Union["market.Proposal", "market.Agreement"],
+)
+EventType = TypeVar(
+    "EventType",
+    _NULL,
+    Union[market_models.ProposalEvent, market_models.ProposalRejectedEvent],
 )
 
 

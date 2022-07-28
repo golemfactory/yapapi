@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Tuple, TYPE_CHECKING
+from typing import List, Tuple, TYPE_CHECKING
 from decimal import Decimal
 
 from ya_payment import RequestorApi, models
@@ -7,13 +7,14 @@ from ya_payment import RequestorApi, models
 from .api_call_wrapper import api_call_wrapper
 from .exceptions import NoMatchingAccount
 from .resource import Resource
+from .resource_internals import _NULL
 from .events import ResourceClosed
 
 if TYPE_CHECKING:
     from .golem_node import GolemNode
 
 
-class Allocation(Resource[RequestorApi, models.Allocation, None, None]):
+class Allocation(Resource[RequestorApi, models.Allocation, _NULL, _NULL, _NULL]):
     @api_call_wrapper(ignore=[404, 410])
     async def release(self) -> None:
         await self.api.release_allocation(self.id)
