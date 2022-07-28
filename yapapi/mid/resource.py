@@ -138,7 +138,6 @@ class Resource(
     @api_call_wrapper()
     async def _get_data(self) -> ModelType:
         #   NOTE: this method is often overwritten in subclasses
-        #   TODO: typing? self._data typing?
         get_method: Callable[[str], Awaitable[ModelType]] = getattr(self.api, self._get_method_name)
         return await get_method(self._id)
 

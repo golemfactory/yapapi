@@ -47,6 +47,9 @@ class ResourceDataChanged(ResourceEvent):
         super().__init__(resource)
         self.old_data = old_data
 
+        #   TODO: this should be included in typing, but I don't know how to do this
+        assert old_data is None or type(resource.data) is type(old_data)
+
 
 class ResourceChangePossible(ResourceEvent):
     """Emitted when we receive an information that the resource.data might be outdated.
