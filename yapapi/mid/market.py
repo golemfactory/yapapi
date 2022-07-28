@@ -2,7 +2,7 @@ import asyncio
 from typing import AsyncIterator, Dict, Optional, TYPE_CHECKING, Union
 from datetime import datetime, timedelta, timezone
 
-from ya_market import RequestorApi, models as ya_models, exceptions
+from ya_market import RequestorApi, models as models, exceptions
 
 from .api_call_wrapper import api_call_wrapper
 from .exceptions import ResourceNotFound
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from .golem_node import GolemNode
 
 
-class Demand(Resource[RequestorApi]):
+class Demand(Resource[RequestorApi, models.Demand]):
     _event_collecting_task: Optional[asyncio.Task] = None
 
     def start_collecting_events(self):
@@ -23,7 +23,7 @@ class Demand(Resource[RequestorApi]):
         self._event_collecting_task = task
 
     @api_call_wrapper()
-    async def _get_data(self) -> ya_models.Demand:
+    async def _get_data(self) -> models.Demand:
         #   NOTE: this method is required because there is no get_demand(id)
         #         in ya_market (as there is no matching endpoint in yagna)
         all_demands = await self.api.get_demands()
@@ -39,14 +39,14 @@ class Demand(Resource[RequestorApi]):
         properties: Dict[str, str],
         constraints: str,
     ) -> "Demand":
-        data = ya_models.DemandOfferBase(
+        data = models.DemandOfferBase(
             properties=properties,
             constraints=constraints,
         )
         return await cls.create(node, data)
 
     @classmethod
-    async def create(cls, node: "GolemNode", data: ya_models.DemandOfferBase) -> "Demand":
+    async def create(cls, node: "GolemNode", data: models.DemandOfferBase) -> "Demand":
         api = cls._get_api(node)
         demand_id = await api.subscribe_demand(data)
         return cls(node, demand_id)
@@ -79,11 +79,11 @@ class Demand(Resource[RequestorApi]):
             queue: asyncio.Queue = event_collector.event_queue()
             while True:
                 event = await queue.get()
-                if isinstance(event, ya_models.ProposalEvent):
+                if isinstance(event, models.ProposalEvent):
                     proposal = Proposal.from_proposal_event(self.node, event)
                     parent = self._get_proposal_parent(proposal)
                     parent.add_child(proposal)
-                elif isinstance(event, ya_models.ProposalRejectedEvent):
+                elif isinstance(event, models.ProposalRejectedEvent):
                     proposal = self.proposal(event.proposal_id)
                     proposal.add_event(event)
 
@@ -109,7 +109,7 @@ class Demand(Resource[RequestorApi]):
         return proposal
 
 
-class Proposal(Resource[RequestorApi]):
+class Proposal(Resource[RequestorApi, models.Proposal]):
     _demand: Optional["Demand"] = None
 
     ##############################
@@ -158,9 +158,9 @@ class Proposal(Resource[RequestorApi]):
         else:
             self.demand = demand
 
-    def add_event(self, event: Union[ya_models.ProposalEvent, ya_models.ProposalRejectedEvent]) -> None:
+    def add_event(self, event: Union[models.ProposalEvent, models.ProposalRejectedEvent]) -> None:
         super().add_event(event)
-        if isinstance(event, ya_models.ProposalRejectedEvent):
+        if isinstance(event, models.ProposalRejectedEvent):
             self.set_no_more_children()
 
     async def responses(self) -> AsyncIterator["Proposal"]:
@@ -172,7 +172,7 @@ class Proposal(Resource[RequestorApi]):
     #   Negotiations
     @api_call_wrapper()
     async def create_agreement(self, autoclose=True, timeout: timedelta = timedelta(seconds=60)) -> "Agreement":
-        proposal = ya_models.AgreementProposal(
+        proposal = models.AgreementProposal(
             proposal_id=self.id,
             valid_to=datetime.now(timezone.utc) + timeout,  # type: ignore  # TODO: what is AgreementValidTo?
         )
@@ -200,16 +200,16 @@ class Proposal(Resource[RequestorApi]):
 
         return new_proposal
 
-    async def _response_data(self) -> ya_models.DemandOfferBase:
+    async def _response_data(self) -> models.DemandOfferBase:
         # FIXME: this is a mock
         demand_data = await self.demand.get_data()
-        data = ya_models.DemandOfferBase(properties=demand_data.properties, constraints=demand_data.constraints)
+        data = models.DemandOfferBase(properties=demand_data.properties, constraints=demand_data.constraints)
         return data
 
     ##########################
     #   Other
     @api_call_wrapper()
-    async def _get_data(self) -> ya_models.Proposal:
+    async def _get_data(self) -> models.Proposal:
         assert self.demand is not None
         data = await self.api.get_proposal_offer(self.demand.id, self.id)
         if data.state == "Rejected":
@@ -217,7 +217,7 @@ class Proposal(Resource[RequestorApi]):
         return data
 
     @classmethod
-    def from_proposal_event(cls, node: "GolemNode", event: ya_models.ProposalEvent) -> "Proposal":
+    def from_proposal_event(cls, node: "GolemNode", event: models.ProposalEvent) -> "Proposal":
         data = event.proposal
         assert data.proposal_id is not None  # mypy
         proposal = Proposal(node, data.proposal_id, data)
@@ -225,7 +225,7 @@ class Proposal(Resource[RequestorApi]):
         return proposal
 
 
-class Agreement(Resource[RequestorApi]):
+class Agreement(Resource[RequestorApi, models.Agreement]):
     @api_call_wrapper()
     async def confirm(self) -> None:
         await self.api.confirm_agreement(self.id)

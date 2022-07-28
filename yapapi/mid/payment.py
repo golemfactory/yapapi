@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Tuple, TYPE_CHECKING
 from decimal import Decimal
 
-from ya_payment import RequestorApi, models as ya_models
+from ya_payment import RequestorApi, models
 
 from .api_call_wrapper import api_call_wrapper
 from .exceptions import NoMatchingAccount
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from .golem_node import GolemNode
 
 
-class Allocation(Resource[RequestorApi]):
+class Allocation(Resource[RequestorApi, models.Allocation]):
     @api_call_wrapper(ignore=[404, 410])
     async def release(self) -> None:
         await self.api.release_allocation(self.id)
@@ -38,13 +38,13 @@ class Allocation(Resource[RequestorApi]):
     async def create_with_account(
         cls,
         node: "GolemNode",
-        account: ya_models.Account,
+        account: models.Account,
         amount: Decimal,
     ) -> "Allocation":
         timestamp = datetime.now(timezone.utc)
         timeout = timestamp + timedelta(days=365 * 10)
 
-        data = ya_models.Allocation(
+        data = models.Allocation(
             address=account.address,
             payment_platform=account.platform,
             total_amount=str(amount),
@@ -63,7 +63,7 @@ class Allocation(Resource[RequestorApi]):
         return await cls.create(node, data)
 
     @classmethod
-    async def create(cls, node: "GolemNode", data: ya_models.Allocation) -> "Allocation":
+    async def create(cls, node: "GolemNode", data: models.Allocation) -> "Allocation":
         api = cls._get_api(node)
         created = await api.create_allocation(data)
         return cls(node, created.allocation_id, created)

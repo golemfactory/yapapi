@@ -4,7 +4,7 @@ from typing import Any, AsyncIterator, Generic, List, Optional, TYPE_CHECKING
 
 from yapapi.mid.events import NewResource, ResourceDataChanged
 from yapapi.mid.api_call_wrapper import api_call_wrapper
-from yapapi.mid.resource_internals import get_requestor_api, RequestorApiType
+from yapapi.mid.resource_internals import get_requestor_api, RequestorApiType, ModelType
 
 if TYPE_CHECKING:
     from .golem_node import GolemNode
@@ -26,11 +26,11 @@ class ResourceMeta(ABCMeta):
         return node._resources[cls][id_]
 
 
-class Resource(ABC, Generic[RequestorApiType], metaclass=ResourceMeta):
-    def __init__(self, node: "GolemNode", id_: str, data: Any = None):
+class Resource(ABC, Generic[RequestorApiType, ModelType], metaclass=ResourceMeta):
+    def __init__(self, node: "GolemNode", id_: str, data: Optional[ModelType] = None):
         self._node = node
         self._id = id_
-        self._data = data
+        self._data: Optional[ModelType] = data
 
         self._parent: Optional[Resource] = None
         self._children: List[Resource] = []
@@ -99,7 +99,7 @@ class Resource(ABC, Generic[RequestorApiType], metaclass=ResourceMeta):
     ####################
     #   PROPERTIES
     @property
-    def api(self) -> Any:
+    def api(self) -> RequestorApiType:
         return self._get_api(self.node)
 
     @property
@@ -107,7 +107,7 @@ class Resource(ABC, Generic[RequestorApiType], metaclass=ResourceMeta):
         return self._id
 
     @property
-    def data(self) -> Any:
+    def data(self) -> ModelType:
         if self._data is None:
             raise RuntimeError(f"Unknown {type(self).__name__} data - call get_data() first")
         return self._data
@@ -118,7 +118,7 @@ class Resource(ABC, Generic[RequestorApiType], metaclass=ResourceMeta):
 
     ####################
     #   DATA LOADING
-    async def get_data(self, force=False) -> Any:
+    async def get_data(self, force=False) -> ModelType:
         async with self._get_data_lock:
             if self._data is None or force:
                 old_data = self._data
@@ -126,10 +126,11 @@ class Resource(ABC, Generic[RequestorApiType], metaclass=ResourceMeta):
                 if old_data != self._data:
                     self.node.event_bus.emit(ResourceDataChanged(self, old_data))
 
+        assert self._data is not None
         return self._data
 
     @api_call_wrapper()
-    async def _get_data(self) -> Any:
+    async def _get_data(self) -> ModelType:
         #   NOTE: this method is often overwritten in subclasses
         #   TODO: typing? self._data typing?
         get_method = getattr(self.api, self._get_method_name)

@@ -20,8 +20,8 @@ MarketResourceType = TypeVar(
     market_models.Proposal,
     market_models.Agreement,
 )
-ResourceType = TypeVar(
-    'ResourceType',
+ModelType = TypeVar(
+    'ModelType',
     payment_models.Allocation,
     market_models.Demand,
     market_models.Proposal,

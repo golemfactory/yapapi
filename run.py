@@ -1,6 +1,7 @@
 import asyncio
 from datetime import timedelta
 from random import random
+from typing import AsyncIterator, AsyncGenerator, TypeVar
 
 from yapapi.payload import vm
 
@@ -12,24 +13,25 @@ from yapapi.mid.default_logger import DefaultLogger
 
 
 IMAGE_HASH = "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"
+X = TypeVar('X')
 
 
-async def score_proposal(proposal: Proposal):
+async def score_proposal(proposal: Proposal) -> float:
     return random()
 
 
-async def max_3(resources):
+async def max_3(any_generator: AsyncIterator[X]) -> AsyncGenerator[X, None]:
     #   This function can be inserted anywhere in the example chain
     #   (except as the first element)
     cnt = 0
-    async for resource in resources:
-        yield resource
+    async for x in any_generator:
+        yield x
         cnt += 1
         if cnt == 3:
             break
 
 
-async def main():
+async def main() -> None:
     golem = GolemNode()
     golem.event_bus.listen(DefaultLogger().on_event)
 
@@ -45,6 +47,8 @@ async def main():
             AgreementCreator(),
             max_3,
         )
+        from yapapi.mid.market import Agreement
+        agreement: Agreement  # TODO: this should not be necessary
         async for agreement in chain:
             print(f"--> {agreement}")
 
