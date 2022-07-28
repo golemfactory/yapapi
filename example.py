@@ -8,7 +8,7 @@ from yapapi.mid.events import ResourceEvent
 IMAGE_HASH = "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"
 
 
-async def example_1(allocation_id, demand_id, proposal_id):
+async def example_1(allocation_id: str, demand_id: str, proposal_id: str) -> None:
     """Show existing allocation/demand"""
     golem = GolemNode()
     allocation = golem.allocation(allocation_id)
@@ -99,7 +99,7 @@ async def example_4() -> None:
         assert proposal.parent is demand
 
 
-async def example_5():
+async def example_5() -> None:
     """EventBus usage example"""
     golem = GolemNode()
     got_events = []
@@ -120,7 +120,7 @@ async def example_5():
     assert isinstance(got_events[1], events.ResourceClosed)
 
 
-async def main():
+async def main() -> None:
     # print("\n---------- EXAMPLE 1 -------------\n")
     # allocation_id = "715e5db0-472e-4b93-a286-88e2015c1a2e"
     # demand_id = "87cb58c918b4480fb13a1089e275cbde-1af4ea079292d70e9ab15b786098e70e01313a044903c4d4ec9deb6b28db9a20"

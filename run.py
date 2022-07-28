@@ -6,7 +6,7 @@ from typing import AsyncIterator, AsyncGenerator, TypeVar
 from yapapi.payload import vm
 
 from yapapi.mid.golem_node import GolemNode
-from yapapi.mid.market import Proposal
+from yapapi.mid.market import Agreement, Proposal
 
 from yapapi.mid.chain import Chain, SimpleScorer, DefaultNegotiator, AgreementCreator
 from yapapi.mid.default_logger import DefaultLogger
@@ -47,8 +47,7 @@ async def main() -> None:
             AgreementCreator(),
             max_3,
         )
-        from yapapi.mid.market import Agreement
-        agreement: Agreement  # TODO: this should not be necessary
+        agreement: Agreement  # I don't know if it's possible to modify Chain to make this redundant
         async for agreement in chain:
             print(f"--> {agreement}")
 

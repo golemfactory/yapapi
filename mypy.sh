@@ -1,7 +1,9 @@
-#   We include most of the --strict flags, but not all
+#   Most of the --strict flags are included
 mypy \
     --namespace-packages            \
     --install-types                 \
+    example.py                      \
+    run.py                          \
     yapapi/mid                      \
     --warn-unused-configs           \
     --disallow-incomplete-defs      \
