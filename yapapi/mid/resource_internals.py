@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 #########################
 #   TYPING BLACK MAGIC
+ResourceType = TypeVar("ResourceType", bound="Resource")
 RequestorApiType = TypeVar("RequestorApiType", PaymentApi, MarketApi)
 ModelType = TypeVar(
     "ModelType",

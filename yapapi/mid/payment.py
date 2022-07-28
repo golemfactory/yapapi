@@ -69,6 +69,6 @@ class Allocation(Resource[RequestorApi, models.Allocation, None, None]):
         return cls(node, created.allocation_id, created)
 
     @api_call_wrapper()
-    async def demand_properties_constraints(self) -> Tuple[List[Dict[str, str]], List[str]]:
+    async def demand_properties_constraints(self) -> Tuple[List[models.MarketProperty], List[str]]:
         data = await self.api.get_demand_decorations([self.id])
         return data.properties, data.constraints

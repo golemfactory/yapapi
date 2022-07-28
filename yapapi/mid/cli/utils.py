@@ -1,5 +1,6 @@
 import asyncio
 from dataclasses import dataclass, MISSING
+from datetime import datetime
 from typing import Awaitable, Callable, List
 from functools import wraps
 import re
@@ -20,6 +21,7 @@ def format_allocations(allocations: List[Allocation]) -> str:
     x.field_names = ["id", "address", "network", "driver", "total", "remaining", "timeout"]
     for allocation in allocations:
         data = allocation.data
+        assert data.payment_platform is not None  # mypy
         network, driver, _ = data.payment_platform.split('-')
         x.add_row([
             allocation.id,
@@ -28,7 +30,7 @@ def format_allocations(allocations: List[Allocation]) -> str:
             driver,
             data.total_amount,
             data.remaining_amount,
-            data.timeout.isoformat(" ", "seconds"),
+            data.timeout.isoformat(" ", "seconds") if data.timeout is not None else '',
         ])
 
     return x.get_string()
@@ -40,6 +42,11 @@ def format_demands(demands: List[Demand]) -> str:
     for demand in demands:
         data = demand.data
         subnet = data.properties['golem.node.debug.subnet']
+
+        #   According to ya_client spec, this should be ya_market.models.Timestamp, but is datetime
+        #   Maybe this is a TODO for ya_client?
+        assert type(data.timestamp) is datetime  # mypy
+
         created = data.timestamp.isoformat(" ", "seconds")
         x.add_row([
             demand.id,

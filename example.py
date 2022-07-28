@@ -33,7 +33,7 @@ async def example_1(allocation_id, demand_id, proposal_id):
     assert proposal is golem.proposal(proposal_id, demand_id)
 
 
-async def example_2():
+async def example_2() -> None:
     golem = GolemNode()
     """Show all current allocations/demands"""
     async with golem:
@@ -44,7 +44,7 @@ async def example_2():
         #     print(demand)
 
 
-async def example_3():
+async def example_3() -> None:
     """Create new allocation, demand, fetch a single proposal, cleanup"""
     golem = GolemNode()
     async with golem:
@@ -65,7 +65,7 @@ async def example_3():
         await allocation.release()
 
 
-async def example_4():
+async def example_4() -> None:
     """Respond to an proposal. Receive a conuterproposal. Reject it."""
     golem = GolemNode()
     async with golem:

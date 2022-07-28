@@ -1,5 +1,6 @@
 from functools import wraps
-from typing import Callable, List
+from typing import Awaitable, Callable, List, TypeVar, Optional
+from typing_extensions import ParamSpec
 
 from ya_payment import ApiException as PaymentApiException
 from ya_market import ApiException as MarketApiException
@@ -10,21 +11,25 @@ from .exceptions import ResourceNotFound
 
 
 all_api_exceptions = (PaymentApiException, MarketApiException, ActivityApiException, NetApiException)
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
-def api_call_wrapper(ignore: List[int] = []) -> Callable[[Callable], Callable]:
-    def outer_wrapper(f) -> Callable:
+def api_call_wrapper(
+    ignore: List[int] = []
+) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
+    def outer_wrapper(f: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
         @wraps(f)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> Optional[R]:
             try:
                 return await f(*args, **kwargs)
             except all_api_exceptions as e:
                 if e.status in ignore:
-                    pass
+                    return None
                 elif e.status == 404:
                     self = args[0]
-                    raise ResourceNotFound(type(self).__name__, self.id)
+                    raise ResourceNotFound(type(self).__name__, self.id)  # type: ignore  # 404 -> we have id
                 else:
                     raise
-        return wrapper
+        return wrapper  # type: ignore  # I don't understand this :/
     return outer_wrapper

@@ -1,11 +1,11 @@
 import asyncio
 from abc import ABC, ABCMeta
-from typing import Any, AsyncIterator, Generic, List, Optional, TYPE_CHECKING
+from typing import Any, AsyncIterator, Generic, List, Optional, TYPE_CHECKING, Type
 
 from yapapi.mid.events import NewResource, ResourceDataChanged
 from yapapi.mid.api_call_wrapper import api_call_wrapper
 from yapapi.mid.resource_internals import (
-    get_requestor_api, RequestorApiType, ModelType, ParentType, ChildType
+    get_requestor_api, ResourceType, RequestorApiType, ModelType, ParentType, ChildType
 )
 
 if TYPE_CHECKING:
@@ -144,7 +144,7 @@ class Resource(
 
     @classmethod
     @api_call_wrapper()
-    async def get_all(cls, node: "GolemNode") -> List["Resource"]:
+    async def get_all(cls: Type[ResourceType], node: "GolemNode") -> List[ResourceType]:
         api = cls._get_api(node)
         get_all_method = getattr(api, cls._get_all_method_name())
         data = await get_all_method()
