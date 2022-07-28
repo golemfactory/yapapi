@@ -1,4 +1,3 @@
-from abc import ABC
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Tuple, TYPE_CHECKING
 from decimal import Decimal
@@ -14,13 +13,7 @@ if TYPE_CHECKING:
     from .golem_node import GolemNode
 
 
-class PaymentApiResource(Resource[RequestorApi], ABC):
-    @classmethod
-    def _get_api(cls, node: "GolemNode") -> RequestorApi:
-        return RequestorApi(node._ya_payment_api)
-
-
-class Allocation(PaymentApiResource):
+class Allocation(Resource[RequestorApi]):
     @api_call_wrapper(ignore=[404, 410])
     async def release(self) -> None:
         await self.api.release_allocation(self.id)

@@ -1,4 +1,3 @@
-from abc import ABC
 import asyncio
 from typing import AsyncIterator, Dict, Optional, TYPE_CHECKING, Union
 from datetime import datetime, timedelta, timezone
@@ -15,13 +14,7 @@ if TYPE_CHECKING:
     from .golem_node import GolemNode
 
 
-class MarketApiResource(Resource[RequestorApi], ABC):
-    @classmethod
-    def _get_api(cls, node: "GolemNode") -> RequestorApi:
-        return RequestorApi(node._ya_market_api)
-
-
-class Demand(MarketApiResource):
+class Demand(Resource[RequestorApi]):
     _event_collecting_task: Optional[asyncio.Task] = None
 
     def start_collecting_events(self):
@@ -116,7 +109,7 @@ class Demand(MarketApiResource):
         return proposal
 
 
-class Proposal(MarketApiResource):
+class Proposal(Resource[RequestorApi]):
     _demand: Optional["Demand"] = None
 
     ##############################
@@ -232,7 +225,7 @@ class Proposal(MarketApiResource):
         return proposal
 
 
-class Agreement(MarketApiResource):
+class Agreement(Resource[RequestorApi]):
     @api_call_wrapper()
     async def confirm(self) -> None:
         await self.api.confirm_agreement(self.id)

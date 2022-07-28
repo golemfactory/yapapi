@@ -1,13 +1,29 @@
 import asyncio
-from abc import ABC, abstractmethod
+from abc import ABC, ABCMeta
 from typing import Any, AsyncIterator, Generic, List, Optional, TYPE_CHECKING
 
-from yapapi.mid.events import ResourceDataChanged
+from yapapi.mid.events import NewResource, ResourceDataChanged
 from yapapi.mid.api_call_wrapper import api_call_wrapper
-from yapapi.mid.resource_internals import ResourceMeta, RequestorApiType
+from yapapi.mid.resource_internals import get_requestor_api, RequestorApiType
 
 if TYPE_CHECKING:
     from .golem_node import GolemNode
+
+
+class ResourceMeta(ABCMeta):
+    """Resources metaclass. Ensures a single instance per resource id. Emits the NewResource event."""
+
+    def __call__(cls, node: "GolemNode", id_: str, *args, **kwargs):  # type: ignore
+        assert isinstance(cls, type(Resource))  # mypy
+        if args:
+            #   Sanity check: when data is passed, it must be a new resource
+            assert id_ not in node._resources[cls]
+
+        if id_ not in node._resources[cls]:
+            obj = super(ResourceMeta, cls).__call__(node, id_, *args, **kwargs)  # type: ignore
+            node._resources[cls][id_] = obj
+            node.event_bus.emit(NewResource(obj))
+        return node._resources[cls][id_]
 
 
 class Resource(ABC, Generic[RequestorApiType], metaclass=ResourceMeta):
@@ -28,13 +44,6 @@ class Resource(ABC, Generic[RequestorApiType], metaclass=ResourceMeta):
         #   Lock for Resource.get_data calls. We don't want to update the same Resource in
         #   multiple tasks at the same time.
         self._get_data_lock = asyncio.Lock()
-
-    ##########################
-    #   ABSTRACT METHODS
-    @classmethod
-    @abstractmethod
-    def _get_api(cls, node: "GolemNode") -> RequestorApiType:
-        pass
 
     ################################
     #   RESOURCE TREE & YAGNA EVENTS
@@ -142,6 +151,10 @@ class Resource(ABC, Generic[RequestorApiType], metaclass=ResourceMeta):
 
     ###################
     #   OTHER
+    @classmethod
+    def _get_api(cls, node: "GolemNode") -> RequestorApiType:
+        return get_requestor_api(cls, node)
+
     @property
     def _get_method_name(self) -> str:
         return f'get_{type(self).__name__.lower()}'
