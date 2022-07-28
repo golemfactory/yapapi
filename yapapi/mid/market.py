@@ -1,5 +1,5 @@
 import asyncio
-from typing import AsyncIterator, Dict, Optional, TYPE_CHECKING, Union
+from typing import AsyncIterator, Dict, List, Optional, TYPE_CHECKING, Union
 from datetime import datetime, timedelta, timezone
 
 from ya_market import RequestorApi, models as models, exceptions
@@ -26,7 +26,7 @@ class Demand(Resource[RequestorApi, models.Demand, None, "Proposal"]):
     async def _get_data(self) -> models.Demand:
         #   NOTE: this method is required because there is no get_demand(id)
         #         in ya_market (as there is no matching endpoint in yagna)
-        all_demands = await self.api.get_demands()
+        all_demands: List[models.Demand] = await self.api.get_demands()
         try:
             return next(d for d in all_demands if d.demand_id == self.id)
         except StopIteration:
@@ -207,10 +207,9 @@ class Proposal(Resource[RequestorApi, models.Proposal, Union["Demand", "Proposal
 
     ##########################
     #   Other
-    @api_call_wrapper()
     async def _get_data(self) -> models.Proposal:
         assert self.demand is not None
-        data = await self.api.get_proposal_offer(self.demand.id, self.id)
+        data: models.Proposal = await self.api.get_proposal_offer(self.demand.id, self.id)
         if data.state == "Rejected":
             self.set_no_more_children()
         return data

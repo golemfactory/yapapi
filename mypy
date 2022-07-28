@@ -1,6 +1,0 @@
-mypy \
-    --namespace-packages \
-    example.py \
-    t/test_1.py \
-    run.py \
-    yapapi/mid

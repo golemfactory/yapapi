@@ -1,6 +1,6 @@
 import asyncio
 from abc import ABC, ABCMeta
-from typing import Any, AsyncIterator, Generic, List, Optional, TYPE_CHECKING, Type
+from typing import Any, AsyncIterator, Awaitable, Callable, Generic, List, Optional, TYPE_CHECKING, Type
 
 from yapapi.mid.events import NewResource, ResourceDataChanged
 from yapapi.mid.api_call_wrapper import api_call_wrapper
@@ -139,7 +139,7 @@ class Resource(
     async def _get_data(self) -> ModelType:
         #   NOTE: this method is often overwritten in subclasses
         #   TODO: typing? self._data typing?
-        get_method = getattr(self.api, self._get_method_name)
+        get_method: Callable[[str], Awaitable[ModelType]] = getattr(self.api, self._get_method_name)
         return await get_method(self._id)
 
     @classmethod
@@ -160,7 +160,7 @@ class Resource(
     #   OTHER
     @classmethod
     def _get_api(cls, node: "GolemNode") -> RequestorApiType:
-        return get_requestor_api(cls, node)
+        return get_requestor_api(cls, node)  # type: ignore
 
     @property
     def _get_method_name(self) -> str:

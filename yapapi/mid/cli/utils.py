@@ -33,7 +33,7 @@ def format_allocations(allocations: List[Allocation]) -> str:
             data.timeout.isoformat(" ", "seconds") if data.timeout is not None else '',
         ])
 
-    return x.get_string()
+    return x.get_string()  # type: ignore
 
 
 def format_demands(demands: List[Demand]) -> str:
@@ -45,15 +45,15 @@ def format_demands(demands: List[Demand]) -> str:
 
         #   According to ya_client spec, this should be ya_market.models.Timestamp, but is datetime
         #   Maybe this is a TODO for ya_client?
-        assert type(data.timestamp) is datetime  # mypy
+        timestamp: datetime = data.timestamp  # type: ignore
 
-        created = data.timestamp.isoformat(" ", "seconds")
+        created = timestamp.isoformat(" ", "seconds")
         x.add_row([
             demand.id,
             subnet,
             created,
         ])
-    return x.get_string()
+    return x.get_string()  # type: ignore
 
 
 @dataclass

@@ -28,7 +28,7 @@ class GolemNode:
         #   (This is done internally by the metaclass of the Resource)
         self._resources: DefaultDict[Type[Resource], Dict[str, Resource]] = defaultdict(dict)
         self._autoclose_resources: set(Resource) = set()
-        self._event_bus = EventBus()
+        self._event_bus: EventBus = EventBus()
 
     ########################
     #   Start/stop interface

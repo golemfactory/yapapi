@@ -62,7 +62,7 @@ async def main() -> None:
             #   Proposal state is not auto-updated, but we can update it manually:
             assert agreement.parent.data.state == "Draft"
             await agreement.parent.get_data(force=True)
-            assert agreement.parent.data.state == "Accepted"
+            assert agreement.parent.data.state == "Accepted"  # type: ignore  # ya_client TODO?
 
 
 if __name__ == '__main__':
