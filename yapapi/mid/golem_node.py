@@ -1,6 +1,6 @@
 import asyncio
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, Iterable, Optional, List, Set, Type, Union
+from typing import Any, DefaultDict, Dict, Iterable, Optional, List, Set, Type, TypeVar, Union
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
@@ -17,11 +17,11 @@ from .resource import Resource
 
 
 DEFAULT_EXPIRATION_TIMEOUT = timedelta(seconds=1800)
+ResourceType = TypeVar("ResourceType", bound=Resource)
 
 
 class GolemNode:
     def __init__(self) -> None:
-        #   TODO: add args - `app_key` and `base_url` (maybe also optional other URLs?)
         self._api_config = rest.Configuration()
 
         #   All created Resources will be stored here
@@ -55,8 +55,8 @@ class GolemNode:
         print("Clean shutdown finished")
 
     async def _stop_event_collectors(self) -> None:
-        demands = self._resources[Demand].values()
-        tasks = [demand.stop_collecting_events() for demand in demands]  # type: ignore  # TODO: better typing?
+        demands = self._all_resources(Demand)
+        tasks = [demand.stop_collecting_events() for demand in demands]
         if tasks:
             await asyncio.gather(*tasks)
 
@@ -165,7 +165,6 @@ class GolemNode:
 
     ##########################
     #   Events
-    #   (TODO: do we want the whole EventBus API repeated here? "listen" etc?)
     @property
     def event_bus(self) -> EventBus:
         return self._event_bus
@@ -174,6 +173,9 @@ class GolemNode:
     #   Other
     def add_autoclose_resource(self, resource: Union["Allocation", "Demand", "Agreement"]) -> None:
         self._autoclose_resources.add(resource)
+
+    def _all_resources(self, cls: Type[ResourceType]) -> List[ResourceType]:
+        return list(self._resources[cls].values())  # type: ignore
 
     def __str__(self) -> str:
         lines = [
