@@ -21,8 +21,8 @@ ResourceType = TypeVar("ResourceType", bound=Resource)
 
 
 class GolemNode:
-    def __init__(self) -> None:
-        self._api_config = rest.Configuration()
+    def __init__(self, app_key: str = None, base_url: str = None) -> None:
+        self._api_config = rest.Configuration(app_key, url=base_url)
 
         #   All created Resources will be stored here
         #   (This is done internally by the metaclass of the Resource)
