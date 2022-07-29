@@ -45,7 +45,7 @@ class Demand(Resource[RequestorApi, models.Demand, _NULL, "Proposal", _NULL]):
     async def unsubscribe(self) -> None:
         """Stop all operations related to this demand and remove it.
 
-        This is a final operation, nothing more can be done with an unsubscribed :class:`Demand`."""
+        This is a final operation, unsubscribed demand is not available anymore."""
         self.set_no_more_children()
         await self.stop_collecting_events()
         await self.api.unsubscribe_demand(self.id)

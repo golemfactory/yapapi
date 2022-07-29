@@ -15,8 +15,17 @@ if TYPE_CHECKING:
 
 
 class Allocation(Resource[RequestorApi, models.Allocation, _NULL, _NULL, _NULL]):
+    """A single allocation on the Golem Network.
+
+    Created with one of the :class:`Allocation`-returning methods of the :class:`~yapapi.mid.golem_node.GolemNode`.
+    """
     @api_call_wrapper(ignore=[404, 410])
     async def release(self) -> None:
+        """Release the allocation.
+
+        Remaining amount will be available again. This is the final operation -
+        released allocation is not available anymore.
+        """
         await self.api.release_allocation(self.id)
         self.node.event_bus.emit(ResourceClosed(self))
 

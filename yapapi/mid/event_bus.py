@@ -72,6 +72,30 @@ class ResourceEventFilter(EventFilter):
 
 
 class EventBus:
+    """Emit events, listen for events.
+
+    This class has few purposes:
+
+    * Easy monitoring of the execution process (just log all events)
+    * Convenient communication between separated parts of the code. E.g. we might want to act on incoming
+      invoices from a component that is not connected to any other part of the code - with EventBus,
+      we only have to register a callback for NewResource events.
+    * Using a producer-consumer pattern to implement parts of the app-specific logic.
+
+    Sample usage::
+
+        async def on_allocation_event(event: ResourceEvent) -> None:
+            print(f"Something happened to an allocation!", event)
+
+        golem = GolemNode()
+        event_bus: EventBus = golem.event_bus
+        event_bus.resource_listen(on_allocation_event, resource_classes=[Allocation])
+
+        async with golem:
+            #   This will cause execution of on_allocation_event with a NewResource event
+            allocation = await golem.create_allocation(1)
+        #   Allocation was created with autoclose=True, so now we also got a ResourceClosed event
+    """
     def __init__(self) -> None:
         self.queue: asyncio.Queue[Event] = asyncio.Queue()
         self.consumers: DefaultDict[EventFilter, List[EventCallableType]] = defaultdict(list)
@@ -88,6 +112,20 @@ class EventBus:
             self._task.cancel()
             self._task = None
 
+    def listen(
+        self,
+        callback: EventCallableType,
+        classes: Iterable[Type[Event]] = (),
+    ) -> None:
+        """Execute the callback when :any:`Event` is emitted.
+
+        :param callback: An async function to be executed.
+        :param classes: A list of :any:`Event` subclasses - if not empty,
+            `callback` will only be executed on events of matching classes.
+        """
+        template = AnyEventFilter(tuple(classes))
+        self.consumers[template].append(callback)
+
     def resource_listen(
         self,
         callback: ResourceEventCallableType,
@@ -95,18 +133,27 @@ class EventBus:
         resource_classes: Iterable[Type[Resource]] = (),
         ids: Iterable[str] = (),
     ) -> None:
+        """Execute the callback when :any:`ResourceEvent` is emitted.
+
+        :param callback: An async function to be executed.
+        :param event_classes: A list of :any:`ResourceEvent` subclasses - if not empty,
+            `callback` will only be executed only on events of matching classes.
+        :param resource_classes: A list of :class:`~yapapi.mid.resource.Resource` subclasses - if not empty,
+            `callback` will only be executed on events related to resources of a matching class.
+        :param ids: A list of resource IDs - if not empty,
+            `callback` will only be executed on events related to resources with a matching ID.
+        """
         template = ResourceEventFilter(tuple(event_classes), tuple(resource_classes), tuple(ids))
         self.consumers[template].append(callback)
 
-    def listen(
-        self,
-        callback: EventCallableType,
-        classes: Iterable[Type[Event]] = (),
-    ) -> None:
-        template = AnyEventFilter(tuple(classes))
-        self.consumers[template].append(callback)
-
     def emit(self, event: Event) -> None:
+        """Emit an event - execute all callbacks listening for matching events.
+
+        If emit(X) was called before emit(Y), then it is guaranteed that callbacks
+        for event Y will start only after all X callbacks finished.
+
+        :param event: An event that will be emitted.
+        """
         self.queue.put_nowait(event)
 
     async def _emit_events(self) -> None:
@@ -115,6 +162,8 @@ class EventBus:
             await self._emit(event)
 
     async def _emit(self, event: Event) -> None:
+        #   TODO: With this implementation a single never-ending callback will stop
+        #         the whole EventBus. This should be fixed in the future.
         tasks = []
         for event_template, callbacks in self.consumers.items():
             if event_template.includes(event):
