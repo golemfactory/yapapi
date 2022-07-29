@@ -11,7 +11,7 @@ class Event(ABC):
 
 
 class ResourceEvent(Event, ABC):
-    """Base class for all events related to a particular :class:`~yapapmi.mid.resource.Resource`."""
+    """Base class for all events related to a particular :any:`Resource`."""
     def __init__(self, resource: "Resource"):
         self._resource = resource
 
@@ -25,7 +25,7 @@ class ResourceEvent(Event, ABC):
 
 
 class NewResource(ResourceEvent):
-    """Emitted when a new :class:`Resource` object is created.
+    """Emitted when a new :any:`Resource` object is created.
 
     There are three distinct scenarios possible:
 
@@ -39,7 +39,7 @@ class NewResource(ResourceEvent):
 
 
 class ResourceDataChanged(ResourceEvent):
-    """Emitted when `data` attribute of a :class:`Resource` changes.
+    """Emitted when `data` attribute of a :any:`Resource` changes.
 
     This event is **not** emitted when the data "would have changed if we
     requested new data, but we didn't request it". In other words, we don't listen for
@@ -69,7 +69,7 @@ class ResourceChangePossible(ResourceEvent):
 
     E.g. this is emitted for a `Proposal` when an agreement is created based on this proposal.
 
-    It is **not** guaranteed that anything really changed, but e.g. if you want to keep some :class:`Resource`
+    It is **not** guaranteed that anything really changed, but e.g. if you want to keep some :any:`Resource`
     objects as up-to-date as possible, you might consider something like::
 
         async def update_resource(event: ResourceEvent) -> None:
@@ -97,5 +97,5 @@ class ResourceClosed(ResourceEvent):
     for an already closed resource (e.g. by passing an id of a terminated agreement to
     :any:`GolemNode.agreement`) does not trigger this event.
 
-    This event should never be emitted more than once for a given :class:`Resource`.
+    This event should never be emitted more than once for a given :any:`Resource`.
     """

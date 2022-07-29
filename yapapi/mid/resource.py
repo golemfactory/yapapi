@@ -78,7 +78,7 @@ class Resource(
         """List of Resources that were created "from" this resource.
 
         E.g. children of a :any:`Demand` are :any:`Proposal`.
-        Children of :any:`Proposal` are either :any:`Proposal` (counter-proposals to this proposal),
+        Children of :any:`Proposal` are either :any:`Proposal` (counter-proposals to it),
         or :any:`Agreement`.
 
         """

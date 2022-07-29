@@ -21,23 +21,25 @@ ResourceType = TypeVar("ResourceType", bound=Resource)
 
 
 class GolemNode:
+    """Main entrypoint to the python Golem API, communicates with `yagna`.
+
+    GolemNode object corresponds to a single running `yagna` instance
+    and can operate on different subnets / networks.
+
+    Usage::
+
+        golem = GolemNode()
+        async with golem:
+            #   Interact with the Golem Network
+
+    """
+
     def __init__(self, app_key: str = None, base_url: str = None) -> None:
-        """Main entrypoint to the python Golem API, communicates with `yagna`.
-
-        GolemNode object corresponds to a single running `yagna` instance
-        and can operate on different subnets / payment networks.
-
+        """
         :param app_key: App key used as an authentication token for all `yagna` calls.
                         Defaults to the `YAGNA_APPKEY` env variable.
         :param base_url: Base url for all `yagna` APIs. Defaults to `YAGNA_API_URL` env
                          variable or http://127.0.0.1:7465.
-
-        Usage::
-
-            golem = GolemNode()
-            async with golem:
-                #   Interact with the Golem Network
-
         """
         self._api_config = rest.Configuration(app_key, url=base_url)
 
@@ -223,7 +225,8 @@ class GolemNode:
     def event_bus(self) -> EventBus:
         """Returns the :class:`EventBus` used by this :class:`GolemNode`.
 
-        Events caused by this :class:`GolemNode` and objects operating on it are emitted on this event bus.
+        Any :any:`Event` triggered by this :class:`GolemNode` or any related object
+        will be sent there and passed to registered listeners.
         """
         return self._event_bus
 

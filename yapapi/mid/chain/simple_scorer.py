@@ -35,7 +35,7 @@ class SimpleScorer:
         self._scored_proposals: List[ScoredProposal] = []
 
     async def __call__(self, proposals: AsyncIterator[Proposal]) -> AsyncIterator[Proposal]:
-        """Consumes incoming proposals as fast as possible. Always yields :any:`Proposal` with the highest score.
+        """Consumes incoming proposals as fast as possible. Always yields a :any:`Proposal` with the highest score.
 
         :param proposals: Stream of :class:`Proposal` to be reordered.
             In fact, this could be stream of whatever, as long as this whatever matches

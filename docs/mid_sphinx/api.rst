@@ -25,7 +25,7 @@ Mid-level API
 Mid-level API consists of reusable components that can serve as a building blocks for various
 different applications.
 
-Important temporary note: this will be easier to undarstand after reading the `run.py` example.
+Important temporary note: this will be easier to understand after reading the `run.py` example.
 
 Chain
 -----
@@ -52,8 +52,8 @@ Low-level API
 
 Low-level objects correspond to resources in the Golem Network.
 They make no assumptions about any higher-level components that interact with them.
-Capabilities of the low-level API should match `yagna` capabilities, i.e. anything you can
-do by direct `yagna` interactions should also be possible - and, hopefully, more convinient - 
+Capabilities of the low-level API should match `yagna` capabilities, i.e. anything one can
+do by direct `yagna` interactions should also be possible - and, hopefully, more convenient - 
 by performing operations on the low-level objects.
 
 Resource
@@ -92,3 +92,9 @@ Events
 
 .. automodule:: yapapi.mid.events
     :members:
+
+Logging
+=======
+
+.. autoclass:: yapapi.mid.default_logger.DefaultLogger
+    :members: __init__, file_name, logger, on_event

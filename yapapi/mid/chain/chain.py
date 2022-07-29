@@ -14,10 +14,11 @@ class Chain():
             async for number in numbers:
                 yield str(number)
 
-        async for int_in_str in Chain(source, int_2_str):
-            ...
+        async for x in Chain(source, int_2_str):
+            # x == "1"
+            # x == "2"
 
-    More complex usages --> [TODO - examples].
+    More complex usages --> [TODO - examples, run.py].
     """
 
     def __init__(self, chain_start: AsyncIterator[Any], *pipes: Callable[[AsyncIterator[Any]], AsyncIterator[Any]]):
