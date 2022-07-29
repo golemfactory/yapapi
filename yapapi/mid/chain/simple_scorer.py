@@ -15,12 +15,19 @@ class ScoredProposal:
 
 
 class SimpleScorer:
+    """Re-orders proposals using a provided scoring function."""
     def __init__(
         self,
         score_proposal: Callable[[Proposal], Awaitable[float]],
         min_proposals: Optional[int] = None,
         max_wait: Optional[timedelta] = None,
     ):
+        """
+        :param score_proposal: Proposal-scoring function. Higher score -> better :any:`Proposal`.
+        :param min_proposals: If not None, :func:`__call__` will not yield anything until
+            at least that many proposals were scored (but `max_wait` overrides this)
+        :param max_wait: If not None, we'll not wait for `min_proposals` longer than that.
+        """
         self._score_proposal = score_proposal
         self._min_proposals = min_proposals
         self._max_wait = max_wait
@@ -28,6 +35,12 @@ class SimpleScorer:
         self._scored_proposals: List[ScoredProposal] = []
 
     async def __call__(self, proposals: AsyncIterator[Proposal]) -> AsyncIterator[Proposal]:
+        """Consumes incoming proposals as fast as possible. Always yields :any:`Proposal` with the highest score.
+
+        :param proposals: Stream of :class:`Proposal` to be reordered.
+            In fact, this could be stream of whatever, as long as this whatever matches
+            the scoring function, and this whatever would be yielded (--> TODO).
+        """
         self._no_more_proposals = False
         proposal_scorer_task = asyncio.get_event_loop().create_task(self._process_stream(proposals))
         try:

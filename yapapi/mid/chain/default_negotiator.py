@@ -5,7 +5,12 @@ from yapapi.mid.market import Proposal
 
 
 class DefaultNegotiator:
+    """IN: any :any:`Proposal`. OUT: a :any:`Proposal` that can be used as a base for an :any:`Agreement`"""
     def __init__(self, buffer_size: int = 1):
+        """
+        :param buffer_size: (number_of_current_negotiations + number_of_ready_proposals) will always equal this number
+            (except when the initial stream was exhausted, when it will be lower).
+        """
         self.main_task: Optional[asyncio.Task] = None
         self.tasks: List[asyncio.Task] = []
         self.queue: asyncio.Queue[Proposal] = asyncio.Queue()
@@ -17,6 +22,10 @@ class DefaultNegotiator:
         self.semaphore = asyncio.BoundedSemaphore(buffer_size)
 
     async def __call__(self, proposals: AsyncIterator[Proposal]) -> AsyncIterator[Proposal]:
+        """Consumes proposals as slowly as possible (but filling `buffer_size`), yields "ready" :any:`Proposal`.
+
+        :param proposals: A stream of :any:`Proposal` that will be used as a base of negotiations.
+        """
         self._no_more_proposals = False
         self.main_task = asyncio.create_task(self._process_proposals(proposals))
 
