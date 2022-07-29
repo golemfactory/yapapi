@@ -19,7 +19,7 @@ documentation = "https://yapapi.readthedocs.io/en/stable/api.html"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.6.2"
+python = "^3.8.0"
 aiohttp = "^3.6"
 aiohttp-sse-client = "^0.1.7"
 dataclasses = { version = "^0.8", python = ">=3.6, <3.7"}

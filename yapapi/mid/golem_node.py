@@ -22,6 +22,18 @@ ResourceType = TypeVar("ResourceType", bound=Resource)
 
 class GolemNode:
     def __init__(self, app_key: str = None, base_url: str = None) -> None:
+        """Main entrypoint.
+
+        A single GolemNode instance that corresponds to a running `yagna` instance
+        and can operate on different subnets / payment networks.
+
+        Usage::
+
+            golem = GolemNode()
+            async with golem:
+                #   Interact with the Golem Network
+
+        """
         self._api_config = rest.Configuration(app_key, url=base_url)
 
         #   All created Resources will be stored here
@@ -55,6 +67,7 @@ class GolemNode:
         print("Clean shutdown finished")
 
     async def _stop_event_collectors(self) -> None:
+        #   NOTE: now only Demands collect events, but this will change in the future
         demands = self._all_resources(Demand)
         tasks = [demand.stop_collecting_events() for demand in demands]
         if tasks:
@@ -94,6 +107,13 @@ class GolemNode:
         driver: str = DEFAULT_DRIVER,
         autoclose: bool = True,
     ) -> Allocation:
+        """Create new allocation.
+
+        :param amount: Amount of allocated GLMs
+        :param network: Payment network
+        :param driver: Payment driver
+        :param autoclose: Release allocation on __aexit__
+        """
         decimal_amount = Decimal(amount)
 
         #   TODO (?): It is assumed we have only a single account for (network, driver).
@@ -112,6 +132,17 @@ class GolemNode:
         autoclose: bool = True,
         autostart: bool = True,
     ) -> Demand:
+        """Create new demand.
+
+        :param payload: Details of the demand
+        :param subnet: Subnet tag
+        :param expiration: Timestamp when all agreements based on this demand will expire (TODO: is this true?)
+        :param allocations: Collection of :class:`Allocation` that will be included in the `Demand` description.
+        :param autoclose: Unsubscribe demand on :func:`__aexit__`
+        :param autostart: Immediately start collecting yagna events for this :class:`Demand`.
+                          Without autostart events for this :class:`Demand` will start being collected after a call to
+                          :func:`Demand.start_collecting_events`.
+        """
         if expiration is None:
             expiration = datetime.now(timezone.utc) + DEFAULT_EXPIRATION_TIMEOUT
 

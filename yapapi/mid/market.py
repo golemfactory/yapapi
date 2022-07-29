@@ -16,13 +16,60 @@ if TYPE_CHECKING:
 
 
 class Demand(Resource[RequestorApi, models.Demand, _NULL, "Proposal", _NULL]):
+    """A single demand on the Golem Network.
+
+    Created with one of the :class:`Demand`-returning methods of the :class:`~yapapi.mid.golem_node.GolemNode`.
+    """
     _event_collecting_task: Optional[asyncio.Task] = None
 
+    ######################
+    #   EXTERNAL INTERFACE
     def start_collecting_events(self) -> None:
-        assert self._event_collecting_task is None
-        task = asyncio.get_event_loop().create_task(self._process_yagna_events())
-        self._event_collecting_task = task
+        """Start collecting `yagna` events in response to this demand.
 
+        Each event is either a new initial :class:`Proposal` (yielded in :func:`initial_proposals`),
+        a response to our counter-proposal (accessible via :func:`Proposal.responses`),
+        or a rejection of a proposal.
+        """
+        if self._event_collecting_task is None:
+            task = asyncio.get_event_loop().create_task(self._process_yagna_events())
+            self._event_collecting_task = task
+
+    async def stop_collecting_events(self) -> None:
+        """Stop collecting events, after a prior call to :func:`start_collecting_events`."""
+        if self._event_collecting_task is not None:
+            self._event_collecting_task.cancel()
+            self._event_collecting_task = None
+
+    @api_call_wrapper(ignore=[404, 410])
+    async def unsubscribe(self) -> None:
+        """Stop all operations related to this demand and remove it.
+
+        This is a final operation, nothing more can be done with an unsubscribed :class:`Demand`."""
+        self.set_no_more_children()
+        await self.stop_collecting_events()
+        await self.api.unsubscribe_demand(self.id)
+        self.node.event_bus.emit(ResourceClosed(self))
+
+    async def initial_proposals(self) -> AsyncIterator["Proposal"]:
+        """Yields initial proposals matched to this demand."""
+        async for proposal in self.child_aiter():
+            assert isinstance(proposal, Proposal)  # mypy
+            if proposal.initial:
+                yield proposal
+
+    def proposal(self, proposal_id: str) -> "Proposal":
+        """Return a :class:`Proposal` with a given ID."""
+        proposal = Proposal(self.node, proposal_id)
+
+        #   NOTE: we don't know the parent, so we don't set it, but demand is known
+        if proposal._demand is None:
+            proposal.demand = self
+
+        return proposal
+
+    #################
+    #   OTHER METHODS
     @api_call_wrapper()
     async def _get_data(self) -> models.Demand:
         #   NOTE: this method is required because there is no get_demand(id)
@@ -51,24 +98,6 @@ class Demand(Resource[RequestorApi, models.Demand, _NULL, "Proposal", _NULL]):
         api = cls._get_api(node)
         demand_id = await api.subscribe_demand(data)
         return cls(node, demand_id)
-
-    @api_call_wrapper(ignore=[404, 410])
-    async def unsubscribe(self) -> None:
-        self.set_no_more_children()
-        await self.stop_collecting_events()
-        await self.api.unsubscribe_demand(self.id)
-        self.node.event_bus.emit(ResourceClosed(self))
-
-    async def stop_collecting_events(self) -> None:
-        if self._event_collecting_task is not None:
-            self._event_collecting_task.cancel()
-            self._event_collecting_task = None
-
-    async def initial_proposals(self) -> AsyncIterator["Proposal"]:
-        async for proposal in self.child_aiter():
-            assert isinstance(proposal, Proposal)  # mypy
-            if proposal.initial:
-                yield proposal
 
     async def _process_yagna_events(self) -> None:
         event_collector = YagnaEventCollector(
@@ -101,15 +130,6 @@ class Demand(Resource[RequestorApi, models.Demand, _NULL, "Proposal", _NULL]):
             assert parent._parent is not None
         return parent
 
-    def proposal(self, proposal_id: str) -> "Proposal":
-        proposal = Proposal(self.node, proposal_id)
-
-        #   NOTE: we don't know the parent, so we don't set it, but demand is known
-        if proposal._demand is None:
-            proposal.demand = self
-
-        return proposal
-
 
 class Proposal(
     Resource[
@@ -120,22 +140,40 @@ class Proposal(
         Union[models.ProposalEvent, models.ProposalRejectedEvent]
     ]
 ):
+    """A single proposal on the Golem Network.
+
+    Either a initial proposal matched to a demand, or a counter-proposal sent
+    either by us or by the provider.
+
+    Sample usage::
+
+        initial_proposal = await demand.initial_proposals().__anext__()
+        our_counter_proposal = await initial_proposal.respond()
+        async for their_counter_proposal in our_counter_proposal.responses():
+            agreement = their_counter_proposal.create_agreement()
+            break
+        else:
+            print("Our counter-proposal got rejected :(")
+    """
     _demand: Optional["Demand"] = None
 
     ##############################
     #   State-related properties
     @property
     def initial(self) -> bool:
+        """True for proposals matched directly to the demand."""
         assert self.data is not None
         return self.data.state == 'Initial'
 
     @property
     def draft(self) -> bool:
+        """True for proposals that are responses to other proposals."""
         assert self.data is not None
         return self.data.state == 'Draft'
 
     @property
     def rejected(self) -> bool:
+        """True for rejected proposals. They will have no more :func:`responses`."""
         assert self.data is not None
         return self.data.state == 'Rejected'
 
@@ -143,6 +181,7 @@ class Proposal(
     #   Tree-related methods
     @property
     def demand(self) -> "Demand":
+        """Initial :class:`Demand` related to this proposal."""
         assert self._demand is not None
         return self._demand
 
@@ -173,6 +212,11 @@ class Proposal(
             self.set_no_more_children()
 
     async def responses(self) -> AsyncIterator["Proposal"]:
+        """Yields responses to this proposal.
+
+        Stops when the proposal is rejected, or when :func:`Demand.stop_collecting_events`
+        of the related :class:`Demand` is called.
+        """
         async for child in self.child_aiter():
             if isinstance(child, Proposal):
                 yield child
@@ -181,6 +225,11 @@ class Proposal(
     #   Negotiations
     @api_call_wrapper()
     async def create_agreement(self, autoclose: bool = True, timeout: timedelta = timedelta(seconds=60)) -> "Agreement":
+        """Promote this proposal to an agreement.
+
+        :param autoclose: Terminate the agreement when the :class:`~yapapi.mid.golem_node.GolemNode` closes.
+        :param timeout: TODO - this is used as `AgreementValidTo`, but what is it exactly?
+        """
         proposal = models.AgreementProposal(
             proposal_id=self.id,
             valid_to=datetime.now(timezone.utc) + timeout,  # type: ignore  # TODO: what is AgreementValidTo?
@@ -195,12 +244,26 @@ class Proposal(
 
     @api_call_wrapper()
     async def reject(self, reason: str = '') -> None:
+        """Reject the proposal - inform the provider that we won't send any more counter-proposals.
+
+        :param reason: An optional information for the provider describing rejection reasons.
+
+        Invalid on our responses.
+        """
         await self.api.reject_proposal_offer(
             self.demand.id, self.id, request_body={"message": reason}, _request_timeout=5
         )
 
     @api_call_wrapper()
     async def respond(self) -> "Proposal":
+        """Respond to a proposal with a counter-proposal.
+
+        Invalid on proposals sent by the provider.
+
+        TODO: all the negotiation logic should be reflected in params of this method,
+        but negotiations are not implemented yet.
+        """
+
         data = await self._response_data()
         new_proposal_id = await self.api.counter_proposal_demand(self.demand.id, self.id, data, _request_timeout=5)
 
@@ -234,12 +297,32 @@ class Proposal(
 
 
 class Agreement(Resource[RequestorApi, models.Agreement, "Proposal", _NULL, _NULL]):
+    """A single agreement on the Golem Network.
+
+    Sample usage::
+
+        agreement = await proposal.create_agreement()
+        await agreement.confirm()
+        await agreement.wait_for_approval()
+        #   Create activity, use the activity
+        await agreement.terminate()
+    """
     @api_call_wrapper()
     async def confirm(self) -> None:
+        """Confirm the agreement.
+
+        First step that leads to an active agreement.
+        """
         await self.api.confirm_agreement(self.id)
 
     @api_call_wrapper()
     async def wait_for_approval(self) -> bool:
+        """Wait for provider's approval of the agreement.
+
+        Second (and last) step leading to an active agreement.
+
+        :returns: True if agreement was approved.
+        """
         try:
             await self.api.wait_for_approval(self.id, timeout=15, _request_timeout=16)
             return True
@@ -254,11 +337,7 @@ class Agreement(Resource[RequestorApi, models.Agreement, "Proposal", _NULL, _NUL
 
     @api_call_wrapper()
     async def terminate(self, reason: str = '') -> None:
+        """Terminate the agreement."""
         #   FIXME: check our state first
         await self.api.terminate_agreement(self.id, request_body={"message": reason})
         self.node.event_bus.emit(ResourceClosed(self))
-
-    @property
-    async def activity_possible(self) -> bool:
-        #   FIXME
-        return True
