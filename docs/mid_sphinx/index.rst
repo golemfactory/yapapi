@@ -14,8 +14,23 @@ GolemNode
               allocations, demands,
               event_bus
 
-Low-level objects
-=================
+Low-level API
+=============
+
+Low-level objects correspond to resources in the Golem Network.
+They make no assumptions about any higher-level components that interact with them.
+Capabilities of the low-level API should match `yagna` capabilities, i.e. anything you can
+do by direct `yagna` interactions should also be possible - and, hopefully, more convinient - 
+by performing operations on the low-level objects.
+
+Resource
+--------
+
+.. autoclass:: yapapi.mid.resource.Resource
+    :members: id, node,
+              get_data, data,
+              parent, children, child_aiter, 
+              events,
 
 Market API
 ----------
@@ -35,6 +50,13 @@ Payment API
 
 .. autoclass:: yapapi.mid.payment.Allocation
     :members: release
+
+
+Mid-level API
+=============
+
+Mid-level components are reusable components 
+
 
 Events
 ======
