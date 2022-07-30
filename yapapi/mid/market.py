@@ -63,7 +63,7 @@ class Demand(Resource[RequestorApi, models.Demand, _NULL, "Proposal", _NULL]):
         proposal = Proposal(self.node, proposal_id)
 
         #   NOTE: we don't know the parent, so we don't set it, but demand is known
-        if proposal._demand is None:
+        if proposal._demand is None and proposal._parent is None:
             proposal.demand = self
 
         return proposal

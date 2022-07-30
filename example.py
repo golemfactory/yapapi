@@ -9,8 +9,9 @@ IMAGE_HASH = "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"
 
 
 async def example_1(allocation_id: str, demand_id: str, proposal_id: str) -> None:
-    """Show existing allocation/demand"""
+    """Show existing allocation/demand/proposal"""
     golem = GolemNode()
+
     allocation = golem.allocation(allocation_id)
     demand = golem.demand(demand_id)
     proposal = golem.proposal(proposal_id, demand_id)
@@ -35,14 +36,14 @@ async def example_1(allocation_id: str, demand_id: str, proposal_id: str) -> Non
 
 
 async def example_2() -> None:
-    golem = GolemNode()
     """Show all current allocations/demands"""
+    golem = GolemNode()
     async with golem:
         for allocation in await golem.allocations():
             print(allocation)
 
-        # for demand in await golem.demands():
-        #     print(demand)
+        for demand in await golem.demands():
+            print(demand)
 
 
 async def example_3() -> None:
@@ -67,7 +68,7 @@ async def example_3() -> None:
 
 
 async def example_4() -> None:
-    """Respond to an proposal. Receive a conuterproposal. Reject it."""
+    """Respond to a proposal. Receive a conuterproposal. Reject it."""
     golem = GolemNode()
     async with golem:
         allocation = await golem.create_allocation(1)
@@ -121,10 +122,11 @@ async def example_5() -> None:
 
 
 async def main() -> None:
+    # NOTE: this example assumes correct allocation/demand/proposal IDs
     # print("\n---------- EXAMPLE 1 -------------\n")
-    # allocation_id = "715e5db0-472e-4b93-a286-88e2015c1a2e"
-    # demand_id = "87cb58c918b4480fb13a1089e275cbde-1af4ea079292d70e9ab15b786098e70e01313a044903c4d4ec9deb6b28db9a20"
-    # proposal_id = "R-786e99dbc162c910d904d882e700380ee1a51b946485eb3a9096095b56414e68"
+    # allocation_id = "94a0b27b-6f35-4dc4-98e2-6538bffe3c09"
+    # demand_id = "07a5a0aa1c0641e3995b0afc4c9d0a63-9d135ea900e850d273f459a7ea218f5b489b4a0ec9789f059cb470780505efc8"
+    # proposal_id = "R-83e5d06932340fddc1ba9b913c00621fac8b4628e2601dc9ab68df97435dd8df"
     # await example_1(allocation_id, demand_id, proposal_id)
 
     print("\n---------- EXAMPLE 2 -------------\n")

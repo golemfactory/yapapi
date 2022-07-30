@@ -68,7 +68,7 @@ class Resource(
         return self._parent
 
     def add_child(self, child: ChildType) -> None:
-        assert child._parent is None
+        assert child._parent is None  # type:ignore
         child._parent = self  # type: ignore
         self._children.append(child)
 
