@@ -15,17 +15,15 @@ import sys
 
 sys.path.insert(0, os.path.abspath("../../"))
 
-from yapapi import get_version
-
 
 # -- Project information -----------------------------------------------------
 
-project = "yapapi"
-copyright = "2020-2021, Golem Factory"
+project = "Yapapi mid-level refactoring"
+copyright = "2022, Golem Factory"
 author = "Golem Factory"
 
 # The full version, including alpha/beta/rc tags
-release = get_version()
+release = "0.001"
 
 
 # -- General configuration ---------------------------------------------------
@@ -58,19 +56,5 @@ html_theme = "sphinx_rtd_theme"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = []
-
-#   This removes the `yapapi.log` docstrings.
-#   There are two reasons:
-#   *   there are some sections/subsections declared there and it messes up the docs
-#   *   it's obsolete, because encourages usage of Executor
-#   Solution from https://stackoverflow.com/a/18031024/15851655
-def remove_module_docstring(app, what, name, obj, options, lines):
-    if what == "module" and name == "yapapi.log":
-        del lines[:]
-
-
-def setup(app):
-    app.connect("autodoc-process-docstring", remove_module_docstring)
-
 
 autodoc_member_order = "bysource"
