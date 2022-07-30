@@ -16,9 +16,26 @@
     * Except for the above, it should be good.
     * Typing is good, checked with almost-strict mypy (details: `mypy.sh`).
 
-## Examples & Docs
+## Start
 
-Public API is described in [api.html](api.html). It migh be useful to read few examples first.
+### Install
+
+```
+poetry install -E docs
+```
+
+### Documentation
+
+Generate & read the documentation: 
+
+```
+sphinx-build docs/mid_sphinx/ build -E
+firefox build/api.html
+```
+
+It migh be useful to read few examples first.
+
+### Examples
 
 1. `example.py` - simple functions demonstrating selected parts of the interface
 2. `run.py` - POC of the higher-level interface

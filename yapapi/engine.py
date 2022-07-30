@@ -207,13 +207,6 @@ class _Engine:
 
     def emit(self, event_class: Type[events.EventType], **kwargs) -> events.EventType:
         """Emit an event to be consumed by this engine's event consumer."""
-        created = set()
-        if event_class.__name__.endswith('Created'):
-            for name, x in kwargs.items():
-                msg = f'{name}({x.id})'
-                if msg not in created:
-                    created.add(msg)
-                    print('CREATED ' + msg)
         event = event_class(**kwargs)
         self._emit_event(event)
         return event
@@ -371,7 +364,6 @@ class _Engine:
                     ),
                 )
                 self._budget_allocations.append(allocation)
-                print(f'CREATED allocation({allocation.id})')
 
             if not self._budget_allocations:
                 raise NoPaymentAccountError(self._payment_driver, self._payment_network)

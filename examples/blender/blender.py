@@ -40,8 +40,6 @@ async def main(
     )
 
     async def worker(ctx: WorkContext, tasks):
-        import time
-        time.sleep(1000)
         script_dir = pathlib.Path(__file__).resolve().parent
         scene_path = str(script_dir / "cubes.blend")
 
