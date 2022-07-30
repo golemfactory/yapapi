@@ -4,10 +4,12 @@ from typing import Any, Callable, Dict, List, Optional
 
 
 class YagnaEventCollector:
-    """Utility class that listens for yagna events on a given endpoint
+    """Utility class that listens for yagna events on a given endpoint and puts them in queue(s).
 
-    and puts them in queue(s).
-    NOTE: this has nothing to do with "internal" yapapi events."""
+    There should be at most a single YagnaEventCollector listening on a given endpoint, but multiple
+    cliens talking to a single instance of a YagnaEventCollector will get the same events.
+    """
+
     def __init__(self, func: Callable, func_args: List[Any], func_kwargs: Dict[Any, Any]):
         self.func = func
         self.func_args = func_args
@@ -39,6 +41,12 @@ class YagnaEventCollector:
                 await asyncio.sleep(0.1)
 
     def event_queue(self, past_events: bool = True) -> asyncio.Queue:
+        """Returns :class:`asyncio.Queue` where all incoming events will be put.
+
+        Multiple calls to this method create multiple queues that don't interfere with each other.
+
+        If `past_events` is True, returned queue will contain all past events known to this YagnaEventCollector.
+        """
         queue: asyncio.Queue[Any] = asyncio.Queue()
         self._queues.append(queue)
 

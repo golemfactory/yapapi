@@ -47,13 +47,9 @@ async def main() -> None:
             AgreementCreator(),
             max_3,
         )
-        agreement: Agreement  # I don't know if it's possible to modify Chain to make this redundant
+        agreement: Agreement  # I don't know if it's possible to modify Chain typing to make this redundant
         async for agreement in chain:
             print(f"--> {agreement}")
-
-            #   This stops the demand.initial_proposals() generator
-            #   and thus (finally, after all current proposals are processed) whole chain
-            demand.set_no_more_children()
 
             #   Low-level objects form a tree - each has a parent and children.
             #   E.g. agreement.parent is the final proposal, and agreement.parent.parent
