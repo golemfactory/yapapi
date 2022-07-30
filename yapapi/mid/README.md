@@ -12,7 +12,7 @@
     * `Resource` class inheritance is not very simple/pretty. This could be improved either
       by extending the tree with additional classes, or by repeating parts of the logic in 
       different places. I believe current approach is better than the alternatives.
-    * Mid-level API (`Chain`) is rather a POC than a final version
+    * Mid-level API (`Chain`) is rather a POC than a final version.
     * Except for the above, it should be good.
     * Typing is good, checked with almost-strict mypy (details: `mypy.sh`).
 
@@ -21,19 +21,8 @@
 ### Install
 
 ```
-poetry install -E docs
+poetry install
 ```
-
-### Documentation
-
-Generate & read the documentation: 
-
-```
-sphinx-build docs/mid_sphinx/ build -E
-firefox build/api.html
-```
-
-It migh be useful to read few examples first.
 
 ### Examples
 
@@ -41,6 +30,18 @@ It migh be useful to read few examples first.
 2. `run.py` - POC of the higher-level interface
 3. `cli_example.sh` - command line interface
 4. `t/test_1.py` - few simple tests
+
+### Docs
+
+[API docs on readthedocs](https://jb-yapapi.readthedocs.io/en/latest/api.html)
+
+Or:
+
+```
+poetry install -E docs
+sphinx-build docs/mid_sphinx/ build -E
+firefox build/api.html
+```
 
 ## Code
 
