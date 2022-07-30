@@ -181,30 +181,22 @@ class Proposal(
     #   Tree-related methods
     @property
     def demand(self) -> "Demand":
-        """Initial :class:`Demand` related to this proposal."""
-        assert self._demand is not None
-        return self._demand
+        """Initial :class:`Demand` of this proposal."""
+        # We can either have no parent (this is possible when this Proposal was created from id),
+        # and then _demand is always set, or a Proposal-parent or a Demand-parent.
+        if self._demand is not None:
+            return self._demand
+        else:
+            if isinstance(self.parent, Demand):
+                return self.parent
+            else:
+                return self.parent.demand
 
     @demand.setter
     def demand(self, demand: "Demand") -> None:
         assert self._demand is None
+        assert self._parent is None  # Sanity check (there's no scenario where we have a parent and demand is set)
         self._demand = demand
-
-    @property
-    def parent(self) -> Union["Proposal", "Demand"]:
-        #   NOTE: We have this method here because we need @parent.setter
-        return super().parent
-
-    @parent.setter
-    def parent(self, parent: Union["Proposal", "Demand"]) -> None:
-        assert self._parent is None
-        self._parent = parent
-
-        demand = parent if isinstance(parent, Demand) else parent.demand
-        if self._demand is not None:
-            assert self._demand is demand
-        else:
-            self.demand = demand
 
     def add_event(self, event: Union[models.ProposalEvent, models.ProposalRejectedEvent]) -> None:
         super().add_event(event)

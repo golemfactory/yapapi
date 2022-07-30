@@ -67,13 +67,9 @@ class Resource(
         assert self._parent is not None
         return self._parent
 
-    @parent.setter
-    def parent(self, parent: ParentType) -> None:
-        assert self._parent is None
-        self._parent = parent
-
     def add_child(self, child: ChildType) -> None:
-        child.parent = self  # type: ignore
+        assert child._parent is None
+        child._parent = self  # type: ignore
         self._children.append(child)
 
     @property

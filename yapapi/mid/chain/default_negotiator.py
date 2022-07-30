@@ -30,7 +30,12 @@ class DefaultNegotiator:
         self.main_task = asyncio.create_task(self._process_proposals(proposals))
 
         while not self.queue.empty() or not self._no_more_proposals or self._has_running_tasks:
-            proposal = await self.queue.get()
+            #   Ugly but works, this class requires a minor rewrite either way
+            try:
+                proposal = self.queue.get_nowait()
+            except asyncio.QueueEmpty:
+                await asyncio.sleep(0.1)
+                continue
             self.semaphore.release()
             yield proposal
 

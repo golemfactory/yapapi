@@ -66,6 +66,7 @@ class SimpleScorer:
 
     async def _process_stream(self, proposal_stream: AsyncIterator[Proposal]) -> None:
         async for proposal in proposal_stream:
+            #   TODO: maybe we should score all proposals at the same time? Or maybe not all, but with a limit?
             score = await self.score_proposal(proposal)
             score = score * -1  # heap -> smallest values first -> reverse
             heapq.heappush(self._scored_proposals, ScoredProposal(score, proposal))
