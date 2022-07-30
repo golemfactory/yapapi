@@ -4,97 +4,161 @@ Golem Python API Reference
 **************************
 
 
-GolemNode
-=========
+Golem
+=====
 
-.. autoclass:: yapapi.mid.golem_node.GolemNode
-    :members: __init__, __aenter__, __aexit__, 
-              create_allocation, create_demand, 
-              allocation, demand, proposal, agreement, 
-              allocations, demands,
-              event_bus
-
-High-Level API
-==============
-
-[Nothing here yet. Task API, Service API etc.]
-
-Mid-level API
-=============
-
-Mid-level API consists of reusable components that can serve as a building blocks for various
-different applications.
-
-Important temporary note: this will be easier to understand after reading the `run.py` example.
-
-Chain
------
-
-.. autoclass:: yapapi.mid.chain.Chain
-
-Chain components
-----------------
-
-Components in this section can be used as parts of the Chain (but don't have to).
-
-.. autoclass:: yapapi.mid.chain.SimpleScorer
-    :members: __init__, __call__
-
-.. autoclass:: yapapi.mid.chain.DefaultNegotiator
-    :members: __init__, __call__
-
-.. autoclass:: yapapi.mid.chain.AgreementCreator
-    :members: __call__
+.. autoclass:: yapapi.Golem
+    :members: __init__, start, stop, execute_tasks, run_service, create_network, add_event_consumer
 
 
-Low-level API
-=============
+Task API
+========
 
-Low-level objects correspond to resources in the Golem Network.
-They make no assumptions about any higher-level components that interact with them.
-Capabilities of the low-level API should match `yagna` capabilities, i.e. anything one can
-do by direct `yagna` interactions should also be possible - and, hopefully, more convenient - 
-by performing operations on the low-level objects.
+Task
+----
 
-Resource
---------
+.. autoclass:: yapapi.Task
+    :members: __init__, running_time, accept_result, reject_result
 
-.. autoclass:: yapapi.mid.resource.Resource
-    :members: id, node,
-              get_data, data,
-              parent, children, child_aiter, 
-              events,
+Service API
+===========
 
-Market API
+Service
+-------
+
+.. autoclass:: yapapi.services.Service
+    :members: id, provider_name, state, is_available, start, run, shutdown, reset, send_message, send_message_nowait, receive_message, receive_message_nowait, get_payload, network, network_node
+
+Cluster
+-------
+
+.. autoclass:: yapapi.services.Cluster
+    :members:
+
+ServiceState
+------------
+
+.. autoclass:: yapapi.services.ServiceState
+    :members: pending, starting, running, stopping, terminated, AVAILABLE
+
+Network API
+===========
+
+Network
+-------
+
+.. autoclass:: yapapi.network.Network
+    :members: create, owner_ip, network_address, netmask, gateway, nodes_dict, network_id, add_owner_address, add_node,
+
+Node
+----
+
+.. autoclass:: yapapi.network.Node
+    :members: network, node_id, ip, get_deploy_args
+
+Exceptions
 ----------
 
-.. autoclass:: yapapi.mid.market.Demand
-    :members: initial_proposals, start_collecting_events, stop_collecting_events, unsubscribe, proposal
+.. autoclass:: yapapi.network.NetworkError
 
-.. autoclass:: yapapi.mid.market.Proposal
-    :members: initial, draft, rejected, demand,
-              respond, responses, reject, create_agreement
+Payload definition
+==================
 
-.. autoclass:: yapapi.mid.market.Agreement
-    :members: confirm, wait_for_approval, terminate
+Payload
+-------
 
-Payment API
+.. autoclass:: yapapi.payload.Payload
+
+Package
+-------
+
+.. autoclass:: yapapi.payload.package.Package
+
+
+vm.repo
+-------
+
+.. automodule:: yapapi.payload.vm
+    :members: repo
+
+
+Execution control
+=================
+
+WorkContext
 -----------
 
-.. autoclass:: yapapi.mid.payment.Allocation
-    :members: release
+.. autoclass:: yapapi.WorkContext
+    :members: id, provider_name, provider_id, new_script, get_raw_usage, get_usage, get_raw_state, get_cost
+
+Script
+------
+
+.. autoclass:: yapapi.script.Script
+    :members: __init__, id, add, deploy, start, terminate, run, download_bytes, download_file, download_json, upload_bytes, upload_file, upload_json
+
+
+Market strategies
+==========================
+
+.. autoclass:: yapapi.strategy.MarketStrategy
+    :members: decorate_demand, score_offer, respond_to_provider_offer, acceptable_prop_value_range_overrides, acceptable_prop_value_ranges,
+              invoice_accepted_amount, debit_note_accepted_amount
+
+.. autoclass:: yapapi.strategy.WrappingMarketStrategy
+    :members: __init__, base_strategy
+
+.. autoclass:: yapapi.strategy.LeastExpensiveLinearPayuMS
+    :members: score_offer
+
+.. autoclass:: yapapi.strategy.DecreaseScoreForUnconfirmedAgreement
+    :members: on_event
+
+.. autoclass:: yapapi.strategy.PropValueRange
+    :members: __init__, min, max, __contains__, clamp
+
+.. autoclass:: yapapi.strategy.DummyMS
 
 Events
-======
+==========
 
-.. autoclass:: yapapi.mid.event_bus.EventBus
-    :members: listen, resource_listen, emit
-
-.. automodule:: yapapi.mid.events
+.. automodule:: yapapi.events
     :members:
+
+Exceptions
+==========
+
+.. autoexception:: yapapi.NoPaymentAccountError
+
+.. autoexception:: yapapi.rest.activity.BatchTimeoutError
 
 Logging
 =======
 
-.. autoclass:: yapapi.mid.default_logger.DefaultLogger
-    :members: __init__, file_name, logger, on_event
+.. automodule:: yapapi.log
+    :members: enable_default_logger, log_summary, SummaryLogger
+
+
+Utils
+=====
+
+.. autofunction:: yapapi.windows_event_loop_fix
+
+.. autofunction:: yapapi.get_version
+
+Yapapi Contrib
+==============
+
+.. automodule:: yapapi.contrib
+
+.. automodule:: yapapi.contrib.strategy.provider_filter
+
+.. autoclass:: yapapi.contrib.strategy.ProviderFilter
+
+.. automodule:: yapapi.contrib.service.http_proxy
+
+.. autoclass:: yapapi.contrib.service.http_proxy.LocalHttpProxy
+    :members: __init__, run, stop
+
+.. autoclass:: yapapi.contrib.service.http_proxy.HttpProxyService
+    :members: __init__, handle_request
