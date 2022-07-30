@@ -116,6 +116,11 @@ class Resource(
         return self._events.copy()
 
     def set_no_more_children(self) -> None:
+        """This resource will have no more children. This stops :any:`child_aiter` iterator.
+
+        This can be called either from iside the resource (e.g. Proposal sets this when it receives
+        a ProposalRejected event), or from outside (e.g. on shutdown).
+        """
         if not self._no_more_children.done():
             self._no_more_children.set_result(None)
 
@@ -170,7 +175,6 @@ class Resource(
 
     @api_call_wrapper()
     async def _get_data(self) -> ModelType:
-        #   NOTE: this method is often overwritten in subclasses
         get_method: Callable[[str], Awaitable[ModelType]] = getattr(self.api, self._get_method_name)
         return await get_method(self._id)
 
@@ -196,10 +200,12 @@ class Resource(
 
     @property
     def _get_method_name(self) -> str:
+        """Name of the single GET ya_client method, e.g. get_allocation."""
         return f'get_{type(self).__name__.lower()}'
 
     @classmethod
     def _get_all_method_name(cls) -> str:
+        """Name of the collection GET ya_client method, e.g. get_allocations."""
         return f'get_{cls.__name__.lower()}s'
 
     def __str__(self) -> str:
