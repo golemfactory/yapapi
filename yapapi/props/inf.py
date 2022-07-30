@@ -40,7 +40,9 @@ class ExeUnitRequest(Model):
 class ExeUnitManifestRequest(Model):
     manifest: str = prop("golem.srv.comp.payload")
     manifest_sig: str = prop("golem.srv.comp.payload.sig")
-    manifest_sig_algorithm: Optional[str] = prop("golem.srv.comp.payload.sig.algorithm", default=None)
+    manifest_sig_algorithm: Optional[str] = prop(
+        "golem.srv.comp.payload.sig.algorithm", default=None
+    )
     manifest_cert: Optional[str] = prop("golem.srv.comp.payload.cert", default=None)
 
 

@@ -33,6 +33,7 @@ VM_CAPS_VPN: str = "vpn"
 
 VmCaps = Literal["vpn", "inet", "manifest-support"]
 
+
 @dataclass
 class InfVm(InfBase):
     runtime = RUNTIME_VM
@@ -51,11 +52,13 @@ class VmPackageFormat(Enum):
 class VmRequest(ExeUnitRequest):
     package_format: VmPackageFormat = prop_base.prop("golem.srv.comp.vm.package_format")
 
+
 @dataclass
 class VmManifestRequest(ExeUnitManifestRequest):
     package_format: VmPackageFormat = prop_base.prop(
         "golem.srv.comp.vm.package_format", default=VmPackageFormat.GVMKIT_SQUASH
     )
+
 
 @dataclass(frozen=True)
 class _VmConstraints(Model):
@@ -72,6 +75,7 @@ class _VmConstraints(Model):
     def __str__(self):
         return prop_base.join_str_constraints(prop_base.constraint_model_serialize(self))
 
+
 @dataclass
 class _VmManifestPackage(Package):
     manifest: str
@@ -85,20 +89,22 @@ class _VmManifestPackage(Package):
 
     async def decorate_demand(self, demand: DemandBuilder):
         demand.ensure(str(self.constraints))
-        demand.add(VmManifestRequest(
-            manifest=self.manifest,
-            manifest_sig=self.manifest_sig,
-            manifest_sig_algorithm=self.manifest_sig_algorithm,
-            manifest_cert=self.manifest_cert,
-            package_format=VmPackageFormat.GVMKIT_SQUASH
-        ))
+        demand.add(
+            VmManifestRequest(
+                manifest=self.manifest,
+                manifest_sig=self.manifest_sig,
+                manifest_sig_algorithm=self.manifest_sig_algorithm,
+                manifest_cert=self.manifest_cert,
+                package_format=VmPackageFormat.GVMKIT_SQUASH,
+            )
+        )
 
 
 async def manifest(
-    manifest: str = None,
-    manifest_sig: str = None,
-    manifest_sig_algorithm: str = None,
-    manifest_cert: str = None,
+    manifest: str,
+    manifest_sig: str,
+    manifest_sig_algorithm: str,
+    manifest_cert: str,
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,
     min_cpu_threads: int = 1,
@@ -112,8 +118,9 @@ async def manifest(
         manifest_sig=manifest_sig,
         manifest_sig_algorithm=manifest_sig_algorithm,
         manifest_cert=manifest_cert,
-        constraints=constraints
+        constraints=constraints,
     )
+
 
 @dataclass
 class _VmPackage(Package):
@@ -135,7 +142,7 @@ class _VmPackage(Package):
 
 async def repo(
     *,
-    image_hash: Optional[str] = None,
+    image_hash: str,
     image_url: Optional[str] = None,
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,
