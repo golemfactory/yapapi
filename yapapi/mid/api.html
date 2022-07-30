@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yapapi mid-level refactoring 0.001 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="#" class="icon icon-home"> Yapapi mid-level refactoring
+          </a>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-api">Golem Python API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">Yapapi mid-level refactoring</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home"></a> &raquo;</li>
+      <li>Yapapi mid-level refactoring 0.001 documentation</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="golem-python-api-reference">
+<h1>Golem Python API Reference<a class="headerlink" href="#golem-python-api-reference" title="Permalink to this headline"></a></h1>
+<div class="toctree-wrapper compound">
+<span id="document-api"></span><section id="golem-python-api-reference">
+<h2>Golem Python API Reference<a class="headerlink" href="#golem-python-api-reference" title="Permalink to this headline"></a></h2>
+<section id="golemnode">
+<h3>GolemNode<a class="headerlink" href="#golemnode" title="Permalink to this headline"></a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="yapapi.mid.golem_node.GolemNode">
+<em class="property"><span class="pre">class</span><span class="w">  </span></em><span class="sig-prename descclassname"><span class="pre">yapapi.mid.golem_node.</span></span><span class="sig-name descname"><span class="pre">GolemNode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_url</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.golem_node.GolemNode" title="Permalink to this definition"></a></dt>
+<dd><p>Main entrypoint to the python Golem API, communicates with <cite>yagna</cite>.</p>
+<p>GolemNode object corresponds to a single running <cite>yagna</cite> instance
+and can operate on different subnets / networks.</p>
+<p>Usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">golem</span> <span class="o">=</span> <span class="n">GolemNode</span><span class="p">()</span>
+<span class="k">async</span> <span class="k">with</span> <span class="n">golem</span><span class="p">:</span>
+    <span class="c1">#   Interact with the Golem Network</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.golem_node.GolemNode.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_url</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.golem_node.GolemNode.__init__" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>app_key</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – App key used as an authentication token for all <cite>yagna</cite> calls.
+Defaults to the <cite>YAGNA_APPKEY</cite> env variable.</p></li>
+<li><p><strong>base_url</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – Base url for all <cite>yagna</cite> APIs. Defaults to <cite>YAGNA_API_URL</cite> env
+variable or <a class="reference external" href="http://127.0.0.1:7465">http://127.0.0.1:7465</a>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.golem_node.GolemNode.__aenter__">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">__aenter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.golem_node.GolemNode.__aenter__" title="Permalink to this definition"></a></dt>
+<dd><p>Start. Initialize all the APIs and the event bus.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#yapapi.mid.golem_node.GolemNode" title="yapapi.mid.golem_node.GolemNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">GolemNode</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.golem_node.GolemNode.__aexit__">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">__aexit__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">exc_info</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.golem_node.GolemNode.__aexit__" title="Permalink to this definition"></a></dt>
+<dd><p>Shutdown. Stop collecting yagna events, close all resources created with autoclose=True, close APIs etc.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.golem_node.GolemNode.create_allocation">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">create_allocation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">amount</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'rinkeby'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">driver</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'erc20'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">autoclose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.golem_node.GolemNode.create_allocation" title="Permalink to this definition"></a></dt>
+<dd><p>Create a new allocation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>amount</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Decimal</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>]) – Amount of GLMs to be allocated</p></li>
+<li><p><strong>network</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – Payment network</p></li>
+<li><p><strong>driver</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – Payment driver</p></li>
+<li><p><strong>autoclose</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – Release allocation on <a class="reference internal" href="#yapapi.mid.golem_node.GolemNode.__aexit__" title="yapapi.mid.golem_node.GolemNode.__aexit__"><code class="xref py py-func docutils literal notranslate"><span class="pre">__aexit__()</span></code></a></p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#yapapi.mid.payment.Allocation" title="yapapi.mid.payment.Allocation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Allocation</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.golem_node.GolemNode.create_demand">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">create_demand</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">payload</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subnet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'devnet-beta'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expiration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allocations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">autoclose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">autostart</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.golem_node.GolemNode.create_demand" title="Permalink to this definition"></a></dt>
+<dd><p>Subscribe a new demand.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>payload</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Payload</span></code>) – Details of the demand</p></li>
+<li><p><strong>subnet</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – Subnet tag</p></li>
+<li><p><strong>expiration</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">datetime</span></code>]) – Timestamp when all agreements based on this demand will expire (TODO: is this correct?)</p></li>
+<li><p><strong>allocations</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Iterable</span></code>[<a class="reference internal" href="#yapapi.mid.payment.Allocation" title="yapapi.mid.payment.Allocation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Allocation</span></code></a>]) – Allocations that will be included in the description of this demand.</p></li>
+<li><p><strong>autoclose</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – Unsubscribe demand on <a class="reference internal" href="#yapapi.mid.golem_node.GolemNode.__aexit__" title="yapapi.mid.golem_node.GolemNode.__aexit__"><code class="xref py py-func docutils literal notranslate"><span class="pre">__aexit__()</span></code></a></p></li>
+<li><p><strong>autostart</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – Immediately start collecting yagna events for this <a class="reference internal" href="#yapapi.mid.market.Demand" title="yapapi.mid.market.Demand"><code class="xref py py-class docutils literal notranslate"><span class="pre">Demand</span></code></a>.
+Without autostart events for this demand will start being collected after a call to
+<a class="reference internal" href="#yapapi.mid.market.Demand.start_collecting_events" title="yapapi.mid.market.Demand.start_collecting_events"><code class="xref py py-func docutils literal notranslate"><span class="pre">start_collecting_events()</span></code></a>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#yapapi.mid.market.Demand" title="yapapi.mid.market.Demand"><code class="xref py py-class docutils literal notranslate"><span class="pre">Demand</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.golem_node.GolemNode.allocation">
+<span class="sig-name descname"><span class="pre">allocation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">allocation_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.golem_node.GolemNode.allocation" title="Permalink to this definition"></a></dt>
+<dd><p>Returns an <a class="reference internal" href="#yapapi.mid.payment.Allocation" title="yapapi.mid.payment.Allocation"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Allocation</span></code></a> with a given id (assumed to be correct, there is no validation).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#yapapi.mid.payment.Allocation" title="yapapi.mid.payment.Allocation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Allocation</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.golem_node.GolemNode.demand">
+<span class="sig-name descname"><span class="pre">demand</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">demand_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.golem_node.GolemNode.demand" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a <a class="reference internal" href="#yapapi.mid.market.Demand" title="yapapi.mid.market.Demand"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Demand</span></code></a> with a given id (assumed to be correct, there is no validation).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#yapapi.mid.market.Demand" title="yapapi.mid.market.Demand"><code class="xref py py-class docutils literal notranslate"><span class="pre">Demand</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.golem_node.GolemNode.proposal">
+<span class="sig-name descname"><span class="pre">proposal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">proposal_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.golem_node.GolemNode.proposal" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a <a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a> with a given id (assumed to be correct, there is no validation).</p>
+<p>Id of a proposal has a meaning only in the context of a demand,
+so demand_id is also necessary (and also not validated).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.golem_node.GolemNode.agreement">
+<span class="sig-name descname"><span class="pre">agreement</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">agreement_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.golem_node.GolemNode.agreement" title="Permalink to this definition"></a></dt>
+<dd><p>Returns an <a class="reference internal" href="#yapapi.mid.market.Agreement" title="yapapi.mid.market.Agreement"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Agreement</span></code></a> with a given id (assumed to be correct, there is no validation).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#yapapi.mid.market.Agreement" title="yapapi.mid.market.Agreement"><code class="xref py py-class docutils literal notranslate"><span class="pre">Agreement</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.golem_node.GolemNode.allocations">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">allocations</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.golem_node.GolemNode.allocations" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a list of <a class="reference internal" href="#yapapi.mid.payment.Allocation" title="yapapi.mid.payment.Allocation"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Allocation</span></code></a> objects corresponding to all current allocations.</p>
+<p>These are all allocations related to the current APP_KEY - it doesn’t matter if they were created
+with this <a class="reference internal" href="#yapapi.mid.golem_node.GolemNode" title="yapapi.mid.golem_node.GolemNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">GolemNode</span></code></a> instance (or if <a class="reference internal" href="#yapapi.mid.golem_node.GolemNode" title="yapapi.mid.golem_node.GolemNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">GolemNode</span></code></a> was used at all).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<a class="reference internal" href="#yapapi.mid.payment.Allocation" title="yapapi.mid.payment.Allocation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Allocation</span></code></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.golem_node.GolemNode.demands">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">demands</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.golem_node.GolemNode.demands" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a list of <a class="reference internal" href="#yapapi.mid.market.Demand" title="yapapi.mid.market.Demand"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Demand</span></code></a> objects corresponding to all current demands.</p>
+<p>These are all demands subscribed with the current APP_KEY - it doesn’t matter if they were created
+with this <a class="reference internal" href="#yapapi.mid.golem_node.GolemNode" title="yapapi.mid.golem_node.GolemNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">GolemNode</span></code></a> instance (or if <a class="reference internal" href="#yapapi.mid.golem_node.GolemNode" title="yapapi.mid.golem_node.GolemNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">GolemNode</span></code></a> was used at all).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<a class="reference internal" href="#yapapi.mid.market.Demand" title="yapapi.mid.market.Demand"><code class="xref py py-class docutils literal notranslate"><span class="pre">Demand</span></code></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="yapapi.mid.golem_node.GolemNode.event_bus">
+<em class="property"><span class="pre">property</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">event_bus</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w">  </span><a class="reference internal" href="index.html#yapapi.mid.event_bus.EventBus" title="yapapi.mid.event_bus.EventBus"><span class="pre">yapapi.mid.event_bus.EventBus</span></a></em><a class="headerlink" href="#yapapi.mid.golem_node.GolemNode.event_bus" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the <a class="reference internal" href="#yapapi.mid.event_bus.EventBus" title="yapapi.mid.event_bus.EventBus"><code class="xref any py py-class docutils literal notranslate"><span class="pre">EventBus</span></code></a> used by this <a class="reference internal" href="#yapapi.mid.golem_node.GolemNode" title="yapapi.mid.golem_node.GolemNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">GolemNode</span></code></a>.</p>
+<p>Any <a class="reference internal" href="#yapapi.mid.events.Event" title="yapapi.mid.events.Event"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Event</span></code></a> triggered by this <a class="reference internal" href="#yapapi.mid.golem_node.GolemNode" title="yapapi.mid.golem_node.GolemNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">GolemNode</span></code></a> or any related object
+will be sent there and passed to registered listeners.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#yapapi.mid.event_bus.EventBus" title="yapapi.mid.event_bus.EventBus"><code class="xref py py-class docutils literal notranslate"><span class="pre">EventBus</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="high-level-api">
+<h3>High-Level API<a class="headerlink" href="#high-level-api" title="Permalink to this headline"></a></h3>
+<p>[Nothing here yet. Task API, Service API etc.]</p>
+</section>
+<section id="mid-level-api">
+<h3>Mid-level API<a class="headerlink" href="#mid-level-api" title="Permalink to this headline"></a></h3>
+<p>Mid-level API consists of reusable components that can serve as a building blocks for various
+different applications.</p>
+<p>Important temporary note: this will be easier to understand after reading the <cite>run.py</cite> example.</p>
+<section id="chain">
+<h4>Chain<a class="headerlink" href="#chain" title="Permalink to this headline"></a></h4>
+<dl class="py class">
+<dt class="sig sig-object py" id="yapapi.mid.chain.Chain">
+<em class="property"><span class="pre">class</span><span class="w">  </span></em><span class="sig-prename descclassname"><span class="pre">yapapi.mid.chain.</span></span><span class="sig-name descname"><span class="pre">Chain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chain_start</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">pipes</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.chain.Chain" title="Permalink to this definition"></a></dt>
+<dd><p>Special class for mid-level components that utilize the pipes and filters pattern.</p>
+<p>Sample usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">async</span> <span class="k">def</span> <span class="nf">source</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">AsyncIterator</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">yield</span> <span class="mi">1</span>
+    <span class="k">yield</span> <span class="mi">2</span>
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">int_2_str</span><span class="p">(</span><span class="n">numbers</span><span class="p">:</span> <span class="n">AsyncIterator</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">AsyncIterator</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="k">async</span> <span class="k">for</span> <span class="n">number</span> <span class="ow">in</span> <span class="n">numbers</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="nb">str</span><span class="p">(</span><span class="n">number</span><span class="p">)</span>
+
+<span class="k">async</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">Chain</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">int_2_str</span><span class="p">):</span>
+    <span class="c1"># x == &quot;1&quot;</span>
+    <span class="c1"># x == &quot;2&quot;</span>
+</pre></div>
+</div>
+<p>More complex usages –&gt; [TODO - examples, run.py].</p>
+</dd></dl>
+
+</section>
+<section id="chain-components">
+<h4>Chain components<a class="headerlink" href="#chain-components" title="Permalink to this headline"></a></h4>
+<p>Components in this section can be used as parts of the Chain (but don’t have to).</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="yapapi.mid.chain.SimpleScorer">
+<em class="property"><span class="pre">class</span><span class="w">  </span></em><span class="sig-prename descclassname"><span class="pre">yapapi.mid.chain.</span></span><span class="sig-name descname"><span class="pre">SimpleScorer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">score_proposal</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_proposals</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_wait</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.chain.SimpleScorer" title="Permalink to this definition"></a></dt>
+<dd><p>Re-orders proposals using a provided scoring function.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.chain.SimpleScorer.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">score_proposal</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_proposals</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_wait</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.chain.SimpleScorer.__init__" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>score_proposal</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code>[[<a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a>], <code class="xref py py-class docutils literal notranslate"><span class="pre">Awaitable</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>]]) – Proposal-scoring function. Higher score -&gt; better <a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a>.</p></li>
+<li><p><strong>min_proposals</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]) – If not None, <a class="reference internal" href="#yapapi.mid.chain.SimpleScorer.__call__" title="yapapi.mid.chain.SimpleScorer.__call__"><code class="xref py py-func docutils literal notranslate"><span class="pre">__call__()</span></code></a> will not yield anything until
+at least that many proposals were scored (but <cite>max_wait</cite> overrides this)</p></li>
+<li><p><strong>max_wait</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">timedelta</span></code>]) – If not None, we’ll not wait for <cite>min_proposals</cite> longer than that.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.chain.SimpleScorer.__call__">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">__call__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">proposals</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.chain.SimpleScorer.__call__" title="Permalink to this definition"></a></dt>
+<dd><p>Consumes incoming proposals as fast as possible. Always yields a <a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a> with the highest score.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>proposals</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">AsyncIterator</span></code>[<a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a>]) – Stream of <a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a> to be reordered.
+In fact, this could be stream of whatever, as long as this whatever matches
+the scoring function, and this whatever would be yielded (–&gt; TODO - maybe generalize this?).</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">AsyncIterator</span></code>[<a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="yapapi.mid.chain.DefaultNegotiator">
+<em class="property"><span class="pre">class</span><span class="w">  </span></em><span class="sig-prename descclassname"><span class="pre">yapapi.mid.chain.</span></span><span class="sig-name descname"><span class="pre">DefaultNegotiator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.chain.DefaultNegotiator" title="Permalink to this definition"></a></dt>
+<dd><p>IN: any <a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a>. OUT: a <a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a> that can be used as a base for an <a class="reference internal" href="#yapapi.mid.market.Agreement" title="yapapi.mid.market.Agreement"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Agreement</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.chain.DefaultNegotiator.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.chain.DefaultNegotiator.__init__" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>buffer_size</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – (number_of_current_negotiations + number_of_ready_proposals) will always equal this number
+(except when the initial stream was exhausted, when it will be lower).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.chain.DefaultNegotiator.__call__">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">__call__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">proposals</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.chain.DefaultNegotiator.__call__" title="Permalink to this definition"></a></dt>
+<dd><p>Consumes proposals as slowly as possible (but filling <cite>buffer_size</cite>), yields “ready” <a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>proposals</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">AsyncIterator</span></code>[<a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a>]) – A stream of <a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a> that will be used as a base of negotiations.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">AsyncIterator</span></code>[<a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="yapapi.mid.chain.AgreementCreator">
+<em class="property"><span class="pre">class</span><span class="w">  </span></em><span class="sig-prename descclassname"><span class="pre">yapapi.mid.chain.</span></span><span class="sig-name descname"><span class="pre">AgreementCreator</span></span><a class="headerlink" href="#yapapi.mid.chain.AgreementCreator" title="Permalink to this definition"></a></dt>
+<dd><p>Uses a <a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a> to create an <a class="reference internal" href="#yapapi.mid.market.Agreement" title="yapapi.mid.market.Agreement"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Agreement</span></code></a>, confirms it and waits for approval.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.chain.AgreementCreator.__call__">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">__call__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">proposals</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.chain.AgreementCreator.__call__" title="Permalink to this definition"></a></dt>
+<dd><p>Consumes <a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a>. Yields confirmed &amp; approved <a class="reference internal" href="#yapapi.mid.market.Agreement" title="yapapi.mid.market.Agreement"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Agreement</span></code></a>.</p>
+<p>At most a single <a class="reference internal" href="#yapapi.mid.market.Agreement" title="yapapi.mid.market.Agreement"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Agreement</span></code></a> is being created at any given time, so that’s pretty
+inefficient.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>proposals</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">AsyncIterator</span></code>[<a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a>]) – A stream of <a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a> (that should be in a state that allows to
+<a class="reference internal" href="#yapapi.mid.market.Proposal.create_agreement" title="yapapi.mid.market.Proposal.create_agreement"><code class="xref any py py-meth docutils literal notranslate"><span class="pre">Proposal.create_agreement</span></code></a> on them).</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">AsyncIterator</span></code>[<a class="reference internal" href="#yapapi.mid.market.Agreement" title="yapapi.mid.market.Agreement"><code class="xref py py-class docutils literal notranslate"><span class="pre">Agreement</span></code></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+<section id="low-level-api">
+<h3>Low-level API<a class="headerlink" href="#low-level-api" title="Permalink to this headline"></a></h3>
+<p>Low-level objects correspond to resources in the Golem Network.
+They make no assumptions about any higher-level components that interact with them.
+Capabilities of the low-level API should match <cite>yagna</cite> capabilities, i.e. anything one can
+do by direct <cite>yagna</cite> interactions should also be possible - and, hopefully, more convenient -
+by performing operations on the low-level objects.</p>
+<section id="resource">
+<h4>Resource<a class="headerlink" href="#resource" title="Permalink to this headline"></a></h4>
+<dl class="py class">
+<dt class="sig sig-object py" id="yapapi.mid.resource.Resource">
+<em class="property"><span class="pre">class</span><span class="w">  </span></em><span class="sig-prename descclassname"><span class="pre">yapapi.mid.resource.</span></span><span class="sig-name descname"><span class="pre">Resource</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.resource.Resource" title="Permalink to this definition"></a></dt>
+<dd><p>Base class of all low-level objects.</p>
+<p>TODO - fix typing in the documentation of this class. I’m afraid this might require
+changes in <cite>sphinx_autodoc_typehints</cite>.</p>
+<p>TODO - in the final version this should disappear from the public docs and all these methods
+should be described on subclasses, but this doesn’t make much sense before the previous TODO.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="yapapi.mid.resource.Resource.parent">
+<em class="property"><span class="pre">property</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">parent</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w">  </span><span class="pre">yapapi.mid.resource_internals.ParentType</span></em><a class="headerlink" href="#yapapi.mid.resource.Resource.parent" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a <a class="reference internal" href="#yapapi.mid.resource.Resource" title="yapapi.mid.resource.Resource"><code class="xref py py-class docutils literal notranslate"><span class="pre">Resource</span></code></a> we are a child of. Details: <a class="reference internal" href="#yapapi.mid.resource.Resource.children" title="yapapi.mid.resource.Resource.children"><code class="xref py py-func docutils literal notranslate"><span class="pre">children()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeVar</span></code>(<code class="docutils literal notranslate"><span class="pre">ParentType</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_NULL</span></code>, market.Proposal, <code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[market.Demand, market.Proposal])</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="yapapi.mid.resource.Resource.children">
+<em class="property"><span class="pre">property</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">children</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w">  </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">yapapi.mid.resource_internals.ChildType</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#yapapi.mid.resource.Resource.children" title="Permalink to this definition"></a></dt>
+<dd><p>List of Resources that were created “from” this resource.</p>
+<p>E.g. children of a <a class="reference internal" href="#yapapi.mid.market.Demand" title="yapapi.mid.market.Demand"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Demand</span></code></a> are <a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a>.
+Children of <a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a> are either <a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a> (counter-proposals to it),
+or <a class="reference internal" href="#yapapi.mid.market.Agreement" title="yapapi.mid.market.Agreement"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Agreement</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">TypeVar</span></code>(<code class="docutils literal notranslate"><span class="pre">ChildType</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_NULL</span></code>, market.Proposal, <code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[market.Proposal, market.Agreement])]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.resource.Resource.child_aiter">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">child_aiter</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.resource.Resource.child_aiter" title="Permalink to this definition"></a></dt>
+<dd><p>Yields children. Stops when <a class="reference internal" href="#yapapi.mid.resource.Resource" title="yapapi.mid.resource.Resource"><code class="xref py py-class docutils literal notranslate"><span class="pre">Resource</span></code></a> knows there will be no more children.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">AsyncIterator</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">TypeVar</span></code>(<code class="docutils literal notranslate"><span class="pre">ChildType</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_NULL</span></code>, market.Proposal, <code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[market.Proposal, market.Agreement])]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="yapapi.mid.resource.Resource.events">
+<em class="property"><span class="pre">property</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">events</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w">  </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">yapapi.mid.resource_internals.EventType</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#yapapi.mid.resource.Resource.events" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a list of all <cite>yagna</cite> events related to this <a class="reference internal" href="#yapapi.mid.resource.Resource" title="yapapi.mid.resource.Resource"><code class="xref py py-class docutils literal notranslate"><span class="pre">Resource</span></code></a>.</p>
+<p>Note: these are <strong>yagna</strong> events and should not be confused with <cite>yapapi.mid.events</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">TypeVar</span></code>(<code class="docutils literal notranslate"><span class="pre">EventType</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_NULL</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">ProposalEvent</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">ProposalRejectedEvent</span></code>])]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="yapapi.mid.resource.Resource.id">
+<em class="property"><span class="pre">property</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w">  </span><span class="pre">str</span></em><a class="headerlink" href="#yapapi.mid.resource.Resource.id" title="Permalink to this definition"></a></dt>
+<dd><p>Id of the resource, generated by <cite>yagna</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="yapapi.mid.resource.Resource.data">
+<em class="property"><span class="pre">property</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">data</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w">  </span><span class="pre">yapapi.mid.resource_internals.ModelType</span></em><a class="headerlink" href="#yapapi.mid.resource.Resource.data" title="Permalink to this definition"></a></dt>
+<dd><p>Same as <a class="reference internal" href="#yapapi.mid.resource.Resource.get_data" title="yapapi.mid.resource.Resource.get_data"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_data()</span></code></a>, but cached.</p>
+<p>Raises <code class="xref py py-class docutils literal notranslate"><span class="pre">RuntimeError</span></code> if data was never fetched.</p>
+<p>NOTE: <cite>data</cite> might be available even without a prior call to <a class="reference internal" href="#yapapi.mid.resource.Resource.get_data" title="yapapi.mid.resource.Resource.get_data"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_data()</span></code></a>
+because some resources (e.g. initial <a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a>) are fetched from <cite>yagna</cite>
+with full data right away.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeVar</span></code>(<code class="docutils literal notranslate"><span class="pre">ModelType</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Allocation</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Demand</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Proposal</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Agreement</span></code>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="yapapi.mid.resource.Resource.node">
+<em class="property"><span class="pre">property</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">node</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w">  </span><a class="reference internal" href="index.html#yapapi.mid.golem_node.GolemNode" title="yapapi.mid.golem_node.GolemNode"><span class="pre">yapapi.mid.golem_node.GolemNode</span></a></em><a class="headerlink" href="#yapapi.mid.resource.Resource.node" title="Permalink to this definition"></a></dt>
+<dd><p><a class="reference internal" href="#yapapi.mid.golem_node.GolemNode" title="yapapi.mid.golem_node.GolemNode"><code class="xref any py py-class docutils literal notranslate"><span class="pre">GolemNode</span></code></a> that defines the context of this <a class="reference internal" href="#yapapi.mid.resource.Resource" title="yapapi.mid.resource.Resource"><code class="xref py py-class docutils literal notranslate"><span class="pre">Resource</span></code></a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#yapapi.mid.golem_node.GolemNode" title="yapapi.mid.golem_node.GolemNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">GolemNode</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.resource.Resource.get_data">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">get_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">force</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.resource.Resource.get_data" title="Permalink to this definition"></a></dt>
+<dd><p>Returns details of this resource.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>force</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – False -&gt; returns the cached data (or fetches data from <cite>yagna</cite> if there is no cached version).
+True -&gt; always fetches the new data (and updates the cache).</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeVar</span></code>(<code class="docutils literal notranslate"><span class="pre">ModelType</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Allocation</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Demand</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Proposal</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Agreement</span></code>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="market-api">
+<h4>Market API<a class="headerlink" href="#market-api" title="Permalink to this headline"></a></h4>
+<dl class="py class">
+<dt class="sig sig-object py" id="yapapi.mid.market.Demand">
+<em class="property"><span class="pre">class</span><span class="w">  </span></em><span class="sig-prename descclassname"><span class="pre">yapapi.mid.market.</span></span><span class="sig-name descname"><span class="pre">Demand</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.market.Demand" title="Permalink to this definition"></a></dt>
+<dd><p>A single demand on the Golem Network.</p>
+<p>Created with one of the <a class="reference internal" href="#yapapi.mid.market.Demand" title="yapapi.mid.market.Demand"><code class="xref py py-class docutils literal notranslate"><span class="pre">Demand</span></code></a>-returning methods of the <a class="reference internal" href="#yapapi.mid.golem_node.GolemNode" title="yapapi.mid.golem_node.GolemNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">GolemNode</span></code></a>.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.market.Demand.start_collecting_events">
+<span class="sig-name descname"><span class="pre">start_collecting_events</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.market.Demand.start_collecting_events" title="Permalink to this definition"></a></dt>
+<dd><p>Start collecting <cite>yagna</cite> events in response to this demand.</p>
+<p>Each event is either a new initial <a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a> (yielded in <a class="reference internal" href="#yapapi.mid.market.Demand.initial_proposals" title="yapapi.mid.market.Demand.initial_proposals"><code class="xref py py-func docutils literal notranslate"><span class="pre">initial_proposals()</span></code></a>),
+a response to our counter-proposal (accessible via <a class="reference internal" href="#yapapi.mid.market.Proposal.responses" title="yapapi.mid.market.Proposal.responses"><code class="xref py py-func docutils literal notranslate"><span class="pre">Proposal.responses()</span></code></a>),
+or a rejection of a proposal.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.market.Demand.stop_collecting_events">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">stop_collecting_events</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.market.Demand.stop_collecting_events" title="Permalink to this definition"></a></dt>
+<dd><p>Stop collecting events, after a prior call to <a class="reference internal" href="#yapapi.mid.market.Demand.start_collecting_events" title="yapapi.mid.market.Demand.start_collecting_events"><code class="xref py py-func docutils literal notranslate"><span class="pre">start_collecting_events()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.market.Demand.unsubscribe">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">unsubscribe</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.market.Demand.unsubscribe" title="Permalink to this definition"></a></dt>
+<dd><p>Stop all operations related to this demand and remove it.</p>
+<p>This is a final operation, unsubscribed demand is not available anymore.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.market.Demand.initial_proposals">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">initial_proposals</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.market.Demand.initial_proposals" title="Permalink to this definition"></a></dt>
+<dd><p>Yields initial proposals matched to this demand.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">AsyncIterator</span></code>[<a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.market.Demand.proposal">
+<span class="sig-name descname"><span class="pre">proposal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">proposal_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.market.Demand.proposal" title="Permalink to this definition"></a></dt>
+<dd><p>Return a <a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a> with a given ID.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="yapapi.mid.market.Proposal">
+<em class="property"><span class="pre">class</span><span class="w">  </span></em><span class="sig-prename descclassname"><span class="pre">yapapi.mid.market.</span></span><span class="sig-name descname"><span class="pre">Proposal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.market.Proposal" title="Permalink to this definition"></a></dt>
+<dd><p>A single proposal on the Golem Network.</p>
+<p>Either a initial proposal matched to a demand, or a counter-proposal sent
+either by us or by the provider.</p>
+<p>Sample usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">initial_proposal</span> <span class="o">=</span> <span class="k">await</span> <span class="n">demand</span><span class="o">.</span><span class="n">initial_proposals</span><span class="p">()</span><span class="o">.</span><span class="fm">__anext__</span><span class="p">()</span>
+<span class="n">our_counter_proposal</span> <span class="o">=</span> <span class="k">await</span> <span class="n">initial_proposal</span><span class="o">.</span><span class="n">respond</span><span class="p">()</span>
+<span class="k">async</span> <span class="k">for</span> <span class="n">their_counter_proposal</span> <span class="ow">in</span> <span class="n">our_counter_proposal</span><span class="o">.</span><span class="n">responses</span><span class="p">():</span>
+    <span class="n">agreement</span> <span class="o">=</span> <span class="n">their_counter_proposal</span><span class="o">.</span><span class="n">create_agreement</span><span class="p">()</span>
+    <span class="k">break</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Our counter-proposal was rejected :(&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="py property">
+<dt class="sig sig-object py" id="yapapi.mid.market.Proposal.initial">
+<em class="property"><span class="pre">property</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">initial</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w">  </span><span class="pre">bool</span></em><a class="headerlink" href="#yapapi.mid.market.Proposal.initial" title="Permalink to this definition"></a></dt>
+<dd><p>True for proposals matched directly to the demand.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="yapapi.mid.market.Proposal.draft">
+<em class="property"><span class="pre">property</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">draft</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w">  </span><span class="pre">bool</span></em><a class="headerlink" href="#yapapi.mid.market.Proposal.draft" title="Permalink to this definition"></a></dt>
+<dd><p>True for proposals that are responses to other proposals.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="yapapi.mid.market.Proposal.rejected">
+<em class="property"><span class="pre">property</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">rejected</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w">  </span><span class="pre">bool</span></em><a class="headerlink" href="#yapapi.mid.market.Proposal.rejected" title="Permalink to this definition"></a></dt>
+<dd><p>True for rejected proposals. They will have no more <a class="reference internal" href="#yapapi.mid.market.Proposal.responses" title="yapapi.mid.market.Proposal.responses"><code class="xref py py-func docutils literal notranslate"><span class="pre">responses()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="yapapi.mid.market.Proposal.demand">
+<em class="property"><span class="pre">property</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">demand</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w">  </span><a class="reference internal" href="index.html#yapapi.mid.market.Demand" title="yapapi.mid.market.Demand"><span class="pre">yapapi.mid.market.Demand</span></a></em><a class="headerlink" href="#yapapi.mid.market.Proposal.demand" title="Permalink to this definition"></a></dt>
+<dd><p>Initial <a class="reference internal" href="#yapapi.mid.market.Demand" title="yapapi.mid.market.Demand"><code class="xref py py-class docutils literal notranslate"><span class="pre">Demand</span></code></a> related to this proposal.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#yapapi.mid.market.Demand" title="yapapi.mid.market.Demand"><code class="xref py py-class docutils literal notranslate"><span class="pre">Demand</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.market.Proposal.responses">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">responses</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.market.Proposal.responses" title="Permalink to this definition"></a></dt>
+<dd><p>Yields responses to this proposal.</p>
+<p>Stops when the proposal is rejected.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">AsyncIterator</span></code>[<a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.market.Proposal.create_agreement">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">create_agreement</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">autoclose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">datetime.timedelta(seconds=60)</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.market.Proposal.create_agreement" title="Permalink to this definition"></a></dt>
+<dd><p>Promote this proposal to an agreement.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>autoclose</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – Terminate the agreement when the <a class="reference internal" href="#yapapi.mid.golem_node.GolemNode" title="yapapi.mid.golem_node.GolemNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">GolemNode</span></code></a> closes.</p></li>
+<li><p><strong>timeout</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">timedelta</span></code>) – TODO - this is used as <cite>AgreementValidTo</cite>, but what is it exactly?</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#yapapi.mid.market.Agreement" title="yapapi.mid.market.Agreement"><code class="xref py py-class docutils literal notranslate"><span class="pre">Agreement</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.market.Proposal.reject">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">reject</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reason</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.market.Proposal.reject" title="Permalink to this definition"></a></dt>
+<dd><p>Reject the proposal - inform the provider that we won’t send any more counter-proposals.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>reason</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – An optional information for the provider describing rejection reasons.</p>
+</dd>
+</dl>
+<p>Invalid on our responses.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.market.Proposal.respond">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">respond</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.market.Proposal.respond" title="Permalink to this definition"></a></dt>
+<dd><p>Respond to a proposal with a counter-proposal.</p>
+<p>Invalid on proposals sent by the provider.</p>
+<p>TODO: all the negotiation logic should be reflected in params of this method,
+but negotiations are not implemented yet.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="yapapi.mid.market.Agreement">
+<em class="property"><span class="pre">class</span><span class="w">  </span></em><span class="sig-prename descclassname"><span class="pre">yapapi.mid.market.</span></span><span class="sig-name descname"><span class="pre">Agreement</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.market.Agreement" title="Permalink to this definition"></a></dt>
+<dd><p>A single agreement on the Golem Network.</p>
+<p>Sample usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">agreement</span> <span class="o">=</span> <span class="k">await</span> <span class="n">proposal</span><span class="o">.</span><span class="n">create_agreement</span><span class="p">()</span>
+<span class="k">await</span> <span class="n">agreement</span><span class="o">.</span><span class="n">confirm</span><span class="p">()</span>
+<span class="k">await</span> <span class="n">agreement</span><span class="o">.</span><span class="n">wait_for_approval</span><span class="p">()</span>
+<span class="c1">#   Create activity, use the activity</span>
+<span class="k">await</span> <span class="n">agreement</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.market.Agreement.confirm">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">confirm</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.market.Agreement.confirm" title="Permalink to this definition"></a></dt>
+<dd><p>Confirm the agreement.</p>
+<p>First step that leads to an active agreement.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.market.Agreement.wait_for_approval">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">wait_for_approval</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.market.Agreement.wait_for_approval" title="Permalink to this definition"></a></dt>
+<dd><p>Wait for provider’s approval of the agreement.</p>
+<p>Second (and last) step leading to an active agreement.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>True if agreement was approved.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.market.Agreement.terminate">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">terminate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reason</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.market.Agreement.terminate" title="Permalink to this definition"></a></dt>
+<dd><p>Terminate the agreement.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="payment-api">
+<h4>Payment API<a class="headerlink" href="#payment-api" title="Permalink to this headline"></a></h4>
+<dl class="py class">
+<dt class="sig sig-object py" id="yapapi.mid.payment.Allocation">
+<em class="property"><span class="pre">class</span><span class="w">  </span></em><span class="sig-prename descclassname"><span class="pre">yapapi.mid.payment.</span></span><span class="sig-name descname"><span class="pre">Allocation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.payment.Allocation" title="Permalink to this definition"></a></dt>
+<dd><p>A single allocation on the Golem Network.</p>
+<p>Created with one of the <a class="reference internal" href="#yapapi.mid.payment.Allocation" title="yapapi.mid.payment.Allocation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Allocation</span></code></a>-returning methods of the <a class="reference internal" href="#yapapi.mid.golem_node.GolemNode" title="yapapi.mid.golem_node.GolemNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">GolemNode</span></code></a>.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.payment.Allocation.release">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">release</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.payment.Allocation.release" title="Permalink to this definition"></a></dt>
+<dd><p>Release the allocation.</p>
+<p>Remaining amount will be available again. This is the final operation -
+released allocation is not available anymore.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+<section id="events">
+<h3>Events<a class="headerlink" href="#events" title="Permalink to this headline"></a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="yapapi.mid.event_bus.EventBus">
+<em class="property"><span class="pre">class</span><span class="w">  </span></em><span class="sig-prename descclassname"><span class="pre">yapapi.mid.event_bus.</span></span><span class="sig-name descname"><span class="pre">EventBus</span></span><a class="headerlink" href="#yapapi.mid.event_bus.EventBus" title="Permalink to this definition"></a></dt>
+<dd><p>Emit events, listen for events.</p>
+<p>This class has few purposes:</p>
+<ul class="simple">
+<li><p>Easy monitoring of the execution process (just log all events)</p></li>
+<li><p>Convenient communication between separated parts of the code. E.g. we might want to act on incoming
+invoices from a component that is not connected to any other part of the code - with EventBus,
+we only have to register a callback for NewResource events.</p></li>
+<li><p>Using a producer-consumer pattern to implement parts of the app-specific logic.</p></li>
+</ul>
+<p>Sample usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">async</span> <span class="k">def</span> <span class="nf">on_allocation_event</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">ResourceEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Something happened to an allocation!&quot;</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
+
+<span class="n">golem</span> <span class="o">=</span> <span class="n">GolemNode</span><span class="p">()</span>
+<span class="n">event_bus</span><span class="p">:</span> <span class="n">EventBus</span> <span class="o">=</span> <span class="n">golem</span><span class="o">.</span><span class="n">event_bus</span>
+<span class="n">event_bus</span><span class="o">.</span><span class="n">resource_listen</span><span class="p">(</span><span class="n">on_allocation_event</span><span class="p">,</span> <span class="n">resource_classes</span><span class="o">=</span><span class="p">[</span><span class="n">Allocation</span><span class="p">])</span>
+
+<span class="k">async</span> <span class="k">with</span> <span class="n">golem</span><span class="p">:</span>
+    <span class="c1">#   This will cause execution of on_allocation_event with a NewResource event</span>
+    <span class="n">allocation</span> <span class="o">=</span> <span class="k">await</span> <span class="n">golem</span><span class="o">.</span><span class="n">create_allocation</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="c1">#   Allocation was created with autoclose=True, so now we also got a ResourceClosed event</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.event_bus.EventBus.listen">
+<span class="sig-name descname"><span class="pre">listen</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">callback</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">classes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.event_bus.EventBus.listen" title="Permalink to this definition"></a></dt>
+<dd><p>Execute the callback when <a class="reference internal" href="#yapapi.mid.events.Event" title="yapapi.mid.events.Event"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Event</span></code></a> is emitted.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>callback</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code>[[<a class="reference internal" href="#yapapi.mid.events.ResourceEvent" title="yapapi.mid.events.ResourceEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResourceEvent</span></code></a>], <code class="xref py py-class docutils literal notranslate"><span class="pre">Awaitable</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>]], <code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code>[[<a class="reference internal" href="#yapapi.mid.events.NewResource" title="yapapi.mid.events.NewResource"><code class="xref py py-class docutils literal notranslate"><span class="pre">NewResource</span></code></a>], <code class="xref py py-class docutils literal notranslate"><span class="pre">Awaitable</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>]], <code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code>[[<a class="reference internal" href="#yapapi.mid.events.ResourceDataChanged" title="yapapi.mid.events.ResourceDataChanged"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResourceDataChanged</span></code></a>], <code class="xref py py-class docutils literal notranslate"><span class="pre">Awaitable</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>]], <code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code>[[<a class="reference internal" href="#yapapi.mid.events.ResourceChangePossible" title="yapapi.mid.events.ResourceChangePossible"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResourceChangePossible</span></code></a>], <code class="xref py py-class docutils literal notranslate"><span class="pre">Awaitable</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>]], <code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code>[[<a class="reference internal" href="#yapapi.mid.events.ResourceClosed" title="yapapi.mid.events.ResourceClosed"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResourceClosed</span></code></a>], <code class="xref py py-class docutils literal notranslate"><span class="pre">Awaitable</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>]], <code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code>[[<a class="reference internal" href="#yapapi.mid.events.Event" title="yapapi.mid.events.Event"><code class="xref py py-class docutils literal notranslate"><span class="pre">Event</span></code></a>], <code class="xref py py-class docutils literal notranslate"><span class="pre">Awaitable</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>]]]) – An async function to be executed.</p></li>
+<li><p><strong>classes</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Iterable</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Type</span></code>[<a class="reference internal" href="#yapapi.mid.events.Event" title="yapapi.mid.events.Event"><code class="xref py py-class docutils literal notranslate"><span class="pre">Event</span></code></a>]]) – A list of <a class="reference internal" href="#yapapi.mid.events.Event" title="yapapi.mid.events.Event"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Event</span></code></a> subclasses - if not empty,
+<cite>callback</cite> will only be executed on events of matching classes.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.event_bus.EventBus.resource_listen">
+<span class="sig-name descname"><span class="pre">resource_listen</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">callback</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event_classes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resource_classes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ids</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.event_bus.EventBus.resource_listen" title="Permalink to this definition"></a></dt>
+<dd><p>Execute the callback when <a class="reference internal" href="#yapapi.mid.events.ResourceEvent" title="yapapi.mid.events.ResourceEvent"><code class="xref any py py-class docutils literal notranslate"><span class="pre">ResourceEvent</span></code></a> is emitted.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>callback</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code>[[<a class="reference internal" href="#yapapi.mid.events.ResourceEvent" title="yapapi.mid.events.ResourceEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResourceEvent</span></code></a>], <code class="xref py py-class docutils literal notranslate"><span class="pre">Awaitable</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>]], <code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code>[[<a class="reference internal" href="#yapapi.mid.events.NewResource" title="yapapi.mid.events.NewResource"><code class="xref py py-class docutils literal notranslate"><span class="pre">NewResource</span></code></a>], <code class="xref py py-class docutils literal notranslate"><span class="pre">Awaitable</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>]], <code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code>[[<a class="reference internal" href="#yapapi.mid.events.ResourceDataChanged" title="yapapi.mid.events.ResourceDataChanged"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResourceDataChanged</span></code></a>], <code class="xref py py-class docutils literal notranslate"><span class="pre">Awaitable</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>]], <code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code>[[<a class="reference internal" href="#yapapi.mid.events.ResourceChangePossible" title="yapapi.mid.events.ResourceChangePossible"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResourceChangePossible</span></code></a>], <code class="xref py py-class docutils literal notranslate"><span class="pre">Awaitable</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>]], <code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code>[[<a class="reference internal" href="#yapapi.mid.events.ResourceClosed" title="yapapi.mid.events.ResourceClosed"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResourceClosed</span></code></a>], <code class="xref py py-class docutils literal notranslate"><span class="pre">Awaitable</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>]]]) – An async function to be executed.</p></li>
+<li><p><strong>event_classes</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Iterable</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Type</span></code>[<a class="reference internal" href="#yapapi.mid.events.ResourceEvent" title="yapapi.mid.events.ResourceEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResourceEvent</span></code></a>]]) – A list of <a class="reference internal" href="#yapapi.mid.events.ResourceEvent" title="yapapi.mid.events.ResourceEvent"><code class="xref any py py-class docutils literal notranslate"><span class="pre">ResourceEvent</span></code></a> subclasses - if not empty,
+<cite>callback</cite> will only be executed only on events of matching classes.</p></li>
+<li><p><strong>resource_classes</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Iterable</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Type</span></code>[<a class="reference internal" href="#yapapi.mid.resource.Resource" title="yapapi.mid.resource.Resource"><code class="xref py py-class docutils literal notranslate"><span class="pre">Resource</span></code></a>]]) – A list of <a class="reference internal" href="#yapapi.mid.resource.Resource" title="yapapi.mid.resource.Resource"><code class="xref py py-class docutils literal notranslate"><span class="pre">Resource</span></code></a> subclasses - if not empty,
+<cite>callback</cite> will only be executed on events related to resources of a matching class.</p></li>
+<li><p><strong>ids</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Iterable</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – A list of resource IDs - if not empty,
+<cite>callback</cite> will only be executed on events related to resources with a matching ID.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.event_bus.EventBus.emit">
+<span class="sig-name descname"><span class="pre">emit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.event_bus.EventBus.emit" title="Permalink to this definition"></a></dt>
+<dd><p>Emit an event - execute all callbacks listening for matching events.</p>
+<p>If emit(X) was called before emit(Y), then it is guaranteed that callbacks
+for event Y will start only after all X callbacks finished (TODO - this should change,
+we don’t want the EventBus to stop because of a single never-ending callback).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>event</strong> (<a class="reference internal" href="#yapapi.mid.events.Event" title="yapapi.mid.events.Event"><code class="xref py py-class docutils literal notranslate"><span class="pre">Event</span></code></a>) – An event that will be emitted.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-yapapi.mid.events"></span><dl class="py class">
+<dt class="sig sig-object py" id="yapapi.mid.events.Event">
+<em class="property"><span class="pre">class</span><span class="w">  </span></em><span class="sig-prename descclassname"><span class="pre">yapapi.mid.events.</span></span><span class="sig-name descname"><span class="pre">Event</span></span><a class="headerlink" href="#yapapi.mid.events.Event" title="Permalink to this definition"></a></dt>
+<dd><p>Base class for all events.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="yapapi.mid.events.ResourceEvent">
+<em class="property"><span class="pre">class</span><span class="w">  </span></em><span class="sig-prename descclassname"><span class="pre">yapapi.mid.events.</span></span><span class="sig-name descname"><span class="pre">ResourceEvent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resource</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.events.ResourceEvent" title="Permalink to this definition"></a></dt>
+<dd><p>Base class for all events related to a particular <a class="reference internal" href="#yapapi.mid.resource.Resource" title="yapapi.mid.resource.Resource"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Resource</span></code></a>.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="yapapi.mid.events.ResourceEvent.resource">
+<em class="property"><span class="pre">property</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">resource</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w">  </span><a class="reference internal" href="index.html#yapapi.mid.resource.Resource" title="yapapi.mid.resource.Resource"><span class="pre">yapapi.mid.resource.Resource</span></a></em><a class="headerlink" href="#yapapi.mid.events.ResourceEvent.resource" title="Permalink to this definition"></a></dt>
+<dd><p>Resource related to this <a class="reference internal" href="#yapapi.mid.events.ResourceEvent" title="yapapi.mid.events.ResourceEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResourceEvent</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#yapapi.mid.resource.Resource" title="yapapi.mid.resource.Resource"><code class="xref py py-class docutils literal notranslate"><span class="pre">Resource</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="yapapi.mid.events.NewResource">
+<em class="property"><span class="pre">class</span><span class="w">  </span></em><span class="sig-prename descclassname"><span class="pre">yapapi.mid.events.</span></span><span class="sig-name descname"><span class="pre">NewResource</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resource</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.events.NewResource" title="Permalink to this definition"></a></dt>
+<dd><p>Emitted when a new <a class="reference internal" href="#yapapi.mid.resource.Resource" title="yapapi.mid.resource.Resource"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Resource</span></code></a> object is created.</p>
+<p>There are three distinct scenarios possible:</p>
+<ul class="simple">
+<li><p>We create a new resource, e.g. with <a class="reference internal" href="#yapapi.mid.golem_node.GolemNode.create_allocation" title="yapapi.mid.golem_node.GolemNode.create_allocation"><code class="xref any py py-meth docutils literal notranslate"><span class="pre">GolemNode.create_allocation()</span></code></a></p></li>
+<li><p>We start interacting with some resource that was created by us before,
+but not with this particular GolemNode instance, eg. <a class="reference internal" href="#yapapi.mid.golem_node.GolemNode.allocation" title="yapapi.mid.golem_node.GolemNode.allocation"><code class="xref any py py-meth docutils literal notranslate"><span class="pre">GolemNode.allocation()</span></code></a></p></li>
+<li><p>We find a resource created by someone else (e.g. a <a class="reference internal" href="#yapapi.mid.market.Proposal" title="yapapi.mid.market.Proposal"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Proposal</span></code></a>)</p></li>
+</ul>
+<p>There’s no difference between these scenarions from the POV of this event.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="yapapi.mid.events.ResourceDataChanged">
+<em class="property"><span class="pre">class</span><span class="w">  </span></em><span class="sig-prename descclassname"><span class="pre">yapapi.mid.events.</span></span><span class="sig-name descname"><span class="pre">ResourceDataChanged</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resource</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">old_data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.events.ResourceDataChanged" title="Permalink to this definition"></a></dt>
+<dd><p>Emitted when <cite>data</cite> attribute of a <a class="reference internal" href="#yapapi.mid.resource.Resource" title="yapapi.mid.resource.Resource"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Resource</span></code></a> changes.</p>
+<p>This event is <strong>not</strong> emitted when the data “would have changed if we
+requested new data, but we didn’t request it”. In other words, we don’t listen for
+<cite>yagna</cite>-side changes, only react to changes already noticed in the context of a <a class="reference internal" href="#yapapi.mid.golem_node.GolemNode" title="yapapi.mid.golem_node.GolemNode"><code class="xref any py py-class docutils literal notranslate"><span class="pre">GolemNode</span></code></a>.</p>
+<p>Second argument is the old data (before the change), so comparing
+<cite>event.resource.data</cite> with <cite>event.old_data</cite> shows what changed.</p>
+<p>NULL (i.e. empty) change doesn’t trigger the change, even if we explicitly sent a resource-changing call.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="yapapi.mid.events.ResourceDataChanged.old_data">
+<em class="property"><span class="pre">property</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">old_data</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w">  </span><span class="pre">Any</span></em><a class="headerlink" href="#yapapi.mid.events.ResourceDataChanged.old_data" title="Permalink to this definition"></a></dt>
+<dd><p>Value of <cite>self.resource.data</cite> before the change.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="yapapi.mid.events.ResourceChangePossible">
+<em class="property"><span class="pre">class</span><span class="w">  </span></em><span class="sig-prename descclassname"><span class="pre">yapapi.mid.events.</span></span><span class="sig-name descname"><span class="pre">ResourceChangePossible</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resource</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.events.ResourceChangePossible" title="Permalink to this definition"></a></dt>
+<dd><p>Emitted when we receive an information that a <a class="reference internal" href="#yapapi.mid.resource.Resource.data" title="yapapi.mid.resource.Resource.data"><code class="xref any py py-attr docutils literal notranslate"><span class="pre">Resource.data</span></code></a> might be outdated.</p>
+<p>E.g. this is emitted for a <cite>Proposal</cite> when an agreement is created based on this proposal.</p>
+<p>It is <strong>not</strong> guaranteed that anything really changed, but e.g. if you want to keep some <a class="reference internal" href="#yapapi.mid.resource.Resource" title="yapapi.mid.resource.Resource"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Resource</span></code></a>
+objects as up-to-date as possible, you might consider something like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">async</span> <span class="k">def</span> <span class="nf">update_resource</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">ResourceEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">await</span> <span class="n">event</span><span class="o">.</span><span class="n">resource</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="n">force</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">golem</span><span class="o">.</span><span class="n">event_bus</span><span class="o">.</span><span class="n">resource_listen</span><span class="p">(</span>
+    <span class="n">update_resource</span><span class="p">,</span>
+    <span class="n">event_classes</span><span class="o">=</span><span class="p">[</span><span class="n">ResourceChangePossible</span><span class="p">],</span>
+    <span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="n">an_important_resource</span><span class="o">.</span><span class="n">id</span><span class="p">]</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>NOTE: This is <strong>NOT IMPLEMENTED</strong> yet, as it’s pretty complex and useless now, and maybe not a good idea at all.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="yapapi.mid.events.ResourceClosed">
+<em class="property"><span class="pre">class</span><span class="w">  </span></em><span class="sig-prename descclassname"><span class="pre">yapapi.mid.events.</span></span><span class="sig-name descname"><span class="pre">ResourceClosed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resource</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.events.ResourceClosed" title="Permalink to this definition"></a></dt>
+<dd><p>Emitted when a resource is deleted or rendered unusable.</p>
+<p>Usual case is when we delete a resource (e.g. <a class="reference internal" href="#yapapi.mid.payment.Allocation.release" title="yapapi.mid.payment.Allocation.release"><code class="xref any py py-meth docutils literal notranslate"><span class="pre">Allocation.release()</span></code></a>),
+or when the lifespan of a resource ends (e.g. <a class="reference internal" href="#yapapi.mid.market.Agreement.terminate" title="yapapi.mid.market.Agreement.terminate"><code class="xref any py py-meth docutils literal notranslate"><span class="pre">Agreement.terminate()</span></code></a>),
+but this can be also emitted when we notice that resource was deleted by someone
+else (TODO: when? is this possible at all? e.g. expired proposal?).</p>
+<p>This is emitted only when something changes. Creating a new Resource object
+for an already closed resource (e.g. by passing an id of a terminated agreement to
+<a class="reference internal" href="#yapapi.mid.golem_node.GolemNode.agreement" title="yapapi.mid.golem_node.GolemNode.agreement"><code class="xref any py py-meth docutils literal notranslate"><span class="pre">GolemNode.agreement</span></code></a>) does not trigger this event.</p>
+<p>This event should never be emitted more than once for a given <a class="reference internal" href="#yapapi.mid.resource.Resource" title="yapapi.mid.resource.Resource"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Resource</span></code></a>.</p>
+</dd></dl>
+
+</section>
+<section id="logging">
+<h3>Logging<a class="headerlink" href="#logging" title="Permalink to this headline"></a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="yapapi.mid.default_logger.DefaultLogger">
+<em class="property"><span class="pre">class</span><span class="w">  </span></em><span class="sig-prename descclassname"><span class="pre">yapapi.mid.default_logger.</span></span><span class="sig-name descname"><span class="pre">DefaultLogger</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'log.log'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.default_logger.DefaultLogger" title="Permalink to this definition"></a></dt>
+<dd><p>Dump all events to a file.</p>
+<p>Usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">golem</span> <span class="o">=</span> <span class="n">GolemNode</span><span class="p">()</span>
+<span class="n">golem</span><span class="o">.</span><span class="n">event_bus</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="n">DefaultLogger</span><span class="p">()</span><span class="o">.</span><span class="n">on_event</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Or:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">DefaultLogger</span><span class="p">()</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;What&#39;s up?&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.default_logger.DefaultLogger.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'log.log'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.default_logger.DefaultLogger.__init__" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>file_name</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – Name of the file where all events will be dumped.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="yapapi.mid.default_logger.DefaultLogger.file_name">
+<em class="property"><span class="pre">property</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">file_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w">  </span><span class="pre">str</span></em><a class="headerlink" href="#yapapi.mid.default_logger.DefaultLogger.file_name" title="Permalink to this definition"></a></dt>
+<dd><p>Name of the file where all events will be dumped.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="yapapi.mid.default_logger.DefaultLogger.logger">
+<em class="property"><span class="pre">property</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">logger</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w">  </span><span class="pre">logging.Logger</span></em><a class="headerlink" href="#yapapi.mid.default_logger.DefaultLogger.logger" title="Permalink to this definition"></a></dt>
+<dd><p>Logger that just dumps everything to file <a class="reference internal" href="#yapapi.mid.default_logger.DefaultLogger.file_name" title="yapapi.mid.default_logger.DefaultLogger.file_name"><code class="xref any py py-attr docutils literal notranslate"><span class="pre">file_name</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Logger</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yapapi.mid.default_logger.DefaultLogger.on_event">
+<em class="property"><span class="pre">async</span><span class="w">  </span></em><span class="sig-name descname"><span class="pre">on_event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#yapapi.mid.default_logger.DefaultLogger.on_event" title="Permalink to this definition"></a></dt>
+<dd><p>Callback that can be passed to <a class="reference internal" href="#yapapi.mid.event_bus.EventBus.listen" title="yapapi.mid.event_bus.EventBus.listen"><code class="xref any py py-meth docutils literal notranslate"><span class="pre">EventBus.listen</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Golem Factory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

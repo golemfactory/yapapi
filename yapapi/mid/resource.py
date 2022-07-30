@@ -37,6 +37,9 @@ class Resource(
 
     TODO - fix typing in the documentation of this class. I'm afraid this might require
     changes in `sphinx_autodoc_typehints`.
+
+    TODO - in the final version this should disappear from the public docs and all these methods
+    should be described on subclasses, but this doesn't make much sense before the previous TODO.
     """
     def __init__(self, node: "GolemNode", id_: str, data: Optional[ModelType] = None):
         self._node = node
@@ -155,8 +158,8 @@ class Resource(
     async def get_data(self, force: bool = False) -> ModelType:
         """Returns details of this resource.
 
-        :param force: False -> cached data will be returned (fetches data from `yagna` if there is no cached version).
-            True -> we'll always requst the new data (and update the cache).
+        :param force: False -> returns the cached data (or fetches data from `yagna` if there is no cached version).
+            True -> always fetches the new data (and updates the cache).
 
         """
         async with self._get_data_lock:
@@ -166,7 +169,7 @@ class Resource(
                 if old_data != self._data:
                     self.node.event_bus.emit(ResourceDataChanged(self, old_data))
 
-        assert self._data is not None
+        assert self._data is not None  # mypy
         return self._data
 
     @api_call_wrapper()

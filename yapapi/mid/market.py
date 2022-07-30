@@ -153,7 +153,7 @@ class Proposal(
             agreement = their_counter_proposal.create_agreement()
             break
         else:
-            print("Our counter-proposal got rejected :(")
+            print("Our counter-proposal was rejected :(")
     """
     _demand: Optional["Demand"] = None
 
@@ -214,8 +214,7 @@ class Proposal(
     async def responses(self) -> AsyncIterator["Proposal"]:
         """Yields responses to this proposal.
 
-        Stops when the proposal is rejected, or when :func:`Demand.stop_collecting_events`
-        of the related :class:`Demand` is called.
+        Stops when the proposal is rejected.
         """
         async for child in self.child_aiter():
             if isinstance(child, Proposal):

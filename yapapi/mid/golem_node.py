@@ -34,7 +34,7 @@ class GolemNode:
 
     """
 
-    def __init__(self, app_key: str = None, base_url: str = None) -> None:
+    def __init__(self, app_key: Optional[str] = None, base_url: Optional[str] = None) -> None:
         """
         :param app_key: App key used as an authentication token for all `yagna` calls.
                         Defaults to the `YAGNA_APPKEY` env variable.
@@ -223,7 +223,7 @@ class GolemNode:
     #   Events
     @property
     def event_bus(self) -> EventBus:
-        """Returns the :class:`EventBus` used by this :class:`GolemNode`.
+        """Returns the :any:`EventBus` used by this :class:`GolemNode`.
 
         Any :any:`Event` triggered by this :class:`GolemNode` or any related object
         will be sent there and passed to registered listeners.

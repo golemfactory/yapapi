@@ -37,9 +37,9 @@ class SimpleScorer:
     async def __call__(self, proposals: AsyncIterator[Proposal]) -> AsyncIterator[Proposal]:
         """Consumes incoming proposals as fast as possible. Always yields a :any:`Proposal` with the highest score.
 
-        :param proposals: Stream of :class:`Proposal` to be reordered.
+        :param proposals: Stream of :any:`Proposal` to be reordered.
             In fact, this could be stream of whatever, as long as this whatever matches
-            the scoring function, and this whatever would be yielded (--> TODO).
+            the scoring function, and this whatever would be yielded (--> TODO - maybe generalize this?).
         """
         self._no_more_proposals = False
         proposal_scorer_task = asyncio.get_event_loop().create_task(self._process_stream(proposals))

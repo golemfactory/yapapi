@@ -150,7 +150,8 @@ class EventBus:
         """Emit an event - execute all callbacks listening for matching events.
 
         If emit(X) was called before emit(Y), then it is guaranteed that callbacks
-        for event Y will start only after all X callbacks finished.
+        for event Y will start only after all X callbacks finished (TODO - this should change,
+        we don't want the EventBus to stop because of a single never-ending callback).
 
         :param event: An event that will be emitted.
         """

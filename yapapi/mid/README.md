@@ -7,14 +7,23 @@
     * `Proposal` - except for mocked negotiations, it is quite ready
     * `Agreement` - can be created/approved/terminated (only)
     * POC of the higher-level interface
+3. Code quality:
+    * There is a bunch of TODOs left in the code, but none of them should be important now.
+    * `Resource` class inheritance is not very simple/pretty. This could be improved either
+      by extending the tree with additional classes, or by repeating parts of the logic in 
+      different places. I believe current approach is better than the alternatives.
+    * Mid-level API (`Chain`) is rather a POC than a final version
+    * Except for the above, it should be good.
+    * Typing is good, checked with almost-strict mypy (details: `mypy.sh`).
 
-## Examples
+## Examples & Docs
+
+Public API is described in [api.html](api.html). It migh be useful to read few examples first.
 
 1. `example.py` - simple functions demonstrating selected parts of the interface
-2. `t/test_1.py` - few simple tests
-3. `cli_example.sh`
-4. `run.py` - POC of the higher-level interface
-5. After `run.py` was executed, `log.log` contains a POC of a log file
+2. `run.py` - POC of the higher-level interface
+3. `cli_example.sh` - command line interface
+4. `t/test_1.py` - few simple tests
 
 ## Code
 
