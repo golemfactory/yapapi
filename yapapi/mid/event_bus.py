@@ -2,23 +2,14 @@ from abc import ABC, abstractmethod
 import asyncio
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Awaitable, Callable, DefaultDict, Iterable, List, Optional, Tuple, Type, Union
+from typing import Any, Awaitable, Callable, DefaultDict, Iterable, List, Optional, Tuple, Type, TypeVar
 
 from yapapi.mid import events
 from yapapi.mid.events import Event, ResourceEvent
 from yapapi.mid.resource import Resource
 
-###################################################
-#   TODO: maybe there's a better way?
-ResourceEventCallableType = Union[
-    Callable[[events.ResourceEvent], Awaitable[None]],
-    Callable[[events.NewResource], Awaitable[None]],
-    Callable[[events.ResourceDataChanged], Awaitable[None]],
-    Callable[[events.ResourceChangePossible], Awaitable[None]],
-    Callable[[events.ResourceClosed], Awaitable[None]],
-]
-OtherEventCallableType = Callable[[events.Event], Awaitable[None]]
-EventCallableType = Union[ResourceEventCallableType, OtherEventCallableType]
+EventType = TypeVar("EventType", bound=events.Event)
+ResourceEventType = TypeVar("ResourceEventType", bound=events.ResourceEvent)
 
 
 ######################################
@@ -98,7 +89,7 @@ class EventBus:
     """
     def __init__(self) -> None:
         self.queue: asyncio.Queue[Event] = asyncio.Queue()
-        self.consumers: DefaultDict[EventFilter, List[EventCallableType]] = defaultdict(list)
+        self.consumers: DefaultDict[EventFilter, List[Callable[[Any], Awaitable[None]]]] = defaultdict(list)
 
         self._task: Optional[asyncio.Task] = None
 
@@ -114,7 +105,7 @@ class EventBus:
 
     def listen(
         self,
-        callback: EventCallableType,
+        callback: Callable[[EventType], Awaitable[None]],
         classes: Iterable[Type[Event]] = (),
     ) -> None:
         """Execute the callback when :any:`Event` is emitted.
@@ -128,7 +119,7 @@ class EventBus:
 
     def resource_listen(
         self,
-        callback: ResourceEventCallableType,
+        callback: Callable[[ResourceEventType], Awaitable[None]],
         event_classes: Iterable[Type[ResourceEvent]] = (),
         resource_classes: Iterable[Type[Resource]] = (),
         ids: Iterable[str] = (),
@@ -168,7 +159,7 @@ class EventBus:
         tasks = []
         for event_template, callbacks in self.consumers.items():
             if event_template.includes(event):
-                tasks += [callback(event) for callback in callbacks]  # type: ignore  # template ensures correct type
+                tasks += [callback(event) for callback in callbacks]
         if tasks:
             await asyncio.gather(*tasks)
         self.queue.task_done()
