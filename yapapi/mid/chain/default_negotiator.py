@@ -44,8 +44,15 @@ class DefaultNegotiator:
         return not all(task.done() for task in self.tasks)
 
     async def _process_proposals(self, proposals: AsyncIterator[Proposal]) -> None:
-        async for proposal in proposals:
+        #   Q: Why not `async for proposal in proposals`?
+        #   A: Because we should request a new proposal only after semaphore is acquired.
+        #      We want to get a new proposal as late as possible, it will be the best one.
+        while True:
             await self.semaphore.acquire()
+            try:
+                proposal = await proposals.__anext__()
+            except StopAsyncIteration:
+                break
             self.tasks.append(asyncio.create_task(self._negotiate_proposal(proposal)))
 
         self._no_more_proposals = True
