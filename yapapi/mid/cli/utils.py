@@ -93,5 +93,14 @@ def async_golem_wrapper(f: Callable[..., Awaitable[R]]) -> Callable[..., R]:
                 return await f(golem, *args, **kwargs)
 
         loop = asyncio.get_event_loop()
-        return loop.run_until_complete(with_golem_node())
+        try:
+            task = loop.create_task(with_golem_node())
+            return loop.run_until_complete(task)
+        except KeyboardInterrupt:
+            try:
+                task.cancel()
+                loop.run_until_complete(task)
+            except asyncio.CancelledError:
+                pass
+
     return wrapper
