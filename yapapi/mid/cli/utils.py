@@ -12,7 +12,7 @@ from yapapi.props.base import constraint
 from yapapi.props import inf
 
 from yapapi.mid.payment import Allocation
-from yapapi.mid.market import Demand
+from yapapi.mid.market import Demand, Proposal
 from yapapi.mid.golem_node import GolemNode
 
 
@@ -54,6 +54,30 @@ def format_demands(demands: List[Demand]) -> str:
             created,
         ])
     return x.get_string()  # type: ignore
+
+
+def format_proposals(proposals: List[Proposal], first: bool) -> str:
+    x = PrettyTable()
+    x.field_names = ["provider_id", "arch", "cores", "threads", "memory (GiB)", "storage (GiB)"]
+    for proposal in proposals:
+        data = proposal.data
+        x.add_row([
+            data.issuer_id,
+            data.properties["golem.inf.cpu.architecture"],
+            data.properties["golem.inf.cpu.cores"],
+            data.properties["golem.inf.cpu.threads"],
+            round(data.properties["golem.inf.mem.gib"]),
+            round(data.properties["golem.inf.storage.gib"]),
+        ])
+
+    #   NOTE: this is a "dynamic" table and first row has header and others
+    #   have only data.
+    data = x.get_string()
+    lines = data.splitlines()
+    if first:
+        return "\n".join(lines[:-1])
+    else:
+        return lines[3]
 
 
 @dataclass

@@ -6,7 +6,10 @@ import click
 from yapapi.engine import DEFAULT_NETWORK, DEFAULT_DRIVER, DEFAULT_SUBNET
 
 from yapapi.mid.golem_node import GolemNode
-from .utils import format_allocations, format_demands, CliPayload, async_golem_wrapper, parse_timedelta_str
+from .utils import (
+    format_allocations, format_demands, format_proposals,
+    CliPayload, async_golem_wrapper, parse_timedelta_str
+)
 
 
 @click.group()
@@ -76,14 +79,21 @@ async def status(golem: GolemNode) -> None:
 @async_golem_wrapper
 async def find_node(golem: GolemNode, runtime: str, subnet: str, timeout_str: Optional[str]) -> None:
     timeout = parse_timedelta_str(timeout_str) if timeout_str is not None else None
+    cnt = 0
 
     async def get_nodes() -> None:
+        nonlocal cnt
+
         payload = CliPayload(runtime)
         demand = await golem.create_demand(payload, subnet=subnet)
+
         async for proposal in demand.initial_proposals():
-            click.echo(proposal)
+            click.echo(format_proposals([proposal], cnt == 0))
+            cnt += 1
 
     try:
         await asyncio.wait_for(get_nodes(), timeout)
     except asyncio.TimeoutError:
         pass
+    finally:
+        print(f"{cnt} proposals found")
