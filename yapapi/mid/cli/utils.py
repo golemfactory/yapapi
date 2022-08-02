@@ -1,7 +1,7 @@
 import asyncio
 from dataclasses import dataclass, MISSING
 from datetime import datetime
-from typing import Any, Awaitable, Callable, List, TypeVar
+from typing import Any, Awaitable, Callable, List, TypeVar, Optional
 from functools import wraps
 import re
 
@@ -72,12 +72,11 @@ def format_proposals(proposals: List[Proposal], first: bool) -> str:
 
     #   NOTE: this is a "dynamic" table and first row has header and others
     #   have only data.
-    data = x.get_string()
-    lines = data.splitlines()
+    lines = x.get_string().splitlines()
     if first:
         return "\n".join(lines[:-1])
     else:
-        return lines[3]
+        return lines[3]  # type: ignore
 
 
 @dataclass
@@ -104,14 +103,14 @@ def parse_timedelta_str(timedelta_str: str) -> float:
 R = TypeVar("R")
 
 
-def async_golem_wrapper(f: Callable[..., Awaitable[R]]) -> Callable[..., R]:
+def async_golem_wrapper(f: Callable[..., Awaitable[R]]) -> Callable[..., Optional[R]]:
     """Wraps an async function. Returns a sync function that:
 
     * starts a GolemNode and passes it as the first argument
     * executes the coroutine in a loop
     """
     @wraps(f)
-    def wrapper(*args: Any, **kwargs: Any) -> R:
+    def wrapper(*args: Any, **kwargs: Any) -> Optional[R]:
         async def with_golem_node() -> R:
             async with GolemNode() as golem:
                 return await f(golem, *args, **kwargs)
@@ -126,5 +125,6 @@ def async_golem_wrapper(f: Callable[..., Awaitable[R]]) -> Callable[..., R]:
                 loop.run_until_complete(task)
             except asyncio.CancelledError:
                 pass
+            return None
 
     return wrapper
