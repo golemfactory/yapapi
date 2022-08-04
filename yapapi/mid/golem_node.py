@@ -23,8 +23,9 @@ ResourceType = TypeVar("ResourceType", bound=Resource)
 class GolemNode:
     """Main entrypoint to the python Golem API, communicates with `yagna`.
 
-    GolemNode object corresponds to a single running `yagna` instance
-    and can operate on different subnets / networks.
+    GolemNode object corresponds to a single identity and a single running `yagna` instance
+    (--> it's identified by a (APPKEY, YAGNA_URL) pair) and can operate on different subnets / networks.
+    Multiple GolemNode instances can be used to access different identities / `yagna` instances.
 
     Usage::
 
