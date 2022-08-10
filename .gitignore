@@ -1,6 +1,7 @@
 __pycache__/
 .mypy_cache
 .idea
+.vscode
 *.egg-info
 
 #   files created by tests and examples
