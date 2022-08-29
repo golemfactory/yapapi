@@ -1,7 +1,8 @@
 import asyncio
 from dataclasses import dataclass, MISSING
 from datetime import datetime
-from typing import Any, Awaitable, Callable, List, TypeVar, Optional
+from typing import Awaitable, Callable, List, TypeVar, Optional
+from typing_extensions import Concatenate, ParamSpec
 from functools import wraps
 import re
 
@@ -100,17 +101,19 @@ def parse_timedelta_str(timedelta_str: str) -> float:
     return num * as_seconds[what]
 
 
+P = ParamSpec("P")
 R = TypeVar("R")
 
 
-def async_golem_wrapper(f: Callable[..., Awaitable[R]]) -> Callable[..., Optional[R]]:
+def async_golem_wrapper(f: Callable[Concatenate[GolemNode, P], Awaitable[R]]) -> Callable[P, Optional[R]]:
     """Wraps an async function. Returns a sync function that:
 
     * starts a GolemNode and passes it as the first argument
     * executes the coroutine in a loop
+    * on KeyboardInterrupt stops the task and returns None
     """
     @wraps(f)
-    def wrapper(*args: Any, **kwargs: Any) -> Optional[R]:
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> Optional[R]:
         async def with_golem_node() -> R:
             async with GolemNode() as golem:
                 return await f(golem, *args, **kwargs)
