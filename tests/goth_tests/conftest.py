@@ -69,6 +69,15 @@ def config_overrides(request) -> List[Override]:
     return cast(List[Override], [tuple(o.split("=", 1)) for o in overrides])
 
 
+@pytest.fixture(scope="function")
+def single_node_override() -> Override:
+    nodes = [
+        {"name": "requestor", "type": "Requestor"},
+        {"name": "provider-1", "type": "VM-Wasm-Provider", "use-proxy": True},
+    ]
+    return "nodes", nodes
+
+
 @pytest.fixture
 def ssh_verify_connection(request):
     return request.config.option.ssh_verify_connection

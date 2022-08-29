@@ -128,17 +128,18 @@ async def assert_demand_resubscribed(events: "EventStream[Event]"):
 
 
 @pytest.mark.asyncio
-async def test_demand_resubscription(log_dir: Path, goth_config_path: Path, monkeypatch, config_overrides: List[Override]) -> None:
+async def test_demand_resubscription(
+    log_dir: Path,
+    goth_config_path: Path,
+    monkeypatch,
+    config_overrides: List[Override],
+    single_node_override: Override,
+) -> None:
     """Test that checks that a demand is re-submitted after its previous submission expires."""
 
     configure_logging(log_dir)
 
-    # Override the default test configuration to create only one provider node
-    nodes = [
-        {"name": "requestor", "type": "Requestor"},
-        {"name": "provider-1", "type": "VM-Wasm-Provider", "use-proxy": True},
-    ]
-    goth_config = load_yaml(goth_config_path, config_overrides + [("nodes", nodes)])
+    goth_config = load_yaml(goth_config_path, config_overrides + [single_node_override])
 
     vm_package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
