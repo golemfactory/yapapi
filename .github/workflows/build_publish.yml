@@ -10,8 +10,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: 3.8
       - uses: Gr1N/setup-poetry@v4
@@ -29,8 +29,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: 3.8
       - uses: Gr1N/setup-poetry@v4
@@ -62,8 +62,8 @@ jobs:
     if: ${{ github.event.action == 'prereleased' }}
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: 3.8
       - uses: Gr1N/setup-poetry@v4
@@ -86,8 +86,8 @@ jobs:
     if: ${{ github.event.action == 'released' }}
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: 3.8
       - uses: Gr1N/setup-poetry@v4

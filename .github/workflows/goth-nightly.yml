@@ -13,7 +13,7 @@ jobs:
       matrix-json: ${{ steps.get-matrix.outputs.matrix }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -39,12 +39,12 @@ jobs:
     name: Run integration tests (nightly) on ${{ matrix.branch }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: ${{ matrix.branch }}
 
       - name: Configure python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: '3.8.0'
 
