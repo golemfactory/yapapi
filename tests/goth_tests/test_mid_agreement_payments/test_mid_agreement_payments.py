@@ -45,15 +45,10 @@ async def test_mid_agreement_payments(
     log_dir: Path,
     goth_config_path: Path,
     config_overrides: List[Override],
+    single_node_override: Override,
 ) -> None:
 
-    # Override the default test configuration to create only one provider node
-    nodes = [
-        {"name": "requestor", "type": "Requestor"},
-        {"name": "provider-1", "type": "VM-Wasm-Provider", "use-proxy": True},
-    ]
-    config_overrides.append(("nodes", nodes))
-    goth_config = load_yaml(goth_config_path, config_overrides)
+    goth_config = load_yaml(goth_config_path, config_overrides + [single_node_override])
     test_script_path = str(Path(__file__).parent / "requestor.py")
 
     configure_logging(log_dir)
