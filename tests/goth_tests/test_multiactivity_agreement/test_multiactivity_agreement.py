@@ -54,17 +54,14 @@ async def test_multiactivity_agreement(
     log_dir: Path,
     goth_config_path: Path,
     config_overrides: List[goth.configuration.Override],
+    single_node_override: goth.configuration.Override,
 ) -> None:
 
     configure_logging(log_dir)
 
-    # Override the default test configuration to create only one provider node
-    nodes = [
-        {"name": "requestor", "type": "Requestor"},
-        {"name": "provider-1", "type": "VM-Wasm-Provider", "use-proxy": True},
-    ]
-    config_overrides.append(("nodes", nodes))
-    goth_config = goth.configuration.load_yaml(goth_config_path, config_overrides)
+    goth_config = goth.configuration.load_yaml(
+        goth_config_path, config_overrides + [single_node_override]
+    )
 
     runner = Runner(base_log_dir=log_dir, compose_config=goth_config.compose_config)
 

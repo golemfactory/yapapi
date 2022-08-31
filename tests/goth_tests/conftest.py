@@ -6,7 +6,7 @@ from typing import cast, List
 import pytest
 
 from goth.configuration import Override
-from yapapi.package import vm
+from yapapi.payload import vm
 
 
 #  `pytest-rerunfailures` and `pytest-asyncio` don't work together
@@ -67,6 +67,15 @@ def config_overrides(request) -> List[Override]:
 
     overrides: List[str] = request.config.option.config_override or []
     return cast(List[Override], [tuple(o.split("=", 1)) for o in overrides])
+
+
+@pytest.fixture(scope="function")
+def single_node_override() -> Override:
+    nodes = [
+        {"name": "requestor", "type": "Requestor"},
+        {"name": "provider-1", "type": "VM-Wasm-Provider", "use-proxy": True},
+    ]
+    return "nodes", nodes
 
 
 @pytest.fixture

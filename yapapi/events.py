@@ -107,7 +107,7 @@ Events inheritance tree
                         TaskAccepted
                         TaskRejected
                     ServiceEvent
-                        ServiceStarted
+                        ServiceStateChanged
                         ServiceFinished
                     ScriptEvent
                         ScriptSent
@@ -127,8 +127,6 @@ Events inheritance tree
                 DebitNoteEvent
                     DebitNoteReceived
                     DebitNoteAccepted
-                PaymentPrepared
-                PaymentQueued
                 PaymentFailed
         ExecutionInterrupted
         ShutdownFinished
@@ -442,14 +440,6 @@ class DebitNoteAccepted(DebitNoteEvent):
     pass
 
 
-class PaymentPrepared(AgreementEvent):
-    pass
-
-
-class PaymentQueued(AgreementEvent):
-    pass
-
-
 class PaymentFailed(AgreementEvent):
     pass
 
@@ -482,8 +472,10 @@ class TaskFinished(TaskEvent):
     pass
 
 
-class ServiceStarted(ServiceEvent):
-    pass
+@attr.s(auto_attribs=True, repr=False)
+class ServiceStateChanged(ServiceEvent):
+    old: "yapapi.services.ServiceState"
+    new: "yapapi.services.ServiceState"
 
 
 class ServiceFinished(ServiceEvent):

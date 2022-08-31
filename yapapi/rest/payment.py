@@ -229,8 +229,8 @@ class Payment(object):
                     events = await self._api.get_invoice_events(after_timestamp=ts)
                 for ev in events:
                     logger.debug("Received invoice event: %r, type: %s", ev, ev.__class__)
+                    ts = ev.event_date
                     if isinstance(ev, yap.InvoiceReceivedEvent):
-                        ts = ev.event_date
                         if not ev.invoice_id:
                             logger.error("Empty invoice id in event: %r", ev)
                             continue
@@ -241,7 +241,7 @@ class Payment(object):
 
         return fetch(ts)
 
-    def incoming_debit_notes(self) -> AsyncIterator[DebitNote]:
+    def incoming_debit_note_ids(self) -> AsyncIterator[str]:
         ts = datetime.now(timezone.utc)
 
         async def fetch(init_ts: datetime):
@@ -252,13 +252,12 @@ class Payment(object):
                     events = await self._api.get_debit_note_events(after_timestamp=ts)
                 for ev in events:
                     logger.debug("Received debit note event: %r, type: %s", ev, ev.__class__)
+                    ts = ev.event_date
                     if isinstance(ev, yap.DebitNoteReceivedEvent):
-                        ts = ev.event_date
                         if not ev.debit_note_id:
                             logger.error("Empty debit note id in event: %r", ev)
                             continue
-                        debit_note = await self.debit_note(ev.debit_note_id)
-                        yield debit_note
+                        yield ev.debit_note_id
                 if not events:
                     await asyncio.sleep(1)
 
