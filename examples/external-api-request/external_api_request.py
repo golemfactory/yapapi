@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import asyncio
 import base64
+from datetime import timedelta
 import pathlib
 import sys
 
@@ -14,6 +15,7 @@ sys.path.append(str(examples_dir))
 
 from utils import run_golem_example
 
+event = asyncio.Event()
 
 class ApiCallService(Service):
     @staticmethod
@@ -56,12 +58,13 @@ class ApiCallService(Service):
 
         result = (await future_result).stdout
         print(result.strip() if result else "")
+        event.set()
 
 
 async def main():
     async with Golem(budget=1.0, subnet_tag="devnet-beta") as golem:
         await golem.run_service(ApiCallService, num_instances=1)
-        await asyncio.sleep(10)
+        await event.wait()
 
 
 if __name__ == "__main__":
