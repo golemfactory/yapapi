@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "yapapi"
-version = "0.9.2"
+version = "0.9.3-alpha.0"
 description = "High-level Python API for the New Golem"
 authors = ["Przemysław K. Rekucki <przemyslaw.rekucki@golem.network>", "GolemFactory <contact@golem.network>"]
 license = "LGPL-3.0-or-later"
@@ -44,7 +44,7 @@ attrs = ">=19.3"
 # It will be then installable with `poetry install -E integration-tests`.
 # Note that putting `goth` in `poetry.dev-dependencies` instead of `poetry.dependencies`
 # would not work: see https://github.com/python-poetry/poetry/issues/129.
-goth = { version = "^0.12", optional = true, python = "^3.8.0" }
+goth = { version = "^0.13", optional = true, python = "^3.8.0" }
 # goth = { git = "https://github.com/golemfactory/goth.git", branch = "master", optional = true, python = "^3.8.0", develop = true }
 Deprecated = "^1.2.12"
 python-statemachine = "^0.8.0"
@@ -106,7 +106,7 @@ ya-market = "0.1.0"
 [tool.poe.tasks]
 test = "pytest --cov=yapapi --ignore tests/goth_tests"
 goth-assets = "python -m goth create-assets tests/goth_tests/assets"
-goth-tests = "pytest -svx tests/goth_tests --config-override docker-compose.compose-file=docker-compose-hybrid-net.yml --ssh-verify-connection --reruns 3 --only-rerun AssertionError --only-rerun TimeoutError --only-rerun goth.runner.exceptions.TemporalAssertionError --only-rerun urllib.error.URLError --only-rerun goth.runner.exceptions.CommandError"
+goth-tests = "pytest -svx tests/goth_tests --ssh-verify-connection --reruns 3 --only-rerun AssertionError --only-rerun TimeoutError --only-rerun goth.runner.exceptions.TemporalAssertionError --only-rerun urllib.error.URLError --only-rerun goth.runner.exceptions.CommandError"
 typecheck = "mypy --check-untyped-defs --no-implicit-optional ."
 codestyle = "black --check --diff ."
 _liccheck_export = "poetry export -f requirements.txt -o .requirements.txt"
