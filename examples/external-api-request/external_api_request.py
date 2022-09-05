@@ -17,6 +17,7 @@ from utils import run_golem_example
 
 event = asyncio.Event()
 
+
 class ApiCallService(Service):
     @staticmethod
     async def get_payload():
