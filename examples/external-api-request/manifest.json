@@ -14,28 +14,26 @@
         "os": "linux"
       },
       "urls": [
-        "http://yacn2.dev.golem.network:8000/docker-golem-curl-jq-latest-58eb5b4316.gvmi"
+        "http://yacn2.dev.golem.network:8000/docker-golem-script-curl-latest-d75268e752.gvmi"
       ],
-      "hash": "sha3:84676b9d29cc86ec4862dd8ee991a3f64e9f15bbc00ee3fdfa78105f"
+      "hash": "sha3:e5f5ddfd649525dbe25d93d9ed51d1bdd0849933d9a5720adb4b5810"
     }
   ],
   "compManifest": {
     "version": "0.1.0",
     "script": {
       "commands": [
-        "run .*curl.*"
+        "run .*curl.*",
+        "run .*request.sh.*",
+        "transfer .*output.txt"
       ],
       "match": "regex"
     },
     "net": {
       "inet": {
         "out": {
-          "protocols": [
-            "https"
-          ],
-          "urls": [
-            "https://api.coingecko.com"
-          ]
+          "protocols": ["https"],
+          "urls": ["https://api.coingecko.com", "https://httpbin.org"]
         }
       }
     }

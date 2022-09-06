@@ -5,4 +5,5 @@ RUN apk update \
  && apk add jq \
  && rm -rf /var/cache/apk/*
 
-WORKDIR /golem/work
+COPY request.sh /golem/entrypoints/
+VOLUME /golem/work /golem/output /golem/resource
