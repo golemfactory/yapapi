@@ -6,7 +6,7 @@ import toml
 from pathlib import Path
 from pkg_resources import get_distribution
 
-from yapapi.ctx import ExecOptions, Work, WorkContext
+from yapapi.ctx import ExecOptions, WorkContext
 from yapapi.engine import NoPaymentAccountError
 from yapapi.executor import Executor, Task
 from yapapi.golem import Golem
@@ -54,5 +54,4 @@ __all__ = [
     "ExecOptions",
     "Golem",
     "NoPaymentAccountError",
-    "Work",
 ]
