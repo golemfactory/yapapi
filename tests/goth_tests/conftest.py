@@ -35,8 +35,19 @@ def event_loop():
     loop.close()
 
 
+def _project_dir() -> Path:
+    package_dir = Path(__file__).parent.parent
+    return package_dir.parent.resolve()
+
+
 def pytest_addoption(parser):
     """Add optional parameters to pytest CLI invocations."""
+
+    parser.addoption(
+        "--config-path",
+        help="Path to the `goth-config.yml` file. (default: %(default)s)",
+        default=_project_dir() / "tests" / "goth_tests" / "assets" / "goth-config.yml",
+    )
 
     parser.addoption(
         "--config-override",
@@ -76,8 +87,7 @@ def ssh_verify_connection(request):
 
 @pytest.fixture(scope="session")
 def project_dir() -> Path:
-    package_dir = Path(__file__).parent.parent
-    return package_dir.parent.resolve()
+    return _project_dir()
 
 
 @pytest.fixture(scope="session")
@@ -90,8 +100,8 @@ def log_dir() -> Path:
 
 
 @pytest.fixture(scope="session")
-def goth_config_path(project_dir) -> Path:
-    return project_dir / "tests" / "goth_tests" / "assets" / "goth-config.yml"
+def goth_config_path(request) -> Path:
+    return request.config.option.config_path
 
 
 @pytest.fixture()
