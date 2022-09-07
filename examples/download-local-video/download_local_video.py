@@ -13,9 +13,9 @@ from yapapi.payload import vm
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
-from utils import run_golem_example
+from utils import (run_golem_example, TEXT_COLOR_CYAN, TEXT_COLOR_DEFAULT, TEXT_COLOR_RED)
 
-event = asyncio.Event()
+task_finished_event = asyncio.Event()
 
 class ApiCallService(Service):
     @staticmethod
@@ -45,23 +45,33 @@ class ApiCallService(Service):
 
     async def run(self):
         script = self._ctx.new_script()
+        url = "http://speedtest.tele2.net/1GB.zip"
 
-        future_result1 = script.run("/golem/entrypoints/request.sh", "http://yacn2.dev.golem.network:8000/docker-golem_hashcat_gpu_ok-latest-deeda00637.gvmi")
-        future_result2 = script.download_file("/golem/output/output.txt", "output.txt")
+        request_result = script.run("/golem/entrypoints/request.sh", url)
+        script.download_file("/golem/output/output.txt", "output.txt")
         yield script
 
-        result = (await future_result1).stdout
-        print(result.strip() if result else "dupa1")
-        result = (await future_result2).stdout
-        print(result.strip() if result else "dupa2")
-        event.set()
+        result = (await request_result).stdout
+    
+        if result:
+            print(
+                f"{TEXT_COLOR_CYAN}"
+                f"Golem Network took: {result.strip()} seconds to download a file from {url}"
+                f"{TEXT_COLOR_DEFAULT}")
+        else:
+            print(
+                f"{TEXT_COLOR_RED}"
+                f"Error: Did not compute"
+                f"{TEXT_COLOR_DEFAULT}")
+
+        task_finished_event.set()
 
 
 async def main():
     async with Golem(budget=1.0, subnet_tag="raf-local") as golem:
         await golem.run_service(ApiCallService, num_instances=1)
 
-        await event.wait()
+        await task_finished_event.wait()
 
 
 if __name__ == "__main__":
