@@ -9,6 +9,7 @@ from yapapi import Golem
 from yapapi.services import Service
 from yapapi.log import enable_default_logger
 from yapapi.payload import vm
+from yapapi.rest.activity import CommandExecutionError
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
@@ -18,9 +19,10 @@ from utils import (build_parser, run_golem_example, TEXT_COLOR_CYAN, TEXT_COLOR_
 task_finished_event = asyncio.Event()
 
 class ApiCallService(Service):
-    def __init__(self, *args, url: str, **kwargs):
+    def __init__(self, *args, url: str, outfile: str, **kwargs):
         super().__init__(*args, **kwargs)
         self._url = url
+        self._outfile = outfile
 
     @staticmethod
     async def get_payload():
@@ -50,29 +52,27 @@ class ApiCallService(Service):
     async def run(self):
         script = self._ctx.new_script()
         
-        request_result = script.run("/golem/entrypoints/request.sh", self._url)
-        script.download_file("/golem/output/output.txt", "output.txt")
-        yield script
+        script.run("/golem/entrypoints/request.sh", self._url)
+        script.download_file("/golem/output/output.txt", self._outfile)
 
-        result = (await request_result).stdout
-    
-        if result:
+        try:
+            yield script
+
+            result = open(self._outfile, "r").read().strip()
             print(
                 f"{TEXT_COLOR_CYAN}"
-                f"Golem Network took: {result.strip()} seconds to download a file from {self._url}"
+                f"Golem Network took: {result} seconds to download a file from {self._url}"
                 f"{TEXT_COLOR_DEFAULT}")
-        else:
-            print(
-                f"{TEXT_COLOR_RED}"
-                f"Error: Did not compute"
-                f"{TEXT_COLOR_DEFAULT}")
+            task_finished_event.set()
 
-        task_finished_event.set()
+        except CommandExecutionError as e:
+            task_finished_event.set()
+            raise RuntimeError(f"Failed to compute: {e}")
 
 
-async def main(subnet_tag, url):
+async def main(subnet_tag, url, outfile):
     async with Golem(budget=1.0, subnet_tag=subnet_tag) as golem:
-        instance_params = [{"url": url}]
+        instance_params = [{"url": url, "outfile": outfile}]
         await golem.run_service(ApiCallService, instance_params=instance_params, num_instances=1)
 
         await task_finished_event.wait()
@@ -85,7 +85,14 @@ if __name__ == "__main__":
         type=str,
         help="Url with file to download",
     )
+    parser.add_argument(
+        "--outfile",
+        type=str,
+        default="output.txt",
+        help="Output file with measured time",
+    )
+
     args = parser.parse_args()
     enable_default_logger(log_file="measure_download_time.log")
 
-    run_golem_example(main(subnet_tag=args.subnet_tag, url=args.url))
+    run_golem_example(main(subnet_tag=args.subnet_tag, url=args.url, outfile=args.outfile))

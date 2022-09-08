@@ -14,20 +14,15 @@
         "os": "linux"
       },
       "urls": [
-        "http://yacn2.dev.golem.network:8000/docker-golem-download-local-video-8-latest-634a315374.gvmi"
+        "http://yacn2.dev.golem.network:8000/docker-golem-measure-download-time-1-latest-d61b0e7ef7.gvmi"
       ],
-      "hash": "sha3:37abc385ddb1bc572c578cd0172f45fc75a15fe1e598e3018735a2e5"
+      "hash": "sha3:6f213fd13c42dd0e78a474776f0f742db56dd05338ff07594cb73f9b"
     }
   ],
   "compManifest": {
     "version": "0.1.0",
     "script": {
-      "commands": [
-        "run .*request.sh.*",
-        "run .*time.*",
-        "run .*wget.*",
-        "transfer .*output.txt"
-      ],
+      "commands": ["run .*request.sh.*", "transfer .*output.txt"],
       "match": "regex"
     },
     "net": {
