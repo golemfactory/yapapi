@@ -206,10 +206,17 @@ class AgreementsPool:
                     provider,
                 )
 
-        del self._agreements[agreement_id]
-        self.emitter(
-            events.AgreementTerminated, agreement=buffered_agreement.agreement, reason=reason
-        )
+        try:
+            del self._agreements[agreement_id]
+            self.emitter(
+                events.AgreementTerminated, agreement=buffered_agreement.agreement, reason=reason
+            )
+        except KeyError:
+            logger.debug(
+                "Terminated agreement no longer in the pool. id: %s, provider: %s",
+                agreement_id,
+                provider,
+            )
 
     async def terminate_all(self, reason: dict) -> None:
         """Terminate all agreements."""
