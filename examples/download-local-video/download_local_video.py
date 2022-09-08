@@ -13,11 +13,15 @@ from yapapi.payload import vm
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
-from utils import (run_golem_example, TEXT_COLOR_CYAN, TEXT_COLOR_DEFAULT, TEXT_COLOR_RED)
+from utils import (build_parser, run_golem_example, TEXT_COLOR_CYAN, TEXT_COLOR_DEFAULT, TEXT_COLOR_RED)
 
 task_finished_event = asyncio.Event()
 
 class ApiCallService(Service):
+    def __init__(self, *args, url: str, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._url = url
+
     @staticmethod
     async def get_payload():
         manifest = open("manifest.json", "rb").read()
@@ -45,9 +49,8 @@ class ApiCallService(Service):
 
     async def run(self):
         script = self._ctx.new_script()
-        url = "http://speedtest.tele2.net/1GB.zip"
-
-        request_result = script.run("/golem/entrypoints/request.sh", url)
+        
+        request_result = script.run("/golem/entrypoints/request.sh", self._url)
         script.download_file("/golem/output/output.txt", "output.txt")
         yield script
 
@@ -56,7 +59,7 @@ class ApiCallService(Service):
         if result:
             print(
                 f"{TEXT_COLOR_CYAN}"
-                f"Golem Network took: {result.strip()} seconds to download a file from {url}"
+                f"Golem Network took: {result.strip()} seconds to download a file from {self._url}"
                 f"{TEXT_COLOR_DEFAULT}")
         else:
             print(
@@ -67,13 +70,22 @@ class ApiCallService(Service):
         task_finished_event.set()
 
 
-async def main():
-    async with Golem(budget=1.0, subnet_tag="raf-local") as golem:
-        await golem.run_service(ApiCallService, num_instances=1)
+async def main(subnet_tag, url):
+    async with Golem(budget=1.0, subnet_tag=subnet_tag) as golem:
+        instance_params = [{"url": url}]
+        await golem.run_service(ApiCallService, instance_params=instance_params, num_instances=1)
 
         await task_finished_event.wait()
 
 
 if __name__ == "__main__":
+    parser = build_parser("Download file from internet inside Golem Network")
+    parser.add_argument(
+        "--url",
+        type=str,
+        help="Url with file to download",
+    )
+    args = parser.parse_args()
     enable_default_logger(log_file="download_local_video.log")
-    run_golem_example(main())
+
+    run_golem_example(main(subnet_tag=args.subnet_tag, url=args.url))
