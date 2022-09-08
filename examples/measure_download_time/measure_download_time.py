@@ -66,7 +66,6 @@ class ApiCallService(Service):
         task_finished_event.set()
 
 
-
 async def main(subnet_tag, url, outfile):
     async with Golem(budget=1.0, subnet_tag=subnet_tag) as golem:
         instance_params = [{"url": url, "outfile": outfile}]
