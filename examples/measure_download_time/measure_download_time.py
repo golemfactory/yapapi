@@ -3,7 +3,6 @@ import asyncio
 import base64
 import pathlib
 import sys
-from datetime import datetime, timedelta
 
 from yapapi import Golem
 from yapapi.services import Service
@@ -14,7 +13,7 @@ from yapapi.rest.activity import CommandExecutionError
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
-from utils import (build_parser, run_golem_example, TEXT_COLOR_CYAN, TEXT_COLOR_DEFAULT, TEXT_COLOR_RED)
+from utils import (build_parser, run_golem_example, TEXT_COLOR_CYAN, TEXT_COLOR_DEFAULT)
 
 task_finished_event = asyncio.Event()
 
