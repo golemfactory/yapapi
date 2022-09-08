@@ -79,7 +79,7 @@ async def main(subnet_tag, url):
 
 
 if __name__ == "__main__":
-    parser = build_parser("Download file from internet inside Golem Network")
+    parser = build_parser("Measure time which takes Golem Network to download a file from provided url")
     parser.add_argument(
         "--url",
         type=str,
