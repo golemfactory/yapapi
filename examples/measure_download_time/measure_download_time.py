@@ -13,9 +13,10 @@ from yapapi.rest.activity import CommandExecutionError
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
-from utils import (build_parser, run_golem_example, TEXT_COLOR_CYAN, TEXT_COLOR_DEFAULT)
+from utils import build_parser, run_golem_example, TEXT_COLOR_CYAN, TEXT_COLOR_DEFAULT
 
 task_finished_event = asyncio.Event()
+
 
 class ApiCallService(Service):
     def __init__(self, *args, url: str, outfile: str, **kwargs):
@@ -50,7 +51,7 @@ class ApiCallService(Service):
 
     async def run(self):
         script = self._ctx.new_script()
-        
+
         script.run("/golem/entrypoints/request.sh", self._url)
         script.download_file("/golem/output/output.txt", self._outfile)
 
@@ -61,7 +62,8 @@ class ApiCallService(Service):
             print(
                 f"{TEXT_COLOR_CYAN}"
                 f"Golem Network took: {result} seconds to download a file from {self._url}"
-                f"{TEXT_COLOR_DEFAULT}")
+                f"{TEXT_COLOR_DEFAULT}"
+            )
             task_finished_event.set()
 
         except CommandExecutionError as e:
@@ -78,7 +80,9 @@ async def main(subnet_tag, url, outfile):
 
 
 if __name__ == "__main__":
-    parser = build_parser("Measure time which takes Golem Network to download a file from provided url")
+    parser = build_parser(
+        "Measure time which takes Golem Network to download a file from provided url"
+    )
     parser.add_argument(
         "--url",
         type=str,
