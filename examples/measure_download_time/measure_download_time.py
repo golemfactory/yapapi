@@ -55,20 +55,16 @@ class ApiCallService(Service):
         script.run("/golem/entrypoints/request.sh", self._url)
         script.download_file("/golem/output/output.txt", self._outfile)
 
-        try:
-            yield script
+        yield script
 
-            result = open(self._outfile, "r").read().strip()
-            print(
-                f"{TEXT_COLOR_CYAN}"
-                f"Golem Network took: {result} seconds to download a file from {self._url}"
-                f"{TEXT_COLOR_DEFAULT}"
-            )
-            task_finished_event.set()
+        result = open(self._outfile, "r").read().strip()
+        print(
+            f"{TEXT_COLOR_CYAN}"
+            f"Golem Network took: {result} seconds to download a file from {self._url}"
+            f"{TEXT_COLOR_DEFAULT}"
+        )
+        task_finished_event.set()
 
-        except CommandExecutionError as e:
-            task_finished_event.set()
-            raise RuntimeError(f"Failed to compute: {e}")
 
 
 async def main(subnet_tag, url, outfile):
