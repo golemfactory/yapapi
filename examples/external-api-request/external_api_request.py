@@ -15,7 +15,7 @@ sys.path.append(str(examples_dir))
 
 from utils import run_golem_example
 
-event = asyncio.Event()
+service_finished_event = asyncio.Event()
 
 
 class ApiCallService(Service):
@@ -59,13 +59,13 @@ class ApiCallService(Service):
 
         result = (await future_result).stdout
         print(result.strip() if result else "")
-        event.set()
+        service_finished_event.set()
 
 
 async def main():
     async with Golem(budget=1.0, subnet_tag="devnet-beta") as golem:
         await golem.run_service(ApiCallService, num_instances=1)
-        await event.wait()
+        await service_finished_event.wait()
 
 
 if __name__ == "__main__":
