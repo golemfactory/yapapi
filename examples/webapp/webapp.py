@@ -8,7 +8,6 @@ import sys
 from datetime import datetime
 
 from yapapi import Golem
-from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.payload import vm
 from yapapi.services import Service, ServiceState
 
