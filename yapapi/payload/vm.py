@@ -37,6 +37,7 @@ _DEFAULT_TIMEOUT_SECONDS: Final[int] = 10
 logger = logging.getLogger(__name__)
 
 VM_CAPS_VPN: str = "vpn"
+VM_CAPS_MANIFEST_SUPPORT: str = "manifest-support"
 
 VmCaps = Literal["vpn", "inet", "manifest-support"]
 
@@ -115,8 +116,38 @@ async def manifest(
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,
     min_cpu_threads: int = 1,
-    capabilities: Optional[List[VmCaps]] = None,
+    capabilities: Optional[List[VmCaps]] = [VM_CAPS_MANIFEST_SUPPORT],
 ) -> Package:
+    """
+    Build a reference to application payload.
+
+    :param manifest: base64 encoded Computation Payload Manifest https://handbook.golem.network/requestor-tutorials/vm-runtime/computation-payload-manifest
+    :param manifest_sig: an optional signature of of base64 encoded Computation Payload Manifest
+    :manifest_sig_algorithm: an optional signature algorithm, e.g. "sha256"
+    :manifest_cert: an optional base64 encoded public certificate (DER or PEM) matching key used to generate signature
+    :param min_mem_gib: minimal memory required to execute application code
+    :param min_storage_gib: minimal disk storage to execute tasks
+    :param min_cpu_threads: minimal available logical CPU cores
+    :param capabilities: an optional list of required vm capabilities
+    :return: the payload definition for the given VM image
+
+    example usage::
+
+        package = await vm.manifest(
+            manifest = open("manifest.json.base64", "r").read(),
+        )
+
+    example usage with a signed Computation Pyload Manifest and additional "inet" capability::
+
+        package = await vm.manifest(
+            manifest = open("manifest.json.base64", "r").read(),
+            manifest_sig = open("manifest.json.sig.base64", "r").read(),
+            manifest_sig_algorithm = "sha256",
+            manifest_cert = open("cert.der.base64", "r").read(),
+            # non default "inet" network capability
+            capabilities = ["manifest-support", "inet"],
+        )
+    """
     capabilities = capabilities or list()
     constraints = _VmConstraints(min_mem_gib, min_storage_gib, min_cpu_threads, capabilities)
 
