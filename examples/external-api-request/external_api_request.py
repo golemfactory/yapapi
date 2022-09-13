@@ -61,7 +61,6 @@ class ApiCallService(Service):
 
         result = (await future_result).stdout
         print(result.strip() if result else "")
-        service_finished_event.set()
 
 
 async def main(subnet_tag, payment_driver, payment_network):
