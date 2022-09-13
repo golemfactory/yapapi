@@ -19,6 +19,7 @@ from utils import (
     print_env_info,
 )
 
+
 class ApiCallService(Service):
     @staticmethod
     async def get_payload():
@@ -62,6 +63,7 @@ class ApiCallService(Service):
         print(result.strip() if result else "")
         service_finished_event.set()
 
+
 async def main(subnet_tag, payment_driver, payment_network):
     async with Golem(
         budget=1.0,
@@ -79,6 +81,7 @@ async def main(subnet_tag, payment_driver, payment_network):
                 await asyncio.sleep(10)
             except (KeyboardInterrupt, asyncio.CancelledError):
                 break
+
 
 if __name__ == "__main__":
     parser = build_parser("External API request example")
