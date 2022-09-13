@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
 import asyncio
 import base64
-from datetime import timedelta
+from datetime import datetime
 import pathlib
 import sys
 
 from yapapi import Golem
 from yapapi.services import Service
-from yapapi.log import enable_default_logger
 from yapapi.payload import vm
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
-from utils import run_golem_example
 
-service_finished_event = asyncio.Event()
-
+from utils import (
+    build_parser,
+    run_golem_example,
+    print_env_info,
+)
 
 class ApiCallService(Service):
     @staticmethod
@@ -61,13 +62,35 @@ class ApiCallService(Service):
         print(result.strip() if result else "")
         service_finished_event.set()
 
+async def main(subnet_tag, payment_driver, payment_network):
+    async with Golem(
+        budget=1.0,
+        subnet_tag=subnet_tag,
+        payment_driver=payment_driver,
+        payment_network=payment_network,
+    ) as golem:
+        print_env_info(golem)
 
-async def main():
-    async with Golem(budget=1.0, subnet_tag="devnet-beta") as golem:
-        await golem.run_service(ApiCallService, num_instances=1)
-        await service_finished_event.wait()
+        cluster = await golem.run_service(ApiCallService, num_instances=1)
 
+        while True:
+            print(cluster.instances)
+            try:
+                await asyncio.sleep(10)
+            except (KeyboardInterrupt, asyncio.CancelledError):
+                break
 
 if __name__ == "__main__":
-    enable_default_logger(log_file="external_api_request.log")
-    run_golem_example(main())
+    parser = build_parser("External API request example")
+    now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
+    parser.set_defaults(log_file=f"external-api-request-yapapi-{now}.log")
+    args = parser.parse_args()
+
+    run_golem_example(
+        main(
+            subnet_tag=args.subnet_tag,
+            payment_driver=args.payment_driver,
+            payment_network=args.payment_network,
+        ),
+        log_file=args.log_file,
+    )
