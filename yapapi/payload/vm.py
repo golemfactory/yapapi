@@ -116,7 +116,7 @@ async def manifest(
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,
     min_cpu_threads: int = 1,
-    capabilities: Optional[List[VmCaps]] = [VM_CAPS_MANIFEST_SUPPORT],
+    capabilities: Optional[List[VmCaps]] = None,
 ) -> Package:
     """
     Build a reference to application payload.
@@ -128,7 +128,7 @@ async def manifest(
     :param min_mem_gib: minimal memory required to execute application code
     :param min_storage_gib: minimal disk storage to execute tasks
     :param min_cpu_threads: minimal available logical CPU cores
-    :param capabilities: an optional list of required vm capabilities
+    :param capabilities: an optional list of required VM capabilities
     :return: the payload definition for the given VM image
 
     example usage::
@@ -144,7 +144,6 @@ async def manifest(
             manifest_sig = open("manifest.json.sig.base64", "r").read(),
             manifest_sig_algorithm = "sha256",
             manifest_cert = open("cert.der.base64", "r").read(),
-            # non default "inet" network capability
             capabilities = ["manifest-support", "inet"],
         )
     """
@@ -195,7 +194,7 @@ async def repo(
     :param min_mem_gib: minimal memory required to execute application code
     :param min_storage_gib: minimal disk storage to execute tasks
     :param min_cpu_threads: minimal available logical CPU cores
-    :param capabilities: an optional list of required vm capabilities
+    :param capabilities: an optional list of required VM capabilities
     :return: the payload definition for the given VM image
 
     example usage::
