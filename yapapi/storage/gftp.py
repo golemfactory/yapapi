@@ -5,7 +5,6 @@ Golem File Transfer Storage Provider
 import asyncio
 import contextlib
 from dataclasses import dataclass
-import distutils.util
 import json
 import os
 import sys
@@ -32,6 +31,7 @@ import semantic_version  # type: ignore
 from typing_extensions import Literal, Protocol, TypedDict
 
 from yapapi.storage import StorageProvider, Destination, Source, Content
+from yapapi.utils import strtobool
 import logging
 
 
@@ -245,9 +245,9 @@ def read_use_gftp_close_env_var() -> Optional[bool]:
     returns `None`.
     """
     try:
-        env_value = os.environ[USE_GFTP_CLOSE_ENV_VAR]
-        return distutils.util.strtobool(env_value)
-    except Exception:
+        env_value = os.environ.get(USE_GFTP_CLOSE_ENV_VAR, "")
+        return strtobool(env_value)
+    except ValueError:
         return None
 
 

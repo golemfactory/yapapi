@@ -79,9 +79,9 @@ class _VmConstraints(Model):
 @dataclass
 class _VmManifestPackage(Package):
     manifest: str
-    manifest_sig: str
-    manifest_sig_algorithm: str
-    manifest_cert: str
+    manifest_sig: Optional[str]
+    manifest_sig_algorithm: Optional[str]
+    manifest_cert: Optional[str]
     constraints: _VmConstraints
 
     async def resolve_url(self) -> str:
@@ -102,9 +102,9 @@ class _VmManifestPackage(Package):
 
 async def manifest(
     manifest: str,
-    manifest_sig: str,
-    manifest_sig_algorithm: str,
-    manifest_cert: str,
+    manifest_sig: Optional[str] = None,
+    manifest_sig_algorithm: Optional[str] = None,
+    manifest_cert: Optional[str] = None,
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,
     min_cpu_threads: int = 1,
