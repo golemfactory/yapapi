@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "sign-manifest"
+version = "0.1.0"
+description = ""
+authors = ["GolemFactory <contact@golem.network>"]
+license = "GPL v3"
+readme = "README.md"
+packages = [{include = "sign_manifest"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+pyOpenSSL = "^22.0.0"
+PyYAML = "^6.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

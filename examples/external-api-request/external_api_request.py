@@ -23,8 +23,7 @@ from utils import (
 class ApiCallService(Service):
     @staticmethod
     async def get_payload():
-        manifest = open("manifest.json", "rb").read()
-        manifest = base64.b64encode(manifest).decode("utf-8")
+        manifest = open("manifest.json.base64", "rb").read().decode("utf-8")
 
         manifest_sig = open("manifest.json.base64.sign.sha256", "rb").read()
         manifest_sig = base64.b64encode(manifest_sig).decode("utf-8")
@@ -32,7 +31,7 @@ class ApiCallService(Service):
         manifest_sig_algorithm = "sha256"
 
         # both DER and PEM formats are supported
-        manifest_cert = open("requestor.cert.der", "rb").read()
+        manifest_cert = open("certs/foo_req.cert.pem", "rb").read()
         manifest_cert = base64.b64encode(manifest_cert).decode("utf-8")
 
         return await vm.manifest(
@@ -41,8 +40,8 @@ class ApiCallService(Service):
             manifest_sig_algorithm=manifest_sig_algorithm,
             manifest_cert=manifest_cert,
             min_mem_gib=0.5,
-            min_cpu_threads=0.5,
-            capabilities=["inet", "manifest-support"],
+            min_cpu_threads=1,
+            capabilities=[vm.VM_CAPS_INET, vm.VM_CAPS_MANIFEST],
         )
 
     async def run(self):

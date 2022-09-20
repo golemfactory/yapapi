@@ -29,7 +29,9 @@ _FALLBACK_REPO_URL: Final = "http://girepo.dev.golem.network:8000"
 
 logger = logging.getLogger(__name__)
 
-VM_CAPS_VPN: str = "vpn"
+VM_CAPS_VPN: Final[str] = "vpn"
+VM_CAPS_MANIFEST: Final[str] = "manifest-support"
+VM_CAPS_INET: Final[str] = "inet"
 
 VmCaps = Literal["vpn", "inet", "manifest-support"]
 
