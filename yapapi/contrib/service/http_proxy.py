@@ -135,6 +135,8 @@ class HttpProxyService(Service, abc.ABC):
         if request.can_read_body:
             remote_request += await request.read()
 
+
+
         logger.info("Sending request: `%s %s` to %s", request.method, request.path_qs, self)
         logger.debug("remote_request: %s", remote_request)
 
@@ -242,7 +244,7 @@ class LocalHttpProxy:
         the :meth:`~HttpProxyService.handle_request` of the specified cluster in a round-robin
         fashion
         """
-        runner = web.ServerRunner(web.Server(self._request_handler))  # type: ignore
+        runner = web.ServerRunner(_Server(self._request_handler, client_max_size=1024 ** 3))  # type: ignore
         await runner.setup()
         site = web.TCPSite(runner, port=self._port)
         await site.start()
@@ -252,3 +254,14 @@ class LocalHttpProxy:
     async def stop(self):
         assert self._site, "Not started, call `run` first."
         await self._site.stop()
+
+
+class _Server(web.Server):
+    def __init__(self, *args, client_max_size=1024 ** 2, **kwargs):
+        self._client_max_size = client_max_size
+        super().__init__(*args, **kwargs)
+
+    def _make_request(
+        self, *args, **kwargs
+    ) -> web.BaseRequest:
+        return web.BaseRequest(*args, **kwargs, loop=self._loop, client_max_size=self._client_max_size)
