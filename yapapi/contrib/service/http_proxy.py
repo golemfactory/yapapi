@@ -17,7 +17,8 @@ import asyncio
 import logging
 from multidict import CIMultiDict
 import re
-from typing import Optional, Final
+from typing import Optional
+from typing_extensions import Final
 import traceback
 
 from yapapi.services import Cluster, ServiceState, Service
@@ -31,11 +32,7 @@ DEFAULT_MAX_REQUEST_SIZE: Final[int] = 128 * 1024 ** 2
 
 
 class _ResponseParser:
-    def __init__(
-            self,
-            ws: client_ws.ClientWebSocketResponse,
-            timeout: float = DEFAULT_TIMEOUT
-    ):
+    def __init__(self, ws: client_ws.ClientWebSocketResponse, timeout: float = DEFAULT_TIMEOUT):
         self.headers_data = b""
         self.headers: Optional[CIMultiDict] = None
         self.content = b""
@@ -153,7 +150,11 @@ class HttpProxyService(Service, abc.ABC):
         ) as ws:
             max_chunk, remainder = divmod(len(remote_request), WEBSOCKET_CHUNK_LIMIT)
             for chunk in range(0, max_chunk + (1 if remainder else 0)):
-                await ws.send_bytes(remote_request[chunk * WEBSOCKET_CHUNK_LIMIT:(chunk + 1) * WEBSOCKET_CHUNK_LIMIT])
+                await ws.send_bytes(
+                    remote_request[
+                        chunk * WEBSOCKET_CHUNK_LIMIT : (chunk + 1) * WEBSOCKET_CHUNK_LIMIT
+                    ]
+                )
 
             response_parser = _ResponseParser(ws, self._remote_response_timeout)
             try:
@@ -216,11 +217,12 @@ class LocalHttpProxy:
 
     """
 
-    def __init__(self,
-         cluster: Cluster[HttpProxyService],
-         port: int,
-         max_request_size: int = DEFAULT_MAX_REQUEST_SIZE,
-     ):
+    def __init__(
+        self,
+        cluster: Cluster[HttpProxyService],
+        port: int,
+        max_request_size: int = DEFAULT_MAX_REQUEST_SIZE,
+    ):
         """
         Initialize the local HTTP proxy
 
@@ -274,16 +276,15 @@ class LocalHttpProxy:
 
 class _Server(web.Server):
     """Override of aiohttp.web.Server to allow for an increase of the request size."""
+
     def __init__(self, *args, client_max_size=1024 ** 2, **kwargs):
         self._client_max_size = client_max_size
         super().__init__(*args, **kwargs)
 
-    def _make_request(
-        self, *args, **kwargs
-    ) -> web.BaseRequest:
-        return web.BaseRequest(
+    def _make_request(self, *args, **kwargs) -> web.BaseRequest:
+        return web.BaseRequest(  # type: ignore
             *args,
-            **kwargs,
             loop=self._loop,
-            client_max_size=self._client_max_size
+            client_max_size=self._client_max_size,
+            **kwargs,
         )

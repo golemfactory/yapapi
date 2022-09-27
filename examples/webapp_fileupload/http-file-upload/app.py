@@ -19,7 +19,7 @@ app = Flask(__name__)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"echo": True}
 app.config["SQLALCHEMY_DATABASE_URI"] = f"rqlite+pyrqlite://{args.db_address}:{args.db_port}/"
-app.config['UPLOAD_FOLDER'] = "uploads"
+app.config["UPLOAD_FOLDER"] = "uploads"
 
 
 db = SQLAlchemy(app)
@@ -37,7 +37,7 @@ def root_get():
     return render_template(
         "index.html",
         images_url=url_for("download_image", filename=""),
-        images=Img.query.order_by(Img.id.desc()).limit(64)
+        images=Img.query.order_by(Img.id.desc()).limit(64),
     )
 
 
@@ -53,7 +53,7 @@ def root_post():
         return render_template("error.html", back_url=url_for("root_get"))
 
     filename = secure_filename(file.filename)
-    filepath = Path(app.config['UPLOAD_FOLDER']) / filename
+    filepath = Path(app.config["UPLOAD_FOLDER"]) / filename
     file.save(filepath)
 
     db.session.add(Img(filename=filename))
