@@ -17,7 +17,7 @@ import asyncio
 import logging
 from multidict import CIMultiDict
 import re
-from typing import Optional
+from typing import Optional, Final
 import traceback
 
 from yapapi.services import Cluster, ServiceState, Service
@@ -25,9 +25,17 @@ from yapapi.services import Cluster, ServiceState, Service
 
 logger = logging.getLogger(__name__)
 
+WEBSOCKET_CHUNK_LIMIT: Final[int] = 2 ** 16
+DEFAULT_TIMEOUT: Final[float] = 30.0
+DEFAULT_MAX_REQUEST_SIZE: Final[int] = 128 * 1024 ** 2
+
 
 class _ResponseParser:
-    def __init__(self, ws: client_ws.ClientWebSocketResponse, timeout: float = 10.0):
+    def __init__(
+            self,
+            ws: client_ws.ClientWebSocketResponse,
+            timeout: float = DEFAULT_TIMEOUT
+    ):
         self.headers_data = b""
         self.headers: Optional[CIMultiDict] = None
         self.content = b""
@@ -90,7 +98,7 @@ class HttpProxyService(Service, abc.ABC):
         self,
         remote_port: int = 80,
         remote_host: Optional[str] = None,
-        response_timeout: float = 10.0,
+        response_timeout: float = DEFAULT_TIMEOUT,
     ):
         """
         Initialize the HTTP proxy service
@@ -135,8 +143,6 @@ class HttpProxyService(Service, abc.ABC):
         if request.can_read_body:
             remote_request += await request.read()
 
-
-
         logger.info("Sending request: `%s %s` to %s", request.method, request.path_qs, self)
         logger.debug("remote_request: %s", remote_request)
 
@@ -145,7 +151,9 @@ class HttpProxyService(Service, abc.ABC):
             instance_ws,
             headers={"Authorization": f"Bearer {app_key}"},
         ) as ws:
-            await ws.send_bytes(remote_request)
+            max_chunk, remainder = divmod(len(remote_request), WEBSOCKET_CHUNK_LIMIT)
+            for chunk in range(0, max_chunk + (1 if remainder else 0)):
+                await ws.send_bytes(remote_request[chunk * WEBSOCKET_CHUNK_LIMIT:(chunk + 1) * WEBSOCKET_CHUNK_LIMIT])
 
             response_parser = _ResponseParser(ws, self._remote_response_timeout)
             try:
@@ -208,19 +216,25 @@ class LocalHttpProxy:
 
     """
 
-    def __init__(self, cluster: Cluster[HttpProxyService], port: int):
+    def __init__(self,
+         cluster: Cluster[HttpProxyService],
+         port: int,
+         max_request_size: int = DEFAULT_MAX_REQUEST_SIZE,
+     ):
         """
         Initialize the local HTTP proxy
 
         :param cluster: a :class:`~yapapi.services.Cluster` of one or more VPN-connected
             :class:`~HttpProxyService` instances.
         :param port: a local port on the requestor's machine to listen on
+        :param max_request_size: maximum client request size, defaults to 128MB
         """
         self._request_count = 0
         self._request_lock = asyncio.Lock()
         self._cluster = cluster
         self._port = port
         self._site: Optional[web.TCPSite] = None
+        self._max_request_size = max_request_size
 
     async def _request_handler(self, request: web.Request) -> web.Response:
         logger.info("Received a local HTTP request: %s %s", request.method, request.path_qs)
@@ -244,7 +258,9 @@ class LocalHttpProxy:
         the :meth:`~HttpProxyService.handle_request` of the specified cluster in a round-robin
         fashion
         """
-        runner = web.ServerRunner(_Server(self._request_handler, client_max_size=1024 ** 3))  # type: ignore
+        runner = web.ServerRunner(
+            _Server(self._request_handler, client_max_size=self._max_request_size)
+        )  # type: ignore
         await runner.setup()
         site = web.TCPSite(runner, port=self._port)
         await site.start()
@@ -257,6 +273,7 @@ class LocalHttpProxy:
 
 
 class _Server(web.Server):
+    """Override of aiohttp.web.Server to allow for an increase of the request size."""
     def __init__(self, *args, client_max_size=1024 ** 2, **kwargs):
         self._client_max_size = client_max_size
         super().__init__(*args, **kwargs)
@@ -264,4 +281,9 @@ class _Server(web.Server):
     def _make_request(
         self, *args, **kwargs
     ) -> web.BaseRequest:
-        return web.BaseRequest(*args, **kwargs, loop=self._loop, client_max_size=self._client_max_size)
+        return web.BaseRequest(
+            *args,
+            **kwargs,
+            loop=self._loop,
+            client_max_size=self._client_max_size
+        )
