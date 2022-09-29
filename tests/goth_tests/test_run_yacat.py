@@ -87,10 +87,10 @@ async def test_run_yacat(
             )
             logger.info("Keyspace found")
 
-            await all_sent.wait_for_result(timeout=60)
+            await all_sent.wait_for_result(timeout=120)
             logger.info("All tasks sent")
 
-            await all_computed.wait_for_result(timeout=120)
+            await all_computed.wait_for_result(timeout=240)
             logger.info("All tasks computed")
 
             await cmd_monitor.wait_for_pattern(".*Password found: yo", timeout=60)
