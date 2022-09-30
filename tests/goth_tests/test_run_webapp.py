@@ -16,14 +16,17 @@ from goth.runner import Runner
 from goth.runner.probe import RequestorProbe
 
 from .assertions import assert_no_errors, assert_all_invoices_accepted
-
+from ._util import get_free_port
 
 logger = logging.getLogger("goth.test")
 
 SUBNET_TAG = "goth"
 
 ONELINER_ENTRY = "hello from goth"
-ONELINER_URL = "http://localhost:8080/"
+
+port = get_free_port()
+
+ONELINER_URL = f"http://localhost:{port}/"
 
 
 @pytest.mark.asyncio
@@ -55,7 +58,7 @@ async def test_run_webapp(
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
-            f"{requestor_path} --subnet-tag {SUBNET_TAG}",
+            f"{requestor_path} --subnet-tag {SUBNET_TAG} --port {port}",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor, process_monitor):
             start_time = time.time()
