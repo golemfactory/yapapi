@@ -84,7 +84,7 @@ async def test_power_outage(
             logger.info("Agreement confirmed")
 
             await cmd_monitor.wait_for_pattern(
-                ".*Task started on provider 'provider-1'.*", timeout=20
+                ".*Task started on provider 'provider-1'.*", timeout=60
             )
 
             logger.debug("Stopping provider 1")
@@ -94,7 +94,7 @@ async def test_power_outage(
             await cmd_monitor.wait_for_pattern(".*Terminated agreement with provider-1")
             logger.info("Agreement properly terminated")
 
-            await all_sent.wait_for_result(timeout=120)
+            await all_sent.wait_for_result(timeout=240)
             logger.info("All tasks sent")
 
             await all_computed.wait_for_result(timeout=120)
