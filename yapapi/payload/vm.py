@@ -1,5 +1,5 @@
 from dns.exception import DNSException
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 import logging
 import sys
@@ -24,8 +24,9 @@ from yapapi.props.builder import DemandBuilder, Model
 from yapapi.props import inf
 from yapapi.props.inf import InfBase, INF_CORES, RUNTIME_VM, ExeUnitRequest, ExeUnitManifestRequest
 
-_DEFAULT_REPO_SRV: Final = "_girepo._tcp.dev.golem.network"
-_FALLBACK_REPO_URL: Final = "http://girepo.dev.golem.network:8000"
+_DEFAULT_REPO_SRV: Final[str] = "_girepo._tcp.dev.golem.network"
+_FALLBACK_REPO_URL: Final[str] = "http://girepo.dev.golem.network:8000"
+_DEFAULT_TIMEOUT_SECONDS: Final[int] = 10
 
 logger = logging.getLogger(__name__)
 
@@ -204,7 +205,7 @@ async def repo(
     )
 
 
-def resolve_repo_srv(repo_srv, fallback_url=_FALLBACK_REPO_URL) -> str:
+def resolve_repo_srv(repo_srv: str, fallback_url=_FALLBACK_REPO_URL) -> str:
     """
     Get the url of the package repository based on its SRV record address.
 
@@ -215,7 +216,9 @@ def resolve_repo_srv(repo_srv, fallback_url=_FALLBACK_REPO_URL) -> str:
     """
     try:
         try:
-            srv: Optional[SRVRecord] = SRVResolver.resolve_random(repo_srv)
+            srv: Optional[SRVRecord] = SRVResolver.resolve_random(
+                repo_srv, timeout=_DEFAULT_TIMEOUT_SECONDS
+            )
         except DNSException as e:
             raise PackageException(f"Could not resolve Golem package repository address [{e}].")
 
