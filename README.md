@@ -57,6 +57,15 @@ By default, `poetry` looks for the required Python version on your `PATH` and cr
 
 All of the project's dependencies will be installed to that virtual environment.
 
+### Running unit tests
+
+`yapapi` uses [Poe the Poet](https://github.com/nat-n/poethepoet) for running tasks.
+Declarations of project tasks can be found in `pyproject.toml`.
+
+```
+poetry run poe test
+```
+
 ### Running `goth` integration tests
 
 #### Prerequisites
@@ -85,6 +94,14 @@ Once you have the environment set up, to run all the integration tests, use:
 
 ```
 poetry run poe goth-tests
+```
+
+### Contributing
+
+It is recommended to run unit tests and static code analysis before committing changes.
+
+```
+poetry run poe check
 ```
 
 ## See also
