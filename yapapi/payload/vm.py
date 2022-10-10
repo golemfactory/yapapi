@@ -205,20 +205,21 @@ async def repo(
     )
 
 
-def resolve_repo_srv(repo_srv: str, fallback_url=_FALLBACK_REPO_URL) -> str:
+def resolve_repo_srv(
+    repo_srv: str, fallback_url=_FALLBACK_REPO_URL, timeout=_DEFAULT_TIMEOUT_SECONDS
+) -> str:
     """
     Get the url of the package repository based on its SRV record address.
 
     :param repo_srv: the SRV domain name
     :param fallback_url: temporary hardcoded fallback url in case there's a problem resolving SRV
+    :param timeout: socket connection timeout in seconds
     :return: the url of the package repository containing the port
     :raises: PackageException if no valid service could be reached
     """
     try:
         try:
-            srv: Optional[SRVRecord] = SRVResolver.resolve_random(
-                repo_srv, timeout=_DEFAULT_TIMEOUT_SECONDS
-            )
+            srv: Optional[SRVRecord] = SRVResolver.resolve_random(repo_srv, timeout=timeout)
         except DNSException as e:
             raise PackageException(f"Could not resolve Golem package repository address [{e}].")
 
