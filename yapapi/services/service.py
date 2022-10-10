@@ -1,9 +1,9 @@
 import asyncio
-from dataclasses import dataclass, field
 import uuid
-import statemachine  # type: ignore
+from dataclasses import dataclass, field
 from types import TracebackType
 from typing import (
+    TYPE_CHECKING,
     Any,
     AsyncGenerator,
     Awaitable,
@@ -13,15 +13,16 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
-    TYPE_CHECKING,
     Union,
 )
 
+import statemachine  # type: ignore
+
+from yapapi import events
 from yapapi.ctx import WorkContext
 from yapapi.network import Network, Node
 from yapapi.payload import Payload
 from yapapi.script import Script
-from yapapi import events
 from yapapi.utils import warn_deprecated_msg
 
 from .service_state import ServiceState
@@ -110,6 +111,14 @@ class Service:
         """Return the network :class:`~yapapi.network.Node` record associated with this instance."""
         return self._network_node
 
+    @property
+    def exc_info(self) -> ExcInfo:
+        """Return exception info for an exception that caused the last state transition.
+
+        If no such exception occurred, return `(None, None, None)`.
+        """
+        return self._exc_info
+
     def _set_cluster(self, cluster: "Cluster") -> None:
         self._cluster = cluster
 
@@ -127,13 +136,6 @@ class Service:
         )
         network_description = f" @ {self._network_node.ip}" if self._network_node else ""
         return f"<{class_name} {state}{provider_description}{network_description}>"
-
-    def exc_info(self) -> ExcInfo:
-        """Return exception info for an exception that caused the last state transition.
-
-        If no such exception occurred, return `(None, None, None)`.
-        """
-        return self._exc_info
 
     async def send_message(self, message: Any = None):
         """Send a control message to this instance."""
@@ -377,8 +379,15 @@ class Service:
         warn_deprecated_msg(msg)
 
     @property
+    def restart_condition(self) -> bool:
+        """Dictate condition based on which this instance will be restarted."""
+        return (
+            self.exc_info != (None, None, None) and not self.__service_instance.started_successfully
+        )
+
+    @property
     def is_available(self):
-        """Return `True` iff this instance is available (that is, starting, running or stopping)."""
+        """Return `True` if this instance is available (that is, starting, running or stopping)."""
         return self.__service_instance.state in ServiceState.AVAILABLE
 
     @property

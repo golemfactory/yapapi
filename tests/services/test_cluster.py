@@ -1,11 +1,13 @@
 import asyncio
 import itertools
 import sys
-import pytest
-from yapapi.services import Service, ServiceRunner
-from unittest.mock import Mock, patch
 from unittest import mock
+from unittest.mock import Mock, patch
+
+import pytest
+
 from yapapi import Golem
+from yapapi.services import Service, ServiceRunner
 
 
 class _TestService(Service):
@@ -102,7 +104,7 @@ async def test_spawn_instances(kwargs, args, error, monkeypatch):
 
     assert len(spawn_instance.mock_calls) == len(args)
     for call_args, args in zip(spawn_instance.call_args_list, args):
-        service, network, network_address, restart_condition = call_args[0]
+        service, network, network_address = call_args[0]
         assert service.init_kwargs == args[0]
         assert network_address == args[1]
 
