@@ -76,6 +76,14 @@ First, install [the dependencies required to run goth](https://github.com/golemf
 
 Next, [configure goth's GitHub API token](https://github.com/golemfactory/goth#getting-a-github-api-token).
 
+Make sure you have OpenSSH installed and added to path
+
+```
+ssh -V
+```
+
+Install [Websocat](https://github.com/vi/websocat/#installation)
+
 Now, you can install goth and its additional python requirements:
 
 ```
@@ -102,6 +110,12 @@ It is recommended to run unit tests and static code analysis before committing c
 
 ```
 poetry run poe check
+```
+
+You can clean up the artifacts created during the test runs with:
+
+```
+poetry run poe clean
 ```
 
 ## See also
