@@ -5,37 +5,8 @@ import pytest
 import sys
 from unittest import mock
 
-from yapapi.ctx import CommandContainer, WorkContext
+from yapapi.ctx import WorkContext
 from yapapi.script import Script
-
-
-def test_command_container():
-
-    c = CommandContainer()
-    c.deploy()
-    c.start(args=[])
-    c.transfer(_from="http://127.0.0.1:8000/LICENSE", to="container:/input/file_in")
-    c.run(entry_point="rust-wasi-tutorial", args=["/input/file_in", "/output/file_cp"])
-    c.transfer(_from="container:/output/file_cp", to="http://127.0.0.1:8000/upload/file_up")
-
-    expected_commands = """[
-        { "deploy": {} },
-        { "start": {"args": [] } },
-        { "transfer": {
-            "from": "http://127.0.0.1:8000/LICENSE",
-            "to": "container:/input/file_in"
-        } },
-        { "run": {
-            "entry_point": "rust-wasi-tutorial",
-            "args": [ "/input/file_in", "/output/file_cp" ]
-        } },
-        { "transfer": {
-            "from": "container:/output/file_cp",
-            "to": "http://127.0.0.1:8000/upload/file_up"
-        } }
-    ]
-    """
-    assert json.loads(expected_commands) == c.commands()
 
 
 @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
@@ -65,7 +36,7 @@ class TestWorkContext:
         self._on_download_executed = True
 
     @pytest.mark.asyncio
-    async def test_send_json(self):
+    async def test_upload_json(self):
         storage = mock.AsyncMock()
         dst_path = "/test/path"
         data = {
@@ -73,22 +44,22 @@ class TestWorkContext:
         }
         ctx = self._get_work_context(storage)
 
-        ctx.send_json(dst_path, data)
-        script = ctx.commit()
+        script = ctx.new_script()
+        script.upload_json(data, dst_path)
         await script._before()
 
         storage.upload_bytes.assert_called_with(json.dumps(data).encode("utf-8"))
         self._assert_dst_path(script, dst_path)
 
     @pytest.mark.asyncio
-    async def test_send_bytes(self):
+    async def test_upload_bytes(self):
         storage = mock.AsyncMock()
         dst_path = "/test/path"
         data = b"some byte string"
         ctx = self._get_work_context(storage)
 
-        ctx.send_bytes(dst_path, data)
-        script = ctx.commit()
+        script = ctx.new_script()
+        script.upload_bytes(data, dst_path)
         await script._before()
 
         storage.upload_bytes.assert_called_with(data)
@@ -102,8 +73,8 @@ class TestWorkContext:
         src_path = "/test/path"
         ctx = self._get_work_context(storage)
 
-        ctx.download_bytes(src_path, partial(self._on_download, expected))
-        script = ctx.commit()
+        script = ctx.new_script()
+        script.download_bytes(src_path, partial(self._on_download, expected))
         await script._before()
         await script._after()
 
@@ -120,8 +91,8 @@ class TestWorkContext:
         src_path = "/test/path"
         ctx = self._get_work_context(storage)
 
-        ctx.download_json(src_path, partial(self._on_download, expected))
-        script = ctx.commit()
+        script = ctx.new_script()
+        script.download_json(src_path, partial(self._on_download, expected))
         await script._before()
         await script._after()
 
@@ -137,8 +108,8 @@ class TestWorkContext:
     )
     def test_start(self, args):
         ctx = self._get_work_context()
-        ctx.start(*args)
-        script = ctx.commit()
+        script = ctx.new_script()
+        script.start(*args)
 
         batch = script._evaluate()
 
@@ -153,8 +124,8 @@ class TestWorkContext:
     )
     def test_deploy(self, kwargs):
         ctx = self._get_work_context()
-        ctx.deploy(**kwargs)
-        script = ctx.commit()
+        script = ctx.new_script()
+        script.deploy(**kwargs)
 
         batch = script._evaluate()
 
@@ -162,8 +133,8 @@ class TestWorkContext:
 
     def test_terminate(self):
         ctx = self._get_work_context(None)
-        ctx.terminate()
-        script = ctx.commit()
+        script = ctx.new_script()
+        script.terminate()
 
         batch = script._evaluate()
 

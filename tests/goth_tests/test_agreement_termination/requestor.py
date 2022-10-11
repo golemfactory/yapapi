@@ -24,7 +24,7 @@ async def main():
 
         The first call to this function will produce a worker
         that sends an invalid `run` command to the provider.
-        This should cause `yield ctx.commit()` to fail with
+        This should cause `yield script` to fail with
         `CommandExecutionError`.
 
         The remaining calls will just send `sleep 5` to the
@@ -37,14 +37,16 @@ async def main():
 
         async for task in tasks:
 
+            script = ctx.new_script()
+
             if should_fail:
                 # Send a command that will fail on the provider
-                ctx.run("xyz")
-                yield ctx.commit()
+                script.run("xyz")
+                yield script
             else:
                 # Simulate some work
-                ctx.run("/bin/sleep", "5")
-                yield ctx.commit()
+                script.run("/bin/sleep", "5")
+                yield script
 
             task.accept_result()
 

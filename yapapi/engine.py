@@ -24,7 +24,7 @@ from typing import (
     Type,
     Union,
 )
-from typing_extensions import AsyncGenerator
+from typing_extensions import AsyncGenerator, Final
 
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
@@ -50,11 +50,13 @@ from yapapi.strategy import (
     PROP_PAYMENT_TIMEOUT_SEC,
     DEBIT_NOTE_INTERVAL_GRACE_PERIOD,
 )
+from yapapi.invoice_manager import InvoiceManager
 
 DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "erc20").lower()
 DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "rinkeby").lower()
 DEFAULT_SUBNET: Optional[str] = os.getenv("YAGNA_SUBNET", "devnet-beta")
 
+MAX_CONCURRENTLY_PROCESSED_DEBIT_NOTES: Final[int] = 10
 
 logger = logging.getLogger("yapapi.executor")
 
@@ -141,12 +143,12 @@ class _Engine:
         self._jobs: Set[Job] = set()
 
         # initialize the payment structures
-        self._agreements_to_pay: Dict[JobId, Set[AgreementId]] = defaultdict(set)
+        self._invoice_manager = InvoiceManager()
+
         self._agreements_accepting_debit_notes: Dict[JobId, Set[AgreementId]] = defaultdict(set)
         self._num_debit_notes: Dict[ActivityId, int] = defaultdict(int)
         self._num_payable_debit_notes: Dict[ActivityId, int] = defaultdict(int)
         self._activity_created_at: Dict[ActivityId, datetime] = dict()
-        self._invoices: Dict[AgreementId, rest.payment.Invoice] = dict()
         self._payment_closing: bool = False
 
         self._process_invoices_job: Optional[asyncio.Task] = None
@@ -276,14 +278,6 @@ class _Engine:
     async def add_to_async_context(self, async_context_manager: AsyncContextManager) -> None:
         await self._stack.enter_async_context(async_context_manager)
 
-    def _unpaid_agreement_ids(self) -> Set[AgreementId]:
-        """Return the set of all yet unpaid agreement ids."""
-
-        unpaid_agreement_ids = set()
-        for job_id, agreement_ids in self._agreements_to_pay.items():
-            unpaid_agreement_ids.update(agreement_ids)
-        return unpaid_agreement_ids
-
     async def _shutdown(self, *exc_info):
         """Shutdown this Golem instance."""
 
@@ -313,7 +307,7 @@ class _Engine:
         # then cancel the invoices service
         if self._process_invoices_job:
 
-            unpaid_agreements = self._unpaid_agreement_ids()
+            unpaid_agreements = self._invoice_manager.payable_unpaid_agreement_ids
             if unpaid_agreements:
                 logger.info(
                     "%s still unpaid, waiting for invoices...",
@@ -323,7 +317,7 @@ class _Engine:
                     await asyncio.wait_for(self._process_invoices_job, timeout=30)
                 except asyncio.TimeoutError:
                     logger.debug("process_invoices_job cancelled")
-                unpaid_agreements = self._unpaid_agreement_ids()
+                unpaid_agreements = self._invoice_manager.payable_unpaid_agreement_ids
                 if unpaid_agreements:
                     logger.warning("Unpaid agreements: %s", unpaid_agreements)
 
@@ -392,50 +386,28 @@ class _Engine:
 
     async def _process_invoices(self) -> None:
         """Process incoming invoices."""
-
+        invoice_manager = self._invoice_manager
         async for invoice in self._payment_api.incoming_invoices():
-            job_id = next(
-                (
-                    id
-                    for id in self._agreements_to_pay
-                    if invoice.agreement_id in self._agreements_to_pay[id]
-                ),
-                None,
-            )
-            if job_id is not None:
-                job = self._get_job_by_id(job_id)
-                agreement = self._get_agreement_by_id(invoice.agreement_id)
-                job.emit(
-                    events.InvoiceReceived,
-                    agreement=agreement,
-                    invoice=invoice,
-                )
-                try:
-                    allocation = self._get_allocation(invoice)
-                    await invoice.accept(amount=invoice.amount, allocation=allocation)
-                    job.emit(
-                        events.InvoiceAccepted,
-                        agreement=agreement,
-                        invoice=invoice,
-                    )
-                except CancelledError:
-                    raise
-                except Exception:
-                    job.emit(
-                        events.PaymentFailed,
-                        agreement=agreement,
-                        exc_info=sys.exc_info(),  # type: ignore
-                    )
-                else:
-                    self._agreements_to_pay[job_id].remove(invoice.agreement_id)
-                    assert invoice.agreement_id in self._agreements_accepting_debit_notes[job_id]
-                    self._agreements_accepting_debit_notes[job_id].remove(invoice.agreement_id)
-            else:
-                self._invoices[invoice.agreement_id] = invoice
-            if self._payment_closing and not any(
-                agr_ids for agr_ids in self._agreements_to_pay.values()
-            ):
+            invoice_manager.add_invoice(invoice)
+            await self._agreement_payment_attempt(invoice.agreement_id)
+            if self._payment_closing and not invoice_manager.has_payable_unpaid_agreements:
                 break
+
+    async def accept_payments_for_agreement(self, job_id: str, agreement_id: str) -> None:
+        """Add given agreement to the set of agreements for which invoices should be accepted."""
+        self._invoice_manager.set_payable(agreement_id)
+        await self._agreement_payment_attempt(agreement_id)
+
+    async def _agreement_payment_attempt(self, agreement_id: str) -> None:
+        invoice_manager = self._invoice_manager
+        paid = await invoice_manager.attempt_payment(
+            agreement_id, self._get_allocation, self._strategy.invoice_accepted_amount
+        )
+        if paid:
+            #   We've accepted the final invoice, so we can ignore debit notes
+            job_id = invoice_manager.agreement_job(agreement_id).id
+            assert agreement_id in self._agreements_accepting_debit_notes[job_id]
+            self._agreements_accepting_debit_notes[job_id].remove(agreement_id)
 
     @staticmethod
     def _check_for_termination_reason(
@@ -532,37 +504,67 @@ class _Engine:
 
     async def _process_debit_notes(self) -> None:
         """Process incoming debit notes."""
+        debit_note_processing_tasks: Dict[str, asyncio.Task] = {}
+        loop = asyncio.get_event_loop()
 
-        async for debit_note in self._payment_api.incoming_debit_notes():
-            agr_id = debit_note.agreement_id
-            job_id = next(
-                (
-                    id
-                    for id in self._agreements_accepting_debit_notes
-                    if agr_id in self._agreements_accepting_debit_notes[id]
-                ),
-                None,
+        semaphore = asyncio.Semaphore(MAX_CONCURRENTLY_PROCESSED_DEBIT_NOTES)
+
+        async def _process_debit_note_wrapper(debit_note_id: str) -> None:
+            try:
+                await self._process_debit_note(debit_note_id)
+            finally:
+                debit_note_processing_tasks.pop(debit_note_id)
+                semaphore.release()
+
+        async for debit_note_id in self._payment_api.incoming_debit_note_ids():
+            await semaphore.acquire()
+            debit_note_processing_tasks[debit_note_id] = loop.create_task(
+                _process_debit_note_wrapper(debit_note_id)
             )
-            if job_id is not None:
-                job = self._get_job_by_id(job_id)
-                agreement = self._get_agreement_by_id(agr_id)
-                job.emit(
-                    events.DebitNoteReceived,
-                    agreement=agreement,
-                    debit_note=debit_note,
-                )
+            if self._payment_closing:
+                any_agreement_accepts = any(self._agreements_accepting_debit_notes.values())
+                if not any_agreement_accepts:
+                    #   There are no agreements we're accepting debit notes for,
+                    #   and we're shutting down, so there will never be any again
+                    #   -> we can safely ignore all further incoming debit notes
+                    break
 
-                # We ignore debit notes we can't accept, since rejection is not implemented in yagna
+        if debit_note_processing_tasks:
+            await asyncio.gather(*debit_note_processing_tasks.values())
 
-                # The most we risk by not accepting a debit note would be a termination of the
-                # agreement by the provider which is not an issue here
-                # because in all of these cases the agreement had already been terminated or
-                # we have just terminated it in the course of interval enforcement
-                if not await self._enforce_debit_note_intervals(job, debit_note):
-                    continue
+    async def _process_debit_note(self, debit_note_id: str) -> None:
+        debit_note = await self._payment_api.debit_note(debit_note_id)
+        agr_id = debit_note.agreement_id
+        job_id = next(
+            (
+                id
+                for id in self._agreements_accepting_debit_notes
+                if agr_id in self._agreements_accepting_debit_notes[id]
+            ),
+            None,
+        )
+        if job_id is not None:
+            job = self._get_job_by_id(job_id)
+            agreement = self._get_agreement_by_id(agr_id)
+            job.emit(
+                events.DebitNoteReceived,
+                agreement=agreement,
+                debit_note=debit_note,
+            )
 
-                try:
-                    allocation = self._get_allocation(debit_note)
+            # We ignore debit notes we can't accept, since rejection is not implemented in yagna
+
+            # The most we risk by not accepting a debit note would be a termination of the
+            # agreement by the provider which is not an issue here
+            # because in all of these cases the agreement had already been terminated or
+            # we have just terminated it in the course of interval enforcement
+            if not await self._enforce_debit_note_intervals(job, debit_note):
+                return
+
+            try:
+                allocation = self._get_allocation(debit_note)
+                accepted_amount = await self._strategy.debit_note_accepted_amount(debit_note)
+                if accepted_amount >= Decimal(debit_note.total_amount_due):
                     await debit_note.accept(
                         amount=debit_note.total_amount_due, allocation=allocation
                     )
@@ -571,31 +573,21 @@ class _Engine:
                         agreement=agreement,
                         debit_note=debit_note,
                     )
-                except CancelledError:
-                    raise
-                except Exception:
-                    job.emit(
-                        events.PaymentFailed, agreement=agreement, exc_info=sys.exc_info()  # type: ignore
+                else:
+                    #   We should reject the debit note, but it's not implemented in yagna,
+                    #   so we just ignore it now
+                    logger.warning(
+                        "Ignored debit note %s for %s, we accept only %s",
+                        debit_note.debit_note_id,
+                        debit_note.total_amount_due,
+                        accepted_amount,
                     )
-            if self._payment_closing and not self._agreements_to_pay:
-                break
-
-    async def accept_payments_for_agreement(
-        self, job_id: str, agreement_id: str, *, partial: bool = False
-    ) -> None:
-        """Add given agreement to the set of agreements for which invoices should be accepted."""
-        job = self._get_job_by_id(job_id)
-        agreement = self._get_agreement_by_id(agreement_id)
-        job.emit(events.PaymentPrepared, agreement=agreement)
-        inv = self._invoices.get(agreement_id)
-        if inv is None:
-            self._agreements_to_pay[job_id].add(agreement_id)
-            job.emit(events.PaymentQueued, agreement=agreement)
-            return
-        del self._invoices[agreement_id]
-        allocation = self._get_allocation(inv)
-        await inv.accept(amount=inv.amount, allocation=allocation)
-        job.emit(events.InvoiceAccepted, agreement=agreement, invoice=inv)
+            except CancelledError:
+                raise
+            except Exception:
+                job.emit(
+                    events.PaymentFailed, agreement=agreement, exc_info=sys.exc_info()  # type: ignore
+                )
 
     def accept_debit_notes_for_agreement(self, job_id: str, agreement_id: str) -> None:
         """Add given agreement to the set of agreements for which debit notes should be accepted."""
@@ -650,6 +642,7 @@ class _Engine:
             if on_agreement_ready:
                 on_agreement_ready(agreement)
             self._all_agreements[agreement.id] = agreement
+            self._invoice_manager.add_agreement(job, agreement)
 
             job.emit(events.WorkerStarted, agreement=agreement)
 
@@ -712,7 +705,7 @@ class _Engine:
                 script.emit(events.GettingResults)
                 await script._after()
                 script.emit(events.ScriptFinished)
-                await self.accept_payments_for_agreement(job_id, agreement_id, partial=True)
+                await self.accept_payments_for_agreement(job_id, agreement_id)
 
                 #   NOTE: This is the same as script.results for non-streaming mode,
                 #         but when streaming we have here additional CommandEvents that
@@ -812,6 +805,7 @@ class Job:
 
         self.engine = engine
         self.offers_collected: int = 0
+        self.unscored_offers: asyncio.Queue[OfferProposal] = asyncio.Queue()
         self.proposals_confirmed: int = 0
         self.expiration_time: datetime = expiration_time
         self.payload: Payload = payload
@@ -854,7 +848,16 @@ class Job:
             await proposal.reject(reason)
             return self.emit(events.ProposalRejected, proposal=proposal, reason=reason)
 
-        score = await self.engine._strategy.score_offer(proposal)
+        try:
+            score = await self.engine._strategy.score_offer(proposal)
+        except Exception:
+            logger.warning(
+                f"Strategy error: score_offer(proposal) failed when calling with proposal: %s",
+                proposal.id,
+                exc_info=True,
+            )
+            return await reject_proposal("Unknown error in score offer")
+
         logger.debug(
             "Scored offer %s, provider: %s, strategy: %s, score: %f",
             proposal.id,
@@ -898,14 +901,7 @@ class Job:
         self,
         subscription: Subscription,
     ) -> None:
-        """Create a market subscription and repeatedly collect offer proposals for it.
-
-        Collected proposals are processed concurrently using a bounded number
-        of asyncio tasks.
-
-        :param state: A state related to a call to `Executor.submit()`
-        """
-        max_number_of_tasks = 5
+        """Create a market subscription and repeatedly collect offer proposals for it."""
 
         try:
             proposals = subscription.events()
@@ -913,13 +909,17 @@ class Job:
             self.emit(events.CollectFailed, subscription=subscription, reason=str(ex))
             raise
 
-        # A semaphore is used to limit the number of handler tasks
-        semaphore = asyncio.Semaphore(max_number_of_tasks)
-
         async for proposal in proposals:
-
             self.emit(events.ProposalReceived, proposal=proposal)
             self.offers_collected += 1
+            self.unscored_offers.put_nowait(proposal)
+
+    async def _handle_all_proposals(self) -> None:
+        max_number_of_tasks = 5
+        semaphore = asyncio.Semaphore(max_number_of_tasks)
+
+        while True:
+            proposal = await self.unscored_offers.get()
 
             async def handler(proposal_):
                 """Wrap `_handle_proposal()` method with error handling."""
@@ -950,15 +950,21 @@ class Job:
                 self.expiration_time, self.payload
             )
 
-        while True:
-            try:
-                subscription = await self._demand_builder.subscribe(self.engine._market_api)
-                self.emit(events.SubscriptionCreated, subscription=subscription)
-            except Exception as ex:
-                self.emit(events.SubscriptionFailed, reason=str(ex))
-                raise
-            async with subscription:
-                await self._find_offers_for_subscription(subscription)
+        offer_handler_task = asyncio.get_event_loop().create_task(self._handle_all_proposals())
+
+        try:
+            while True:
+                try:
+                    subscription = await self._demand_builder.subscribe(self.engine._market_api)
+                    self.emit(events.SubscriptionCreated, subscription=subscription)
+                except Exception as ex:
+                    self.emit(events.SubscriptionFailed, reason=str(ex))
+                    raise
+                async with subscription:
+                    await self._find_offers_for_subscription(subscription)
+        except (Exception, CancelledError):
+            offer_handler_task.cancel()
+            raise
 
     # TODO: move to Golem
     def _get_common_payment_platforms(self, proposal: rest.market.OfferProposal) -> Set[str]:

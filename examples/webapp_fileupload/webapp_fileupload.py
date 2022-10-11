@@ -25,6 +25,7 @@ from utils import (
 )
 
 HTTP_IMAGE_HASH = "c37c1364f637c199fe710ca62241ff486db92c875b786814c6030aa1"
+HTTP_FILE_UPLOAD_IMAGE_HASH = "d6ad76933c70c1ca250f161c663e21565bb6bec6597c8d6eb091f284"
 DB_IMAGE_HASH = "85021afecf51687ecae8bdc21e10f3b11b82d2e3b169ba44e177340c"
 
 STARTING_TIMEOUT = timedelta(minutes=4)
@@ -39,7 +40,7 @@ class HttpService(HttpProxyService):
     @staticmethod
     async def get_payload():
         return await vm.repo(
-            image_hash=HTTP_IMAGE_HASH,
+            image_hash=HTTP_FILE_UPLOAD_IMAGE_HASH,
             capabilities=[vm.VM_CAPS_VPN],
         )
 
@@ -59,9 +60,17 @@ class HttpService(HttpProxyService):
         script.run(
             "/bin/bash",
             "-c",
-            f"cd /webapp && python app.py --db-address {self._db_address} --db-port {self._db_port} run > /webapp/out 2> /webapp/err &",
+            f"cd /webapp && python app.py --db-address {self._db_address} --db-port {self._db_port} run > /logs/out 2> /logs/err &",
         )
         yield script
+
+    async def run(self):
+        while True:
+            await asyncio.sleep(5)
+            script = self._ctx.new_script()
+            script.download_file("/logs/out", "webapp_out.txt")
+            script.download_file("/logs/err", "webapp_err.txt")
+            yield script
 
     async def reset(self):
         # We don't have to do anything when the service is restarted

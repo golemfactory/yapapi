@@ -42,16 +42,18 @@ class FirstInstanceFailsToStart(Service):
         async for script in super().start():
             yield script
 
-        self._ctx.run("/bin/echo", "STARTING", str(instances_started + 1))
-        future_results = yield self._ctx.commit()
-        results = await future_results
-        log(f"{results[-1].stdout.strip()}")
+        script = self._ctx.new_script()
+        future_result = script.run("/bin/echo", "STARTING", str(instances_started + 1))
+        yield script
+        result = await future_result
+        log(f"{result.stdout.strip()}")
         instances_started += 1
 
         if instances_started == 1:
-            self._ctx.run("/no/such/command")
-            future_results = yield self._ctx.commit()
-            await future_results
+            script = self._ctx.new_script()
+            future_result = script.run("/no/such/command")
+            yield script
+            await future_result
 
         if instances_started > 2:
             # Wait for the stop signal here
@@ -62,14 +64,16 @@ class FirstInstanceFailsToStart(Service):
         global instances_running
         instances_running += 1
 
-        self._ctx.run("/bin/echo", "RUNNING", str(instances_started))
-        future_results = yield self._ctx.commit()
-        results = await future_results
-        log(f"{results[-1].stdout.strip()}")
+        script = self._ctx.new_script()
+        future_result = script.run("/bin/echo", "RUNNING", str(instances_started))
+        yield script
+        result = await future_result
+        log(f"{result.stdout.strip()}")
 
-        self._ctx.run("/no/such/command")
-        future_results = yield self._ctx.commit()
-        await future_results
+        script = self._ctx.new_script()
+        future_result = script.run("/no/such/command")
+        yield script
+        await future_result
 
     async def shutdown(self):
 

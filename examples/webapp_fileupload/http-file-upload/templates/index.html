@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Image chat</title>
+</head>
+<body>
+    <form method="post" enctype="multipart/form-data">
+        <input type="file" name="file">
+        <input type="submit" value="send">
+    </form>
+    <hr>
+    {%- for img in images %}
+    <p>
+        <a href="{{ images_url }}{{img.filename}}">
+            <img src="{{ images_url }}{{img.filename}}" alt="{{img.filename}}" width="800">
+        </a>
+    </p>
+    {%- endfor %}
+</body>
+</html>

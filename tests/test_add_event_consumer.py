@@ -83,8 +83,8 @@ async def test_emit_event_class(dummy_yagna_engine):
     golem.add_event_consumer(event_consumer_2, [events.TaskEvent, "ServiceEvent"])
     golem.add_event_consumer(event_consumer_3)
     async with golem:
-        service_started = golem._engine.emit(
-            events.ServiceStarted, job="foo", agreement="bar", activity="baz", service="???"
+        invoice_received = golem._engine.emit(
+            events.InvoiceReceived, job="foo", agreement="bar", invoice="baz"
         )
         subscription_created = golem._engine.emit(
             events.SubscriptionCreated, job="foo", subscription="bar"
@@ -97,11 +97,11 @@ async def test_emit_event_class(dummy_yagna_engine):
         )
 
     assert got_events_1 == [subscription_created]
-    assert got_events_2 == [service_started, service_finished, task_started]
+    assert got_events_2 == [service_finished, task_started]
 
     #   Additional ShutdownFinished event is passed to the catchall consumer only
     assert got_events_3[:4] == [
-        service_started,
+        invoice_received,
         subscription_created,
         service_finished,
         task_started,
