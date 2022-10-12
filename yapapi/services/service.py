@@ -23,7 +23,6 @@ from yapapi.ctx import WorkContext
 from yapapi.network import Network, Node
 from yapapi.payload import Payload
 from yapapi.script import Script
-from yapapi.utils import warn_deprecated_msg
 
 from .service_state import ServiceState
 
@@ -367,16 +366,8 @@ class Service:
         Handlers of a restarted service are called more then once - all of the cleanup necessary between calls
         should be implemented here. E.g. if we initialize a counter in :func:`Service.__init__` and increment it
         in :func:`Service.start()`, we might want to reset it here to the initial value.
-
-        Target implementation (0.10.0 and up) will raise NotImplementedError. Current implementation only warns about
-        this future change.
         """
-
-        msg = (
-            "Default implementation of Service.reset will raise NotImplementedError starting from 0.10.0. "
-            f"You should implement this method on {type(self)}"
-        )
-        warn_deprecated_msg(msg)
+        pass
 
     @property
     def restart_condition(self) -> bool:
