@@ -39,7 +39,6 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
         service_class: Type[ServiceType],
         payload: Payload,
         expiration: Optional[datetime] = None,
-        respawn_unstarted_instances: bool = True,
         network: Optional[Network] = None,
     ):
         """Initialize this Cluster.
@@ -49,8 +48,6 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
         :param payload: definition of service runtime for this Cluster
         :param expiration: a date before which all agreements related to running services
             in this Cluster should be terminated
-        :param respawn_unstarted_instances: if an instance fails in the `starting` state,
-            should this Cluster try to spawn another instance
         :param network: optional Network representing the VPN that this Cluster's instances will
             be attached to.
         """
@@ -59,7 +56,6 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
         job = Job(engine, expiration, payload)
         self.service_runner = ServiceRunner(job)
         self._service_class = service_class
-        self._respawn_unstarted_instances = respawn_unstarted_instances
         self._network: Optional[Network] = network
 
         self._task_ids = itertools.count(1)

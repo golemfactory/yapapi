@@ -218,11 +218,6 @@ class Service:
         A clean exit from a handler function triggers the engine to transition the state of the
         instance to the next stage in service's lifecycle - in this case, to `running`.
 
-        On the other hand, any unhandled exception will cause the instance to be either retried on
-        another provider node, if the :class:`Cluster`'s :attr:`respawn_unstarted_instances` argument is set to
-        `True` in :func:`~yapapi.Golem.run_service`, which is also the default behavior, or altogether terminated, if
-        :attr:`respawn_unstarted_instances` is set to `False`.
-
         **Example**::
 
 
@@ -371,7 +366,7 @@ class Service:
 
     @property
     def restart_condition(self) -> bool:
-        """Dictate condition based on which this instance will be restarted."""
+        """Dictated condition based on which this instance will be restarted."""
         return (
             self.exc_info != (None, None, None) and not self.__service_instance.started_successfully
         )
