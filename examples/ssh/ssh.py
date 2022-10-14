@@ -1,20 +1,15 @@
 #!/usr/bin/env python3
 import asyncio
-from datetime import timedelta
+from datetime import datetime, timedelta
 import pathlib
 import random
-import sys
 import string
+import sys
 from uuid import uuid4
 
-
-from datetime import datetime
-
-from yapapi import (
-    Golem,
-    __version__ as yapapi_version,
-)
-from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
+from yapapi import Golem
+from yapapi import __version__ as yapapi_version
+from yapapi.log import enable_default_logger, log_event_repr, log_summary  # noqa
 from yapapi.payload import vm
 from yapapi.services import Service
 
@@ -22,13 +17,13 @@ examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
 from utils import (
-    build_parser,
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_RED,
     TEXT_COLOR_YELLOW,
-    run_golem_example,
+    build_parser,
     print_env_info,
+    run_golem_example,
 )
 
 
@@ -70,10 +65,6 @@ class SshService(Service):
         )
 
         print(f"{TEXT_COLOR_RED}password: {password}{TEXT_COLOR_DEFAULT}")
-
-    async def reset(self):
-        # We don't have to do anything when the service is restarted
-        pass
 
 
 async def main(subnet_tag, payment_driver=None, payment_network=None, num_instances=2):

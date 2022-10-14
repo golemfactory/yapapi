@@ -1,6 +1,6 @@
 """Implementation of high-level services API."""
+from datetime import datetime, timedelta, timezone
 import itertools
-from datetime import timedelta, datetime, timezone
 import sys
 from typing import (
     AsyncContextManager,
@@ -14,15 +14,15 @@ from typing import (
 )
 
 if sys.version_info >= (3, 8):
-    from typing import Final
     from contextlib import AsyncExitStack
+    from typing import Final
 else:
     from typing_extensions import Final
     from async_exit_stack import AsyncExitStack  # type: ignore
 
+from yapapi.engine import Job, _Engine
 from yapapi.network import Network
 from yapapi.payload import Payload
-from yapapi.engine import _Engine, Job
 
 from .service import ServiceType
 from .service_runner import ServiceRunner
@@ -39,7 +39,6 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
         service_class: Type[ServiceType],
         payload: Payload,
         expiration: Optional[datetime] = None,
-        respawn_unstarted_instances: bool = True,
         network: Optional[Network] = None,
     ):
         """Initialize this Cluster.
@@ -49,8 +48,6 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
         :param payload: definition of service runtime for this Cluster
         :param expiration: a date before which all agreements related to running services
             in this Cluster should be terminated
-        :param respawn_unstarted_instances: if an instance fails in the `starting` state,
-            should this Cluster try to spawn another instance
         :param network: optional Network representing the VPN that this Cluster's instances will
             be attached to.
         """
@@ -59,7 +56,6 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
         job = Job(engine, expiration, payload)
         self.service_runner = ServiceRunner(job)
         self._service_class = service_class
-        self._respawn_unstarted_instances = respawn_unstarted_instances
         self._network: Optional[Network] = network
 
         self._task_ids = itertools.count(1)
@@ -162,20 +158,8 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
                 network_address = network_addresses[ix]
 
             service = self.service_class(**single_instance_params)  # type: ignore
-            respawn_condition = (
-                self._instance_not_started if self._respawn_unstarted_instances else None
-            )
-            self.service_runner.add_instance(
-                service, self.network, network_address, respawn_condition
-            )
+            self.service_runner.add_instance(service, self.network, network_address)
             service._set_cluster(self)
-
-    @staticmethod
-    def _instance_not_started(service: ServiceType) -> bool:
-        return (
-            service.exc_info() != (None, None, None)
-            and not service.service_instance.started_successfully
-        )
 
     def _resolve_instance_params(
         self,
