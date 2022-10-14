@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import asyncio
+from datetime import datetime, timedelta
 import pathlib
 import random
 import string
 import sys
-from datetime import datetime, timedelta
 from uuid import uuid4
 
 from yapapi import Golem

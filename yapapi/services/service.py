@@ -1,6 +1,6 @@
 import asyncio
-import uuid
 from dataclasses import dataclass, field
+import statemachine  # type: ignore
 from types import TracebackType
 from typing import (
     TYPE_CHECKING,
@@ -15,8 +15,7 @@ from typing import (
     TypeVar,
     Union,
 )
-
-import statemachine  # type: ignore
+import uuid
 
 from yapapi import events
 from yapapi.ctx import WorkContext
@@ -218,6 +217,13 @@ class Service:
         A clean exit from a handler function triggers the engine to transition the state of the
         instance to the next stage in service's lifecycle - in this case, to `running`.
 
+        On the other hand, any unhandled exception will potentially trigger a restart
+        of an instance on another provider node. This is behavior is controlled by Service's
+        `restart_condition` property and by default restarts instances only if they encountered
+        an error and had not been successfully started before.
+
+        To change this default, override the `restart_condition`.
+
         **Example**::
 
 
@@ -352,11 +358,11 @@ class Service:
         yield s
 
     async def reset(self) -> None:
-        """Reset the service to the initial state.
+        """Reset the service to the initial state. The default implementation does nothing here.
 
         This method is called internally when the service is restarted in :class:`yapapi.services.ServiceRunner`,
         so it is not necessary for services that are never restarted (note that :func:`~yapapi.Golem.run_service()` by
-        default restarts services that didn't start properly).
+        default restarts services that didn't start properly based on :func:`Service.restart_condition()`).
 
         Handlers of a restarted service are called more then once - all of the cleanup necessary between calls
         should be implemented here. E.g. if we initialize a counter in :func:`Service.__init__` and increment it
@@ -366,7 +372,11 @@ class Service:
 
     @property
     def restart_condition(self) -> bool:
-        """Dictated condition based on which this instance will be restarted."""
+        """The condition, based on which :class:`yapapi.services.ServiceRunner` decides if it should restart this instance.
+
+        If `restart_condition` returns `True`, the service is restarted. In such case, before putting the service back into the
+        `pending` state, the `ServiceRunner` calls this service's `reset` method.
+        """
         return (
             self.exc_info != (None, None, None) and not self.__service_instance.started_successfully
         )

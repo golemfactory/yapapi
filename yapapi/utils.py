@@ -1,11 +1,11 @@
 """Utility functions and classes used within yapapi."""
 import asyncio
+from datetime import datetime, timezone, tzinfo
 import enum
 import functools
 import logging
-import warnings
-from datetime import datetime, timezone, tzinfo
 from typing import AsyncContextManager, Callable, Optional
+import warnings
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +132,6 @@ def warn_deprecated_msg(warning_msg) -> None:
         category=DeprecationWarning,
         stacklevel=2,
     )
-    return None
 
 
 def get_local_timezone() -> Optional[tzinfo]:

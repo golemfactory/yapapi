@@ -3,11 +3,11 @@
 the requestor agent controlling and interacting with the "simple service"
 """
 import asyncio
+from datetime import datetime, timedelta, timezone
 import pathlib
 import random
 import string
 import sys
-from datetime import datetime, timedelta, timezone
 
 from yapapi import Golem
 from yapapi.payload import vm

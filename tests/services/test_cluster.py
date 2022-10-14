@@ -1,10 +1,9 @@
 import asyncio
 import itertools
+import pytest
 import sys
 from unittest import mock
 from unittest.mock import Mock, patch
-
-import pytest
 
 from yapapi import Golem
 from yapapi.services import Service, ServiceRunner

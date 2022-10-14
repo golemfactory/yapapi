@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import asyncio
-import pathlib
-import sys
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
+import pathlib
+import sys
 
 from yapapi import Golem
 from yapapi.ctx import ActivityUsage

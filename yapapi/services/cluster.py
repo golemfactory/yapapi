@@ -1,7 +1,7 @@
 """Implementation of high-level services API."""
+from datetime import datetime, timedelta, timezone
 import itertools
 import sys
-from datetime import datetime, timedelta, timezone
 from typing import (
     AsyncContextManager,
     Dict,

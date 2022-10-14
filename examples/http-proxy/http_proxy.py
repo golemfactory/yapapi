@@ -3,10 +3,10 @@
 a simple http proxy example
 """
 import asyncio
+from datetime import datetime, timedelta, timezone
 import pathlib
 import shlex
 import sys
-from datetime import datetime, timedelta, timezone
 
 from yapapi import Golem
 from yapapi.contrib.service.http_proxy import HttpProxyService, LocalHttpProxy
