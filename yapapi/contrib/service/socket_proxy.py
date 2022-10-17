@@ -3,7 +3,7 @@ import aiohttp
 import asyncio
 import itertools
 import logging
-from typing import Iterator, List, Iterable
+from typing import Dict, Iterator, List, Optional
 from typing_extensions import Final
 
 from yapapi.services import Cluster, Service
@@ -25,18 +25,10 @@ connection_ids: Iterator[int] = itertools.count(1)
 class SocketProxyService(Service, abc.ABC):
     """
     Base class for services connected to the :class:`~SocketProxy`.
-
     Implements the interface required by the `SocketProxy`.
     """
 
-    def __init__(
-        self,
-        remote_ports: List[int],
-        response_timeout: float = DEFAULT_TIMEOUT,
-    ):
-        super().__init__()
-        self.remote_ports = remote_ports
-        self.response_timeout = response_timeout
+    remote_ports: List[int]
 
 
 class ProxyConnection:
@@ -164,13 +156,13 @@ class ProxyServer:
     """A server for a pair of local/remote ports within the :class:`~SocketProxy`.
 
     Connects a local TPC socket with a remote websocket on a single
-    :class:`~SocketProxyService` instance.
+    :class:`~Service` instance.
     """
 
     def __init__(
         self,
         proxy: "SocketProxy",
-        service: SocketProxyService,
+        service: Service,
         remote_port: int,
         local_address: str,
         local_port: int,
@@ -213,6 +205,7 @@ class ProxyServer:
 
     async def run(self):
         server = await asyncio.start_server(self.handler, self.local_address, self.local_port)
+        assert server.sockets
         addrs = ", ".join(str(sock.getsockname()) for sock in server.sockets)
         logger.info("Listening on: %s, forwarding to: %s", addrs, self.instance_ws)
 
@@ -227,24 +220,17 @@ class ProxyServer:
 
 
 class SocketProxy:
-    """
-    Runs a local `aiohttp` server and processes requests through instances of
-    :class:`~HttpProxyService`.
+    """Exposes ports of services running in VMs on providers as local ports.
 
-    Using `yapapi`'s Network API (:meth:`~yapapi.Golem.create_network`), execution units on the
-    provider nodes can be connected to a virtual network which can then be used both for
-    communication between those nodes (through virtual network interfaces within VMs) and between
-    the specific nodes and the requestor agent (through a websocket endpoint in the yagna daemon's
-    REST API).
-
-    `LocalHttpProxy` and `HttpProxyService` use the latter to enable HTTP connections to be routed
-    from a local port on the requestor's host, to a specified TCP port within the VM on the
-    provider's end.
+    The connections can be routed to instances of services connected to a Golem VPN
+    using `yapapi`'s Network API (:meth:`~yapapi.Golem.create_network`).
     """
+
+    servers: Dict[Service, Dict[int, ProxyServer]]
 
     def __init__(
         self,
-        ports: Iterable[int],
+        ports: List[int],
         address: str = DEFAULT_SOCKET_ADDRESS,
         buffer_size: int = DEFAULT_SOCKET_BUFFER_SIZE,
         timeout: float = DEFAULT_TIMEOUT,
@@ -254,29 +240,42 @@ class SocketProxy:
         self.buffer_size = buffer_size
         self.timeout = timeout
 
+        self.servers = dict()
         self._available_ports = list(ports)
         self._tasks: List[asyncio.Task] = list()
 
-    async def run_instance(self, service: SocketProxyService):
+    async def run_server(self, service: Service, remote_port: int):
+        """Run a socket proxy for a single instance of a service."""
         assert service.network_node, "Service must be started on a VPN."
 
-        for remote_port in service.remote_ports:
-            local_port = self._available_ports.pop(0)
-            logger.info("Starting proxy server for %s (%s -> %s)", service, local_port, remote_port)
-            server = ProxyServer(
-                self,
-                service,
-                remote_port,
-                self.address,
-                local_port,
-                buffer_size=self.buffer_size,
-                timeout=self.timeout,
-            )
-            self._tasks.append(asyncio.create_task(server.run()))
+        local_port = self._available_ports.pop(0)
+        logger.info("Starting proxy server for %s (%s -> %s)", service, local_port, remote_port)
+        server = ProxyServer(
+            self,
+            service,
+            remote_port,
+            self.address,
+            local_port,
+            buffer_size=self.buffer_size,
+            timeout=self.timeout,
+        )
+
+        self._tasks.append(asyncio.create_task(server.run()))
+
+        service_servers = self.servers.setdefault(service, dict())
+        service_servers[remote_port] = server
+
+        return server
+
+    def get_server(self, service: Service, remote_port: int):
+        """Get a running server for a given service and port."""
+        return self.servers[service][remote_port]
 
     async def run(self, cluster: Cluster[SocketProxyService]):
+        """Run the proxy servers for all ports on a cluster."""
         for service in cluster.instances:
-            await self.run_instance(service)
+            for remote_port in service.remote_ports:
+                await self.run_server(service, remote_port)
 
     async def stop(self):
         logger.info("Stopping socket proxy...")
