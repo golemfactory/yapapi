@@ -3,29 +3,25 @@
 a simple http proxy example
 """
 import asyncio
-
 from datetime import datetime, timedelta, timezone
 import pathlib
 import shlex
 import sys
 
-
 from yapapi import Golem
-from yapapi.services import ServiceState
-from yapapi.payload import vm
-
 from yapapi.contrib.service.http_proxy import HttpProxyService, LocalHttpProxy
-
+from yapapi.payload import vm
+from yapapi.services import ServiceState
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
 from utils import (
-    build_parser,
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
-    run_golem_example,
+    build_parser,
     print_env_info,
+    run_golem_example,
 )
 
 # the timeout after we commission our service instances
@@ -79,10 +75,6 @@ class HttpService(HttpProxyService):
 
     # we don't need to implement `run` since, after the service is started,
     # all communication is performed through the VPN
-
-    async def reset(self):
-        # We don't have to do anything when the service is restarted
-        pass
 
 
 # ######## Main application code which spawns the Golem service and the local HTTP server

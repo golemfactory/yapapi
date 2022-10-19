@@ -1,20 +1,13 @@
 #!/usr/bin/env python3
 import asyncio
-from datetime import timedelta
-import itertools
+from datetime import datetime, timedelta
 import pathlib
 import random
-import sys
 import string
+import sys
 
-
-from datetime import datetime
-
-from yapapi import (
-    Golem,
-)
+from yapapi import Golem
 from yapapi.contrib.service.socket_proxy import SocketProxy, SocketProxyService
-from yapapi.log import enable_default_logger, log_summary, log_event_repr  # noqa
 from yapapi.payload import vm
 
 
@@ -27,13 +20,13 @@ examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
 from utils import (
-    build_parser,
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_RED,
     TEXT_COLOR_YELLOW,
-    run_golem_example,
+    build_parser,
     print_env_info,
+    run_golem_example,
 )
 
 
@@ -78,10 +71,6 @@ class SshService(SocketProxyService):
             f"-p {server.local_port} root@{server.local_address}{TEXT_COLOR_DEFAULT}"
         )
         print(f"{TEXT_COLOR_RED}password: {password}{TEXT_COLOR_DEFAULT}")
-
-    async def reset(self):
-        # We don't have to do anything when the service is restarted
-        pass
 
 
 async def main(subnet_tag, payment_driver=None, payment_network=None, num_instances=2):
