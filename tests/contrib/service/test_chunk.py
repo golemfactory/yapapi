@@ -5,7 +5,7 @@ import pytest
 
 
 @pytest.mark.parametrize(
-    "data, chunk_limit, num_expected, mv",
+    "data, chunk_limit, num_chunks_expected, pass_as_memoryview",
     (
         (random.randbytes(16), 16, 1, True),
         (random.randbytes(8), 16, 1, True),
@@ -21,13 +21,13 @@ import pytest
         (random.randbytes(257), 16, 17, False),
     ),
 )
-def test_chunks(data, chunk_limit, num_expected, mv):
-    num_received = 0
+def test_chunks(data, chunk_limit, num_chunks_expected, pass_as_memoryview):
+    num_chunks_received = 0
     data_out = b""
-    data_in = memoryview(data) if data else data
+    data_in = memoryview(data) if pass_as_memoryview else data
     for chunk in chunks(data_in, chunk_limit):
         data_out += chunk
-        num_received += 1
+        num_chunks_received += 1
 
-    assert num_received == num_expected
+    assert num_chunks_received == num_chunks_expected
     assert data_out == data

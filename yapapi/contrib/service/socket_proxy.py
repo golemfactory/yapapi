@@ -59,7 +59,7 @@ class ProxyConnection:
 
         self.to_data_len = 0
         self.from_data_len = 0
-        self.done = False
+        self._done = False
         self._tasks: List[asyncio.Task] = list()
 
         self.ws_session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout))
@@ -74,12 +74,12 @@ class ProxyConnection:
 
     async def sender(self):
         logger.debug("%s: starting the sender.", self)
-        while not self.done:
+        while not self._done:
             try:
                 client_data = await self.listen_reader.read(self.buffer_size)
                 if not client_data:
                     logger.debug("%s: client socket closed.", self)
-                    self.done = True
+                    self._done = True
                     self._cancel_tasks()
                     break
 
@@ -97,12 +97,12 @@ class ProxyConnection:
 
     async def responder(self):
         logger.debug("%s: starting the responder.", self)
-        while not self.done:
+        while not self._done:
             try:
                 remote_response = await self.ws.receive(timeout=self.timeout)
                 if remote_response.type == aiohttp.WSMsgType.CLOSED:
                     logger.debug("%s: received `CLOSED` from the remote end", self)
-                    self.done = True
+                    self._done = True
                     self._cancel_tasks()
                     break
 
@@ -205,8 +205,7 @@ class ProxyServer:
 
     async def run(self):
         server = await asyncio.start_server(self.handler, self.local_address, self.local_port)
-        assert server.sockets
-        addrs = ", ".join(str(sock.getsockname()) for sock in server.sockets)
+        addrs = ", ".join(str(sock.getsockname()) for sock in server.sockets)  # type: ignore  # noqa
         logger.info("Listening on: %s, forwarding to: %s", addrs, self.instance_ws)
 
         try:
