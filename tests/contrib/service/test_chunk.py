@@ -3,6 +3,7 @@ from yapapi.contrib.service.chunk import chunks
 
 import pytest
 
+
 @pytest.mark.parametrize(
     "data, chunk_limit, num_chunks_expected, pass_as_memoryview",
     (
