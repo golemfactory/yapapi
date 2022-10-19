@@ -1,24 +1,23 @@
-import random
+import secrets
 from yapapi.contrib.service.chunk import chunks
 
 import pytest
 
-
 @pytest.mark.parametrize(
     "data, chunk_limit, num_chunks_expected, pass_as_memoryview",
     (
-        (random.randbytes(16), 16, 1, True),
-        (random.randbytes(8), 16, 1, True),
-        (random.randbytes(17), 16, 2, True),
-        (random.randbytes(31), 16, 2, True),
-        (random.randbytes(256), 16, 16, True),
-        (random.randbytes(257), 16, 17, True),
-        (random.randbytes(16), 16, 1, False),
-        (random.randbytes(8), 16, 1, False),
-        (random.randbytes(17), 16, 2, False),
-        (random.randbytes(31), 16, 2, False),
-        (random.randbytes(256), 16, 16, False),
-        (random.randbytes(257), 16, 17, False),
+        (secrets.token_bytes(16), 16, 1, True),
+        (secrets.token_bytes(8), 16, 1, True),
+        (secrets.token_bytes(17), 16, 2, True),
+        (secrets.token_bytes(31), 16, 2, True),
+        (secrets.token_bytes(256), 16, 16, True),
+        (secrets.token_bytes(257), 16, 17, True),
+        (secrets.token_bytes(16), 16, 1, False),
+        (secrets.token_bytes(8), 16, 1, False),
+        (secrets.token_bytes(17), 16, 2, False),
+        (secrets.token_bytes(31), 16, 2, False),
+        (secrets.token_bytes(256), 16, 16, False),
+        (secrets.token_bytes(257), 16, 17, False),
     ),
 )
 def test_chunks(data, chunk_limit, num_chunks_expected, pass_as_memoryview):
