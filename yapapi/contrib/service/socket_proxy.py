@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 DEFAULT_SOCKET_BUFFER_SIZE: Final[int] = 1024 * 1024
-DEFAULT_SOCKET_ADDRESS: Final[str] = "localhost"
+DEFAULT_SOCKET_ADDRESS: Final[str] = "127.0.0.1"
 
 
 connection_ids: Iterator[int] = itertools.count(1)
