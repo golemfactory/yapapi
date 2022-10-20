@@ -5,13 +5,16 @@ import pathlib
 import random
 import string
 import sys
-from uuid import uuid4
 
 from yapapi import Golem
-from yapapi import __version__ as yapapi_version
-from yapapi.log import enable_default_logger, log_event_repr, log_summary  # noqa
+from yapapi.contrib.service.socket_proxy import SocketProxy, SocketProxyService
 from yapapi.payload import vm
-from yapapi.services import Service
+
+
+# the timeout after we commission our service instances
+# before we abort this script
+STARTING_TIMEOUT = timedelta(minutes=4)
+
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
@@ -27,7 +30,13 @@ from utils import (
 )
 
 
-class SshService(Service):
+class SshService(SocketProxyService):
+    remote_port = 22
+
+    def __init__(self, proxy: SocketProxy):
+        super().__init__()
+        self.proxy = proxy
+
     @staticmethod
     async def get_payload():
         return await vm.repo(
@@ -54,16 +63,13 @@ class SshService(Service):
         script.run("/bin/bash", "-c", "/usr/sbin/sshd")
         yield script
 
-        connection_uri = self.network_node.get_websocket_uri(22)
-        app_key = self.cluster.service_runner._job.engine._api_config.app_key
+        server = await self.proxy.run_server(self, self.remote_port)
 
         print(
-            "Connect with:\n"
-            f"{TEXT_COLOR_CYAN}"
-            f"ssh -o ProxyCommand='websocat asyncstdio: {connection_uri} --binary -H=Authorization:\"Bearer {app_key}\"' root@{uuid4().hex}"
-            f"{TEXT_COLOR_DEFAULT}"
+            f"{TEXT_COLOR_CYAN}connect with:\n"
+            f"ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "
+            f"-p {server.local_port} root@{server.local_address}{TEXT_COLOR_DEFAULT}"
         )
-
         print(f"{TEXT_COLOR_RED}password: {password}{TEXT_COLOR_DEFAULT}")
 
 
@@ -80,9 +86,14 @@ async def main(subnet_tag, payment_driver=None, payment_network=None, num_instan
         print_env_info(golem)
 
         network = await golem.create_network("192.168.0.1/24")
+        proxy = SocketProxy(ports=range(2222, 2222 + num_instances))
+
         async with network:
             cluster = await golem.run_service(
-                SshService, network=network, num_instances=num_instances
+                SshService,
+                network=network,
+                num_instances=num_instances,
+                instance_params=[{"proxy": proxy} for _ in range(num_instances)],
             )
             instances = cluster.instances
 
@@ -93,6 +104,7 @@ async def main(subnet_tag, payment_driver=None, payment_network=None, num_instan
                 except (KeyboardInterrupt, asyncio.CancelledError):
                     break
 
+            await proxy.stop()
             cluster.stop()
 
             cnt = 0

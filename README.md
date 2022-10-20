@@ -82,8 +82,6 @@ Make sure you have OpenSSH installed and added to path
 ssh -V
 ```
 
-Install [Websocat](https://github.com/vi/websocat/#installation)
-
 Now, you can install goth and its additional python requirements:
 
 ```

@@ -23,6 +23,7 @@ import traceback
 
 from yapapi.services import Cluster, ServiceState, Service
 
+from .chunk import chunks
 
 logger = logging.getLogger(__name__)
 
@@ -148,13 +149,8 @@ class HttpProxyService(Service, abc.ABC):
             instance_ws,
             headers={"Authorization": f"Bearer {app_key}"},
         ) as ws:
-            max_chunk, remainder = divmod(len(remote_request), WEBSOCKET_CHUNK_LIMIT)
-            for chunk in range(0, max_chunk + (1 if remainder else 0)):
-                await ws.send_bytes(
-                    remote_request[
-                        chunk * WEBSOCKET_CHUNK_LIMIT : (chunk + 1) * WEBSOCKET_CHUNK_LIMIT
-                    ]
-                )
+            for chunk in chunks(memoryview(remote_request), WEBSOCKET_CHUNK_LIMIT):
+                await ws.send_bytes(chunk)
 
             response_parser = _ResponseParser(ws, self._remote_response_timeout)
             try:
