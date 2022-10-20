@@ -1,19 +1,18 @@
 """A goth test scenario for mid-agreement payments."""
-from functools import partial
+
 import logging
 import os
 from pathlib import Path
+import pytest
 import re
 from typing import List
 
-import pytest
-
-from goth.configuration import load_yaml, Override
-from goth.runner.log import configure_logging
+from goth.configuration import Override, load_yaml
 from goth.runner import Runner
+from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
-from yapapi.strategy import DEBIT_NOTE_INTERVAL_GRACE_PERIOD
 
+from yapapi.strategy import DEBIT_NOTE_INTERVAL_GRACE_PERIOD
 
 logger = logging.getLogger("goth.test.mid_agreement_payments")
 
