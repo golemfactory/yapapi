@@ -4,14 +4,14 @@ import inspect
 import json
 import sys
 import typing
-from typing import Dict, Type, Any, Union, List, cast, TypeVar
+from typing import Any, Dict, List, Type, TypeVar, Union, cast
 
 if sys.version_info > (3, 8):
     from typing import Literal
 else:
     from typing_extensions import Literal
 
-from dataclasses import dataclass, fields, MISSING, field, Field
+from dataclasses import MISSING, Field, dataclass, field, fields
 from datetime import datetime, timezone
 
 Props = Dict[str, str]

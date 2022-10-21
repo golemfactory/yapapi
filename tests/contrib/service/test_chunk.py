@@ -1,7 +1,7 @@
-import secrets
-from yapapi.contrib.service.chunk import chunks
-
 import pytest
+import secrets
+
+from yapapi.contrib.service.chunk import chunks
 
 
 @pytest.mark.parametrize(

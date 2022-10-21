@@ -1,13 +1,20 @@
 import asyncio
-import logging
 from dataclasses import dataclass
-from ipaddress import ip_address, ip_network, IPv4Address, IPv6Address, IPv4Network, IPv6Network
+from ipaddress import (
+    IPv4Address,
+    IPv4Network,
+    IPv6Address,
+    IPv6Network,
+    ip_address,
+    ip_network,
+)
+import logging
 from statemachine import State, StateMachine  # type: ignore
 from typing import Dict, Optional, Union
 from urllib.parse import urlparse
+from ya_net.exceptions import ApiException
 
 import yapapi
-from ya_net.exceptions import ApiException
 
 logger = logging.getLogger("yapapi.network")
 

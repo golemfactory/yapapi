@@ -1,9 +1,8 @@
 import logging
-
 from typing import Set
-from yapapi import events
+
+from yapapi import events, rest
 from yapapi.props.builder import DemandBuilder
-from yapapi import rest
 
 from .wrapping_strategy import WrappingMarketStrategy
 

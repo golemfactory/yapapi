@@ -1,12 +1,10 @@
 """Unit tests for code that selects payment platforms based on driver/network specification."""
-from unittest import mock
-
 import pytest
-
+from unittest import mock
 from ya_payment import RequestorApi
 
 from yapapi import NoPaymentAccountError
-from yapapi.engine import DEFAULT_NETWORK, DEFAULT_DRIVER
+from yapapi.engine import DEFAULT_DRIVER, DEFAULT_NETWORK
 from yapapi.golem import Golem
 from yapapi.rest.payment import Account, Payment
 

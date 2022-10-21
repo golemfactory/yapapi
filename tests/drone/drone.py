@@ -2,31 +2,26 @@
 import asyncio
 from datetime import datetime, timedelta
 import pathlib
-import sys
 import random
+import sys
 
 examples_dir = pathlib.Path(__file__).resolve().parents[2] / "examples"
 sys.path.append(str(examples_dir))
 
-from yapapi import (
-    Golem,
-    NoPaymentAccountError,
-    Task,
-    __version__ as yapapi_version,
-    WorkContext,
-    windows_event_loop_fix,
-)
-from yapapi.log import enable_default_logger
-from yapapi.payload import vm
-from yapapi.rest.activity import BatchTimeoutError
-
 from utils import (
-    build_parser,
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_RED,
     TEXT_COLOR_YELLOW,
+    build_parser,
 )
+
+from yapapi import Golem, NoPaymentAccountError, Task, WorkContext
+from yapapi import __version__ as yapapi_version
+from yapapi import windows_event_loop_fix
+from yapapi.log import enable_default_logger
+from yapapi.payload import vm
+from yapapi.rest.activity import BatchTimeoutError
 
 
 async def main(subnet_tag, payment_driver=None, payment_network=None):

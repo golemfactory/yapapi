@@ -10,7 +10,6 @@ from yapapi import Golem
 from yapapi.contrib.service.socket_proxy import SocketProxy, SocketProxyService
 from yapapi.payload import vm
 
-
 # the timeout after we commission our service instances
 # before we abort this script
 STARTING_TIMEOUT = timedelta(minutes=4)

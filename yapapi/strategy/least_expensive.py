@@ -5,12 +5,12 @@ import logging
 from types import MappingProxyType
 from typing import Dict, Mapping, Union
 
+from yapapi import rest
 from yapapi.props import com
 from yapapi.props.builder import DemandBuilder
 from yapapi.props.com import Counter
-from yapapi import rest
 
-from .base import MarketStrategy, SCORE_REJECTED, SCORE_TRUSTED
+from .base import SCORE_REJECTED, SCORE_TRUSTED, MarketStrategy
 
 
 @dataclass

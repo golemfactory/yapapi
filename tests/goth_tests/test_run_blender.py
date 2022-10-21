@@ -1,13 +1,14 @@
-from goth.assertions import EventStream
-from goth.configuration import Override, load_yaml
-from goth.runner import Runner
-from goth.runner.log import configure_logging
-from goth.runner.probe import RequestorProbe
 import logging
 import os
 from pathlib import Path
 import pytest
 from typing import List
+
+from goth.assertions import EventStream
+from goth.configuration import Override, load_yaml
+from goth.runner import Runner
+from goth.runner.log import configure_logging
+from goth.runner.probe import RequestorProbe
 
 from yapapi.log import SummaryLogger
 
