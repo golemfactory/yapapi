@@ -63,14 +63,15 @@ docs = ['sphinx', 'sphinx-autodoc-typehints', 'sphinx-rtd-theme']
 
 [tool.poetry.dev-dependencies]
 black = "^21.7b0"
-pytest = "^6.2"
-pytest-rerunfailures = "^10.1"
-pytest-asyncio = "^0.14"
-mypy = "^0.782"
-liccheck = "^0.4.7"
-poethepoet = "^0.8.0"
-pytest-cov = "^2.11"
 factory-boy = "^3.2.0"
+isort = "^5.10.1"
+liccheck = "^0.4.7"
+mypy = "^0.782"
+poethepoet = "^0.8.0"
+pytest = "^6.2"
+pytest-asyncio = "^0.14"
+pytest-cov = "^2.11"
+pytest-rerunfailures = "^10.1"
 
 [tool.isort]
 profile = "black"
@@ -115,7 +116,9 @@ test = "pytest --cov=yapapi --ignore tests/goth_tests"
 goth-assets = "python -m goth create-assets tests/goth_tests/assets"
 goth-tests = "pytest -svx tests/goth_tests --config-override docker-compose.build-environment.release-tag=pre-rel-v0.12.0-rc2 --config-path tests/goth_tests/assets/goth-config.yml --ssh-verify-connection --reruns 3 --only-rerun AssertionError --only-rerun TimeoutError --only-rerun goth.runner.exceptions.TemporalAssertionError --only-rerun urllib.error.URLError --only-rerun goth.runner.exceptions.CommandError"
 typecheck = "mypy --check-untyped-defs --no-implicit-optional ."
-codestyle = "black --check --diff ."
+_codestyle_isort = "isort --check-only --diff ."
+_codestyle_black = "black --check --diff ."
+codestyle = ["_codestyle_isort", "_codestyle_black"]
 _liccheck_export = "poetry export -f requirements.txt -o .requirements.txt"
 _liccheck_verify = "liccheck -r .requirements.txt"
 liccheck = ["_liccheck_export", "_liccheck_verify"]

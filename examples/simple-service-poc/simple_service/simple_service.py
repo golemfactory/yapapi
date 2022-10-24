@@ -8,16 +8,16 @@ distribution and time-series plots of the collected data.
 [ part of the VM image that's deployed by the runtime on the Provider's end. ]
 """
 import argparse
+import contextlib
 from datetime import datetime
 import enum
-import contextlib
 import json
 import matplotlib.pyplot as plt
 import numpy
+from pathlib import Path
 import random
 import sqlite3
 import string
-from pathlib import Path
 
 DB_PATH = Path(__file__).absolute().parent / "service.db"
 PLOT_PATH = Path("/golem/out").absolute()

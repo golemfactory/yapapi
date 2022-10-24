@@ -3,18 +3,17 @@ from itertools import product
 import pytest
 from unittest.mock import Mock
 
+from tests.factories.rest.market import OfferProposalFactory
 from yapapi import Golem
 from yapapi.props.com import Counter
 import yapapi.rest.configuration
 from yapapi.strategy import (
+    SCORE_NEUTRAL,
+    SCORE_REJECTED,
+    SCORE_TRUSTED,
     DecreaseScoreForUnconfirmedAgreement,
     LeastExpensiveLinearPayuMS,
-    SCORE_TRUSTED,
-    SCORE_REJECTED,
-    SCORE_NEUTRAL,
 )
-
-from tests.factories.rest.market import OfferProposalFactory
 
 
 @pytest.mark.asyncio

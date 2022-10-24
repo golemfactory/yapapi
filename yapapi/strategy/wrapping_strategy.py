@@ -1,9 +1,8 @@
 import abc
 from decimal import Decimal
 
-from yapapi.props.builder import DemandBuilder
 from yapapi import rest
-
+from yapapi.props.builder import DemandBuilder
 
 from .base import BaseMarketStrategy
 

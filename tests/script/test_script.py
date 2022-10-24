@@ -4,7 +4,7 @@ import pytest
 import sys
 from unittest import mock
 
-from yapapi.events import CommandExecuted, CommandStdOut, CommandStdErr
+from yapapi.events import CommandExecuted, CommandStdErr, CommandStdOut
 from yapapi.script import Script
 
 if sys.version_info >= (3, 8):

@@ -1,14 +1,12 @@
+from factories.agreements_pool import BufferedAgreement, BufferedAgreementFactory
 from operator import xor
-import sys
-import random
-from unittest import mock
-
 import pytest
+import random
+import sys
+from unittest import mock
 
 from yapapi import agreements_pool
 from yapapi.events import AgreementTerminated
-
-from factories.agreements_pool import BufferedAgreement, BufferedAgreementFactory
 
 
 def mock_agreement(**properties):

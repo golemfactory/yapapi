@@ -1,6 +1,7 @@
 import pytest
-from yapapi.props.com import ComLinear, Counter
+
 from tests.factories.props.com import ComLinearFactory
+from yapapi.props.com import ComLinear, Counter
 
 LINEAR_COEFFS = [0.1, 0.2, 0.3]
 DEFINED_USAGES = [Counter.CPU.value, Counter.TIME.value]

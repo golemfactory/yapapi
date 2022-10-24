@@ -1,20 +1,18 @@
 import logging
 import os
 from pathlib import Path
+import pytest
 from typing import List
 
-import pytest
-
 from goth.assertions import EventStream
-from goth.configuration import load_yaml, Override
-from goth.runner.log import configure_logging
+from goth.configuration import Override, load_yaml
 from goth.runner import Runner
-from goth.runner.probe import RequestorProbe, ProviderProbe
+from goth.runner.log import configure_logging
+from goth.runner.probe import ProviderProbe, RequestorProbe
 
 from yapapi.log import SummaryLogger
 
 from .assertions import assert_no_errors, assert_tasks_processed
-
 
 logger = logging.getLogger("goth.test.power_outage")
 

@@ -2,18 +2,16 @@
 
 import abc
 from copy import deepcopy
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
 import logging
 from typing import Dict, Optional
-
-from dataclasses import dataclass
 from typing_extensions import Final
 
+from yapapi import rest
 from yapapi.props import Activity
 from yapapi.props.builder import DemandBuilder, DemandDecorator
-from yapapi import rest
-
 
 SCORE_NEUTRAL: Final[float] = 0.0
 SCORE_REJECTED: Final[float] = -1.0

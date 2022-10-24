@@ -10,11 +10,14 @@ from datetime import datetime
 import sys
 
 from yapapi import Golem
-from yapapi.services import Service
-
-from yapapi.log import enable_default_logger, log_summary, log_event_repr, pluralize  # noqa
+from yapapi.log import (  # noqa
+    enable_default_logger,
+    log_event_repr,
+    log_summary,
+    pluralize,
+)
 from yapapi.payload import vm
-
+from yapapi.services import Service
 
 instances_started = 0
 instances_running = 0

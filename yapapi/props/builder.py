@@ -1,13 +1,12 @@
 import abc
-import enum
-from datetime import datetime
-from typing import List
-from ..rest.market import Market, Subscription
-
 from dataclasses import asdict
+from datetime import datetime
+import enum
+from typing import List
 
 from . import Model
-from .base import join_str_constraints, constraint_model_serialize
+from ..rest.market import Market, Subscription
+from .base import constraint_model_serialize, join_str_constraints
 
 
 class DemandBuilder:

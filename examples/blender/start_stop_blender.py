@@ -11,11 +11,7 @@ from datetime import datetime, timedelta
 import pathlib
 import sys
 
-from yapapi import (
-    Golem,
-    Task,
-    WorkContext,
-)
+from yapapi import Golem, Task, WorkContext
 from yapapi.payload import vm
 from yapapi.rest.activity import BatchTimeoutError
 
@@ -23,11 +19,11 @@ examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
 from utils import (
-    build_parser,
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
-    TEXT_COLOR_RED,
     TEXT_COLOR_MAGENTA,
+    TEXT_COLOR_RED,
+    build_parser,
     format_usage,
     print_env_info,
     run_golem_example,

@@ -1,24 +1,23 @@
 from datetime import datetime, timedelta, timezone
 import pytest
 
+from tests.factories.rest.market import OfferProposalFactory
 from yapapi.props import Activity
 from yapapi.props.builder import DemandBuilder
 from yapapi.strategy import (
-    MarketStrategy,
     PROP_DEBIT_NOTE_ACCEPTANCE_TIMEOUT,
     PROP_DEBIT_NOTE_INTERVAL_SEC,
     PROP_PAYMENT_TIMEOUT_SEC,
+    MarketStrategy,
     PropValueRange,
 )
 from yapapi.strategy.base import (
-    DEFAULT_PROPERTY_VALUE_RANGES,
     DEFAULT_DEBIT_NOTE_ACCEPTANCE_TIMEOUT_SEC,
     DEFAULT_DEBIT_NOTE_INTERVAL_SEC,
     DEFAULT_PAYMENT_TIMEOUT_SEC,
+    DEFAULT_PROPERTY_VALUE_RANGES,
     MIN_EXPIRATION_FOR_MID_AGREEMENT_PAYMENTS,
 )
-
-from tests.factories.rest.market import OfferProposalFactory
 
 
 class BadStrategy(MarketStrategy):  # noqa

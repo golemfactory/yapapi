@@ -1,7 +1,6 @@
 """Unit tests for `yapapi.engine` module."""
-from unittest.mock import Mock
-
 import pytest
+from unittest.mock import Mock
 
 from yapapi import Golem
 import yapapi.engine

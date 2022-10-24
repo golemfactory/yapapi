@@ -12,7 +12,6 @@ from typing import Set
 
 from goth.assertions import EventStream
 
-
 logger = logging.getLogger("goth.test.assertions")
 
 

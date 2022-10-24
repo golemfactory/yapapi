@@ -7,10 +7,10 @@ a simple boolean condition, while preserving correct scoring of the remaining of
 base strategy.
 """
 import inspect
-
-from yapapi.strategy import BaseMarketStrategy, SCORE_REJECTED, WrappingMarketStrategy
-from yapapi.rest.market import OfferProposal
 from typing import Awaitable, Callable, Union
+
+from yapapi.rest.market import OfferProposal
+from yapapi.strategy import SCORE_REJECTED, BaseMarketStrategy, WrappingMarketStrategy
 
 IsAllowedType = Union[
     Callable[[str], bool],
