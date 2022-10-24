@@ -1,22 +1,20 @@
 """An integration test scenario that runs the `webapp` example."""
 import asyncio
+from goth.configuration import Override, load_yaml
+from goth.runner import Runner
+from goth.runner.log import configure_logging
+from goth.runner.probe import RequestorProbe
 import logging
 import os
 from pathlib import Path
+import pytest
+import requests
 import signal
 import time
 from typing import List
 
-import pytest
-import requests
-
-from goth.configuration import load_yaml, Override
-from goth.runner.log import configure_logging
-from goth.runner import Runner
-from goth.runner.probe import RequestorProbe
-
-from .assertions import assert_no_errors, assert_all_invoices_accepted
 from ._util import get_free_port
+from .assertions import assert_all_invoices_accepted, assert_no_errors
 
 logger = logging.getLogger("goth.test")
 
