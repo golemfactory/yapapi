@@ -144,3 +144,6 @@ It's possible to set various elements of `yagna` configuration through environme
   will ask `gftp` to close files when there's no need to publish them any longer. This may greatly
   reduce the number of files kept open while `yapapi` is running but requires `yagna`
   0.7.3 or newer, with older versions it will cause errors.
+
+
+test change -> not to be merged
