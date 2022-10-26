@@ -1,15 +1,15 @@
 from asyncio import CancelledError
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Awaitable, Callable, Dict, Optional, Set, TYPE_CHECKING
 import sys
+from typing import TYPE_CHECKING, Awaitable, Callable, Dict, Optional, Set
 
 from yapapi import events
 
 if TYPE_CHECKING:
-    from yapapi.rest.payment import Invoice, Allocation
-    from yapapi.rest.market import Agreement
     from yapapi.engine import Job
+    from yapapi.rest.market import Agreement
+    from yapapi.rest.payment import Allocation, Invoice
 
 
 @dataclass

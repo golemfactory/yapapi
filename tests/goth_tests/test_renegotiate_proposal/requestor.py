@@ -5,13 +5,13 @@ import datetime
 import sys
 from typing_extensions import Final
 import ya_market
+
+from examples import utils
 from yapapi import props as yp
 from yapapi.log import enable_default_logger
 from yapapi.props.builder import DemandBuilder
 from yapapi.rest import Configuration, Market
 from yapapi.rest.market import OfferProposal
-
-from examples import utils
 
 DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: Final[str] = "golem.com.payment.debit-notes.accept-timeout?"
 # TODO: Investigate number of offers per provider (https://github.com/golemfactory/yapapi/issues/754)

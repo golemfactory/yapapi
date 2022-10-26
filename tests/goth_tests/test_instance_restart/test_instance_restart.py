@@ -3,9 +3,8 @@
 import logging
 import os
 from pathlib import Path
-from typing import List
-
 import pytest
+from typing import List
 
 import goth.configuration
 from goth.runner import Runner

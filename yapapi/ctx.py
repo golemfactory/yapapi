@@ -1,26 +1,23 @@
 from dataclasses import dataclass, field
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 import enum
 import logging
-from typing import Callable, Optional, Dict, List, Any, Awaitable, Type
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Type
 
 try:
     from typing import Protocol
 except ImportError:
     from typing_extensions import Protocol  # type: ignore
 
-
-from ya_activity.models import (
-    ActivityUsage as yaa_ActivityUsage,
-    ActivityState as yaa_ActivityState,
-)
+from ya_activity.models import ActivityState as yaa_ActivityState
+from ya_activity.models import ActivityUsage as yaa_ActivityUsage
 
 from yapapi.events import ActivityEventType, CommandExecuted
 from yapapi.props.com import ComLinear
-from yapapi.script import Script
-from yapapi.storage import StorageProvider, DOWNLOAD_BYTES_LIMIT_DEFAULT
-from yapapi.rest.market import Agreement, AgreementDetails
 from yapapi.rest.activity import Activity
+from yapapi.rest.market import Agreement, AgreementDetails
+from yapapi.script import Script
+from yapapi.storage import DOWNLOAD_BYTES_LIMIT_DEFAULT, StorageProvider
 from yapapi.utils import get_local_timezone
 
 logger = logging.getLogger(__name__)

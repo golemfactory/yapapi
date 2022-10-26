@@ -12,16 +12,16 @@ yapapi repository.
 """
 import abc
 import aiohttp
-from aiohttp import web, client_ws
+from aiohttp import client_ws, web
 import asyncio
 import logging
 from multidict import CIMultiDict
 import re
+import traceback
 from typing import Optional
 from typing_extensions import Final
-import traceback
 
-from yapapi.services import Cluster, ServiceState, Service
+from yapapi.services import Cluster, Service, ServiceState
 
 from .chunk import chunks
 

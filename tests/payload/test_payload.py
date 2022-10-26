@@ -1,9 +1,9 @@
+from dataclasses import dataclass
 import pytest
 
-from dataclasses import dataclass
-from yapapi.props import constraint, prop, inf
-from yapapi.props.builder import DemandBuilder
 from yapapi.payload import Payload
+from yapapi.props import constraint, inf, prop
+from yapapi.props.builder import DemandBuilder
 
 
 @dataclass

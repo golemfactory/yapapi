@@ -2,20 +2,17 @@
 import logging
 import os
 from pathlib import Path
+import pytest
 import re
-import time
 from typing import List
 
-import pytest
-
 from goth.assertions import EventStream
-from goth.configuration import load_yaml, Override
-from goth.runner.log import configure_logging
+from goth.configuration import Override, load_yaml
 from goth.runner import Runner
+from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
 
-from .assertions import assert_no_errors, assert_all_invoices_accepted
-
+from .assertions import assert_all_invoices_accepted, assert_no_errors
 
 logger = logging.getLogger("goth.test.run_custom_usage_counter")
 

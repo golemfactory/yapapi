@@ -1,6 +1,6 @@
 import pytest
 
-from yapapi.storage import Destination, Content
+from yapapi.storage import Content, Destination
 
 
 class _TestDestination(Destination):

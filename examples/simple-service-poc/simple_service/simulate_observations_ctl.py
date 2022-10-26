@@ -6,8 +6,8 @@ a helper, control script that starts and stops our example `simulate_observation
 """
 import argparse
 import os
-import subprocess
 import signal
+import subprocess
 
 PIDFILE = "/var/run/simulate_observations.pid"
 SCRIPT_FILE = "/golem/run/simulate_observations.py"

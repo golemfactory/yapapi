@@ -2,7 +2,7 @@
 
 import pytest
 
-from yapapi.props import com, InvalidPropertiesError
+from yapapi.props import InvalidPropertiesError, com
 
 
 @pytest.mark.parametrize(
