@@ -2,21 +2,23 @@
 Golem File Transfer Storage Provider
 """
 
+from async_exit_stack import AsyncExitStack  # type: ignore
 import asyncio
 import contextlib
 from dataclasses import dataclass
-import distutils.util
 import json
+import jsonrpc_base  # type: ignore
+import logging
 import os
-import sys
-import tempfile
 from os import PathLike
 from pathlib import Path
+import semantic_version  # type: ignore
+import sys
+import tempfile
 from types import TracebackType
 from typing import (
     AsyncContextManager,
     AsyncIterator,
-    cast,
     Dict,
     Iterator,
     List,
@@ -24,16 +26,12 @@ from typing import (
     Set,
     Type,
     Union,
+    cast,
 )
-
-import jsonrpc_base  # type: ignore
-from async_exit_stack import AsyncExitStack  # type: ignore
-import semantic_version  # type: ignore
 from typing_extensions import Literal, Protocol, TypedDict
 
-from yapapi.storage import StorageProvider, Destination, Source, Content
-import logging
-
+from yapapi.storage import Content, Destination, Source, StorageProvider
+from yapapi.utils import strtobool
 
 _logger = logging.getLogger(__name__)
 
@@ -245,9 +243,9 @@ def read_use_gftp_close_env_var() -> Optional[bool]:
     returns `None`.
     """
     try:
-        env_value = os.environ[USE_GFTP_CLOSE_ENV_VAR]
-        return distutils.util.strtobool(env_value)
-    except Exception:
+        env_value = os.environ.get(USE_GFTP_CLOSE_ENV_VAR, "")
+        return strtobool(env_value)
+    except ValueError:
         return None
 
 

@@ -17,7 +17,6 @@ sys.path.insert(0, os.path.abspath("../../"))
 
 from yapapi import get_version
 
-
 # -- Project information -----------------------------------------------------
 
 project = "yapapi"

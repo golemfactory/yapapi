@@ -1,18 +1,15 @@
+import aiohttp
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import logging
 from types import TracebackType
-from typing import AsyncIterator, Optional, TypeVar, Type, Generator, Any, Generic
-
-import aiohttp
-from typing_extensions import Awaitable, AsyncContextManager
-
+from typing import Any, AsyncIterator, Generator, Generic, Optional, Type, TypeVar
+from typing_extensions import AsyncContextManager, Awaitable
 from ya_market import ApiClient, ApiException, RequestorApi, models  # type: ignore
 
-from .common import is_intermittent_error, SuppressedExceptions
 from ..props import Model, NodeInfo
-
+from .common import SuppressedExceptions, is_intermittent_error
 
 _ModelType = TypeVar("_ModelType", bound=Model)
 

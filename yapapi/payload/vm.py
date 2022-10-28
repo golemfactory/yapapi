@@ -1,9 +1,9 @@
+from dataclasses import dataclass
 from dns.exception import DNSException
-from dataclasses import dataclass, field
 from enum import Enum
 import logging
 import sys
-from typing import Optional, List
+from typing import List, Optional
 from typing_extensions import Final
 
 if sys.version_info > (3, 8):
@@ -11,21 +11,28 @@ if sys.version_info > (3, 8):
 else:
     from typing_extensions import Literal
 
-from srvresolver.srv_resolver import SRVResolver, SRVRecord  # type: ignore
+from srvresolver.srv_resolver import SRVRecord, SRVResolver  # type: ignore
 
 from yapapi.payload.package import (
     Package,
     PackageException,
-    resolve_package_url,
     resolve_package_repo_url,
+    resolve_package_url,
 )
 from yapapi.props import base as prop_base
-from yapapi.props.builder import DemandBuilder, Model
 from yapapi.props import inf
-from yapapi.props.inf import InfBase, INF_CORES, RUNTIME_VM, ExeUnitRequest, ExeUnitManifestRequest
+from yapapi.props.builder import DemandBuilder, Model
+from yapapi.props.inf import (
+    INF_CORES,
+    RUNTIME_VM,
+    ExeUnitManifestRequest,
+    ExeUnitRequest,
+    InfBase,
+)
 
-_DEFAULT_REPO_SRV: Final = "_girepo._tcp.dev.golem.network"
-_FALLBACK_REPO_URL: Final = "http://girepo.dev.golem.network:8000"
+_DEFAULT_REPO_SRV: Final[str] = "_girepo._tcp.dev.golem.network"
+_FALLBACK_REPO_URL: Final[str] = "http://girepo.dev.golem.network:8000"
+_DEFAULT_TIMEOUT_SECONDS: Final[int] = 10
 
 logger = logging.getLogger(__name__)
 
@@ -79,9 +86,9 @@ class _VmConstraints(Model):
 @dataclass
 class _VmManifestPackage(Package):
     manifest: str
-    manifest_sig: str
-    manifest_sig_algorithm: str
-    manifest_cert: str
+    manifest_sig: Optional[str]
+    manifest_sig_algorithm: Optional[str]
+    manifest_cert: Optional[str]
     constraints: _VmConstraints
 
     async def resolve_url(self) -> str:
@@ -102,9 +109,9 @@ class _VmManifestPackage(Package):
 
 async def manifest(
     manifest: str,
-    manifest_sig: str,
-    manifest_sig_algorithm: str,
-    manifest_cert: str,
+    manifest_sig: Optional[str] = None,
+    manifest_sig_algorithm: Optional[str] = None,
+    manifest_cert: Optional[str] = None,
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,
     min_cpu_threads: int = 1,
@@ -204,18 +211,21 @@ async def repo(
     )
 
 
-def resolve_repo_srv(repo_srv, fallback_url=_FALLBACK_REPO_URL) -> str:
+def resolve_repo_srv(
+    repo_srv: str, fallback_url=_FALLBACK_REPO_URL, timeout=_DEFAULT_TIMEOUT_SECONDS
+) -> str:
     """
     Get the url of the package repository based on its SRV record address.
 
     :param repo_srv: the SRV domain name
     :param fallback_url: temporary hardcoded fallback url in case there's a problem resolving SRV
+    :param timeout: socket connection timeout in seconds
     :return: the url of the package repository containing the port
     :raises: PackageException if no valid service could be reached
     """
     try:
         try:
-            srv: Optional[SRVRecord] = SRVResolver.resolve_random(repo_srv)
+            srv: Optional[SRVRecord] = SRVResolver.resolve_random(repo_srv, timeout=timeout)
         except DNSException as e:
             raise PackageException(f"Could not resolve Golem package repository address [{e}].")
 

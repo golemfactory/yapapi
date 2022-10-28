@@ -1,15 +1,13 @@
 import logging
 import os
 from pathlib import Path
-from typing import List
-
 import pytest
+from typing import List
 
 import goth.configuration
 from goth.runner import Runner
 from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
-
 
 logger = logging.getLogger("goth.test.async_task_generation")
 

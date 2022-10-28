@@ -4,11 +4,10 @@ from pathlib import Path
 import pytest
 from typing import List
 
-from goth.configuration import load_yaml, Override
-from goth.runner.log import configure_logging
+from goth.configuration import Override, load_yaml
 from goth.runner import Runner
+from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
-
 
 logger = logging.getLogger("goth.test.renegotiate_proposal")
 

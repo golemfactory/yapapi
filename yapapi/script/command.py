@@ -4,13 +4,26 @@ from functools import partial
 import json
 from os import PathLike
 from pathlib import Path
-from typing import Callable, List, Optional, Dict, Union, Any, Awaitable, Type, TYPE_CHECKING
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Type,
+    Union,
+)
 
-
-from yapapi.events import DownloadStarted, DownloadFinished, CommandEventType
+from yapapi.events import CommandEventType, DownloadFinished, DownloadStarted
 from yapapi.script.capture import CaptureContext
-from yapapi.storage import StorageProvider, Source, Destination, DOWNLOAD_BYTES_LIMIT_DEFAULT
-
+from yapapi.storage import (
+    DOWNLOAD_BYTES_LIMIT_DEFAULT,
+    Destination,
+    Source,
+    StorageProvider,
+)
 
 if TYPE_CHECKING:
     from yapapi.script import Script

@@ -1,20 +1,18 @@
 import logging
 import os
 from pathlib import Path
+import pytest
 from typing import List
 
-import pytest
-
 from goth.assertions import EventStream
-from goth.configuration import load_yaml, Override
-from goth.runner.log import configure_logging
+from goth.configuration import Override, load_yaml
 from goth.runner import Runner
-from goth.runner.probe import RequestorProbe, ProviderProbe
+from goth.runner.log import configure_logging
+from goth.runner.probe import ProviderProbe, RequestorProbe
 
 from yapapi.log import SummaryLogger
 
 from .assertions import assert_no_errors, assert_tasks_processed
-
 
 logger = logging.getLogger("goth.test.power_outage")
 
@@ -84,7 +82,7 @@ async def test_power_outage(
             logger.info("Agreement confirmed")
 
             await cmd_monitor.wait_for_pattern(
-                ".*Task started on provider 'provider-1'.*", timeout=20
+                ".*Task started on provider 'provider-1'.*", timeout=60
             )
 
             logger.debug("Stopping provider 1")
@@ -94,7 +92,7 @@ async def test_power_outage(
             await cmd_monitor.wait_for_pattern(".*Terminated agreement with provider-1")
             logger.info("Agreement properly terminated")
 
-            await all_sent.wait_for_result(timeout=120)
+            await all_sent.wait_for_result(timeout=240)
             logger.info("All tasks sent")
 
             await all_computed.wait_for_result(timeout=120)

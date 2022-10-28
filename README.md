@@ -57,6 +57,15 @@ By default, `poetry` looks for the required Python version on your `PATH` and cr
 
 All of the project's dependencies will be installed to that virtual environment.
 
+### Running unit tests
+
+`yapapi` uses [Poe the Poet](https://github.com/nat-n/poethepoet) for running tasks.
+Declarations of project tasks can be found in `pyproject.toml`.
+
+```
+poetry run poe test
+```
+
 ### Running `goth` integration tests
 
 #### Prerequisites
@@ -66,6 +75,12 @@ If you'd like to run the `yapapi` integration test suite locally then you'll nee
 First, install [the dependencies required to run goth](https://github.com/golemfactory/goth#requirements).
 
 Next, [configure goth's GitHub API token](https://github.com/golemfactory/goth#getting-a-github-api-token).
+
+Make sure you have OpenSSH installed and added to path
+
+```
+ssh -V
+```
 
 Now, you can install goth and its additional python requirements:
 
@@ -85,6 +100,20 @@ Once you have the environment set up, to run all the integration tests, use:
 
 ```
 poetry run poe goth-tests
+```
+
+### Contributing
+
+It is recommended to run unit tests and static code analysis before committing changes.
+
+```
+poetry run poe check
+```
+
+You can clean up the artifacts created during the test runs with:
+
+```
+poetry run poe clean
 ```
 
 ## See also

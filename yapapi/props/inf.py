@@ -1,9 +1,10 @@
 """Infrastructural properties."""
 
-from typing import Optional, List
 from dataclasses import dataclass
 from deprecated import deprecated  # type: ignore
 from enum import Enum
+from typing import List, Optional
+
 from .base import Model, prop
 
 INF_MEM: str = "golem.inf.mem.gib"
@@ -39,7 +40,7 @@ class ExeUnitRequest(Model):
 @dataclass
 class ExeUnitManifestRequest(Model):
     manifest: str = prop("golem.srv.comp.payload")
-    manifest_sig: str = prop("golem.srv.comp.payload.sig")
+    manifest_sig: Optional[str] = prop("golem.srv.comp.payload.sig", default=None)
     manifest_sig_algorithm: Optional[str] = prop(
         "golem.srv.comp.payload.sig.algorithm", default=None
     )

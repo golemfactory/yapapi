@@ -179,14 +179,12 @@ List of event classes
 
 """
 
-import attr
 import abc
+import attr
 from datetime import datetime, timedelta
 import logging
 from types import TracebackType
-from typing import List, Optional, Type, Tuple, TypeVar
-
-from yapapi.props import NodeInfo
+from typing import List, Optional, Tuple, Type, TypeVar
 
 #   Q: Why `import yapapi` here?
 #   A: Because we want to have typing annotations without circular imports
@@ -195,7 +193,7 @@ from yapapi.props import NodeInfo
 #      https://github.com/tox-dev/sphinx-autodoc-typehints/issues/22
 #      -> Compare e.g. "MarketStrategy" typing in `yapapi.golem.Golem.__init__`
 import yapapi
-
+from yapapi.props import NodeInfo
 
 logger = logging.getLogger(__name__)
 

@@ -1,5 +1,5 @@
-import asyncio
 import aiohttp
+import asyncio
 from asyncio import CancelledError
 from collections import defaultdict
 import contextlib
@@ -15,7 +15,6 @@ from typing import (
     AsyncContextManager,
     Awaitable,
     Callable,
-    cast,
     Dict,
     Iterator,
     List,
@@ -23,6 +22,7 @@ from typing import (
     Set,
     Type,
     Union,
+    cast,
 )
 from typing_extensions import AsyncGenerator, Final
 
@@ -31,11 +31,11 @@ if sys.version_info >= (3, 7):
 else:
     from async_exit_stack import AsyncExitStack  # type: ignore
 
-from yapapi import rest, events
+from yapapi import events, props, rest
 from yapapi.agreements_pool import AgreementsPool
 from yapapi.ctx import WorkContext
+from yapapi.invoice_manager import InvoiceManager
 from yapapi.payload import Payload
-from yapapi import props
 from yapapi.props.builder import DemandBuilder, DemandDecorator
 from yapapi.rest.activity import Activity
 from yapapi.rest.market import Agreement, OfferProposal, Subscription
@@ -44,13 +44,12 @@ from yapapi.script import Script
 from yapapi.script.command import BatchCommand
 from yapapi.storage import gftp
 from yapapi.strategy import (
-    BaseMarketStrategy,
-    SCORE_NEUTRAL,
+    DEBIT_NOTE_INTERVAL_GRACE_PERIOD,
     PROP_DEBIT_NOTE_INTERVAL_SEC,
     PROP_PAYMENT_TIMEOUT_SEC,
-    DEBIT_NOTE_INTERVAL_GRACE_PERIOD,
+    SCORE_NEUTRAL,
+    BaseMarketStrategy,
 )
-from yapapi.invoice_manager import InvoiceManager
 
 DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "erc20").lower()
 DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "rinkeby").lower()
@@ -412,12 +411,12 @@ class _Engine:
     @staticmethod
     def _check_for_termination_reason(
         activity_id: str, duration: float, num_notes: int, interval: int, payable: bool
-    ):
+    ) -> Optional[Dict[str, str]]:
         freq_descr = f"{num_notes} notes/{duration}s"
         logger.debug(
             f"{'Payable Debit notes' if payable else 'Debit notes'} for activity {activity_id}: {freq_descr}"
         )
-        if duration + DEBIT_NOTE_INTERVAL_GRACE_PERIOD < num_notes * interval:
+        if duration + DEBIT_NOTE_INTERVAL_GRACE_PERIOD < (num_notes - 1) * interval:
             payable_str = "payable " if payable else ""
             reason = {
                 "message": f"Too many {payable_str}debit notes: {freq_descr} (activity: {activity_id})",
@@ -852,7 +851,7 @@ class Job:
             score = await self.engine._strategy.score_offer(proposal)
         except Exception:
             logger.warning(
-                f"Strategy error: score_offer(proposal) failed when calling with proposal: %s",
+                "Strategy error: score_offer(proposal) failed when calling with proposal: %s",
                 proposal.id,
                 exc_info=True,
             )

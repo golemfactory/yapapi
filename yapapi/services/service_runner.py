@@ -5,15 +5,14 @@ import logging
 import sys
 from types import TracebackType
 from typing import (
+    TYPE_CHECKING,
     AsyncContextManager,
-    Callable,
     List,
     Optional,
     Set,
-    Union,
     Tuple,
     Type,
-    TYPE_CHECKING,
+    Union,
 )
 
 logger = logging.getLogger(__name__)
@@ -22,13 +21,13 @@ if TYPE_CHECKING:
     from yapapi.engine import Job
 
 from yapapi import events
-
-from .service import Service, ServiceType, ServiceInstance
-from .service_state import ServiceState
 from yapapi.ctx import WorkContext
+from yapapi.network import Network
 from yapapi.rest.activity import BatchError
 from yapapi.rest.market import Agreement
-from yapapi.network import Network
+
+from .service import Service, ServiceInstance, ServiceType
+from .service_state import ServiceState
 
 # Return type for `sys.exc_info()`
 ExcInfo = Union[
@@ -63,7 +62,6 @@ class ServiceRunner(AsyncContextManager):
         service: ServiceType,
         network: Optional[Network] = None,
         network_address: Optional[str] = None,
-        respawn_condition: Optional[Callable[[ServiceType], bool]] = None,
     ) -> None:
         """Add service the the collection of services managed by this ServiceRunner.
 
@@ -72,9 +70,7 @@ class ServiceRunner(AsyncContextManager):
         self._instances.append(service)
 
         loop = asyncio.get_event_loop()
-        task = loop.create_task(
-            self.spawn_instance(service, network, network_address, respawn_condition)
-        )
+        task = loop.create_task(self.spawn_instance(service, network, network_address))
         self._instance_tasks.append(task)
 
     def stop_instance(self, service: Service):
@@ -195,6 +191,7 @@ class ServiceRunner(AsyncContextManager):
             logger.warning("Don't know how to handle control signal %s", event)
 
         if isinstance(event, tuple):
+            # TODO resolve issue with access to a protected attribute
             instance.service._exc_info = event
 
         if instance.state != prev_state:
@@ -324,14 +321,12 @@ class ServiceRunner(AsyncContextManager):
         service: ServiceType,
         network: Optional[Network] = None,
         network_address: Optional[str] = None,
-        respawn_condition: Optional[Callable[[ServiceType], bool]] = None,
     ) -> None:
         """Lifecycle the service within this :class:`ServiceRunner`.
 
         :param service: instance of the service class, expected to be in a pending state
         :param network: a :class:`~yapapi.network.Network` this service should be attached to
         :param network_address: the address withing the network, ignored if network is None
-        :param respawn_condition: a bool-returning function called when a single lifecycle of the instance finished,
             determining whether service should be reset and lifecycle should restart
         """
 
@@ -385,7 +380,7 @@ class ServiceRunner(AsyncContextManager):
                 continue
             try:
                 await task
-                if respawn_condition is not None and respawn_condition(service):
+                if service.restart_condition:
                     logger.info(f"Restarting service {service}")
                     await service.reset()
                     instance.service_state.restart()
