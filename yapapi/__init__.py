@@ -1,10 +1,9 @@
 """Golem Python API."""
 import asyncio
-import sys
-import toml
-
 from pathlib import Path
 from pkg_resources import get_distribution
+import sys
+import toml
 
 from yapapi.ctx import ExecOptions, WorkContext
 from yapapi.engine import NoPaymentAccountError

@@ -1,6 +1,6 @@
 import factory
-from tests.factories import dataclass_fields_dict
 
+from tests.factories import dataclass_fields_dict
 from yapapi.props import com
 
 _com_linear = dataclass_fields_dict(com.ComLinear)

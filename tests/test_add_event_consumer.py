@@ -1,8 +1,7 @@
-import pytest
 from attr import asdict
+import pytest
 
 from yapapi import Golem, events
-
 
 sample_events = [
     events.CollectFailed(job="foo", subscription="bar", reason="baz"),

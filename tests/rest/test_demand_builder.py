@@ -1,6 +1,7 @@
+from datetime import datetime, timedelta, timezone
+
 from yapapi import props
 from yapapi.payload import vm
-from datetime import datetime, timezone, timedelta
 from yapapi.props.builder import DemandBuilder
 
 

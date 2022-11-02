@@ -183,3 +183,8 @@ def strtobool(val):
         return 0
     else:
         raise ValueError("invalid truth value %r" % (val,))
+
+
+def utc_now() -> datetime:
+    """Get a timezone-aware datetime for _now_."""
+    return datetime.now(tz=timezone.utc)

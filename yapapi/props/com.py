@@ -1,8 +1,9 @@
 """Payment-related properties."""
 import abc
-from typing import Dict, Any, List
-import enum
 from dataclasses import dataclass, field
+import enum
+from typing import Any, Dict, List
+
 from .base import Model, Props, as_list
 
 SCHEME: str = "golem.com.scheme"

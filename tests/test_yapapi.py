@@ -1,6 +1,6 @@
 import asyncio
-import toml
 from pathlib import Path
+import toml
 
 import yapapi
 

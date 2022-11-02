@@ -1,6 +1,7 @@
-import pytest
-from yapapi.rest import Configuration, Payment
 from decimal import Decimal
+import pytest
+
+from yapapi.rest import Configuration, Payment
 
 
 @pytest.fixture

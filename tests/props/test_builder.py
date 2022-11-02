@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import pytest
 
-from yapapi.props import prop, constraint
+from yapapi.props import constraint, prop
 from yapapi.props.builder import AutodecoratingModel, DemandBuilder
 
 

@@ -15,18 +15,18 @@ from typing import (
     Union,
     cast,
 )
-from typing_extensions import Final, AsyncGenerator
+from typing_extensions import AsyncGenerator, Final
 
 from yapapi import events
 from yapapi.ctx import WorkContext
+from yapapi.engine import Job, _Engine
 from yapapi.payload import Payload
 from yapapi.script import Script
-from yapapi.engine import _Engine, Job
 from yapapi.script.command import Deploy, Start
 import yapapi.utils
 
-from .task import Task, TaskStatus
 from ._smartq import SmartQueue
+from .task import Task, TaskStatus
 
 CFG_INVOICE_TIMEOUT: Final[timedelta] = timedelta(minutes=5)
 "Time to receive invoice from provider after tasks ended."

@@ -1,11 +1,10 @@
 import asyncio
 from collections import defaultdict
 from pathlib import Path
+import pytest
 import random
 import tempfile
-from typing import cast, List
-
-import pytest
+from typing import List, cast
 
 from yapapi.storage import gftp
 

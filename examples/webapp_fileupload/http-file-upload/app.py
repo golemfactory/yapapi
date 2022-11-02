@@ -1,9 +1,17 @@
 import argparse
-from flask import Flask, render_template, request, redirect, url_for, Request, send_from_directory
+from flask import (
+    Flask,
+    Request,
+    redirect,
+    render_template,
+    request,
+    send_from_directory,
+    url_for,
+)
 from flask_sqlalchemy import SQLAlchemy
 from pathlib import Path
-from werkzeug.utils import secure_filename
 from werkzeug.datastructures import FileStorage
+from werkzeug.utils import secure_filename
 
 parser = argparse.ArgumentParser("simple flask app")
 parser.add_argument("--db-address", help="the address of the rqlite database", default="localhost")

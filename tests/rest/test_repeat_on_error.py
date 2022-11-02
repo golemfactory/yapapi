@@ -1,13 +1,15 @@
-import asyncio
-
 import aiohttp
+import asyncio
 import pytest
-
 import ya_activity
 import ya_market
 import ya_payment
 
-from yapapi.rest.common import repeat_on_error, SuppressedExceptions, is_intermittent_error
+from yapapi.rest.common import (
+    SuppressedExceptions,
+    is_intermittent_error,
+    repeat_on_error,
+)
 
 
 @pytest.mark.parametrize(

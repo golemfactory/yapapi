@@ -1,6 +1,7 @@
 import factory
 
 from yapapi.agreements_pool import BufferedAgreement
+
 from .rest.market import AgreementFactory
 
 

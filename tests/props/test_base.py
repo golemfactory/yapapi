@@ -1,6 +1,6 @@
+from dataclasses import dataclass
 import pytest
 
-from dataclasses import dataclass
 from yapapi.props import base as props_base
 
 

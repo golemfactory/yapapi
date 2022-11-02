@@ -1,14 +1,11 @@
 import asyncio
-
 from dataclasses import dataclass
 
-from yapapi.props.base import prop, constraint
-from yapapi.props import inf
-
-from yapapi.payload import Payload
 from yapapi import Golem
+from yapapi.payload import Payload
+from yapapi.props import inf
+from yapapi.props.base import constraint, prop
 from yapapi.services import Service
-
 
 RUNTIME_NAME = "my-runtime"
 SOME_CUSTOM_PROPERTY = "golem.srv.app.eth.network"

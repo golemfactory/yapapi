@@ -1,10 +1,6 @@
 from typing import Optional
-
-from ya_net import (
-    ApiClient,
-    RequestorApi,
-    models as yan,
-)
+from ya_net import ApiClient, RequestorApi
+from ya_net import models as yan
 
 
 class Net(object):

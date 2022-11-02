@@ -17,12 +17,12 @@ examples_dir = Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
 from utils import (
-    build_parser,
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_GREEN,
     TEXT_COLOR_RED,
     TEXT_COLOR_YELLOW,
+    build_parser,
     print_env_info,
     run_golem_example,
 )

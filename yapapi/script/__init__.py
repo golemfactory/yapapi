@@ -1,10 +1,21 @@
 from asyncio import InvalidStateError
 from datetime import timedelta
 import itertools
-from typing import Any, Awaitable, Callable, Dict, Iterator, Optional, List, Type, TYPE_CHECKING
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Type,
+)
 
 import yapapi
 from yapapi.events import CommandEvent, CommandExecuted, ScriptEventType
+from yapapi.rest.activity import CommandExecutionError
 from yapapi.script.capture import CaptureContext
 from yapapi.script.command import (
     BatchCommand,
@@ -21,7 +32,6 @@ from yapapi.script.command import (
     Terminate,
 )
 from yapapi.storage import DOWNLOAD_BYTES_LIMIT_DEFAULT
-from yapapi.rest.activity import CommandExecutionError
 
 if TYPE_CHECKING:
     from yapapi.ctx import WorkContext
