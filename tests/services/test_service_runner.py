@@ -62,7 +62,7 @@ async def test_ensure_alive(
 
         loop = asyncio.get_event_loop()
         ensure_alive = loop.create_task(service_runner._ensure_alive(service))
-        sentinel = loop.create_task(asyncio.sleep(0.02))
+        sentinel = loop.create_task(asyncio.sleep(0.1))
 
         done, pending = await asyncio.wait(
             (

@@ -19,8 +19,6 @@ from typing_extensions import Final
 if TYPE_CHECKING:
     from yapapi.engine import Job
 
-from ya_activity.exceptions import ApiException
-
 from yapapi import events
 from yapapi.ctx import WorkContext
 from yapapi.network import Network
@@ -237,21 +235,17 @@ class ServiceRunner(AsyncContextManager):
             return
 
         retries_left = self._health_check_retries
-        exc = None
         while True:
-            if service.is_available and service._ctx:
-                try:
-                    await service._ctx.get_raw_state()
+            if service.is_available:
+                if await service.is_activity_responsive():
                     retries_left = self._health_check_retries
-                except ApiException as e:
+                else:
                     retries_left -= 1
-                    exc = e
                     logger.warning("Service health check failed, retries left: %s", retries_left)
             if retries_left <= 0:
                 raise ServiceRunnerError(
-                    "Service health check failed after %s retries with %s",
+                    "Service health check failed after %s retries",
                     self._health_check_retries,
-                    exc,
                 )
             await asyncio.sleep(self._health_check_interval)
 
