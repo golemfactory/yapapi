@@ -59,9 +59,17 @@ class ServiceRunner(AsyncContextManager):
     def __init__(
         self,
         job: "Job",
-        health_check_interval: float = DEFAULT_HEALTH_CHECK_INTERVAL,
+        health_check_interval: Optional[float] = DEFAULT_HEALTH_CHECK_INTERVAL,
         health_check_retries: int = DEFAULT_HEALTH_CHECK_RETRIES,
     ):
+        """Initialize the ServiceRunner.
+
+        :param job: the engine's :class:`~yapapi.engine.Job` within which the ServiceRunner will run
+        :param health_check_interval: an interval in seconds between subsequent health checks.
+            Setting it to `None` turns off the health check.
+        :param health_check_retries: number of times the health check will be retried before
+            it's reported as failed
+        """
         self._job = job
         self._instances: List[Service] = []
         self._instance_tasks: List[asyncio.Task] = []
@@ -224,6 +232,11 @@ class ServiceRunner(AsyncContextManager):
         return instance.state != prev_state
 
     async def _ensure_alive(self, service: Service):
+        # wait indefinitely when the interval is not defined
+        if self._health_check_interval is None:
+            await asyncio.Future()
+            return
+
         retries_left = self._health_check_retries
         exc = None
         while True:
