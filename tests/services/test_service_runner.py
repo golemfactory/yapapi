@@ -73,10 +73,8 @@ async def test_ensure_alive(
         )
 
     if expected_alive:
-        assert sentinel in done
         assert ensure_alive in pending
     else:
-        assert sentinel in pending
         assert ensure_alive in done
 
         with pytest.raises(ServiceRunnerError):
