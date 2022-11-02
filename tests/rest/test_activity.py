@@ -1,6 +1,7 @@
 import pytest
 from typing import List, Optional, Tuple, Type
 from unittest.mock import Mock
+
 from ya_activity.exceptions import ApiException
 
 from yapapi.rest.activity import BatchError, PollingBatch

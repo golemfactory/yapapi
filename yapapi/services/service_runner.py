@@ -16,9 +16,6 @@ from typing import (
 )
 from typing_extensions import Final
 
-
-logger = logging.getLogger(__name__)
-
 if TYPE_CHECKING:
     from yapapi.engine import Job
 
@@ -32,6 +29,8 @@ from yapapi.rest.market import Agreement
 
 from .service import Service, ServiceInstance, ServiceType
 from .service_state import ServiceState
+
+logger = logging.getLogger(__name__)
 
 # Return type for `sys.exc_info()`
 ExcInfo = Union[

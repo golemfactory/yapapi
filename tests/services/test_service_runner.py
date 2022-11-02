@@ -6,6 +6,7 @@ from typing import Optional
 from unittest import mock
 
 from ya_activity.exceptions import ApiException
+
 from yapapi.ctx import WorkContext
 from yapapi.services.service import Service, ServiceState
 from yapapi.services.service_runner import ServiceRunner, ServiceRunnerError
