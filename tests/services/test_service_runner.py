@@ -20,6 +20,7 @@ def mock_service(init_state: Optional[State] = None):
     return service
 
 
+@pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
 @pytest.mark.asyncio
 async def test_ensure_alive_no_interval():
     with mock.patch("asyncio.Future", mock.AsyncMock()) as future:
