@@ -2,8 +2,8 @@
 import asyncio
 from asyncio import TimeoutError
 import datetime
-import sys
 from typing_extensions import Final
+
 import ya_market
 
 from examples import utils
