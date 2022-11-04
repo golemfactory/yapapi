@@ -1,6 +1,7 @@
 """Unit tests for code that selects payment platforms based on driver/network specification."""
 import pytest
 from unittest import mock
+
 from ya_payment import RequestorApi
 
 from yapapi import NoPaymentAccountError

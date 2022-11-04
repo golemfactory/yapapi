@@ -135,7 +135,7 @@ class WorkContext:
         return usage
 
     async def get_raw_state(self) -> yaa_ActivityState:
-        """Get the state activity bound to this work context.
+        """Get the state of the activity bound to this work context.
 
         The value comes directly from the low level API and is not interpreted in any way.
         """
