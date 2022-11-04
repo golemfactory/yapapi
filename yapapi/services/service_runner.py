@@ -14,8 +14,7 @@ from typing import (
     Type,
     Union,
 )
-
-logger = logging.getLogger(__name__)
+from typing_extensions import Final
 
 if TYPE_CHECKING:
     from yapapi.engine import Job
@@ -29,11 +28,22 @@ from yapapi.rest.market import Agreement
 from .service import Service, ServiceInstance, ServiceType
 from .service_state import ServiceState
 
+logger = logging.getLogger(__name__)
+
 # Return type for `sys.exc_info()`
 ExcInfo = Union[
     Tuple[Type[BaseException], BaseException, TracebackType],
     Tuple[None, None, None],
 ]
+
+DEFAULT_HEALTH_CHECK_INTERVAL: Final[float] = 10.0
+DEFAULT_HEALTH_CHECK_RETRIES: Final[int] = 3
+
+
+class ServiceRunnerError(Exception):
+    """An error while running a Service."""
+
+    pass
 
 
 class ControlSignal(enum.Enum):
@@ -43,11 +53,26 @@ class ControlSignal(enum.Enum):
 
 
 class ServiceRunner(AsyncContextManager):
-    def __init__(self, job: "Job"):
+    def __init__(
+        self,
+        job: "Job",
+        health_check_interval: Optional[float] = DEFAULT_HEALTH_CHECK_INTERVAL,
+        health_check_retries: int = DEFAULT_HEALTH_CHECK_RETRIES,
+    ):
+        """Initialize the ServiceRunner.
+
+        :param job: the engine's :class:`~yapapi.engine.Job` within which the ServiceRunner will run
+        :param health_check_interval: an interval in seconds between subsequent health checks.
+            Setting it to `None` turns off the health check.
+        :param health_check_retries: number of times the health check will be retried before
+            it's reported as failed
+        """
         self._job = job
         self._instances: List[Service] = []
         self._instance_tasks: List[asyncio.Task] = []
         self._stopped = False
+        self._health_check_interval = health_check_interval
+        self._health_check_retries = health_check_retries
 
     @property
     def id(self) -> str:
@@ -203,6 +228,27 @@ class ServiceRunner(AsyncContextManager):
 
         return instance.state != prev_state
 
+    async def _ensure_alive(self, service: Service):
+        # wait indefinitely when the interval is not defined
+        if self._health_check_interval is None:
+            await asyncio.Future()
+            return
+
+        retries_left = self._health_check_retries
+        while True:
+            if service.is_available:
+                if await service.is_activity_responsive():
+                    retries_left = self._health_check_retries
+                else:
+                    retries_left -= 1
+                    logger.warning("Service health check failed, retries left: %s", retries_left)
+            if retries_left <= 0:
+                raise ServiceRunnerError(
+                    "Service health check failed after %s retries",
+                    self._health_check_retries,
+                )
+            await asyncio.sleep(self._health_check_interval)
+
     async def _run_instance(self, instance: ServiceInstance):
         loop = asyncio.get_event_loop()
 
@@ -211,6 +257,7 @@ class ServiceRunner(AsyncContextManager):
         handler = None
         batch_task: Optional[asyncio.Task] = None
         signal_task: Optional[asyncio.Task] = None
+        health_check_task: Optional[asyncio.Task] = None
 
         def update_handler(instance: ServiceInstance):
             nonlocal handler
@@ -252,9 +299,12 @@ class ServiceRunner(AsyncContextManager):
                 batch_task = loop.create_task(handler.__anext__())
             if signal_task is None:
                 signal_task = loop.create_task(instance.control_queue.get())
+            if health_check_task is None:
+                health_check_task = loop.create_task(self._ensure_alive(instance.service))
 
             done, _ = await asyncio.wait(
-                (batch_task, signal_task), return_when=asyncio.FIRST_COMPLETED
+                (batch_task, signal_task, health_check_task),
+                return_when=asyncio.FIRST_COMPLETED,
             )
 
             if batch_task in done:
@@ -302,15 +352,21 @@ class ServiceRunner(AsyncContextManager):
                 change_state(ctl)
                 signal_task = None
 
+            if health_check_task in done:
+                try:
+                    health_check_task.result()
+                except ServiceRunnerError as exception:
+                    logger.info("Health check task aborted: %s", exception)
+                    change_state(sys.exc_info())
+                    health_check_task = None
+
         logger.debug("No handler for %s in state %s", instance.service, instance.state.value)
 
         try:
-            if batch_task:
-                batch_task.cancel()
-                await batch_task
-            if signal_task:
-                signal_task.cancel()
-                await signal_task
+            for t in [batch_task, signal_task, health_check_task]:
+                if t is not None:
+                    t.cancel()
+                    await t
         except asyncio.CancelledError:
             pass
 

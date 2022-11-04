@@ -8,8 +8,6 @@ import pytest
 import time
 from typing import Dict, List, Set, Type
 from unittest.mock import Mock
-from ya_market import ApiException
-import ya_market.api.requestor_api
 
 from goth.assertions import EventStream
 from goth.assertions.monitor import EventMonitor
@@ -18,6 +16,8 @@ from goth.configuration import Override, load_yaml
 from goth.runner import Runner
 from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
+from ya_market import ApiException
+import ya_market.api.requestor_api
 
 from yapapi import Golem, Task
 from yapapi.events import Event, JobFinished, JobStarted, SubscriptionCreated
