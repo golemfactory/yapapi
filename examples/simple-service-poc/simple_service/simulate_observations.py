@@ -9,6 +9,7 @@ singular value
 
 [ part of the VM image that's deployed by the runtime on the Provider's end. ]
 """
+import daemon
 import os
 from pathlib import Path
 import random
@@ -20,7 +21,12 @@ SIGMA = 3
 SERVICE_PATH = Path(__file__).absolute().parent / "simple_service.py"
 
 
-while True:
-    v = random.normalvariate(MU, SIGMA)
-    os.system(f"{SERVICE_PATH} --add {v}")
-    time.sleep(1)
+def main():
+    while True:
+        v = random.normalvariate(MU, SIGMA)
+        os.system(f"{SERVICE_PATH} --add {v}")
+        time.sleep(1)
+
+
+with daemon.DaemonContext():
+    main()
