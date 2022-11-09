@@ -15,7 +15,7 @@ class DateService(Service):
     @staticmethod
     async def get_payload():
         return await vm.repo(
-            image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
+            image="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
         )
 
     async def start(self):
@@ -54,7 +54,8 @@ async def main():
 
         while datetime.now() < start_time + timedelta(minutes=1):
             for num, instance in enumerate(cluster.instances):
-                print(f"Instance {num} is {instance.state.value} on {instance.provider_name}")
+                print(
+                    f"Instance {num} is {instance.state.value} on {instance.provider_name}")
             await asyncio.sleep(REFRESH_INTERVAL_SEC)
 
 

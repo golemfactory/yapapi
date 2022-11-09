@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+from utils import (
+    TEXT_COLOR_CYAN,
+    TEXT_COLOR_DEFAULT,
+    TEXT_COLOR_RED,
+    TEXT_COLOR_YELLOW,
+    build_parser,
+    print_env_info,
+    run_golem_example,
+)
 import asyncio
 from datetime import datetime, timedelta
 import pathlib
@@ -18,16 +27,6 @@ STARTING_TIMEOUT = timedelta(minutes=4)
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
-from utils import (
-    TEXT_COLOR_CYAN,
-    TEXT_COLOR_DEFAULT,
-    TEXT_COLOR_RED,
-    TEXT_COLOR_YELLOW,
-    build_parser,
-    print_env_info,
-    run_golem_example,
-)
-
 
 class SshService(SocketProxyService):
     remote_port = 22
@@ -39,7 +38,7 @@ class SshService(SocketProxyService):
     @staticmethod
     async def get_payload():
         return await vm.repo(
-            image_hash="1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
+            image="1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
             min_mem_gib=0.5,
             min_storage_gib=2.0,
             # we're adding an additional constraint to only select those nodes that
@@ -53,12 +52,14 @@ class SshService(SocketProxyService):
         async for script in super().start():
             yield script
 
-        password = "".join(random.choice(string.ascii_letters + string.digits) for _ in range(8))
+        password = "".join(random.choice(
+            string.ascii_letters + string.digits) for _ in range(8))
 
         script = self._ctx.new_script(timeout=timedelta(seconds=10))
         script.run("/bin/bash", "-c", "syslogd")
         script.run("/bin/bash", "-c", "ssh-keygen -A")
-        script.run("/bin/bash", "-c", f'echo -e "{password}\n{password}" | passwd')
+        script.run("/bin/bash", "-c",
+                   f'echo -e "{password}\n{password}" | passwd')
         script.run("/bin/bash", "-c", "/usr/sbin/sshd")
         yield script
 
@@ -92,7 +93,8 @@ async def main(subnet_tag, payment_driver=None, payment_network=None, num_instan
                 SshService,
                 network=network,
                 num_instances=num_instances,
-                instance_params=[{"proxy": proxy} for _ in range(num_instances)],
+                instance_params=[{"proxy": proxy}
+                                 for _ in range(num_instances)],
             )
             instances = cluster.instances
 

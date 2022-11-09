@@ -1,4 +1,17 @@
 #!/usr/bin/env python3
+from yapapi.rest.activity import BatchTimeoutError
+from yapapi.payload import vm
+from yapapi.log import enable_default_logger
+from yapapi import windows_event_loop_fix
+from yapapi import __version__ as yapapi_version
+from yapapi import Golem, NoPaymentAccountError, Task, WorkContext
+from utils import (
+    TEXT_COLOR_CYAN,
+    TEXT_COLOR_DEFAULT,
+    TEXT_COLOR_RED,
+    TEXT_COLOR_YELLOW,
+    build_parser,
+)
 import asyncio
 from datetime import datetime, timedelta
 import pathlib
@@ -8,25 +21,10 @@ import sys
 examples_dir = pathlib.Path(__file__).resolve().parents[2] / "examples"
 sys.path.append(str(examples_dir))
 
-from utils import (
-    TEXT_COLOR_CYAN,
-    TEXT_COLOR_DEFAULT,
-    TEXT_COLOR_RED,
-    TEXT_COLOR_YELLOW,
-    build_parser,
-)
-
-from yapapi import Golem, NoPaymentAccountError, Task, WorkContext
-from yapapi import __version__ as yapapi_version
-from yapapi import windows_event_loop_fix
-from yapapi.log import enable_default_logger
-from yapapi.payload import vm
-from yapapi.rest.activity import BatchTimeoutError
-
 
 async def main(subnet_tag, payment_driver=None, payment_network=None):
     package = await vm.repo(
-        image_hash="a23ce2c0c29ea9711e4a293a2805700e2f0cb6450fddf9506812eb1b",
+        image="a23ce2c0c29ea9711e4a293a2805700e2f0cb6450fddf9506812eb1b",
         min_mem_gib=0.5,
         min_storage_gib=2.0,
     )
@@ -38,7 +36,8 @@ async def main(subnet_tag, payment_driver=None, payment_network=None):
             script = ctx.new_script(timeout=timedelta(minutes=10))
             script.run("/usr/bin/stress-ng", "--cpu", "1", "--timeout", "1")
             script.run("/golem/task.sh", "-o", "1024", "-t", "5")
-            script.run("/golem/task.sh", "-f", "/golem/output/output.txt,1048576")
+            script.run("/golem/task.sh", "-f",
+                       "/golem/output/output.txt,1048576")
             script.download_file(f"/golem/output/output.txt", output_file)
             script.run("/golem/task.sh", "-e", "1024", "-t", "5")
 

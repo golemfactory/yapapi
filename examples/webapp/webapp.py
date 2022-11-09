@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+from utils import (
+    TEXT_COLOR_CYAN,
+    TEXT_COLOR_DEFAULT,
+    build_parser,
+    print_env_info,
+    run_golem_example,
+)
 import asyncio
 from datetime import datetime, timedelta
 import pathlib
@@ -12,13 +19,6 @@ from yapapi.services import Service, ServiceState
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
-from utils import (
-    TEXT_COLOR_CYAN,
-    TEXT_COLOR_DEFAULT,
-    build_parser,
-    print_env_info,
-    run_golem_example,
-)
 
 HTTP_IMAGE_HASH = "c37c1364f637c199fe710ca62241ff486db92c875b786814c6030aa1"
 DB_IMAGE_HASH = "85021afecf51687ecae8bdc21e10f3b11b82d2e3b169ba44e177340c"
@@ -35,7 +35,7 @@ class HttpService(HttpProxyService):
     @staticmethod
     async def get_payload():
         return await vm.repo(
-            image_hash=HTTP_IMAGE_HASH,
+            image=HTTP_IMAGE_HASH,
             capabilities=[vm.VM_CAPS_VPN],
         )
 
@@ -64,7 +64,7 @@ class DbService(Service):
     @staticmethod
     async def get_payload():
         return await vm.repo(
-            image_hash=DB_IMAGE_HASH,
+            image=DB_IMAGE_HASH,
             capabilities=[vm.VM_CAPS_VPN],
         )
 

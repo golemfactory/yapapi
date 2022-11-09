@@ -2,6 +2,17 @@
 """
 the requestor agent controlling and interacting with the "simple service"
 """
+from utils import (
+    TEXT_COLOR_CYAN,
+    TEXT_COLOR_DEFAULT,
+    TEXT_COLOR_MAGENTA,
+    TEXT_COLOR_RED,
+    TEXT_COLOR_YELLOW,
+    build_parser,
+    format_usage,
+    print_env_info,
+    run_golem_example,
+)
 import asyncio
 from datetime import datetime, timedelta, timezone
 import pathlib
@@ -16,17 +27,6 @@ from yapapi.services import Service, ServiceState
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
-from utils import (
-    TEXT_COLOR_CYAN,
-    TEXT_COLOR_DEFAULT,
-    TEXT_COLOR_MAGENTA,
-    TEXT_COLOR_RED,
-    TEXT_COLOR_YELLOW,
-    build_parser,
-    format_usage,
-    print_env_info,
-    run_golem_example,
-)
 
 # the timeout after we commission our service instances
 # before we abort this script
@@ -49,7 +49,7 @@ class SimpleService(Service):
     @staticmethod
     async def get_payload():
         return await vm.repo(
-            image_hash="8b11df59f84358d47fc6776d0bb7290b0054c15ded2d6f54cf634488",
+            image="8b11df59f84358d47fc6776d0bb7290b0054c15ded2d6f54cf634488",
             min_mem_gib=0.5,
             min_storage_gib=2.0,
         )
@@ -81,12 +81,14 @@ class SimpleService(Service):
 
             print(f"{TEXT_COLOR_CYAN}stats: {stats}{TEXT_COLOR_DEFAULT}")
 
-            plot_filename = "".join(random.choice(string.ascii_letters) for _ in range(10)) + ".png"
+            plot_filename = "".join(random.choice(
+                string.ascii_letters) for _ in range(10)) + ".png"
             print(
                 f"{TEXT_COLOR_CYAN}downloading plot: {plot} to {plot_filename}{TEXT_COLOR_DEFAULT}"
             )
             script = self._ctx.new_script()
-            script.download_file(plot, str(pathlib.Path(__file__).resolve().parent / plot_filename))
+            script.download_file(plot, str(pathlib.Path(
+                __file__).resolve().parent / plot_filename))
             yield script
 
             if self._show_usage:
@@ -109,7 +111,8 @@ class SimpleService(Service):
 
         if self._show_usage:
             cost = await self._ctx.get_cost()
-            print(f"{TEXT_COLOR_MAGENTA} --- {self.name}  COST: {cost} {TEXT_COLOR_DEFAULT}")
+            print(
+                f"{TEXT_COLOR_MAGENTA} --- {self.name}  COST: {cost} {TEXT_COLOR_DEFAULT}")
 
 
 async def main(
@@ -170,7 +173,8 @@ async def main(
             await asyncio.sleep(5)
 
         if still_starting():
-            raise Exception(f"Failed to start instances before {STARTING_TIMEOUT} elapsed :( ...")
+            raise Exception(
+                f"Failed to start instances before {STARTING_TIMEOUT} elapsed :( ...")
 
         print(f"{TEXT_COLOR_YELLOW}All instances started :){TEXT_COLOR_DEFAULT}")
 

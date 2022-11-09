@@ -33,7 +33,7 @@ class FirstInstanceFailsToStart(Service):
     @staticmethod
     async def get_payload():
         return await vm.repo(
-            image_hash="8b11df59f84358d47fc6776d0bb7290b0054c15ded2d6f54cf634488",
+            image="8b11df59f84358d47fc6776d0bb7290b0054c15ded2d6f54cf634488",
             min_mem_gib=0.5,
             min_storage_gib=2.0,
         )
@@ -46,7 +46,8 @@ class FirstInstanceFailsToStart(Service):
             yield script
 
         script = self._ctx.new_script()
-        future_result = script.run("/bin/echo", "STARTING", str(instances_started + 1))
+        future_result = script.run(
+            "/bin/echo", "STARTING", str(instances_started + 1))
         yield script
         result = await future_result
         log(f"{result.stdout.strip()}")
@@ -68,7 +69,8 @@ class FirstInstanceFailsToStart(Service):
         instances_running += 1
 
         script = self._ctx.new_script()
-        future_result = script.run("/bin/echo", "RUNNING", str(instances_started))
+        future_result = script.run(
+            "/bin/echo", "RUNNING", str(instances_started))
         yield script
         result = await future_result
         log(f"{result.stdout.strip()}")

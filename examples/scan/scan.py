@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+from utils import (
+    TEXT_COLOR_CYAN,
+    TEXT_COLOR_DEFAULT,
+    TEXT_COLOR_MAGENTA,
+    TEXT_COLOR_YELLOW,
+    build_parser,
+    print_env_info,
+    run_golem_example,
+)
 from datetime import datetime
 import logging
 import pathlib
@@ -14,15 +23,6 @@ from yapapi.strategy import SCORE_REJECTED, SCORE_TRUSTED, MarketStrategy
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
-from utils import (
-    TEXT_COLOR_CYAN,
-    TEXT_COLOR_DEFAULT,
-    TEXT_COLOR_MAGENTA,
-    TEXT_COLOR_YELLOW,
-    build_parser,
-    print_env_info,
-    run_golem_example,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ class ScanStrategy(MarketStrategy):
 async def main(
     scan_size: int, max_workers: int, subnet_tag, payment_driver=None, payment_network=None
 ):
-    payload = await vm.repo(image_hash=IMAGE_HASH)
+    payload = await vm.repo(image=IMAGE_HASH)
 
     async def worker(ctx: WorkContext, tasks):
         assert ctx.provider_id not in scanned_nodes
@@ -64,7 +64,8 @@ async def main(
 
             result = (await future_result).stdout or ""
 
-            cpu_model_match = re.search("^model name\\s+:\\s+(.*)$", result, flags=re.MULTILINE)
+            cpu_model_match = re.search(
+                "^model name\\s+:\\s+(.*)$", result, flags=re.MULTILINE)
             if cpu_model_match:
                 result = cpu_model_match.group(1)
             else:
@@ -106,7 +107,8 @@ async def main(
 
 if __name__ == "__main__":
     parser = build_parser("Scan providers")
-    parser.add_argument("--scan-size", help="Number of nodes to scan", type=int, default=5)
+    parser.add_argument(
+        "--scan-size", help="Number of nodes to scan", type=int, default=5)
     parser.add_argument(
         "--max-workers", help="Number of scans at the same time", type=int, default=3
     )

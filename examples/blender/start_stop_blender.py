@@ -7,6 +7,16 @@ This way of using Golem might be more convenient for some specific use cases (al
 in the blender example).
 """
 
+from utils import (
+    TEXT_COLOR_CYAN,
+    TEXT_COLOR_DEFAULT,
+    TEXT_COLOR_MAGENTA,
+    TEXT_COLOR_RED,
+    build_parser,
+    format_usage,
+    print_env_info,
+    run_golem_example,
+)
 from datetime import datetime, timedelta
 import pathlib
 import sys
@@ -18,23 +28,12 @@ from yapapi.rest.activity import BatchTimeoutError
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
-from utils import (
-    TEXT_COLOR_CYAN,
-    TEXT_COLOR_DEFAULT,
-    TEXT_COLOR_MAGENTA,
-    TEXT_COLOR_RED,
-    build_parser,
-    format_usage,
-    print_env_info,
-    run_golem_example,
-)
-
 
 async def main(golem, show_usage, min_cpu_threads):
     print_env_info(golem)
 
     package = await vm.repo(
-        image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+        image="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         # only run on provider nodes that have more than 0.5gb of RAM available
         min_mem_gib=0.5,
         # only run on provider nodes that have more than 2gb of storage space available
@@ -56,7 +55,8 @@ async def main(golem, show_usage, min_cpu_threads):
 
         async for task in tasks:
             frame = task.data
-            crops = [{"outfilebasename": "out", "borders_x": [0.0, 1.0], "borders_y": [0.0, 1.0]}]
+            crops = [{"outfilebasename": "out", "borders_x": [
+                0.0, 1.0], "borders_y": [0.0, 1.0]}]
             script.upload_json(
                 {
                     "scene_file": "/golem/resource/scene.blend",
@@ -74,7 +74,8 @@ async def main(golem, show_usage, min_cpu_threads):
             )
             script.run("/golem/entrypoints/run-blender.sh")
             output_file = f"output_{frame}.png"
-            script.download_file(f"/golem/output/out{frame:04d}.png", output_file)
+            script.download_file(
+                f"/golem/output/out{frame:04d}.png", output_file)
             try:
                 yield script
                 # TODO: Check if job results are valid
@@ -113,7 +114,8 @@ async def main(golem, show_usage, min_cpu_threads):
     # reach the providers.
     min_timeout, max_timeout = 6, 30
 
-    timeout = timedelta(minutes=max(min(init_overhead + len(frames) * 2, max_timeout), min_timeout))
+    timeout = timedelta(minutes=max(
+        min(init_overhead + len(frames) * 2, max_timeout), min_timeout))
     num_tasks = 0
     start_time = datetime.now()
 
@@ -145,7 +147,8 @@ async def main(golem, show_usage, min_cpu_threads):
 
 if __name__ == "__main__":
     parser = build_parser("Render a Blender scene")
-    parser.add_argument("--show-usage", action="store_true", help="show activity usage and cost")
+    parser.add_argument("--show-usage", action="store_true",
+                        help="show activity usage and cost")
     parser.add_argument(
         "--min-cpu-threads",
         type=int,

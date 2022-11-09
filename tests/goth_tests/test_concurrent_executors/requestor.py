@@ -17,7 +17,7 @@ from yapapi.payload import vm
 async def main():
 
     vm_package = await vm.repo(
-        image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+        image="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         min_mem_gib=0.5,
         min_storage_gib=2.0,
     )
@@ -82,7 +82,8 @@ async def main():
 
         async def intermediate_tasks():
             async for task in computed_input_tasks:
-                print(f"ALEF computed task: {task.data} -> {task.result}", file=sys.stderr)
+                print(
+                    f"ALEF computed task: {task.data} -> {task.result}", file=sys.stderr)
                 yield Task(data=task.result)
 
         output_tasks = golem.execute_tasks(
@@ -94,7 +95,8 @@ async def main():
         )
 
         async for task in output_tasks:
-            print(f"BET computed task: {task.data} -> {task.result}", file=sys.stderr)
+            print(
+                f"BET computed task: {task.data} -> {task.result}", file=sys.stderr)
 
 
 if __name__ == "__main__":

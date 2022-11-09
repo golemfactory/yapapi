@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+from utils import (
+    TEXT_COLOR_CYAN,
+    TEXT_COLOR_DEFAULT,
+    TEXT_COLOR_GREEN,
+    TEXT_COLOR_RED,
+    TEXT_COLOR_YELLOW,
+    build_parser,
+    print_env_info,
+    run_golem_example,
+)
 import argparse
 import asyncio
 from datetime import datetime, timedelta
@@ -16,16 +26,6 @@ from yapapi.rest.activity import CommandExecutionError
 examples_dir = Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
-from utils import (
-    TEXT_COLOR_CYAN,
-    TEXT_COLOR_DEFAULT,
-    TEXT_COLOR_GREEN,
-    TEXT_COLOR_RED,
-    TEXT_COLOR_YELLOW,
-    build_parser,
-    print_env_info,
-    run_golem_example,
-)
 
 HASHCAT_ATTACK_MODE = 3  # stands for mask attack, hashcat -a option
 KEYSPACE_OUTPUT_PATH = Path("/golem/output/keyspace")
@@ -43,7 +43,8 @@ arg_parser.set_defaults(
 arg_parser.epilog = (
     "Example invocation: ./yacat.py --mask '?a?a?a' --hash '$P$5ZDzPE45CLLhEx/72qt3NehVzwN2Ry/'"
 )
-arg_parser.add_argument("--hash", type=str, help="Target hash to be cracked", required=True)
+arg_parser.add_argument(
+    "--hash", type=str, help="Target hash to be cracked", required=True)
 arg_parser.add_argument(
     "--mask",
     type=str,
@@ -114,7 +115,8 @@ async def perform_mask_attack(ctx: WorkContext, tasks: AsyncIterable[Task]):
         worker_output_path = f"/golem/output/{output_name}"
 
         script = ctx.new_script(timeout=MASK_ATTACK_TIMEOUT)
-        script.run(f"/bin/sh", "-c", _make_attack_command(skip, limit, worker_output_path))
+        script.run(f"/bin/sh", "-c",
+                   _make_attack_command(skip, limit, worker_output_path))
         try:
             output_file = Path(gettempdir()) / output_name
             script.download_file(worker_output_path, str(output_file))
@@ -151,7 +153,7 @@ def _parse_result(potfile_line: str) -> Optional[str]:
 
 async def main(args):
     package = await vm.repo(
-        image_hash="055911c811e56da4d75ffc928361a78ed13077933ffa8320fb1ec2db",
+        image="055911c811e56da4d75ffc928361a78ed13077933ffa8320fb1ec2db",
         min_mem_gib=0.5,
         min_storage_gib=2.0,
     )
@@ -184,7 +186,8 @@ async def main(args):
         )
 
         data = (Task(data=c) for c in range(0, keyspace, args.chunk_size))
-        max_workers = args.max_workers or math.ceil(keyspace / args.chunk_size) // 2
+        max_workers = args.max_workers or math.ceil(
+            keyspace / args.chunk_size) // 2
 
         completed = golem.execute_tasks(
             perform_mask_attack,
@@ -210,7 +213,8 @@ async def main(args):
         else:
             print(f"{TEXT_COLOR_RED}No password found{TEXT_COLOR_DEFAULT}")
 
-        print(f"{TEXT_COLOR_CYAN}Total time: {datetime.now() - start_time}{TEXT_COLOR_DEFAULT}")
+        print(
+            f"{TEXT_COLOR_CYAN}Total time: {datetime.now() - start_time}{TEXT_COLOR_DEFAULT}")
 
 
 if __name__ == "__main__":

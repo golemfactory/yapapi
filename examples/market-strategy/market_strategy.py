@@ -48,7 +48,8 @@ class FastestProviderStrategy(MarketStrategy):
                     f"Scored known provider: {provider_id}: {score} ({len(previous_runs)} runs, avg time {avg_time})"
                 )
             else:
-                print(f"Found new provider: {provider_id}, default score {SCORE_TRUSTED}")
+                print(
+                    f"Found new provider: {provider_id}, default score {SCORE_TRUSTED}")
 
         return score
 
@@ -57,7 +58,7 @@ class FastestProviderStrategy(MarketStrategy):
 
 
 async def main(subnet_tag, payment_driver, payment_network):
-    payload = await vm.repo(image_hash=IMAGE_HASH)
+    payload = await vm.repo(image=IMAGE_HASH)
 
     strategy = FastestProviderStrategy()
 
@@ -71,7 +72,8 @@ async def main(subnet_tag, payment_driver, payment_network):
             real_time = float(real_time_str)
 
             strategy.save_execution_time(ctx.provider_id, real_time)
-            print("TASK EXECUTED", ctx.provider_name, ctx.provider_id, real_time)
+            print("TASK EXECUTED", ctx.provider_name,
+                  ctx.provider_id, real_time)
 
             task.accept_result()
 
@@ -96,7 +98,8 @@ async def main(subnet_tag, payment_driver, payment_network):
 
 
 if __name__ == "__main__":
-    parser = build_parser("Select fastest provider using a simple reputation-based market strategy")
+    parser = build_parser(
+        "Select fastest provider using a simple reputation-based market strategy")
     parser.set_defaults(log_file="market-strategy-example.log")
     args = parser.parse_args()
 

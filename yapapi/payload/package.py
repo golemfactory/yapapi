@@ -29,11 +29,16 @@ async def resolve_package_url(image_url: str, image_hash: str) -> str:
         return f"hash:sha3:{image_hash}:{image_url}"
 
 
-async def resolve_package_repo_url(repo_url: str, image_hash: str) -> str:
-    async with aiohttp.ClientSession() as client:
-        resp = await client.get(f"{repo_url}/image.{image_hash}.link")
-        if resp.status != 200:
-            resp.raise_for_status()
-
-        image_url = await resp.text()
-        return f"hash:sha3:{image_hash}:{image_url}"
+async def resolve_package_repo_url(repo_url: str, image: str) -> str:
+    if len(image) == 56:
+        # SHA3_224 hash
+        image_url = f"{repo_url}/v1/image/download?hash={image}"
+        return f"hash:sha3:{image}:{image_url}"
+    else:
+        async with aiohttp.ClientSession() as session:
+            # Send request to Golem Registry to get image SHA3_224 hash
+            async with session.get(f"{repo_url}/v1/image/info?tag={image}", allow_redirects=True) as response:
+                data = await response.json()
+                image_hash = data["sha3"]
+                image_url = f"{repo_url}/v1/image/download?tag={image}"
+                return f"hash:sha3:{image_hash}:{image_url}"

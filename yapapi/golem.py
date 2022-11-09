@@ -126,7 +126,8 @@ class Golem:
         """
         self._event_dispatcher = AsyncEventDispatcher()
 
-        self.add_event_consumer(event_consumer or self._default_event_consumer())
+        self.add_event_consumer(
+            event_consumer or self._default_event_consumer())
 
         if not strategy:
             strategy = self._initialize_default_strategy()
@@ -148,7 +149,8 @@ class Golem:
     def add_event_consumer(
         self,
         event_consumer: Callable[[events.Event], None],
-        event_classes_or_names: Iterable[Union[Type[events.Event], str]] = (events.Event,),
+        event_classes_or_names: Iterable[Union[Type[events.Event], str]] = (
+            events.Event,),
     ):
         """Initialize another `event_consumer`, working just like the `event_consumer` passed to :func:`Golem.__init__`
 
@@ -175,8 +177,10 @@ class Golem:
             golem.add_event_consumer(event_consumer, ["AgreementConfirmed"])
 
         """
-        event_classes = set((self._parse_event_cls_or_name(x) for x in event_classes_or_names))
-        self._event_dispatcher.add_event_consumer(event_consumer, event_classes, self.operative)
+        event_classes = set((self._parse_event_cls_or_name(x)
+                            for x in event_classes_or_names))
+        self._event_dispatcher.add_event_consumer(
+            event_consumer, event_classes, self.operative)
 
     @staticmethod
     def _parse_event_cls_or_name(
@@ -229,7 +233,8 @@ class Golem:
     @property
     def operative(self) -> bool:
         """Return True if Golem started and didn't stop"""
-        engine_init_finished = hasattr(self, "_engine")  # to avoid special cases in __init__
+        engine_init_finished = hasattr(
+            self, "_engine")  # to avoid special cases in __init__
         return engine_init_finished and self._engine.started
 
     async def start(self) -> None:
@@ -336,7 +341,7 @@ class Golem:
                     task.accept_result(result=await future_result)
 
             package = await vm.repo(
-                image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
+                image="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
             )
 
             async with Golem(budget=1.0, subnet_tag="devnet-beta") as golem:
@@ -345,7 +350,8 @@ class Golem:
 
         """
 
-        kwargs: Dict[str, Any] = {"payload": payload, "implicit_init": implicit_init}
+        kwargs: Dict[str, Any] = {
+            "payload": payload, "implicit_init": implicit_init}
         if max_workers:
             kwargs["max_workers"] = max_workers
         if timeout:
@@ -402,7 +408,7 @@ class Golem:
                 @staticmethod
                 async def get_payload():
                     return await vm.repo(
-                        image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
+                        image="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
                     )
 
                 async def start(self):
@@ -454,7 +460,8 @@ class Golem:
             )
 
         if network_addresses and not network:
-            raise ValueError("`network_addresses` provided without a `network`.")
+            raise ValueError(
+                "`network_addresses` provided without a `network`.")
 
         cluster = Cluster(
             engine=self._engine,
@@ -465,7 +472,8 @@ class Golem:
         )
 
         await self._engine.add_to_async_context(cluster)
-        cluster.spawn_instances(num_instances, instance_params, network_addresses)
+        cluster.spawn_instances(
+            num_instances, instance_params, network_addresses)
 
         return cluster
 
@@ -505,7 +513,8 @@ class Golem:
         """Create a default strategy and register it's event consumer"""
         base_strategy = LeastExpensiveLinearPayuMS(
             max_fixed_price=Decimal("1.0"),
-            max_price_for={com.Counter.CPU: Decimal("0.2"), com.Counter.TIME: Decimal("0.1")},
+            max_price_for={com.Counter.CPU: Decimal(
+                "0.2"), com.Counter.TIME: Decimal("0.1")},
         )
         strategy = DecreaseScoreForUnconfirmedAgreement(base_strategy, 0.5)
         self.add_event_consumer(strategy.on_event)
