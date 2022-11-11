@@ -100,7 +100,6 @@ class Network:
         cls,
         net_api: "yapapi.rest.net.Net",
         ip: str,
-        owner_id: str,
         owner_ip: Optional[str] = None,
         mask: Optional[str] = None,
         gateway: Optional[str] = None,
@@ -109,13 +108,12 @@ class Network:
 
         :param net_api: the mid-level binding used directly to perform calls to the REST API.
         :param ip: the IP address of the network. May contain netmask, e.g. "192.168.0.0/24"
-        :param owner_id: the node ID of the owner of this VPN (the requestor)
         :param owner_ip: the desired IP address of the requestor node within the newly-created network
         :param mask: Optional netmask (only if not provided within the `ip` argument)
         :param gateway: Optional gateway address for the network
         """
 
-        network = cls(net_api, ip, owner_id, owner_ip, mask, gateway)
+        network = cls(net_api, ip, owner_ip, mask, gateway)
         network._state_machine.create()
 
         # create the network in yagna and set the id
@@ -134,7 +132,6 @@ class Network:
         self,
         net_api: "yapapi.rest.net.Net",
         ip: str,
-        owner_id: str,
         owner_ip: Optional[str] = None,
         mask: Optional[str] = None,
         gateway: Optional[str] = None,
@@ -142,7 +139,6 @@ class Network:
         """
         :param net_api: the mid-level binding used directly to perform calls to the REST API.
         :param ip: the IP address of the network. May contain netmask, e.g. "192.168.0.0/24"
-        :param owner_id: the node ID of the owner of this VPN (the requestor)
         :param owner_ip: the desired IP address of the requestor node within the newly-created network
         :param mask: Optional netmask (only if not provided within the `ip` argument)
         :param gateway: Optional gateway address for the network
@@ -158,7 +154,6 @@ class Network:
 
         self._network_id: Optional[str] = None
         self._gateway = gateway
-        self._owner_id = owner_id
         self._owner_ip: IpAddress = ip_address(owner_ip) if owner_ip else self._next_address()
         self._state_machine: NetworkState = NetworkState()
 
@@ -240,7 +235,6 @@ class Network:
 
         async with self._nodes_lock:
             self._ensure_ip_unique(ip)
-            self._nodes[self._owner_id] = Node(network=self, node_id=self._owner_id, ip=ip)
 
         await self._net_api.add_address(self.network_id, ip)
 

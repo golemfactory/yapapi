@@ -1,7 +1,6 @@
 import asyncio
 from datetime import datetime, timedelta
 from decimal import Decimal
-import json
 import sys
 from typing import (
     TYPE_CHECKING,
@@ -486,13 +485,8 @@ class Golem:
         :param mask: Optional netmask (only if not provided within the `ip` argument)
         :param gateway: Optional gateway address for the network
         """
-        async with self._engine._root_api_session.get(
-            f"{self._engine._api_config.root_url}/me"
-        ) as resp:
-            identity = json.loads(await resp.text()).get("identity")
-
         return await Network.create(
-            self._engine._net_api, ip, identity, owner_ip, mask=mask, gateway=gateway
+            self._engine._net_api, ip, owner_ip, mask=mask, gateway=gateway
         )
 
     @staticmethod
