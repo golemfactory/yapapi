@@ -78,7 +78,18 @@ class _ResponseParser:
     async def get_response(self) -> web.Response:
         while not self.content_received:
             ws_response = await self.ws.receive(self.timeout)
-            self.receive_data(ws_response.data)
+            if ws_response.data:
+                self.receive_data(ws_response.data)
+            else:
+                logger.error(
+                    "Empty response data while handling a request, "
+                    "remote status: %s, remote headers: %s",
+                    self.status,
+                    self.headers,
+                )
+                return web.Response(
+                    status=504, text="Empty response data while handling a request."
+                )
 
         assert self.status
         return web.Response(status=self.status, headers=self.headers, body=self.content)
