@@ -60,14 +60,6 @@ class HttpService(HttpProxyService):
         )
         yield script
 
-    async def run(self):
-        while True:
-            await asyncio.sleep(5)
-            script = self._ctx.new_script()
-            script.download_file("/logs/out", "webapp_out.txt")
-            script.download_file("/logs/err", "webapp_err.txt")
-            yield script
-
 
 class DbService(Service):
     @staticmethod
@@ -191,7 +183,7 @@ if __name__ == "__main__":
         help="The local port to listen on",
     )
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
-    parser.set_defaults(log_file=f"webapp-yapapi-{now}.log")
+    parser.set_defaults(log_file=f"webapp-fileupload-yapapi-{now}.log")
     args = parser.parse_args()
 
     run_golem_example(
