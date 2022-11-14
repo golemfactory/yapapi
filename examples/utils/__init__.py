@@ -35,7 +35,7 @@ def build_parser(description: str) -> argparse.ArgumentParser:
     parser.add_argument(
         "--payment-network", "--network", help="Payment network name, for example `rinkeby`"
     )
-    parser.add_argument("--subnet-tag", help="Subnet name, for example `devnet-beta`")
+    parser.add_argument("--subnet-tag", help="Subnet name, for example `public`")
     parser.add_argument(
         "--log-file",
         default=str(default_log_path),
