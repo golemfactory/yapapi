@@ -88,7 +88,7 @@ class ServiceRunner(AsyncContextManager):
         network: Optional[Network] = None,
         network_address: Optional[str] = None,
     ) -> None:
-        """Add service the the collection of services managed by this ServiceRunner.
+        """Add service to the collection of services managed by this ServiceRunner.
 
         The same object should never be managed by more than one ServiceRunner.
         """
@@ -401,11 +401,11 @@ class ServiceRunner(AsyncContextManager):
 
             service._set_ctx(work_context)
             self._change_state(instance)  # pending -> starting
-            if network:
-                service._set_network_node(
-                    await network.add_node(work_context.provider_id, network_address)
-                )
             try:
+                if network:
+                    service._set_network_node(
+                        await network.add_node(work_context.provider_id, network_address)
+                    )
                 if not self._stopped:
                     instance_batches = self._run_instance(instance)
                     try:
