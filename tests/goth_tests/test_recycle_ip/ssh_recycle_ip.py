@@ -8,7 +8,6 @@ from yapapi import Golem
 from yapapi.contrib.service.socket_proxy import SocketProxy, SocketProxyService
 from yapapi.payload import vm
 
-
 first_time = True
 
 
