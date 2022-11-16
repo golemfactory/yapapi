@@ -132,6 +132,9 @@ class Service:
     def _set_network_node(self, node: Node) -> None:
         self._network_node = node
 
+    def _clear_network_node(self) -> None:
+        self._network_node = None
+
     def __repr__(self):
         class_name = type(self).__name__
         state = self.state.value
