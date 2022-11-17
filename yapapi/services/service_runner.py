@@ -421,6 +421,9 @@ class ServiceRunner(AsyncContextManager):
                 work_context.emit(events.WorkerFinished, exc_info=sys.exc_info())
                 raise
             finally:
+                if network and service.network_node:
+                    await network.remove_node(work_context.provider_id)
+                    service._clear_network_node()
                 await self._job.engine.accept_payments_for_agreement(self._job.id, agreement.id)
                 await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
 
