@@ -25,7 +25,8 @@ async def main(
     subnet_tag, min_cpu_threads, payment_driver=None, payment_network=None, show_usage=False
 ):
     package = await vm.repo(
-        image="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+        # image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+        image_name="test2/blender:latest",
         # only run on provider nodes that have more than 0.5gb of RAM available
         min_mem_gib=0.5,
         # only run on provider nodes that have more than 2gb of storage space available

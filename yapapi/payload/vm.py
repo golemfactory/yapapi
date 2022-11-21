@@ -166,14 +166,20 @@ async def manifest(
 @dataclass
 class _VmPackage(Package):
     repo_url: str
-    image: str
+    image_hash: Optional[str]
+    image_name: Optional[str]
     image_url: Optional[str]
     constraints: _VmConstraints
 
     async def resolve_url(self) -> str:
         if not self.image_url:
-            return await resolve_package_repo_url(self.repo_url, self.image)
-        return await resolve_package_url(self.image_url, self.image)
+            if self.image_hash:
+                return await resolve_package_repo_url(self.repo_url, image_hash=self.image_hash)
+            elif self.image_name:
+                return await resolve_package_repo_url(self.repo_url, image_name=self.image_name)
+            else:
+                raise ValueError("image_hash or image_name must be specified")
+        return await resolve_package_url(self.image_url, self.image_hash)
 
     async def decorate_demand(self, demand: DemandBuilder):
         image_url = await self.resolve_url()
@@ -184,7 +190,8 @@ class _VmPackage(Package):
 
 async def repo(
     *,
-    image: str,
+    image_hash: Optional[str] = None,
+    image_name: Optional[str] = None,
     image_url: Optional[str] = None,
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,
@@ -207,7 +214,7 @@ async def repo(
         package = await vm.repo(
             # if we provide only the image hash, the image will be
             # automatically pulled from Golem's image repository
-            image="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
+            image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
         )
 
     example usage with an explicit GVMI image URL (useful to host images outside the Golem repository)::
@@ -218,7 +225,7 @@ async def repo(
             #
             # the hash can be calculated by running `sha3sum -a 224 <image_filename.gvmi>`
             #
-            image="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
+            image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
 
             # the URL can point to any publicly-available location on the web
             image_url="http://girepo.dev.golem.network:8000/docker-golem-hello-world-latest-779758b432.gvmi",
@@ -227,7 +234,7 @@ async def repo(
     example usage with additional constraints::
 
         package = await vm.repo(
-            image="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+            image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
             # only run on provider nodes that have more than 0.5gb of RAM available
             min_mem_gib=0.5,
             # only run on provider nodes that have more than 2gb of storage space available
@@ -240,7 +247,8 @@ async def repo(
     capabilities = capabilities or list()
     return _VmPackage(
         repo_url=resolve_repo_srv(_DEFAULT_REPO_SRV),
-        image=image,
+        image_hash=image_hash,
+        image_name=image_name,
         image_url=image_url,
         constraints=_VmConstraints(
             min_mem_gib, min_storage_gib, min_cpu_threads, capabilities),

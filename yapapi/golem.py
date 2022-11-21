@@ -341,7 +341,7 @@ class Golem:
                     task.accept_result(result=await future_result)
 
             package = await vm.repo(
-                image="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
+                image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
             )
 
             async with Golem(budget=1.0, subnet_tag="devnet-beta") as golem:
@@ -408,7 +408,7 @@ class Golem:
                 @staticmethod
                 async def get_payload():
                     return await vm.repo(
-                        image="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
+                        image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
                     )
 
                 async def start(self):

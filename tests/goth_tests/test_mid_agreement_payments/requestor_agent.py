@@ -31,7 +31,7 @@ async def worker(context: WorkContext, tasks: AsyncIterable[Task]):
 
 
 async def main():
-    package = await vm.repo(image="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376")
+    package = await vm.repo(image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376")
 
     tasks: List[Task] = [Task(data=None)]
     timeout = timedelta(hours=24)

@@ -24,7 +24,7 @@ sys.path.append(str(examples_dir))
 
 async def main(subnet_tag, payment_driver=None, payment_network=None):
     package = await vm.repo(
-        image="a23ce2c0c29ea9711e4a293a2805700e2f0cb6450fddf9506812eb1b",
+        image_hash="a23ce2c0c29ea9711e4a293a2805700e2f0cb6450fddf9506812eb1b",
         min_mem_gib=0.5,
         min_storage_gib=2.0,
     )

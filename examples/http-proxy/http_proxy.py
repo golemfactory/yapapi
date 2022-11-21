@@ -37,7 +37,7 @@ class HttpService(HttpProxyService):
     @staticmethod
     async def get_payload():
         return await vm.repo(
-            image="16ad039c00f60a48c76d0644c96ccba63b13296d140477c736512127",
+            image_hash="16ad039c00f60a48c76d0644c96ccba63b13296d140477c736512127",
             # we're adding an additional constraint to only select those nodes that
             # are offering VPN-capable VM runtimes so that we can connect them to the VPN
             capabilities=[vm.VM_CAPS_VPN],

@@ -38,7 +38,7 @@ class SshService(SocketProxyService):
     @staticmethod
     async def get_payload():
         return await vm.repo(
-            image="1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
+            image_hash="1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
             min_mem_gib=0.5,
             min_storage_gib=2.0,
             # we're adding an additional constraint to only select those nodes that

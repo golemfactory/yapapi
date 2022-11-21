@@ -33,7 +33,7 @@ async def main(golem, show_usage, min_cpu_threads):
     print_env_info(golem)
 
     package = await vm.repo(
-        image="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+        image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         # only run on provider nodes that have more than 0.5gb of RAM available
         min_mem_gib=0.5,
         # only run on provider nodes that have more than 2gb of storage space available
