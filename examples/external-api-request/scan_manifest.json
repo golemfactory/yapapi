@@ -1,0 +1,39 @@
+{
+  "version": "0.1.0",
+  "createdAt": "2022-07-26T12:51:00.000000Z",
+  "expiresAt": "2100-01-01T00:01:00.000000Z",
+  "payload": [
+    {
+      "platform": {
+        "arch": "x86_64",
+        "os": "linux"
+      },
+      "urls": [
+        "http://girepo.dev.golem.network:8000/docker-alpine-latest-a24bb40132.gvmi"
+      ],
+      "hash": "sha3:25d5315561c3aa3b8daa1ea8cfd5a6c35f307f4347a63994c9d5f2a8"
+    }
+  ],
+  "compManifest": {
+    "version": "0.1.0",
+    "script": {
+      "commands": [
+        "run .*",
+        "transfer .*"
+      ],
+      "match": "regex"
+    },
+    "net": {
+      "inet": {
+        "out": {
+          "protocols": [
+            "https"
+          ],
+          "urls": [
+            "https://geth.golem.network:55555"
+          ]
+        }
+      }
+    }
+  }
+}
