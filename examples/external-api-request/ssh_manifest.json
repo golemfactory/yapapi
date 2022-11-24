@@ -1,0 +1,38 @@
+{
+  "version": "0.1.0",
+  "createdAt": "2022-07-26T12:51:00.000000Z",
+  "expiresAt": "2100-01-01T00:01:00.000000Z",
+  "payload": [
+    {
+      "platform": {
+        "arch": "x86_64",
+        "os": "linux"
+      },
+      "urls": [
+        "http://yacn2.dev.golem.network:8000/docker-ssh-latest-020f34f230.gvmi"
+      ],
+      "hash": "sha3:1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902"
+    }
+  ],
+  "compManifest": {
+    "version": "0.1.0",
+    "script": {
+      "commands": [
+        "run .*"
+      ],
+      "match": "regex"
+    },
+    "net": {
+      "inet": {
+        "out": {
+          "protocols": [
+            "https"
+          ],
+          "urls": [
+            "https://geth.golem.network:55555"
+          ]
+        }
+      }
+    }
+  }
+}
