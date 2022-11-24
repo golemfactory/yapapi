@@ -18,7 +18,8 @@
     "version": "0.1.0",
     "script": {
       "commands": [
-        "run .*"
+        "run .*",
+        "transfer .*"
       ],
       "match": "regex"
     },
