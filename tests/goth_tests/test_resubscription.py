@@ -1,37 +1,29 @@
 """Test if subscription expiration is handled correctly by Golem"""
+import colors
 from datetime import timedelta
 import logging
 import os
 from pathlib import Path
-import time
-from typing import Dict, Set, Type, List
-from unittest.mock import Mock
-
-import colors
 import pytest
+import time
+from typing import Dict, List, Set, Type
+from unittest.mock import Mock
 
 from goth.assertions import EventStream
 from goth.assertions.monitor import EventMonitor
 from goth.assertions.operators import eventually
-
-from goth.configuration import load_yaml, Override
+from goth.configuration import Override, load_yaml
 from goth.runner import Runner
 from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
+from ya_market import ApiException
+import ya_market.api.requestor_api
 
 from yapapi import Golem, Task
-from yapapi.events import (
-    Event,
-    JobStarted,
-    JobFinished,
-    SubscriptionCreated,
-)
+from yapapi.events import Event, JobFinished, JobStarted, SubscriptionCreated
 from yapapi.log import enable_default_logger
 from yapapi.payload import vm
 import yapapi.rest.market
-
-import ya_market.api.requestor_api
-from ya_market import ApiException
 
 logger = logging.getLogger("goth.test")
 

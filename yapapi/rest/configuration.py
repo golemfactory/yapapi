@@ -1,10 +1,11 @@
 import os
 from typing import Optional
 from typing_extensions import Final
-import ya_market  # type: ignore
-import ya_payment  # type: ignore
+
 import ya_activity  # type: ignore
+import ya_market  # type: ignore
 import ya_net  # type: ignore
+import ya_payment  # type: ignore
 
 DEFAULT_YAGNA_API_URL: Final[str] = "http://127.0.0.1:7465"
 

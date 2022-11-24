@@ -1,9 +1,10 @@
 import asyncio
 from dataclasses import dataclass, field
-import uuid
+import logging
 import statemachine  # type: ignore
 from types import TracebackType
 from typing import (
+    TYPE_CHECKING,
     Any,
     AsyncGenerator,
     Awaitable,
@@ -13,22 +14,26 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
-    TYPE_CHECKING,
     Union,
 )
+import uuid
 
+from ya_activity.exceptions import ApiException
+
+from yapapi import events
 from yapapi.ctx import WorkContext
 from yapapi.network import Network, Node
 from yapapi.payload import Payload
 from yapapi.script import Script
-from yapapi import events
-from yapapi.utils import warn_deprecated_msg
 
 from .service_state import ServiceState
 
 if TYPE_CHECKING:
     from .cluster import Cluster
     from .service_runner import ControlSignal
+
+
+logger = logging.getLogger(__name__)
 
 # Return type for `sys.exc_info()`
 ExcInfo = Union[
@@ -110,6 +115,14 @@ class Service:
         """Return the network :class:`~yapapi.network.Node` record associated with this instance."""
         return self._network_node
 
+    @property
+    def exc_info(self) -> ExcInfo:
+        """Return exception info for an exception that caused the last state transition.
+
+        If no such exception occurred, return `(None, None, None)`.
+        """
+        return self._exc_info
+
     def _set_cluster(self, cluster: "Cluster") -> None:
         self._cluster = cluster
 
@@ -119,6 +132,9 @@ class Service:
     def _set_network_node(self, node: Node) -> None:
         self._network_node = node
 
+    def _clear_network_node(self) -> None:
+        self._network_node = None
+
     def __repr__(self):
         class_name = type(self).__name__
         state = self.state.value
@@ -127,13 +143,6 @@ class Service:
         )
         network_description = f" @ {self._network_node.ip}" if self._network_node else ""
         return f"<{class_name} {state}{provider_description}{network_description}>"
-
-    def exc_info(self) -> ExcInfo:
-        """Return exception info for an exception that caused the last state transition.
-
-        If no such exception occurred, return `(None, None, None)`.
-        """
-        return self._exc_info
 
     async def send_message(self, message: Any = None):
         """Send a control message to this instance."""
@@ -217,10 +226,12 @@ class Service:
         A clean exit from a handler function triggers the engine to transition the state of the
         instance to the next stage in service's lifecycle - in this case, to `running`.
 
-        On the other hand, any unhandled exception will cause the instance to be either retried on
-        another provider node, if the :class:`Cluster`'s :attr:`respawn_unstarted_instances` argument is set to
-        `True` in :func:`~yapapi.Golem.run_service`, which is also the default behavior, or altogether terminated, if
-        :attr:`respawn_unstarted_instances` is set to `False`.
+        On the other hand, any unhandled exception will potentially trigger a restart
+        of an instance on another provider node. This is behavior is controlled by Service's
+        `restart_condition` property and by default restarts instances only if they encountered
+        an error and had not been successfully started before.
+
+        To change this default, override the `restart_condition`.
 
         **Example**::
 
@@ -356,29 +367,32 @@ class Service:
         yield s
 
     async def reset(self) -> None:
-        """Reset the service to the initial state.
+        """Reset the service to the initial state. The default implementation does nothing here.
 
         This method is called internally when the service is restarted in :class:`yapapi.services.ServiceRunner`,
         so it is not necessary for services that are never restarted (note that :func:`~yapapi.Golem.run_service()` by
-        default restarts services that didn't start properly).
+        default restarts services that didn't start properly based on :func:`Service.restart_condition()`).
 
         Handlers of a restarted service are called more then once - all of the cleanup necessary between calls
         should be implemented here. E.g. if we initialize a counter in :func:`Service.__init__` and increment it
         in :func:`Service.start()`, we might want to reset it here to the initial value.
-
-        Target implementation (0.10.0 and up) will raise NotImplementedError. Current implementation only warns about
-        this future change.
         """
+        pass
 
-        msg = (
-            "Default implementation of Service.reset will raise NotImplementedError starting from 0.10.0. "
-            f"You should implement this method on {type(self)}"
+    @property
+    def restart_condition(self) -> bool:
+        """The condition, based on which :class:`yapapi.services.ServiceRunner` decides if it should restart this instance.
+
+        If `restart_condition` returns `True`, the service is restarted. In such case, before putting the service back into the
+        `pending` state, the `ServiceRunner` calls this service's `reset` method.
+        """
+        return (
+            self.exc_info != (None, None, None) and not self.__service_instance.started_successfully
         )
-        warn_deprecated_msg(msg)
 
     @property
     def is_available(self):
-        """Return `True` iff this instance is available (that is, starting, running or stopping)."""
+        """Return `True` if this instance is available (that is, starting, running or stopping)."""
         return self.__service_instance.state in ServiceState.AVAILABLE
 
     @property
@@ -389,6 +403,21 @@ class Service:
     @property
     def service_instance(self):
         return self.__service_instance
+
+    async def is_activity_responsive(self) -> bool:
+        """Verify if the provider's activity is responsive.
+
+        Tries to get the state activity. Returns True if the activity state could be
+        queried successfully and false otherwise.
+        """
+        if not self._ctx:
+            return False
+
+        try:
+            return bool(await self._ctx.get_raw_state())
+        except ApiException as e:
+            logger.error("Couldn't retrieve the activity state (%s)", e)
+            return False
 
 
 ServiceType = TypeVar("ServiceType", bound=Service)

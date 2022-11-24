@@ -34,11 +34,6 @@ jobs:
           poetry env use python3.8
           poetry install -E integration-tests
 
-      - name: Install websocat
-        run: |
-          sudo wget https://github.com/vi/websocat/releases/download/v1.9.0/websocat_linux64 -O /usr/local/bin/websocat
-          sudo chmod +x /usr/local/bin/websocat
-
       - name: Disconnect Docker containers from default network
         continue-on-error: true
         # related to this issue: https://github.com/moby/moby/issues/23302

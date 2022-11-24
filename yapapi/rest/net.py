@@ -1,10 +1,7 @@
 from typing import Optional
 
-from ya_net import (
-    ApiClient,
-    RequestorApi,
-    models as yan,
-)
+from ya_net import ApiClient, RequestorApi
+from ya_net import models as yan
 
 
 class Net(object):
@@ -38,3 +35,6 @@ class Net(object):
 
     async def add_node(self, network_id: str, node_id: str, ip: str):
         await self._api.add_node(network_id, yan.Node(node_id, ip))
+
+    async def remove_node(self, network_id: str, node_id: str):
+        await self._api.remove_node(network_id, node_id)

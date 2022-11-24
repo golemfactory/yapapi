@@ -1,20 +1,15 @@
 """Utilities for yapapi example scripts."""
-import asyncio
 import argparse
+import asyncio
+import colorama  # type: ignore
 from datetime import datetime, timezone
 from pathlib import Path
 import tempfile
 
-import colorama  # type: ignore
-
-from yapapi import (
-    Golem,
-    windows_event_loop_fix,
-    NoPaymentAccountError,
-    __version__ as yapapi_version,
-)
+from yapapi import Golem, NoPaymentAccountError
+from yapapi import __version__ as yapapi_version
+from yapapi import windows_event_loop_fix
 from yapapi.log import enable_default_logger
-
 
 TEXT_COLOR_RED = "\033[31;1m"
 TEXT_COLOR_GREEN = "\033[32;1m"
@@ -40,7 +35,7 @@ def build_parser(description: str) -> argparse.ArgumentParser:
     parser.add_argument(
         "--payment-network", "--network", help="Payment network name, for example `rinkeby`"
     )
-    parser.add_argument("--subnet-tag", help="Subnet name, for example `devnet-beta`")
+    parser.add_argument("--subnet-tag", help="Subnet name, for example `public`")
     parser.add_argument(
         "--log-file",
         default=str(default_log_path),

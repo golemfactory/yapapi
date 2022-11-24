@@ -6,18 +6,14 @@ import pathlib
 import sys
 
 from yapapi import Golem
-from yapapi.services import Service
 from yapapi.payload import vm
+from yapapi.services import Service
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
 
-from utils import (
-    build_parser,
-    run_golem_example,
-    print_env_info,
-)
+from utils import build_parser, print_env_info, run_golem_example
 
 
 class ApiCallService(Service):

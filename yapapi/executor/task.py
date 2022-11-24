@@ -2,7 +2,18 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 from enum import Enum, auto
 import itertools
-from typing import Callable, ClassVar, Iterator, Generic, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import (
+    Callable,
+    ClassVar,
+    Generic,
+    Iterator,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 try:
     from typing import Protocol
@@ -10,7 +21,8 @@ except ImportError:
     from typing_extensions import Protocol  # type: ignore
 
 from yapapi import events
-from ._smartq import SmartQueue, Handle
+
+from ._smartq import Handle, SmartQueue
 
 
 class TaskStatus(Enum):

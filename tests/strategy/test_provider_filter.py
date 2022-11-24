@@ -1,11 +1,11 @@
 import pytest
 
-from yapapi import Golem
-from yapapi.strategy import SCORE_REJECTED
-from yapapi.contrib.strategy import ProviderFilter
-
 from tests.factories.rest.market import OfferProposalFactory
-from .helpers import Always6, DEFAULT_OFFER_SCORE
+from yapapi import Golem
+from yapapi.contrib.strategy import ProviderFilter
+from yapapi.strategy import SCORE_REJECTED
+
+from .helpers import DEFAULT_OFFER_SCORE, Always6
 
 
 @pytest.mark.asyncio

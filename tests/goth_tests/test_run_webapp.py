@@ -3,27 +3,29 @@ import asyncio
 import logging
 import os
 from pathlib import Path
+import pytest
+import requests
 import signal
 import time
 from typing import List
 
-import pytest
-import requests
-
-from goth.configuration import load_yaml, Override
-from goth.runner.log import configure_logging
+from goth.configuration import Override, load_yaml
 from goth.runner import Runner
+from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
 
-from .assertions import assert_no_errors, assert_all_invoices_accepted
-
+from ._util import get_free_port
+from .assertions import assert_all_invoices_accepted, assert_no_errors
 
 logger = logging.getLogger("goth.test")
 
 SUBNET_TAG = "goth"
 
 ONELINER_ENTRY = "hello from goth"
-ONELINER_URL = "http://localhost:8080/"
+
+port = get_free_port()
+
+ONELINER_URL = f"http://localhost:{port}/"
 
 
 @pytest.mark.asyncio
@@ -55,7 +57,7 @@ async def test_run_webapp(
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
-            f"{requestor_path} --subnet-tag {SUBNET_TAG}",
+            f"{requestor_path} --subnet-tag {SUBNET_TAG} --port {port}",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor, process_monitor):
             start_time = time.time()

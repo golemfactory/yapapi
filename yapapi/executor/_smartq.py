@@ -3,22 +3,21 @@
 
 """
 
-from asyncio.locks import Lock, Condition
+import asyncio
+from asyncio.locks import Condition, Lock
+import logging
 from types import TracebackType
 from typing import (
-    TypeVar,
-    Generic,
     AsyncIterator,
-    Set,
-    Optional,
     ContextManager,
-    Type,
     Dict,
+    Generic,
+    Optional,
+    Set,
+    Type,
+    TypeVar,
 )
 from typing_extensions import AsyncIterable
-import asyncio
-import logging
-
 
 _logger = logging.getLogger("yapapi.executor")
 Item = TypeVar("Item")
