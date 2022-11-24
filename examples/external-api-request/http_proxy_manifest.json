@@ -1,0 +1,39 @@
+{
+  "version": "0.1.0",
+  "createdAt": "2022-07-26T12:51:00.000000Z",
+  "expiresAt": "2100-01-01T00:01:00.000000Z",
+  "payload": [
+    {
+      "platform": {
+        "arch": "x86_64",
+        "os": "linux"
+      },
+      "urls": [
+        "http://yacn2.dev.golem.network:8000/docker-http-proxy-latest-4146b18ae7.gvmi"
+      ],
+      "hash": "sha3:16ad039c00f60a48c76d0644c96ccba63b13296d140477c736512127"
+    }
+  ],
+  "compManifest": {
+    "version": "0.1.0",
+    "script": {
+      "commands": [
+        "run .*",
+        "transfer .*"
+      ],
+      "match": "regex"
+    },
+    "net": {
+      "inet": {
+        "out": {
+          "protocols": [
+            "https"
+          ],
+          "urls": [
+            "https://geth.golem.network:55555"
+          ]
+        }
+      }
+    }
+  }
+}
