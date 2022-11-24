@@ -1,0 +1,38 @@
+{
+  "version": "0.1.0",
+  "createdAt": "2022-07-26T12:51:00.000000Z",
+  "expiresAt": "2100-01-01T00:01:00.000000Z",
+  "payload": [
+    {
+      "platform": {
+        "arch": "x86_64",
+        "os": "linux"
+      },
+      "urls": [
+        "http://girepo.dev.golem.network:8000/local-image-c76719083b.gvmi"
+      ],
+      "hash": "sha3:9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"
+    }
+  ],
+  "compManifest": {
+    "version": "0.1.0",
+    "script": {
+      "commands": [
+        "run .*"
+      ],
+      "match": "regex"
+    },
+    "net": {
+      "inet": {
+        "out": {
+          "protocols": [
+            "https"
+          ],
+          "urls": [
+            "https://geth.golem.network:55555"
+          ]
+        }
+      }
+    }
+  }
+}
