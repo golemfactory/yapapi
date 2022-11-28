@@ -37,7 +37,7 @@ class ApiCallService(Service):
             manifest_cert=manifest_cert,
             min_mem_gib=0.5,
             min_cpu_threads=1,
-            capabilities=[vm.VM_CAPS_INET, vm.VM_CAPS_MANIFEST],
+            capabilities=["inet", "manifest-support"],
         )
 
     async def run(self):

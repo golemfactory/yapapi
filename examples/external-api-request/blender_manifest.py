@@ -27,7 +27,7 @@ async def main(
 ):
     package = await vm.manifest(
         manifest=open("blender_manifest.json.base64", "rb").read().decode("utf-8"),
-        capabilities=[vm.VM_CAPS_INET, vm.VM_CAPS_MANIFEST, vm.VM_CAPS_VPN],
+        capabilities=["manifest-support", vm.VM_CAPS_VPN],
     )
 
     async def worker(ctx: WorkContext, tasks):
