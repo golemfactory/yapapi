@@ -22,18 +22,6 @@
         "transfer .*"
       ],
       "match": "regex"
-    },
-    "net": {
-      "inet": {
-        "out": {
-          "protocols": [
-            "https"
-          ],
-          "urls": [
-            "https://geth.golem.network:55555"
-          ]
-        }
-      }
     }
   }
 }
