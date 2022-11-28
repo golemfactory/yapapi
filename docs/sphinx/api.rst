@@ -151,10 +151,6 @@ Yapapi Contrib
 
 .. automodule:: yapapi.contrib
 
-.. automodule:: yapapi.contrib.strategy.provider_filter
-
-.. autoclass:: yapapi.contrib.strategy.ProviderFilter
-
 .. automodule:: yapapi.contrib.service.http_proxy
 
 .. autoclass:: yapapi.contrib.service.http_proxy.LocalHttpProxy
@@ -162,3 +158,15 @@ Yapapi Contrib
 
 .. autoclass:: yapapi.contrib.service.http_proxy.HttpProxyService
     :members: __init__, handle_request
+
+.. automodule:: yapapi.contrib.service.socket_proxy
+
+.. autoclass:: yapapi.contrib.service.socket_proxy.SocketProxy
+    :members: __init__, run, run_server, stop
+
+.. autoclass:: yapapi.contrib.service.socket_proxy.SocketProxyService
+    :members: remote_ports
+
+.. automodule:: yapapi.contrib.strategy.provider_filter
+
+.. autoclass:: yapapi.contrib.strategy.ProviderFilter
