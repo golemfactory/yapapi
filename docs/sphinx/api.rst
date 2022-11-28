@@ -27,7 +27,7 @@ Service
 -------
 
 .. autoclass:: yapapi.services.Service
-    :members: id, provider_name, state, is_available, start, run, shutdown, reset, send_message, send_message_nowait, receive_message, receive_message_nowait, get_payload, network, network_node
+    :members: id, provider_name, state, is_available, start, run, shutdown, reset, is_activity_responsive, restart_condition, send_message, send_message_nowait, receive_message, receive_message_nowait, get_payload, network, network_node
 
 Cluster
 -------
