@@ -409,6 +409,9 @@ class Service:
 
         Tries to get the state activity. Returns True if the activity state could be
         queried successfully and false otherwise.
+
+        Can be overridden in case the specific implementation of `Service` wants to implement
+        a more appropriate health check of the particular service.
         """
         if not self._ctx:
             return False

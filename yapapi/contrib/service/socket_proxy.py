@@ -1,3 +1,14 @@
+"""
+TCP socket proxy
+^^^^^^^^^^^^^^^^
+
+A local proxy that facilitates connections to any VPN-enabled TCP services launched on Golem
+providers using yapapi's Services API.
+
+For usage in a complete requestor agent app, see the
+`ssh <https://github.com/golemfactory/yapapi/tree/master/examples/ssh>`_ example in the
+yapapi repository.
+"""
 import abc
 import aiohttp
 import asyncio
@@ -29,6 +40,7 @@ class SocketProxyService(Service, abc.ABC):
     """
 
     remote_ports: List[int]
+    """List of remote ports to open the proxies for when using `SocketProxy.`:meth:`~SocketProxy.run`."""
 
 
 class ProxyConnection:
@@ -187,12 +199,14 @@ class ProxyServer:
 
     @property
     def app_key(self):
+        """The application key used to authorize access to `yagna`'s REST API."""
         return (
             self.service.cluster.service_runner._job.engine._api_config.app_key  # type: ignore[union-attr]  # noqa
         )
 
     @property
     def instance_ws(self):
+        """The websocket URI for the specific remote port of the Service."""
         return self.service.network_node.get_websocket_uri(self.remote_port)  # type: ignore[union-attr]  # noqa
 
     async def handler(
@@ -204,6 +218,10 @@ class ProxyServer:
         await connection.run()
 
     async def run(self):
+        """Run the asyncio TCP server for a single port on a Service.
+
+        Preferred usage is through `:meth:`~SocketProxy.run_server`.
+        """
         server = await asyncio.start_server(self.handler, self.local_address, self.local_port)
         addrs = ", ".join(str(sock.getsockname()) for sock in server.sockets)  # type: ignore  # noqa
         logger.info("Listening on: %s, forwarding to: %s", addrs, self.instance_ws)
@@ -223,6 +241,64 @@ class SocketProxy:
 
     The connections can be routed to instances of services connected to a Golem VPN
     using `yapapi`'s Network API (:meth:`~yapapi.Golem.create_network`).
+
+    Example usage::
+
+        class SomeService(SocketProxyService):
+            def __init__(self, remote_port: int = 4242):
+                super().init()
+                self.remote_ports = [remote_port]
+
+        ...
+
+        cluster = await golem.run_service(
+            SomeService,
+            network=network,
+        )
+
+        # ensure services are started
+
+        ...
+
+        proxy = SocketProxy(ports=[8484])
+        await proxy.run(cluster)
+
+        ... # connections to local port 8484 will be routed to port 4242 within the VM
+
+        await proxy.stop()
+        cluster.stop()
+
+
+    Example usage directly from a Service handler::
+
+        class SomeOtherService(SocketProxyService):
+            remote_port = 22  # e.g. an SSH daemon
+
+            def __init__(self, proxy: SocketProxy):
+                super().__init__()
+                self.proxy = proxy
+
+            async def start(self):
+                # perform the initialization of the Service
+
+                ...
+
+                server = await self.proxy.run_server(self, self.remote_port)
+
+
+        proxy = SocketProxy(ports=[2222])
+
+        cluster = await golem.run_service(
+            SomeOtherService,
+            network=network,
+            instance_params=[{"proxy": proxy}],
+        )
+
+        ... # connections to local port 2222 will be routed to port 22 within the VM
+
+        await proxy.stop()
+        cluster.stop()
+
     """
 
     servers: Dict[Service, Dict[int, ProxyServer]]
@@ -234,6 +310,13 @@ class SocketProxy:
         buffer_size: int = DEFAULT_SOCKET_BUFFER_SIZE,
         timeout: float = DEFAULT_TIMEOUT,
     ):
+        """Initialize the TCP socket proxy service.
+
+        :param ports: a list of local ports that will be assigned to consecutive connections
+        :param address: the IP address to bind the local server to
+        :param buffer_size: the size of the data buffer used for the connections
+        :param timeout: the timeout in seconds for the response of the remote end
+        """
         self.ports = ports
         self.address = address
         self.buffer_size = buffer_size
@@ -244,7 +327,11 @@ class SocketProxy:
         self._tasks: List[asyncio.Task] = list()
 
     async def run_server(self, service: Service, remote_port: int):
-        """Run a socket proxy for a single instance of a service."""
+        """Run a socket proxy for a single port on a instance of a service.
+
+        :param service: the service instance
+        :param remote_port: the remote port on which a TCP service is listening on the remote end
+        """
         assert service.network_node, "Service must be started on a VPN."
 
         local_port = self._available_ports.pop(0)
@@ -271,12 +358,16 @@ class SocketProxy:
         return self.servers[service][remote_port]
 
     async def run(self, cluster: Cluster[SocketProxyService]):
-        """Run the proxy servers for all ports on a cluster."""
+        """Run the proxy servers for all ports on a cluster.
+
+        :param cluster: the cluster for which the proxy connections should be enabled.
+        """
         for service in cluster.instances:
             for remote_port in service.remote_ports:
                 await self.run_server(service, remote_port)
 
     async def stop(self):
+        """Stop servers for all connections."""
         logger.info("Stopping socket proxy...")
         for t in self._tasks:
             t.cancel()
