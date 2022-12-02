@@ -22,3 +22,5 @@ poetry.lock
 
 # local config files
 .pre-commit-config.yaml
+
+/build
