@@ -75,11 +75,11 @@ Package
 .. autoclass:: yapapi.payload.package.Package
 
 
-vm.repo
+vm
 -------
 
 .. automodule:: yapapi.payload.vm
-    :members: repo
+    :members: repo, manifest
 
 
 Execution control
