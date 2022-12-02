@@ -81,14 +81,14 @@ class _BrokenService(Service):
 )
 @pytest.mark.asyncio
 @pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
-async def test_spawn_instances(kwargs, args, error, monkeypatch):
+async def test_spawn_instances(kwargs, args, error, monkeypatch, golem_factory):
     def _get_new_engine(self):
         return mock.AsyncMock()
 
     monkeypatch.setattr(Golem, "_get_new_engine", _get_new_engine)
 
     with patch("yapapi.services.ServiceRunner.spawn_instance") as spawn_instance:
-        golem = Golem(budget=1)
+        golem = golem_factory(budget=1)
         try:
             await golem.run_service(
                 service_class=_TestService, payload=Mock(), network=Mock(), **kwargs

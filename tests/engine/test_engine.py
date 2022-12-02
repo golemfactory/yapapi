@@ -3,6 +3,7 @@ import pytest
 from unittest.mock import Mock
 
 from yapapi import Golem
+from yapapi.config import ApiConfig
 import yapapi.engine
 from yapapi.engine import Job
 import yapapi.rest
@@ -23,15 +24,15 @@ def mock_rest_configuration(monkeypatch):
         ("my-little-subnet", "whole-golem", "whole-golem"),
     ],
 )
-def test_set_subnet_tag(default_subnet, subnet_arg, expected_subnet, monkeypatch):
+def test_set_subnet_tag(default_subnet, subnet_arg, expected_subnet, monkeypatch, golem_factory):
     """Check that `subnet_tag` argument takes precedence over `yapapi.engine.DEFAULT_SUBNET`."""
 
     monkeypatch.setattr(yapapi.engine, "DEFAULT_SUBNET", default_subnet)
 
     if subnet_arg is not None:
-        golem = Golem(budget=1.0, subnet_tag=subnet_arg)
+        golem = golem_factory(budget=1.0, subnet_tag=subnet_arg)
     else:
-        golem = Golem(budget=1.0)
+        golem = golem_factory(budget=1.0)
     assert golem.subnet_tag == expected_subnet
 
 

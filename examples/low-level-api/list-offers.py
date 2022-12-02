@@ -7,6 +7,7 @@ import pathlib
 import sys
 
 from yapapi import props as yp
+from yapapi.config import ApiConfig
 from yapapi.log import enable_default_logger
 from yapapi.props.builder import DemandBuilder
 from yapapi.rest import Activity, Configuration, Market, Payment  # noqa
@@ -44,7 +45,7 @@ def main():
         asyncio.get_event_loop().run_until_complete(
             asyncio.wait_for(
                 list_offers(
-                    Configuration(),
+                    Configuration(api_config=ApiConfig()),  # should load app-key from env
                     subnet_tag=subnet,
                 ),
                 timeout=4,

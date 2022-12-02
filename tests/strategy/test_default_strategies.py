@@ -114,25 +114,25 @@ async def test_LeastExpensiveLinearPayuMS_price_caps():
 
 
 @pytest.mark.asyncio
-async def test_default_strategy_type(monkeypatch):
+async def test_default_strategy_type(monkeypatch, golem_factory):
     """Test if the default strategy is composed of appropriate `MarketStrategy` subclasses."""
 
     monkeypatch.setattr(yapapi.rest, "Configuration", Mock)
 
-    golem = Golem(budget=1.0)
+    golem = golem_factory(budget=1.0)
     default_strategy = golem.strategy
     assert isinstance(default_strategy, DecreaseScoreForUnconfirmedAgreement)
     assert isinstance(default_strategy.base_strategy, LeastExpensiveLinearPayuMS)
 
 
 @pytest.mark.asyncio
-async def test_user_strategy_not_modified(monkeypatch):
+async def test_user_strategy_not_modified(monkeypatch, golem_factory):
     """Test that a user strategy is not wrapped in `DecreaseScoreForUnconfirmedAgreement`."""
 
     monkeypatch.setattr(yapapi.rest, "Configuration", Mock)
 
     user_strategy = Mock()
-    golem = Golem(budget=1.0, strategy=user_strategy)
+    golem = golem_factory(budget=1.0, strategy=user_strategy)
     assert golem.strategy == user_strategy
 
 

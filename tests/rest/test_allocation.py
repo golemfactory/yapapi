@@ -1,12 +1,13 @@
 from decimal import Decimal
 import pytest
 
+from yapapi.config import ApiConfig
 from yapapi.rest import Configuration, Payment
 
 
 @pytest.fixture
 async def yapapi_payment(request):
-    conf = Configuration(app_key=request.config.getvalue("yaApiKey"))
+    conf = Configuration(api_config=ApiConfig(app_key=request.config.getvalue("yaApiKey")))
     async with conf.payment() as p:
         yield Payment(p)
 

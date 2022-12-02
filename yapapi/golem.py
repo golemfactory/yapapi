@@ -19,6 +19,8 @@ from typing import (
 )
 from typing_extensions import AsyncGenerator
 
+from yapapi.config import ApiConfig
+
 if sys.version_info > (3, 8):
     from typing import TypedDict
 else:
@@ -57,7 +59,7 @@ class _EngineKwargs(TypedDict):
     payment_driver: Optional[str]
     payment_network: Optional[str]
     stream_output: bool
-    app_key: Optional[str]
+    api_config: ApiConfig
 
 
 class Golem:
@@ -98,11 +100,13 @@ class Golem:
         *,
         budget: Union[float, Decimal],
         strategy: Optional["yapapi.strategy.BaseMarketStrategy"] = None,
+        event_consumer: Optional[Callable[[events.Event], None]] = None,
         subnet_tag: Optional[str] = None,
         payment_driver: Optional[str] = None,
         payment_network: Optional[str] = None,
-        event_consumer: Optional[Callable[[events.Event], None]] = None,
         stream_output: bool = False,
+        api_config: Optional[ApiConfig] = None,
+        # deprecate
         app_key: Optional[str] = None,
     ):
         """Initialize Golem engine.
@@ -115,14 +119,13 @@ class Golem:
         :param payment_driver: name of the payment driver to use. Uses `YAGNA_PAYMENT_DRIVER`
             environment variable, defaults to `erc20`. Only payment platforms with
             the specified driver will be used
-        :param payment_network: name of the network to use. Uses `YAGNA_NETWORK` environment
+        :param payment_network: name of the network to use. Uses `YAGNA_PAYMENT_NETWORK` environment
             variable, defaults to `rinkeby`. Only payment platforms with the specified
             network will be used
         :param event_consumer: a callable that processes events related to the
             computation; by default it is a function that logs all events
         :param stream_output: stream computation output from providers
-        :param app_key: optional Yagna application key. If not provided, the default is to
-                        get the value from `YAGNA_APPKEY` environment variable
+        :param api_config: TODO
         """
         self._event_dispatcher = AsyncEventDispatcher()
 
@@ -130,6 +133,13 @@ class Golem:
 
         if not strategy:
             strategy = self._initialize_default_strategy()
+
+        if api_config is None:
+            # load deprecate app_key
+            build_dict = {}
+            if app_key is not None:
+                build_dict["app_key"] = app_key
+            api_config = ApiConfig(**build_dict)
 
         self._engine_kwargs: _EngineKwargs = {
             "budget": budget,
@@ -139,7 +149,7 @@ class Golem:
             "payment_driver": payment_driver,
             "payment_network": payment_network,
             "stream_output": stream_output,
-            "app_key": app_key,
+            "api_config": api_config,
         }
 
         self._engine: _Engine = self._get_new_engine()
