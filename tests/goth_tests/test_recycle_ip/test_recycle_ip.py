@@ -7,6 +7,7 @@ import pexpect
 import pytest
 import re
 import signal
+import sys
 import time
 from typing import List
 
@@ -15,16 +16,15 @@ from goth.runner import Runner
 from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
 
-from .assertions import assert_all_invoices_accepted, assert_no_errors
+from goth_tests.assertions import assert_all_invoices_accepted, assert_no_errors  # isort:skip
 
-logger = logging.getLogger("goth.test.run_ssh")
+logger = logging.getLogger("goth.test.recycle_ips")
 
 SUBNET_TAG = "goth"
 
 
-@pytest.mark.skip  # TODO: we probably need to fix the way the requestor process are spawned #1020 # noqa
 @pytest.mark.asyncio
-async def test_run_ssh(
+async def test_recycle_ip(
     log_dir: Path,
     project_dir: Path,
     goth_config_path: Path,
@@ -51,7 +51,7 @@ async def test_run_ssh(
     requestor = [c for c in goth_config.containers if c.name == "requestor"][0]
     requestor.use_proxy = False
 
-    requestor_path = project_dir / "examples" / "ssh" / "ssh.py"
+    requestor_path = str(Path(__file__).parent / "ssh_recycle_ip.py")
 
     runner = Runner(
         base_log_dir=log_dir,
@@ -66,29 +66,21 @@ async def test_run_ssh(
             f"{requestor_path} --subnet-tag {SUBNET_TAG}",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor, process_monitor):
-            start_time = time.time()
-
-            def elapsed_time():
-                return f"time: {(time.time() - start_time):.1f}"
-
             cmd_monitor.add_assertion(assert_no_errors)
             cmd_monitor.add_assertion(assert_all_invoices_accepted)
 
             ssh_connections = []
 
             # A longer timeout to account for downloading a VM image
-            for i in range(2):
-                ssh_string = await cmd_monitor.wait_for_pattern("ssh -o", timeout=120)
-                matches = re.match("ssh -o .* -p (\\d+) (root@.*)", ssh_string)
-                port = matches.group(1)
-                address = matches.group(2)
-                password = re.sub("password: ", "", await cmd_monitor.wait_for_pattern("password:"))
+            ssh_string = await cmd_monitor.wait_for_pattern("ssh -o", timeout=120)
+            matches = re.match("ssh -o .* -p (\\d+) (root@.*)", ssh_string)
+            port = matches.group(1)
+            address = matches.group(2)
+            password = re.sub("password: ", "", await cmd_monitor.wait_for_pattern("password:"))
 
-                ssh_connections.append((port, address, password))
+            ssh_connections.append((port, address, password))
 
-            await cmd_monitor.wait_for_pattern(
-                ".*SshService running on provider.*SshService running on provider", timeout=10
-            )
+            await cmd_monitor.wait_for_pattern(".*SshService running on provider", timeout=10)
             logger.info("SSH service instances started")
 
             if not ssh_verify_connection:
@@ -123,13 +115,3 @@ async def test_run_ssh(
             proc: asyncio.subprocess.Process = await process_monitor.get_process()
             proc.send_signal(signal.SIGINT)
             logger.info("Sent SIGINT...")
-
-            for _ in range(2):
-                await cmd_monitor.wait_for_pattern(
-                    ".*SshService terminated on provider", timeout=120
-                )
-
-            logger.info(f"The instances have been terminated ({elapsed_time()})")
-
-            await cmd_monitor.wait_for_pattern(".*All jobs have finished", timeout=20)
-            logger.info(f"Requestor script finished ({elapsed_time()})")

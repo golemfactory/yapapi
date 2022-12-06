@@ -88,7 +88,7 @@ class ServiceRunner(AsyncContextManager):
         network: Optional[Network] = None,
         network_address: Optional[str] = None,
     ) -> None:
-        """Add service the the collection of services managed by this ServiceRunner.
+        """Add service to the collection of services managed by this ServiceRunner.
 
         The same object should never be managed by more than one ServiceRunner.
         """
@@ -401,11 +401,11 @@ class ServiceRunner(AsyncContextManager):
 
             service._set_ctx(work_context)
             self._change_state(instance)  # pending -> starting
-            if network:
-                service._set_network_node(
-                    await network.add_node(work_context.provider_id, network_address)
-                )
             try:
+                if network:
+                    service._set_network_node(
+                        await network.add_node(work_context.provider_id, network_address)
+                    )
                 if not self._stopped:
                     instance_batches = self._run_instance(instance)
                     try:
@@ -421,6 +421,9 @@ class ServiceRunner(AsyncContextManager):
                 work_context.emit(events.WorkerFinished, exc_info=sys.exc_info())
                 raise
             finally:
+                if network and service.network_node:
+                    await network.remove_node(work_context.provider_id)
+                    service._clear_network_node()
                 await self._job.engine.accept_payments_for_agreement(self._job.id, agreement.id)
                 await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
 

@@ -132,6 +132,9 @@ class Service:
     def _set_network_node(self, node: Node) -> None:
         self._network_node = node
 
+    def _clear_network_node(self) -> None:
+        self._network_node = None
+
     def __repr__(self):
         class_name = type(self).__name__
         state = self.state.value
@@ -406,6 +409,9 @@ class Service:
 
         Tries to get the state activity. Returns True if the activity state could be
         queried successfully and false otherwise.
+
+        Can be overridden in case the specific implementation of `Service` wants to implement
+        a more appropriate health check of the particular service.
         """
         if not self._ctx:
             return False

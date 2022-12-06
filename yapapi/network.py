@@ -269,6 +269,17 @@ class Network:
 
         return node
 
+    async def remove_node(self, node_id: str) -> None:
+        """Remove the node from the network.
+
+        :param node_id: Node ID within the Golem network of the VPN node to be removed.
+        """
+
+        await self._net_api.remove_node(self.network_id, node_id)
+
+        async with self._nodes_lock:
+            del self._nodes[node_id]
+
     async def _refresh_node(self, node: Node):
         logger.debug("refreshing node %s", node)
         try:
