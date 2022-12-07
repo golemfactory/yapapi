@@ -34,7 +34,7 @@ class ApiConfig:
     """
 
     app_key: str = field(default_factory=partial(os.getenv, "YAGNA_APPKEY"))  # type: ignore
-    api_url: Optional[str] = field(default_factory=partial(os.getenv, "YAGNA_API_URL"))
+    api_url: str = field(default_factory=partial(os.getenv, "YAGNA_API_URL", "http://127.0.0.1:7465"))  # type: ignore
     market_url: Optional[str] = field(default_factory=partial(os.getenv, "YAGNA_MARKET_URL"))
     payment_url: Optional[str] = field(default_factory=partial(os.getenv, "YAGNA_PAYMENT_URL"))
     net_url: Optional[str] = field(default_factory=partial(os.getenv, "YAGNA_NET_URL"))

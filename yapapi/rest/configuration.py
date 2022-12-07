@@ -9,8 +9,6 @@ import ya_payment
 
 from yapapi.config import ApiConfig  # type: ignore
 
-DEFAULT_YAGNA_API_URL: Final[str] = "http://127.0.0.1:7465"
-
 
 class Configuration(object):
     """
@@ -29,7 +27,7 @@ class Configuration(object):
         api_config: ApiConfig,
     ):
         self.__app_key: str = api_config.app_key
-        self.__url = api_config.api_url or DEFAULT_YAGNA_API_URL
+        self.__url = api_config.api_url
 
         def resolve_url(given_url: Optional[str], prefix: str) -> str:
             return given_url or f"{self.__url}{prefix}"

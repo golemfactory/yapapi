@@ -20,6 +20,7 @@ from typing import (
 from typing_extensions import AsyncGenerator
 
 from yapapi.config import ApiConfig
+from yapapi.utils import Deprecated, warn_deprecated
 
 if sys.version_info > (3, 8):
     from typing import TypedDict
@@ -100,10 +101,10 @@ class Golem:
         *,
         budget: Union[float, Decimal],
         strategy: Optional["yapapi.strategy.BaseMarketStrategy"] = None,
-        event_consumer: Optional[Callable[[events.Event], None]] = None,
         subnet_tag: Optional[str] = None,
         payment_driver: Optional[str] = None,
         payment_network: Optional[str] = None,
+        event_consumer: Optional[Callable[[events.Event], None]] = None,
         stream_output: bool = False,
         api_config: Optional[ApiConfig] = None,
         # deprecate
@@ -125,7 +126,9 @@ class Golem:
         :param event_consumer: a callable that processes events related to the
             computation; by default it is a function that logs all events
         :param stream_output: stream computation output from providers
-        :param api_config: TODO
+        :param api_config: configuration of yagna low level api
+            including but not limited to `YAGNA_APPKEY`, `YAGNA_API_URL` variables
+            See `ApiConfig` docs for more details
         """
         self._event_dispatcher = AsyncEventDispatcher()
 
@@ -138,6 +141,7 @@ class Golem:
             # load deprecate app_key
             build_dict = {}
             if app_key is not None:
+                warn_deprecated("app_key", "api_config", "ToDo ver", Deprecated.parameter)  # ToDo
                 build_dict["app_key"] = app_key
             api_config = ApiConfig(**build_dict)
 

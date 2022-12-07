@@ -124,7 +124,7 @@ class _Engine:
             environment variable, defaults to `rinkeby`. Only payment platforms with the specified
             network will be used
         :param stream_output: stream computation output from providers
-        :param api_config: TODO
+        :param api_config: configuration of yagna low level api
         """
         self._api_config = rest.Configuration(api_config)
         self._budget_amount = Decimal(budget)
