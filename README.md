@@ -9,7 +9,7 @@
 
 ## What's Golem and yapapi?
 
-**[The Golem Network](https://golem.network)** fosters a global group of creators building ambitious software solutions that will shape the technological landscape of future generations by accessing computing resources across the platform. Golem Network is an accessible, reliable, open and censorship-resistant protocol, democratizing access to digital resources and connecting users in a flexible and open-source manner.
+**[The Golem Network](https://golem.network)** fosters a global group of creators building ambitious software solutions that will shape the technological landscape of future generations by utilizing computing resources available on the platform. Golem Network is an accessible, reliable, open and censorship-resistant protocol, democratizing access to digital resources and connecting users in a flexible and open-source manner.
 
 
 **Yapapi** is the Python high-level API that allows developers to connect to their Golem nodes and manage their distributed computational loads through Golem Network.
