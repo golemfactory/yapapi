@@ -36,26 +36,6 @@ def dummy_yagna_engine(monkeypatch):
 
 
 @pytest.fixture
-def api_config_factory():
-    def _api_config_factory(**kwargs) -> ApiConfig:
-        if "app_key" not in kwargs:
-            kwargs["app_key"] = "yagna-app-key"
-        return ApiConfig(**kwargs)
-
-    return _api_config_factory
-
-
-@pytest.fixture
-def golem_factory(api_config_factory) -> Golem:
-    def _golem_factory(**kwargs) -> Golem:
-        if "api_config" not in kwargs:
-            kwargs["api_config"] = api_config_factory()
-        return Golem(**kwargs)
-
-    return _golem_factory
-
-
-@pytest.fixture
 def purge_yagna_os_env() -> None:
     for key in [
         "YAGNA_APPKEY",

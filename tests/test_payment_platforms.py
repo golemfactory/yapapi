@@ -4,6 +4,7 @@ from unittest import mock
 
 from ya_payment import RequestorApi
 
+from tests.factories.golem import GolemFactory
 from yapapi import NoPaymentAccountError
 from yapapi.config import ApiConfig
 from yapapi.engine import DEFAULT_DRIVER, DEFAULT_NETWORK
@@ -67,18 +68,18 @@ def _mock_create_allocation(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_no_accounts_raises(monkeypatch, golem_factory):
+async def test_no_accounts_raises(monkeypatch):
     """Test that exception is raised if `Payment.accounts()` returns empty list."""
 
     monkeypatch.setattr(Payment, "accounts", _mock_accounts_iterator())
 
     with pytest.raises(NoPaymentAccountError):
-        async with golem_factory(budget=10.0):
+        async with GolemFactory(budget=10.0):
             pass
 
 
 @pytest.mark.asyncio
-async def test_no_matching_account_raises(monkeypatch, golem_factory):
+async def test_no_matching_account_raises(monkeypatch):
     """Test that exception is raised if `Payment.accounts()` returns no matching accounts."""
 
     monkeypatch.setattr(
@@ -92,7 +93,7 @@ async def test_no_matching_account_raises(monkeypatch, golem_factory):
     )
 
     with pytest.raises(NoPaymentAccountError) as exc_info:
-        async with golem_factory(
+        async with GolemFactory(
             budget=10.0,
             payment_driver="matching-driver",
             payment_network="matching-network",
@@ -105,9 +106,7 @@ async def test_no_matching_account_raises(monkeypatch, golem_factory):
 
 
 @pytest.mark.asyncio
-async def test_matching_account_creates_allocation(
-    monkeypatch, golem_factory, _mock_decorate_demand
-):
+async def test_matching_account_creates_allocation(monkeypatch, _mock_decorate_demand):
     """Test that matching accounts are correctly selected and allocations are created for them."""
 
     monkeypatch.setattr(
@@ -135,7 +134,7 @@ async def test_matching_account_creates_allocation(
     monkeypatch.setattr(RequestorApi, "release_allocation", mock_release_allocation)
 
     with pytest.raises(_StopExecutor):
-        async with golem_factory(
+        async with GolemFactory(
             budget=10.0, payment_driver="matching-driver", payment_network="matching-network"
         ):
             pass
@@ -146,13 +145,13 @@ async def test_matching_account_creates_allocation(
 
 
 @pytest.mark.asyncio
-async def test_driver_network_case_insensitive(monkeypatch, golem_factory, _mock_create_allocation):
+async def test_driver_network_case_insensitive(monkeypatch, _mock_create_allocation):
     """Test that matching driver and network names is not case sensitive."""
 
     monkeypatch.setattr(Payment, "accounts", _mock_accounts_iterator(("dRIVER", "NetWORK")))
 
     with pytest.raises(_StopExecutor):
-        async with golem_factory(
+        async with GolemFactory(
             budget=10.0,
             payment_driver="dRiVeR",
             payment_network="NeTwOrK",
@@ -161,7 +160,7 @@ async def test_driver_network_case_insensitive(monkeypatch, golem_factory, _mock
 
 
 @pytest.mark.asyncio
-async def test_default_driver_network(monkeypatch, golem_factory, _mock_create_allocation):
+async def test_default_driver_network(monkeypatch, _mock_create_allocation):
     """Test that defaults are used if driver and network are not specified."""
 
     monkeypatch.setattr(
@@ -169,5 +168,5 @@ async def test_default_driver_network(monkeypatch, golem_factory, _mock_create_a
     )
 
     with pytest.raises(_StopExecutor):
-        async with golem_factory(budget=10.0):
+        async with GolemFactory(budget=10.0):
             pass
