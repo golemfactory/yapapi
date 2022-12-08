@@ -1,3 +1,4 @@
+import os
 import pytest
 
 from yapapi.config import ApiConfig
@@ -52,3 +53,19 @@ def golem_factory(api_config_factory) -> Golem:
         return Golem(**kwargs)
 
     return _golem_factory
+
+
+@pytest.fixture
+def purge_yagna_os_env() -> None:
+    for key in [
+        "YAGNA_APPKEY",
+        "YAGNA_API_URL",
+        "YAGNA_MARKET_URL",
+        "YAGNA_PAYMENT_URL",
+        "YAGNA_NET_URL",
+        "YAGNA_ACTIVITY_URL",
+        "YAGNA_SUBNET",
+        "YAGNA_PAYMENT_DRIVER",
+        "YAGNA_PAYMENT_NETWORK",
+    ]:
+        os.environ.pop(key, None)
