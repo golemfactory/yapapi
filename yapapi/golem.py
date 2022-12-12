@@ -141,7 +141,7 @@ class Golem:
             # load deprecate app_key
             build_dict = {}
             if app_key is not None:
-                warn_deprecated("app_key", "api_config", "ToDo ver", Deprecated.parameter)  # ToDo
+                warn_deprecated("app_key", "api_config", "0.11", Deprecated.parameter)
                 build_dict["app_key"] = app_key
             api_config = ApiConfig(**build_dict)
 
