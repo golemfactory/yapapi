@@ -7,4 +7,4 @@ class ApiConfigFactory(factory.Factory):
     class Meta:
         model = yapapi.config.ApiConfig
 
-    app_key="yagna-app-key"
+    app_key = "yagna-app-key"
