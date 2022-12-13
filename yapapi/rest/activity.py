@@ -313,6 +313,7 @@ class StreamingBatch(Batch):
             timeout=self.seconds_left(),
         ) as event_source:
             try:
+                cnt=0
                 async for msg_event in event_source:
                     try:
                         event_class, kwargs = _message_event_to_event_data(msg_event)
@@ -321,8 +322,11 @@ class StreamingBatch(Batch):
                     else:
                         yield event_class, kwargs
 
+                        if event_class is events.CommandExecuted:
+                            cnt+=1
+
                         if event_class is events.CommandExecuted and (
-                            kwargs["cmd_idx"] >= last_idx or not kwargs["success"]
+                            kwargs.get("cmd_idx", cnt) >= last_idx or not kwargs["success"]
                         ):
                             break
 
