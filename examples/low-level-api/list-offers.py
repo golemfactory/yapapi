@@ -45,7 +45,7 @@ def main():
         asyncio.get_event_loop().run_until_complete(
             asyncio.wait_for(
                 list_offers(
-                    Configuration(api_config=ApiConfig()),  # should load app-key from env
+                    Configuration(api_config=ApiConfig()),  # YAGNA_APPKEY will be loaded from env
                     subnet_tag=subnet,
                 ),
                 timeout=4,

@@ -128,7 +128,9 @@ class Golem:
         :param stream_output: stream computation output from providers
         :param api_config: configuration of yagna low level api
             including but not limited to `YAGNA_APPKEY`, `YAGNA_API_URL` variables
-            See `ApiConfig` docs for more details
+            See `:class:`yapapi.config.ApiConfig`` docs for more details
+        :param app_key: optional Yagna application key. If not provided, the default is to
+            get the value from `YAGNA_APPKEY` environment variable
         """
         self._event_dispatcher = AsyncEventDispatcher()
 
