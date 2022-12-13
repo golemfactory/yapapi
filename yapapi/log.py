@@ -41,8 +41,8 @@ as an argument to `log_summary`:
     )
 ```
 """
-from asyncio import get_event_loop, CancelledError
-from collections import defaultdict, Counter
+from asyncio import CancelledError, get_event_loop
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -58,10 +58,10 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Final
 
-from yapapi import events, __version__ as yapapi_version
+from yapapi import __version__ as yapapi_version
+from yapapi import events
 from yapapi.rest.activity import CommandExecutionError
 from yapapi.utils import get_local_timezone, get_logger
-
 
 event_logger = logging.getLogger("yapapi.events")
 

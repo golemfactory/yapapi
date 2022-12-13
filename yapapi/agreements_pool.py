@@ -1,12 +1,11 @@
+import aiohttp
 import asyncio
 from dataclasses import dataclass
 import datetime
 import logging
 import random
 import sys
-from typing import Dict, NamedTuple, Optional, Callable
-
-import aiohttp
+from typing import Callable, Dict, NamedTuple, Optional
 
 from yapapi import events
 from yapapi.props import Activity, NodeInfo
@@ -206,10 +205,17 @@ class AgreementsPool:
                     provider,
                 )
 
-        del self._agreements[agreement_id]
-        self.emitter(
-            events.AgreementTerminated, agreement=buffered_agreement.agreement, reason=reason
-        )
+        try:
+            del self._agreements[agreement_id]
+            self.emitter(
+                events.AgreementTerminated, agreement=buffered_agreement.agreement, reason=reason
+            )
+        except KeyError:
+            logger.debug(
+                "Terminated agreement no longer in the pool. id: %s, provider: %s",
+                agreement_id,
+                provider,
+            )
 
     async def terminate_all(self, reason: dict) -> None:
         """Terminate all agreements."""

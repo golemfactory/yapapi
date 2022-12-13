@@ -1,14 +1,12 @@
+import aiohttp
 import asyncio
 import functools
 import logging
 from typing import Callable, Optional
 
-import aiohttp
-
-import ya_market
 import ya_activity
+import ya_market
 import ya_payment
-
 
 logger = logging.getLogger(__name__)
 

@@ -1,9 +1,10 @@
 import asyncio
-import sys
 from datetime import datetime, timedelta
-import json
 from decimal import Decimal
+import json
+import sys
 from typing import (
+    TYPE_CHECKING,
     Any,
     AsyncIterator,
     Awaitable,
@@ -15,7 +16,6 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    TYPE_CHECKING,
 )
 from typing_extensions import AsyncGenerator
 
@@ -24,12 +24,11 @@ if sys.version_info > (3, 8):
 else:
     from typing_extensions import TypedDict
 
-
 import yapapi
 from yapapi import events
-from yapapi.event_dispatcher import AsyncEventDispatcher
 from yapapi.ctx import WorkContext
 from yapapi.engine import _Engine
+from yapapi.event_dispatcher import AsyncEventDispatcher
 from yapapi.executor import Executor
 from yapapi.executor.task import Task
 from yapapi.network import Network
@@ -37,8 +36,10 @@ from yapapi.payload import Payload
 from yapapi.props import com
 from yapapi.script import Script
 from yapapi.services import Cluster, ServiceType
-from yapapi.strategy import DecreaseScoreForUnconfirmedAgreement, LeastExpensiveLinearPayuMS
-
+from yapapi.strategy import (
+    DecreaseScoreForUnconfirmedAgreement,
+    LeastExpensiveLinearPayuMS,
+)
 
 if TYPE_CHECKING:
     from yapapi.strategy import BaseMarketStrategy
@@ -338,7 +339,7 @@ class Golem:
                 image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
             )
 
-            async with Golem(budget=1.0, subnet_tag="devnet-beta") as golem:
+            async with Golem(budget=1.0, subnet_tag="public") as golem:
                 async for completed in golem.execute_tasks(worker, [Task(data=None)], payload=package):
                     print(completed.result.stdout)
 
@@ -361,7 +362,6 @@ class Golem:
         instance_params: Optional[Iterable[Dict]] = None,
         payload: Optional[Payload] = None,
         expiration: Optional[datetime] = None,
-        respawn_unstarted_instances=True,
         network: Optional[Network] = None,
         network_addresses: Optional[List[str]] = None,
     ) -> Cluster[ServiceType]:
@@ -384,8 +384,6 @@ class Golem:
         :param payload: optional runtime definition for the service; if not provided, the
             payload specified by the :func:`~yapapi.services.Service.get_payload()` method of `service_class` is used
         :param expiration: optional expiration datetime for the service
-        :param respawn_unstarted_instances: if an instance fails in the `starting` state, should
-            the returned :class:`~yapapi.services.Cluster` try to spawn another instance
         :param network: optional :class:`~yapapi.network.Network`, representing a VPN to attach this
             :class:`~yapapi.services.Cluster`'s instances to
         :param network_addresses: optional list of addresses to assign to consecutive spawned instances.
@@ -437,7 +435,7 @@ class Golem:
 
 
             async def main():
-                async with Golem(budget=1.0, subnet_tag="devnet-beta") as golem:
+                async with Golem(budget=1.0, subnet_tag="public") as golem:
                     cluster = await golem.run_service(DateService, num_instances=1)
                     start_time = datetime.now()
 
@@ -463,7 +461,6 @@ class Golem:
             service_class=service_class,
             payload=payload,
             expiration=expiration,
-            respawn_unstarted_instances=respawn_unstarted_instances,
             network=network,
         )
 

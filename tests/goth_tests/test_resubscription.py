@@ -1,37 +1,29 @@
 """Test if subscription expiration is handled correctly by Golem"""
+import colors
 from datetime import timedelta
 import logging
 import os
 from pathlib import Path
-import time
-from typing import Dict, Set, Type
-from unittest.mock import Mock
-
-import colors
 import pytest
+import time
+from typing import Dict, List, Set, Type
+from unittest.mock import Mock
 
 from goth.assertions import EventStream
 from goth.assertions.monitor import EventMonitor
 from goth.assertions.operators import eventually
-
-from goth.configuration import load_yaml
+from goth.configuration import Override, load_yaml
 from goth.runner import Runner
 from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
+from ya_market import ApiException
+import ya_market.api.requestor_api
 
 from yapapi import Golem, Task
-from yapapi.events import (
-    Event,
-    JobStarted,
-    JobFinished,
-    SubscriptionCreated,
-)
+from yapapi.events import Event, JobFinished, JobStarted, SubscriptionCreated
 from yapapi.log import enable_default_logger
 from yapapi.payload import vm
 import yapapi.rest.market
-
-import ya_market.api.requestor_api
-from ya_market import ApiException
 
 logger = logging.getLogger("goth.test")
 
@@ -128,17 +120,18 @@ async def assert_demand_resubscribed(events: "EventStream[Event]"):
 
 
 @pytest.mark.asyncio
-async def test_demand_resubscription(log_dir: Path, goth_config_path: Path, monkeypatch) -> None:
+async def test_demand_resubscription(
+    log_dir: Path,
+    goth_config_path: Path,
+    monkeypatch,
+    config_overrides: List[Override],
+    single_node_override: Override,
+) -> None:
     """Test that checks that a demand is re-submitted after its previous submission expires."""
 
     configure_logging(log_dir)
 
-    # Override the default test configuration to create only one provider node
-    nodes = [
-        {"name": "requestor", "type": "Requestor"},
-        {"name": "provider-1", "type": "VM-Wasm-Provider", "use-proxy": True},
-    ]
-    goth_config = load_yaml(goth_config_path, [("nodes", nodes)])
+    goth_config = load_yaml(goth_config_path, config_overrides + [single_node_override])
 
     vm_package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",

@@ -1,9 +1,9 @@
+from dataclasses import dataclass
 from dns.exception import DNSException
-from dataclasses import dataclass, field
 from enum import Enum
 import logging
 import sys
-from typing import Optional, List
+from typing import List, Optional
 from typing_extensions import Final
 
 if sys.version_info > (3, 8):
@@ -11,27 +11,35 @@ if sys.version_info > (3, 8):
 else:
     from typing_extensions import Literal
 
-from srvresolver.srv_resolver import SRVResolver, SRVRecord  # type: ignore
+from srvresolver.srv_resolver import SRVRecord, SRVResolver  # type: ignore
 
 from yapapi.payload.package import (
     Package,
     PackageException,
-    resolve_package_url,
     resolve_package_repo_url,
+    resolve_package_url,
 )
 from yapapi.props import base as prop_base
-from yapapi.props.builder import DemandBuilder, Model
 from yapapi.props import inf
-from yapapi.props.inf import InfBase, INF_CORES, RUNTIME_VM, ExeUnitRequest
+from yapapi.props.builder import DemandBuilder, Model
+from yapapi.props.inf import (
+    INF_CORES,
+    RUNTIME_VM,
+    ExeUnitManifestRequest,
+    ExeUnitRequest,
+    InfBase,
+)
 
-_DEFAULT_REPO_SRV: Final = "_girepo._tcp.dev.golem.network"
-_FALLBACK_REPO_URL: Final = "http://girepo.dev.golem.network:8000"
+_DEFAULT_REPO_SRV: Final[str] = "_girepo._tcp.dev.golem.network"
+_FALLBACK_REPO_URL: Final[str] = "http://girepo.dev.golem.network:8000"
+_DEFAULT_TIMEOUT_SECONDS: Final[int] = 10
 
 logger = logging.getLogger(__name__)
 
 VM_CAPS_VPN: str = "vpn"
+VM_CAPS_MANIFEST_SUPPORT: str = "manifest-support"
 
-VmCaps = Literal["vpn"]
+VmCaps = Literal["vpn", "inet", "manifest-support"]
 
 
 @dataclass
@@ -53,6 +61,13 @@ class VmRequest(ExeUnitRequest):
     package_format: VmPackageFormat = prop_base.prop("golem.srv.comp.vm.package_format")
 
 
+@dataclass
+class VmManifestRequest(ExeUnitManifestRequest):
+    package_format: VmPackageFormat = prop_base.prop(
+        "golem.srv.comp.vm.package_format", default=VmPackageFormat.GVMKIT_SQUASH
+    )
+
+
 @dataclass(frozen=True)
 class _VmConstraints(Model):
     min_mem_gib: float = prop_base.constraint(inf.INF_MEM, operator=">=")
@@ -67,6 +82,81 @@ class _VmConstraints(Model):
 
     def __str__(self):
         return prop_base.join_str_constraints(prop_base.constraint_model_serialize(self))
+
+
+@dataclass
+class _VmManifestPackage(Package):
+    manifest: str
+    manifest_sig: Optional[str]
+    manifest_sig_algorithm: Optional[str]
+    manifest_cert: Optional[str]
+    constraints: _VmConstraints
+
+    async def resolve_url(self) -> str:
+        return ""
+
+    async def decorate_demand(self, demand: DemandBuilder):
+        demand.ensure(str(self.constraints))
+        demand.add(
+            VmManifestRequest(
+                manifest=self.manifest,
+                manifest_sig=self.manifest_sig,
+                manifest_sig_algorithm=self.manifest_sig_algorithm,
+                manifest_cert=self.manifest_cert,
+                package_format=VmPackageFormat.GVMKIT_SQUASH,
+            )
+        )
+
+
+async def manifest(
+    manifest: str,
+    manifest_sig: Optional[str] = None,
+    manifest_sig_algorithm: Optional[str] = None,
+    manifest_cert: Optional[str] = None,
+    min_mem_gib: float = 0.5,
+    min_storage_gib: float = 2.0,
+    min_cpu_threads: int = 1,
+    capabilities: Optional[List[VmCaps]] = None,
+) -> Package:
+    """
+    Build a reference to application payload.
+
+    :param manifest: base64 encoded Computation Payload Manifest https://handbook.golem.network/requestor-tutorials/vm-runtime/computation-payload-manifest
+    :param manifest_sig: an optional signature of base64 encoded Computation Payload Manifest
+    :param manifest_sig_algorithm: an optional signature algorithm, e.g. "sha256"
+    :param manifest_cert: an optional base64 encoded public certificate (DER or PEM) matching key used to generate signature
+    :param min_mem_gib: minimal memory required to execute application code
+    :param min_storage_gib: minimal disk storage to execute tasks
+    :param min_cpu_threads: minimal available logical CPU cores
+    :param capabilities: an optional list of required VM capabilities
+    :return: the payload definition for the given VM image
+
+    example usage::
+
+        package = await vm.manifest(
+            manifest = open("manifest.json.base64", "r").read(),
+        )
+
+    example usage with a signed Computation Pyload Manifest and additional "inet" capability::
+
+        package = await vm.manifest(
+            manifest = open("manifest.json.base64", "r").read(),
+            manifest_sig = open("manifest.json.sig.base64", "r").read(),
+            manifest_sig_algorithm = "sha256",
+            manifest_cert = open("cert.der.base64", "r").read(),
+            capabilities = ["manifest-support", "inet"],
+        )
+    """
+    capabilities = capabilities or list()
+    constraints = _VmConstraints(min_mem_gib, min_storage_gib, min_cpu_threads, capabilities)
+
+    return _VmManifestPackage(
+        manifest=manifest,
+        manifest_sig=manifest_sig,
+        manifest_sig_algorithm=manifest_sig_algorithm,
+        manifest_cert=manifest_cert,
+        constraints=constraints,
+    )
 
 
 @dataclass
@@ -104,7 +194,7 @@ async def repo(
     :param min_mem_gib: minimal memory required to execute application code
     :param min_storage_gib: minimal disk storage to execute tasks
     :param min_cpu_threads: minimal available logical CPU cores
-    :param capabilities: an optional list of required vm capabilities
+    :param capabilities: an optional list of required VM capabilities
     :return: the payload definition for the given VM image
 
     example usage::
@@ -151,18 +241,21 @@ async def repo(
     )
 
 
-def resolve_repo_srv(repo_srv, fallback_url=_FALLBACK_REPO_URL) -> str:
+def resolve_repo_srv(
+    repo_srv: str, fallback_url=_FALLBACK_REPO_URL, timeout=_DEFAULT_TIMEOUT_SECONDS
+) -> str:
     """
     Get the url of the package repository based on its SRV record address.
 
     :param repo_srv: the SRV domain name
     :param fallback_url: temporary hardcoded fallback url in case there's a problem resolving SRV
+    :param timeout: socket connection timeout in seconds
     :return: the url of the package repository containing the port
     :raises: PackageException if no valid service could be reached
     """
     try:
         try:
-            srv: Optional[SRVRecord] = SRVResolver.resolve_random(repo_srv)
+            srv: Optional[SRVRecord] = SRVResolver.resolve_random(repo_srv, timeout=timeout)
         except DNSException as e:
             raise PackageException(f"Could not resolve Golem package repository address [{e}].")
 

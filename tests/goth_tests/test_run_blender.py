@@ -1,20 +1,22 @@
 import logging
 import os
 from pathlib import Path
+import pytest
 from typing import List
 
-import pytest
-
 from goth.assertions import EventStream
-from goth.configuration import load_yaml, Override
-from goth.runner.log import configure_logging
+from goth.configuration import Override, load_yaml
 from goth.runner import Runner
+from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
 
 from yapapi.log import SummaryLogger
 
-from .assertions import assert_no_errors, assert_all_invoices_accepted, assert_tasks_processed
-
+from .assertions import (
+    assert_all_invoices_accepted,
+    assert_no_errors,
+    assert_tasks_processed,
+)
 
 logger = logging.getLogger("goth.test.run_blender")
 
@@ -67,13 +69,13 @@ async def test_run_blender(
             all_sent = cmd_monitor.add_assertion(assert_all_tasks_started)
             all_computed = cmd_monitor.add_assertion(assert_all_tasks_computed)
 
-            await cmd_monitor.wait_for_pattern(".*Received proposals from 2 ", timeout=20)
+            await cmd_monitor.wait_for_pattern(".*Received proposals from 2 ", timeout=30)
             logger.info("Received proposals")
 
-            await cmd_monitor.wait_for_pattern(".*Agreement proposed ", timeout=10)
+            await cmd_monitor.wait_for_pattern(".*Agreement proposed ", timeout=20)
             logger.info("Agreement proposed")
 
-            await cmd_monitor.wait_for_pattern(".*Agreement confirmed ", timeout=10)
+            await cmd_monitor.wait_for_pattern(".*Agreement confirmed ", timeout=20)
             logger.info("Agreement confirmed")
 
             await all_sent.wait_for_result(timeout=120)

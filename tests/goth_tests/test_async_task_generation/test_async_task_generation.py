@@ -1,15 +1,13 @@
 import logging
 import os
 from pathlib import Path
-from typing import List
-
 import pytest
+from typing import List
 
 import goth.configuration
 from goth.runner import Runner
 from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
-
 
 logger = logging.getLogger("goth.test.async_task_generation")
 
@@ -19,18 +17,16 @@ async def test_async_task_generation(
     log_dir: Path,
     goth_config_path: Path,
     config_overrides: List[goth.configuration.Override],
+    single_node_override: goth.configuration.Override,
 ) -> None:
     """Run the `requestor.py` and make sure that it's standard output is as expected."""
 
     configure_logging(log_dir)
 
     # Override the default test configuration to create only one provider node
-    nodes = [
-        {"name": "requestor", "type": "Requestor"},
-        {"name": "provider-1", "type": "VM-Wasm-Provider", "use-proxy": True},
-    ]
-    config_overrides.append(("nodes", nodes))
-    goth_config = goth.configuration.load_yaml(goth_config_path, config_overrides)
+    goth_config = goth.configuration.load_yaml(
+        goth_config_path, config_overrides + [single_node_override]
+    )
 
     runner = Runner(base_log_dir=log_dir, compose_config=goth_config.compose_config)
 

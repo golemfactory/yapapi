@@ -1,12 +1,14 @@
 __pycache__/
 .mypy_cache
 .idea
+.vscode
 *.egg-info
 
 #   files created by tests and examples
 *.log
 *.png
 .coverage
+.requirements.txt
 
 tests/goth_tests/assets/
 
@@ -17,3 +19,8 @@ poetry.lock
 #Added by cargo
 
 /target
+
+# local config files
+.pre-commit-config.yaml
+
+/build

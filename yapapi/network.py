@@ -1,13 +1,21 @@
 import asyncio
-import logging
 from dataclasses import dataclass
-from ipaddress import ip_address, ip_network, IPv4Address, IPv6Address, IPv4Network, IPv6Network
+from ipaddress import (
+    IPv4Address,
+    IPv4Network,
+    IPv6Address,
+    IPv6Network,
+    ip_address,
+    ip_network,
+)
+import logging
 from statemachine import State, StateMachine  # type: ignore
 from typing import Dict, Optional, Union
 from urllib.parse import urlparse
 
-import yapapi
 from ya_net.exceptions import ApiException
+
+import yapapi
 
 logger = logging.getLogger("yapapi.network")
 
@@ -260,6 +268,17 @@ class Network:
         await self._net_api.add_node(self.network_id, node_id, ip)
 
         return node
+
+    async def remove_node(self, node_id: str) -> None:
+        """Remove the node from the network.
+
+        :param node_id: Node ID within the Golem network of the VPN node to be removed.
+        """
+
+        await self._net_api.remove_node(self.network_id, node_id)
+
+        async with self._nodes_lock:
+            del self._nodes[node_id]
 
     async def _refresh_node(self, node: Node):
         logger.debug("refreshing node %s", node)

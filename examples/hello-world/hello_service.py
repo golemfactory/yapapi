@@ -3,9 +3,9 @@ import asyncio
 from datetime import datetime, timedelta
 
 from yapapi import Golem
-from yapapi.services import Service
 from yapapi.log import enable_default_logger
 from yapapi.payload import vm
+from yapapi.services import Service
 
 DATE_OUTPUT_PATH = "/golem/work/date.txt"
 REFRESH_INTERVAL_SEC = 5
@@ -48,7 +48,7 @@ class DateService(Service):
 
 
 async def main():
-    async with Golem(budget=1.0, subnet_tag="devnet-beta") as golem:
+    async with Golem(budget=1.0, subnet_tag="public") as golem:
         cluster = await golem.run_service(DateService, num_instances=1)
         start_time = datetime.now()
 

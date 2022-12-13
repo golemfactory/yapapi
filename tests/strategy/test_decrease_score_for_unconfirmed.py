@@ -1,16 +1,13 @@
 import asyncio
 import pytest
 
-from yapapi.strategy import DecreaseScoreForUnconfirmedAgreement
-from yapapi import Golem
-
-from tests.factories.events import (
-    AgreementRejectedFactory as AgreementRejected,
-    AgreementConfirmedFactory as AgreementConfirmed,
-)
+from tests.factories.events import AgreementConfirmedFactory as AgreementConfirmed
+from tests.factories.events import AgreementRejectedFactory as AgreementRejected
 from tests.factories.rest.market import OfferProposalFactory
+from yapapi import Golem
+from yapapi.strategy import DecreaseScoreForUnconfirmedAgreement
 
-from .helpers import Always6, DEFAULT_OFFER_SCORE
+from .helpers import DEFAULT_OFFER_SCORE, Always6
 
 #   (events, providers_with_decreased_scores)
 sample_data = (

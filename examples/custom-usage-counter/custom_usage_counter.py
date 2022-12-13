@@ -1,24 +1,19 @@
 #!/usr/bin/env python3
-import argparse
 import asyncio
-
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
 import pathlib
 import sys
 
-from yapapi.strategy import LeastExpensiveLinearPayuMS, DecreaseScoreForUnconfirmedAgreement
-
-from yapapi.log import enable_default_logger
-
-from yapapi.props.base import prop, constraint
-from yapapi.props import inf, com
-
 from yapapi import Golem
 from yapapi.ctx import ActivityUsage
+from yapapi.log import enable_default_logger
 from yapapi.payload import Payload
+from yapapi.props import com, inf
+from yapapi.props.base import constraint
 from yapapi.services import Service, ServiceState
+from yapapi.strategy import LeastExpensiveLinearPayuMS
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
@@ -56,10 +51,6 @@ class CustomCounterService(Service):
         async for s in super().shutdown():
             yield s
         print(f"service {self.id} stopped on '{self.provider_name}'")
-
-    async def reset(self):
-        # We don't have to do anything when the service is restarted
-        pass
 
 
 async def main(running_time_sec, subnet_tag, driver=None, network=None):

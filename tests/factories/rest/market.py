@@ -3,16 +3,9 @@ import factory
 
 from ya_market import models as market_models
 
-from yapapi.rest.market import (
-    Agreement,
-    AgreementDetails,
-    OfferProposal,
-    Subscription,
-)
-
-
 from tests.factories.props.com import ComLinearPropsFactory
 from tests.factories.rest import RestApiModelFactory
+from yapapi.rest.market import Agreement, AgreementDetails, OfferProposal, Subscription
 
 
 class SubscriptionFactory(RestApiModelFactory):

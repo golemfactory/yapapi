@@ -1,9 +1,12 @@
+from factories.agreements_pool import BufferedAgreement, BufferedAgreementFactory
+from operator import xor
+import pytest
 import random
+import sys
 from unittest import mock
 
-import pytest
-
 from yapapi import agreements_pool
+from yapapi.events import AgreementTerminated
 
 
 def mock_agreement(**properties):
@@ -99,3 +102,37 @@ async def test_use_agreement_no_proposals():
 
     result = await pool.use_agreement(use_agreement_cb)
     assert result is None
+
+
+@pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "multi_activity,simulate_race,event_emitted",
+    [
+        (True, False, True),
+        (False, False, True),
+        (True, True, False),
+    ],
+)
+async def test_terminate_agreement(multi_activity, simulate_race, event_emitted):
+    """Test if `_terminate_agreement` works while the agreement gets deleted from the pool."""
+
+    events = []
+
+    pool = agreements_pool.AgreementsPool(
+        lambda event, **kwargs: events.append(event), lambda _offer: None  # noqa
+    )
+    agreement: BufferedAgreement = BufferedAgreementFactory(has_multi_activity=multi_activity)
+    pool._agreements[agreement.agreement.id] = agreement
+
+    async def mock_terminate(_, **__):
+        if simulate_race:
+            del pool._agreements[agreement.agreement.id]
+
+    with mock.patch(
+        "yapapi.rest.market.Agreement.terminate", mock.AsyncMock(side_effect=mock_terminate)
+    ) as terminate_mock:
+        await pool._terminate_agreement(agreement.agreement.id, {})
+    assert terminate_mock.called == multi_activity
+    assert xor(AgreementTerminated in events, not event_emitted)
+    assert not pool._agreements
