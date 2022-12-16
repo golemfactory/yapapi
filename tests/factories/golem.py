@@ -8,4 +8,5 @@ class GolemFactory(factory.Factory):
     class Meta:
         model = yapapi.golem.Golem
 
+    budget = 10.0
     api_config = factory.SubFactory(ApiConfigFactory)

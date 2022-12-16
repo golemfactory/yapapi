@@ -25,9 +25,9 @@ def test_set_subnet_tag(default_subnet, subnet_arg, expected_subnet, monkeypatch
     monkeypatch.setattr(yapapi.engine, "DEFAULT_SUBNET", default_subnet)
 
     if subnet_arg is not None:
-        golem = GolemFactory(budget=1.0, subnet_tag=subnet_arg)
+        golem = GolemFactory(subnet_tag=subnet_arg)
     else:
-        golem = GolemFactory(budget=1.0)
+        golem = GolemFactory()
     assert golem.subnet_tag == expected_subnet
 
 

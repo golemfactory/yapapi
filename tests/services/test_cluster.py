@@ -89,7 +89,7 @@ async def test_spawn_instances(kwargs, args, error, monkeypatch):
     monkeypatch.setattr(Golem, "_get_new_engine", _get_new_engine)
 
     with patch("yapapi.services.ServiceRunner.spawn_instance") as spawn_instance:
-        golem = GolemFactory(budget=1)
+        golem = GolemFactory()
         try:
             await golem.run_service(
                 service_class=_TestService, payload=Mock(), network=Mock(), **kwargs
