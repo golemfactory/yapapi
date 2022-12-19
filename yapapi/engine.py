@@ -26,6 +26,8 @@ from typing import (
 )
 from typing_extensions import AsyncGenerator, Final
 
+from yapapi.config import ApiConfig
+
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
 else:
@@ -104,7 +106,7 @@ class _Engine:
         payment_driver: Optional[str] = None,
         payment_network: Optional[str] = None,
         stream_output: bool = False,
-        app_key: Optional[str] = None,
+        api_config: ApiConfig,
     ):
         """Initialize the engine.
 
@@ -119,13 +121,12 @@ class _Engine:
             environment variable, defaults to `erc20`. Only payment platforms with
             the specified driver will be used
         :param payment_network: name of the payment network to use. Uses `YAGNA_PAYMENT_NETWORK`
-        environment variable, defaults to `rinkeby`. Only payment platforms with the specified
+            environment variable, defaults to `rinkeby`. Only payment platforms with the specified
             network will be used
         :param stream_output: stream computation output from providers
-        :param app_key: optional Yagna application key. If not provided, the default is to
-                        get the value from `YAGNA_APPKEY` environment variable
+        :param api_config: configuration of yagna low level api
         """
-        self._api_config = rest.Configuration(app_key)
+        self._api_config = rest.Configuration(api_config)
         self._budget_amount = Decimal(budget)
         self._budget_allocations: List[rest.payment.Allocation] = []
 

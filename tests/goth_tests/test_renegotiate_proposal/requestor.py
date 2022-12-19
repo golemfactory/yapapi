@@ -8,6 +8,7 @@ import ya_market
 
 from examples import utils
 from yapapi import props as yp
+from yapapi.config import ApiConfig
 from yapapi.log import enable_default_logger
 from yapapi.props.builder import DemandBuilder
 from yapapi.rest import Configuration, Market
@@ -93,7 +94,7 @@ def main():
         asyncio.get_event_loop().run_until_complete(
             asyncio.wait_for(
                 renegotiate_offers(
-                    Configuration(),
+                    Configuration(api_config=ApiConfig()),
                     subnet_tag=subnet,
                 ),
                 timeout=140,

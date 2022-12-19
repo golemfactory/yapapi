@@ -1,4 +1,8 @@
+import os
 import pytest
+
+from yapapi.config import ApiConfig
+from yapapi.golem import Golem
 
 
 def pytest_addoption(parser):
@@ -29,3 +33,19 @@ def dummy_yagna_engine(monkeypatch):
     monkeypatch.setattr(_Engine, "_create_allocations", _engine_create_allocations)
     monkeypatch.setattr(GftpProvider, "__aenter__", _gftp_aenter)
     monkeypatch.setattr(GftpProvider, "__aexit__", _gftp_aexit)
+
+
+@pytest.fixture
+def purge_yagna_os_env() -> None:
+    for key in [
+        "YAGNA_APPKEY",
+        "YAGNA_API_URL",
+        "YAGNA_MARKET_URL",
+        "YAGNA_PAYMENT_URL",
+        "YAGNA_NET_URL",
+        "YAGNA_ACTIVITY_URL",
+        "YAGNA_SUBNET",
+        "YAGNA_PAYMENT_DRIVER",
+        "YAGNA_PAYMENT_NETWORK",
+    ]:
+        os.environ.pop(key, None)

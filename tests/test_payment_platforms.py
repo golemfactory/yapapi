@@ -4,7 +4,9 @@ from unittest import mock
 
 from ya_payment import RequestorApi
 
+from tests.factories.golem import GolemFactory
 from yapapi import NoPaymentAccountError
+from yapapi.config import ApiConfig
 from yapapi.engine import DEFAULT_DRIVER, DEFAULT_NETWORK
 from yapapi.golem import Golem
 from yapapi.rest.payment import Account, Payment
@@ -72,7 +74,7 @@ async def test_no_accounts_raises(monkeypatch):
     monkeypatch.setattr(Payment, "accounts", _mock_accounts_iterator())
 
     with pytest.raises(NoPaymentAccountError):
-        async with Golem(budget=10.0):
+        async with GolemFactory():
             pass
 
 
@@ -91,8 +93,9 @@ async def test_no_matching_account_raises(monkeypatch):
     )
 
     with pytest.raises(NoPaymentAccountError) as exc_info:
-        async with Golem(
-            budget=10.0, payment_driver="matching-driver", payment_network="matching-network"
+        async with GolemFactory(
+            payment_driver="matching-driver",
+            payment_network="matching-network",
         ):
             pass
 
@@ -130,10 +133,8 @@ async def test_matching_account_creates_allocation(monkeypatch, _mock_decorate_d
     monkeypatch.setattr(RequestorApi, "release_allocation", mock_release_allocation)
 
     with pytest.raises(_StopExecutor):
-        async with Golem(
-            budget=10.0,
-            payment_driver="matching-driver",
-            payment_network="matching-network",
+        async with GolemFactory(
+            payment_driver="matching-driver", payment_network="matching-network"
         ):
             pass
 
@@ -149,8 +150,7 @@ async def test_driver_network_case_insensitive(monkeypatch, _mock_create_allocat
     monkeypatch.setattr(Payment, "accounts", _mock_accounts_iterator(("dRIVER", "NetWORK")))
 
     with pytest.raises(_StopExecutor):
-        async with Golem(
-            budget=10.0,
+        async with GolemFactory(
             payment_driver="dRiVeR",
             payment_network="NeTwOrK",
         ):
@@ -166,5 +166,5 @@ async def test_default_driver_network(monkeypatch, _mock_create_allocation):
     )
 
     with pytest.raises(_StopExecutor):
-        async with Golem(budget=10.0):
+        async with GolemFactory():
             pass

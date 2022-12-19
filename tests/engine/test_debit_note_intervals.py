@@ -16,8 +16,12 @@ from yapapi.strategy import PROP_DEBIT_NOTE_INTERVAL_SEC, PROP_PAYMENT_TIMEOUT_S
 def mock_engine(
     agreement: Agreement, debit_note: DebitNote, num_debit_notes=0, num_payable_debit_notes=0
 ) -> _Engine:
-    with mock.patch("yapapi.engine.rest.Configuration"):
-        engine = _Engine(budget=0.0, strategy=mock.Mock(), event_consumer=mock.Mock())
+    engine = _Engine(
+        budget=0.0,
+        strategy=mock.Mock(),
+        event_consumer=mock.Mock(),
+        api_config=mock.Mock(),
+    )
 
     engine._all_agreements[agreement.id] = agreement  # noqa
     engine._num_debit_notes[debit_note.activity_id] = num_debit_notes  # noqa

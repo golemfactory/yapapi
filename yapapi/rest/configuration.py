@@ -5,25 +5,9 @@ from typing_extensions import Final
 import ya_activity  # type: ignore
 import ya_market  # type: ignore
 import ya_net  # type: ignore
-import ya_payment  # type: ignore
+import ya_payment
 
-DEFAULT_YAGNA_API_URL: Final[str] = "http://127.0.0.1:7465"
-
-
-class MissingConfiguration(Exception):
-    def __init__(self, key: str, description: str):
-        self._key = key
-        self._description = description
-
-    def __str__(self):
-        return f"Missing configuration for {self._description}. Please set env var {self._key}."
-
-
-def env_or_fail(key: str, description: str) -> str:
-    val = os.getenv(key)
-    if val is None:
-        raise MissingConfiguration(key=key, description=description)
-    return val
+from yapapi.config import ApiConfig  # type: ignore
 
 
 class Configuration(object):
@@ -36,40 +20,22 @@ class Configuration(object):
     It requires one external argument, namely Yagna's application key, which is
     used to authenticate with the daemon. The application key must be either specified
     explicitly using the `app_key` argument or provided by the `YAGNA_APPKEY` environment variable.
-
-    If `YAGNA_API_URL` environment variable exists, it will be used as a base URL
-    for all REST API URLs. Example value: http://127.0.10.10:7500 (no trailing slash).
-
-    Other than that, the URLs of each specific REST API can be overridden
-    using the following environment variables:
-    * `YAGNA_MARKET_URL`
-    * `YAGNA_PAYMENT_URL`
-    * `YAGNA_ACTIVITY_URL`
-    * `YAGNA_NET_URL`
     """
 
     def __init__(
         self,
-        app_key=None,
-        *,
-        url: Optional[str] = None,
-        market_url: Optional[str] = None,
-        payment_url: Optional[str] = None,
-        activity_url: Optional[str] = None,
-        net_url: Optional[str] = None,
+        api_config: ApiConfig,
     ):
-        self.__app_key: str = app_key or env_or_fail("YAGNA_APPKEY", "API authentication token")
-        self.__url = url or os.getenv("YAGNA_API_URL") or DEFAULT_YAGNA_API_URL
+        self.__app_key: str = api_config.app_key
+        self.__url = api_config.api_url
 
-        def resolve_url(given_url: Optional[str], env_val: str, prefix: str) -> str:
-            return given_url or os.getenv(env_val) or f"{self.__url}{prefix}"
+        def resolve_url(given_url: Optional[str], prefix: str) -> str:
+            return given_url or f"{self.__url}{prefix}"
 
-        self.__market_url: str = resolve_url(market_url, "YAGNA_MARKET_URL", "/market-api/v1")
-        self.__payment_url: str = resolve_url(payment_url, "YAGNA_PAYMENT_URL", "/payment-api/v1")
-        self.__activity_url: str = resolve_url(
-            activity_url, "YAGNA_ACTIVITY_URL", "/activity-api/v1"
-        )
-        self.__net_url: str = resolve_url(net_url, "YAGNA_NET_URL", "/net-api/v1")
+        self.__market_url: str = resolve_url(api_config.market_url, "/market-api/v1")
+        self.__payment_url: str = resolve_url(api_config.payment_url, "/payment-api/v1")
+        self.__activity_url: str = resolve_url(api_config.activity_url, "/activity-api/v1")
+        self.__net_url: str = resolve_url(api_config.net_url, "/net-api/v1")
 
     @property
     def app_key(self) -> str:

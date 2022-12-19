@@ -85,7 +85,7 @@ def patch_collect_offers(monkeypatch):
 
 async def unsubscribe_demand(sub_id: str) -> None:
     """Auxiliary function that calls `unsubscribeDemand` operation for given `sub_id`."""
-    config = yapapi.rest.Configuration()
+    config = yapapi.rest.Configuration(api_config=yapapi.config.ApiConfig())
     market_client = config.market()
     requestor_api = yapapi.rest.market.RequestorApi(market_client)
     await requestor_api.unsubscribe_demand(sub_id)
