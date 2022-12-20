@@ -56,6 +56,10 @@ async def test_run_webapp(
 
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
+        async with requestor.run_command_on_host("netstat -tlp") as (cmd_task, cmd_monitor, process_monitor):
+            await cmd_task
+
+
         async with requestor.run_command_on_host(
             f"{requestor_path} --subnet-tag {SUBNET_TAG} --port {port}",
             env=os.environ,
