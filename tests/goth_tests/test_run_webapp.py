@@ -40,10 +40,8 @@ async def test_run_webapp(
     # This is the default configuration with 2 wasm/VM providers
     goth_config = load_yaml(goth_config_path, config_overrides)
 
-    # disable the mitm proxy used to capture the requestor agent -> daemon API calls
-    # because it doesn't support websockets which are needed by the VPN (and the Local HTTP Proxy)
-    requestor = [c for c in goth_config.containers if c.name == "requestor"][0]
-    requestor.use_proxy = False
+    for c in goth_config.containers:
+        c.use_proxy = False
 
     requestor_path = project_dir / "examples" / "webapp" / "webapp.py"
 
