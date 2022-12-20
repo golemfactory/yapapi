@@ -14,7 +14,7 @@ from goth.runner import Runner
 from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
 
-from ._util import get_free_port
+from ._util import get_free_port, get_logfile_name
 from .assertions import assert_all_invoices_accepted, assert_no_errors
 
 logger = logging.getLogger("goth.test")
@@ -55,9 +55,10 @@ async def test_run_webapp(
     async with runner(goth_config.containers):
 
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
+        log_file = log_dir / get_logfile_name("webapp")
 
         async with requestor.run_command_on_host(
-            f"{requestor_path} --subnet-tag {SUBNET_TAG} --port {port}",
+            f"{requestor_path} --subnet-tag {SUBNET_TAG} --port {port} --log-file { log_file }",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor, process_monitor):
             start_time = time.time()

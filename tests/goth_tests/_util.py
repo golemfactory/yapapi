@@ -1,4 +1,5 @@
 import socket
+from datetime import datetime
 
 
 def get_free_port(range_start: int = 8080, range_end: int = 9090) -> int:
@@ -14,3 +15,9 @@ def get_free_port(range_start: int = 8080, range_end: int = 9090) -> int:
                 return port
             except OSError:
                 pass
+
+
+def get_logfile_name(name: str):
+    """Get a uniformly-formatted name of a new logfile."""
+    now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
+    return f"{name}-{now}.log"
