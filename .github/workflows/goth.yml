@@ -53,6 +53,12 @@ jobs:
       - name: Log in to GitHub Docker repository
         run: echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{github.actor}} --password-stdin
 
+      - name: Run netstat
+        continue-on-error: false
+        run: |
+          sudo apt-get install -y net-tools
+          sudo netstat -tlp
+
       - name: Run test suite
         env:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
