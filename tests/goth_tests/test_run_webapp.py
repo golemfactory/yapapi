@@ -43,6 +43,8 @@ async def test_run_webapp(
     for c in goth_config.containers:
         c.use_proxy = False
 
+    print(goth_config)
+
     requestor_path = project_dir / "examples" / "webapp" / "webapp.py"
 
     runner = Runner(
