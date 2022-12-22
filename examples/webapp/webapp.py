@@ -45,7 +45,7 @@ class HttpService(HttpProxyService):
         async for script in super().start():
             yield script
 
-        script = self._ctx.new_script(timeout=timedelta(seconds=20))
+        script = self._ctx.new_script()
 
         script.run(
             "/bin/bash",
