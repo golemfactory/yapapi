@@ -23,6 +23,7 @@ logger = logging.getLogger("goth.test.recycle_ips")
 SUBNET_TAG = "goth"
 
 
+@pytest.mark.skip  # TODO: https://github.com/golemfactory/yagna/issues/2387
 @pytest.mark.asyncio
 async def test_recycle_ip(
     log_dir: Path,

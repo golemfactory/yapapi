@@ -22,7 +22,7 @@ logger = logging.getLogger("goth.test.run_ssh")
 SUBNET_TAG = "goth"
 
 
-@pytest.mark.skip  # TODO: we probably need to fix the way the requestor process are spawned #1020 # noqa
+@pytest.mark.skip  # TODO: https://github.com/golemfactory/yagna/issues/2387
 @pytest.mark.asyncio
 async def test_run_ssh(
     log_dir: Path,
