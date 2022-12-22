@@ -2,16 +2,12 @@
 import pytest
 from unittest.mock import Mock
 
+from tests.factories.golem import GolemFactory
 from yapapi import Golem
+from yapapi.config import ApiConfig
 import yapapi.engine
 from yapapi.engine import Job
 import yapapi.rest
-
-
-@pytest.fixture(autouse=True)
-def mock_rest_configuration(monkeypatch):
-    """Mock `yapapi.rest.Configuration`."""
-    monkeypatch.setattr(yapapi.rest, "Configuration", Mock)
 
 
 @pytest.mark.parametrize(
@@ -29,9 +25,9 @@ def test_set_subnet_tag(default_subnet, subnet_arg, expected_subnet, monkeypatch
     monkeypatch.setattr(yapapi.engine, "DEFAULT_SUBNET", default_subnet)
 
     if subnet_arg is not None:
-        golem = Golem(budget=1.0, subnet_tag=subnet_arg)
+        golem = GolemFactory(subnet_tag=subnet_arg)
     else:
-        golem = Golem(budget=1.0)
+        golem = GolemFactory()
     assert golem.subnet_tag == expected_subnet
 
 
