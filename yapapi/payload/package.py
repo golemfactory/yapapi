@@ -44,6 +44,10 @@ async def resolve_package_repo_url(repo_url: str, image_hash: Optional[str] = No
         async with aiohttp.ClientSession() as session:
             # Send request to Golem Registry to get image SHA3_224 hash
             async with session.get(f"{repo_url}/v1/image/info?tag={image_name}", allow_redirects=True) as response:
+                if response.status == 404:
+                    raise PackageException(f"Image not found: {image_name}")
+                elif response.status != 200:
+                    raise PackageException(f"Error while getting image info: {response.status}")  
                 data = await response.json()
                 image_hash = data["sha3"]
                 image_url = f"{repo_url}/v1/image/download?tag={image_name}"
