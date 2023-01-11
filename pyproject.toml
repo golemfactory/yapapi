@@ -20,9 +20,13 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.6.2"
+setuptools = [
+  { version = "*", python = ">=3.7" },
+  { version = "^59.0.0", python = ">=3.6.2, <3.7" },
+]
 aiohttp = "^3.6"
 aiohttp-sse-client = "^0.1.7"
-dataclasses = { version = "^0.8", python = ">=3.6, <3.7"}
+dataclasses = { version = "^0.8", python = ">=3.6, <3.7" }
 more-itertools = "^8.6.0"
 urllib3 = "^1.25.9"
 typing_extensions = "^3.10.0"
@@ -50,7 +54,7 @@ Deprecated = "^1.2.12"
 python-statemachine = "^0.8.0"
 
 # goth tests
-pexpect = {version = "^4.8.0", optional = true}
+pexpect = { version = "^4.8.0", optional = true }
 
 # Docs
 sphinx = { version = "^4.0.1", optional = true }
@@ -62,6 +66,10 @@ integration-tests = ['goth', 'pytest', 'pytest-asyncio', 'pexpect']
 docs = ['sphinx', 'sphinx-autodoc-typehints', 'sphinx-rtd-theme']
 
 [tool.poetry.dev-dependencies]
+pip = [
+  { version = "*", python = ">=3.7" },
+  { version = "^21.0.0", python = ">=3.6.2, <3.7" },
+]
 black = "^21.7b0"
 factory-boy = "^3.2.0"
 isort = "^5.10.1"
