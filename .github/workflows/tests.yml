@@ -36,11 +36,11 @@ jobs:
         with:
           poetry-version: 1.2.2
 
-      - run: echo "::set-output name=ENABLE::1"
+      - run: echo "ENABLE=1"  >> $GITHUB_OUTPUT
         if: ${{ matrix.os == 'ubuntu-latest' }}
         name: Enable extended checks
         id: extended-checks
-      - run: echo "::set-output name=ENABLE::1"
+      - run: echo "ENABLE=1" >> $GITHUB_OUTPUT
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.8' }}
         name: Enable sphinx check
         id: extended-checks-sphinx
