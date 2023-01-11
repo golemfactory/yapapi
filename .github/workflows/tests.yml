@@ -46,6 +46,7 @@ jobs:
         id: extended-checks-sphinx
 
       - run: poetry install
+        if: ${{ !steps.extended-checks-sphinx.outputs.ENABLE }}
       - run: poetry install -E docs
         if: ${{ steps.extended-checks-sphinx.outputs.ENABLE }}
 
