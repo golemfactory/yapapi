@@ -37,10 +37,10 @@ jobs:
         with:
           poetry-version: 1.2.2
       - name: Get git release tag
-        run: echo "::set-output name=git-release-tag::yapapi $(git describe --tags)"
+        run: echo "git-release-tag=yapapi $(git describe --tags)" >> $GITHUB_OUTPUT
         id: git_describe
       - name: Get package version
-        run: echo "::set-output name=poetry-version::$(poetry version)"
+        run: echo "poetry-version=$(poetry version)" >> $GITHUB_OUTPUT
         id: poetry_version
       - name: Fail on version mismatch
         run: exit 1

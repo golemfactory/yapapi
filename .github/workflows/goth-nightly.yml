@@ -23,12 +23,12 @@ jobs:
         # second sed expression removes leading whitespaces and '*' characters (git uses it to indicate the current branch)
         run: |
           branch=$(git branch -a | sed -e 's:remotes/origin/::' -e 's:^[ \t*]*::' | grep -E '^b[0-9]+(\.[0-9]+)+$' | sort -Vr | head -1)
-          echo "::set-output name=branch::$branch"
+          echo "branch=$branch" >> $GITHUB_OUTPUT
 
       # prepares JSON object representing strategy matrix which contains two 'branch' variants: master and latest stable
       - name: Get matrix JSON
         id: get-matrix
-        run: echo "::set-output name=matrix::{\"include\":[{\"branch\":\"master\"},{\"branch\":\"${{ steps.latest-stable.outputs.branch }}\"}]}"
+        run: echo "matrix={\"include\":[{\"branch\":\"master\"},{\"branch\":\"${{ steps.latest-stable.outputs.branch }}\"}]}" >> $GITHUB_OUTPUT
 
   goth-tests:
     runs-on: goth
