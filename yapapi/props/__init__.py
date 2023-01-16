@@ -1,7 +1,8 @@
-from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional
+
+from dataclasses import dataclass, field
 
 from .base import InvalidPropertiesError, Model, constraint, prop
 

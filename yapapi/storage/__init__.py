@@ -3,13 +3,14 @@ Storage models.
 """
 
 import abc
-import aiohttp
 import asyncio
 import io
 import os
-from os import PathLike
 import pathlib
+from os import PathLike
 from typing import AsyncIterator, NamedTuple, Optional, Union
+
+import aiohttp
 
 _BUF_SIZE = 40960
 DOWNLOAD_BYTES_LIMIT_DEFAULT = 1 * 1024 * 1024

@@ -11,14 +11,15 @@ For usage in a complete requestor agent app, see the
 yapapi repository.
 """
 import abc
-import aiohttp
-from aiohttp import client_ws, web
 import asyncio
 import logging
-from multidict import CIMultiDict
 import re
 import traceback
 from typing import Optional
+
+import aiohttp
+from aiohttp import client_ws, web
+from multidict import CIMultiDict
 from typing_extensions import Final
 
 from yapapi.services import Cluster, Service, ServiceState

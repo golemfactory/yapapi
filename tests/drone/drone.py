@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import asyncio
-from datetime import datetime, timedelta
 import pathlib
 import random
 import sys
+from datetime import datetime, timedelta
 
 examples_dir = pathlib.Path(__file__).resolve().parents[2] / "examples"
 sys.path.append(str(examples_dir))

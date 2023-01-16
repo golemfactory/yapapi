@@ -1,9 +1,10 @@
 """Infrastructural properties."""
 
-from dataclasses import dataclass
-from deprecated import deprecated  # type: ignore
 from enum import Enum
 from typing import List, Optional
+
+from dataclasses import dataclass
+from deprecated import deprecated  # type: ignore
 
 from .base import Model, prop
 

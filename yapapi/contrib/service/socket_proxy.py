@@ -10,11 +10,12 @@ For usage in a complete requestor agent app, see the
 yapapi repository.
 """
 import abc
-import aiohttp
 import asyncio
 import itertools
 import logging
 from typing import Dict, Iterator, List, Optional
+
+import aiohttp
 from typing_extensions import Final
 
 from yapapi.services import Cluster, Service

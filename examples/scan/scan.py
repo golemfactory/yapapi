@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-from datetime import datetime
 import logging
 import pathlib
 import re
 import sys
+from datetime import datetime
 from typing import List
 
 from yapapi import Golem, Task, WorkContext

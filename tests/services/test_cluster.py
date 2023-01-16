@@ -1,9 +1,10 @@
 import asyncio
 import itertools
-import pytest
 import sys
 from unittest import mock
 from unittest.mock import Mock, patch
+
+import pytest
 
 from tests.factories.golem import GolemFactory
 from yapapi import Golem

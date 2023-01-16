@@ -1,17 +1,7 @@
+import itertools
 from asyncio import InvalidStateError
 from datetime import timedelta
-import itertools
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Type,
-)
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, Iterator, List, Optional, Type
 
 import yapapi
 from yapapi.events import CommandEvent, CommandExecuted, ScriptEventType

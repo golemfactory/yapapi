@@ -1,12 +1,13 @@
 import abc
-from aiohttp import ClientPayloadError
-from aiohttp_sse_client.client import MessageEvent  # type: ignore
 import asyncio
-from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
 import json
 import logging
+from datetime import datetime, timedelta, timezone
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type
+
+from aiohttp import ClientPayloadError
+from aiohttp_sse_client.client import MessageEvent  # type: ignore
+from dataclasses import dataclass
 from typing_extensions import AsyncContextManager, AsyncIterable
 
 from ya_activity import ApiClient, ApiException, RequestorControlApi, RequestorStateApi

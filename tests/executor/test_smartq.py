@@ -1,8 +1,9 @@
 import asyncio
 import itertools
 import logging
-import pytest
 from random import randint
+
+import pytest
 
 from yapapi.executor._smartq import SmartQueue
 

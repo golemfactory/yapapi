@@ -1,13 +1,14 @@
 """Unit tests for `yapapi.engine` module."""
-import pytest
 from unittest.mock import Mock
 
+import pytest
+
+import yapapi.engine
+import yapapi.rest
 from tests.factories.golem import GolemFactory
 from yapapi import Golem
 from yapapi.config import ApiConfig
-import yapapi.engine
 from yapapi.engine import Job
-import yapapi.rest
 
 
 @pytest.mark.parametrize(

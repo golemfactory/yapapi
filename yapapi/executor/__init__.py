@@ -1,8 +1,8 @@
 """An implementation of the new Golem's task executor."""
 import asyncio
+import sys
 from asyncio import CancelledError
 from datetime import datetime, timedelta, timezone
-import sys
 from typing import (
     AsyncIterator,
     Awaitable,
@@ -15,15 +15,16 @@ from typing import (
     Union,
     cast,
 )
+
 from typing_extensions import AsyncGenerator, Final
 
+import yapapi.utils
 from yapapi import events
 from yapapi.ctx import WorkContext
 from yapapi.engine import Job, _Engine
 from yapapi.payload import Payload
 from yapapi.script import Script
 from yapapi.script.command import Deploy, Start
-import yapapi.utils
 
 from ._smartq import SmartQueue
 from .task import Task, TaskStatus

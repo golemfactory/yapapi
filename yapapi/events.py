@@ -180,11 +180,12 @@ List of event classes
 """
 
 import abc
-import attr
-from datetime import datetime, timedelta
 import logging
+from datetime import datetime, timedelta
 from types import TracebackType
 from typing import List, Optional, Tuple, Type, TypeVar
+
+import attr
 
 #   Q: Why `import yapapi` here?
 #   A: Because we want to have typing annotations without circular imports

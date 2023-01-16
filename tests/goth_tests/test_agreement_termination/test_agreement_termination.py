@@ -1,11 +1,12 @@
 """A goth test scenario for agreement termination."""
-from functools import partial
 import logging
 import os
-from pathlib import Path
-import pytest
 import re
+from functools import partial
+from pathlib import Path
 from typing import List
+
+import pytest
 
 from goth.configuration import Override, load_yaml
 from goth.runner import Runner

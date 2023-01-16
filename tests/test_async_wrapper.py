@@ -1,6 +1,7 @@
 import asyncio
-import pytest
 import time
+
+import pytest
 
 from yapapi.utils import AsyncWrapper
 

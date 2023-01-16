@@ -1,9 +1,10 @@
-from collections import defaultdict
-from dataclasses import dataclass
-from decimal import Decimal
 import logging
+from collections import defaultdict
+from decimal import Decimal
 from types import MappingProxyType
 from typing import Dict, Mapping, Union
+
+from dataclasses import dataclass
 
 from yapapi import rest
 from yapapi.props import com

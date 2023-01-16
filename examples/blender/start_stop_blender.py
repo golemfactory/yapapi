@@ -7,9 +7,9 @@ This way of using Golem might be more convenient for some specific use cases (al
 in the blender example).
 """
 
-from datetime import datetime, timedelta
 import pathlib
 import sys
+from datetime import datetime, timedelta
 
 from yapapi import Golem, Task, WorkContext
 from yapapi.payload import vm

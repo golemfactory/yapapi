@@ -1,8 +1,9 @@
 """Payment-related properties."""
 import abc
-from dataclasses import dataclass, field
 import enum
 from typing import Any, Dict, List
+
+from dataclasses import dataclass, field
 
 from .base import Model, Props, as_list
 

@@ -1,17 +1,8 @@
 """Implementation of high-level services API."""
-from datetime import datetime, timedelta, timezone
 import itertools
 import sys
-from typing import (
-    AsyncContextManager,
-    Dict,
-    Generator,
-    Generic,
-    Iterable,
-    List,
-    Optional,
-    Type,
-)
+from datetime import datetime, timedelta, timezone
+from typing import AsyncContextManager, Dict, Generator, Generic, Iterable, List, Optional, Type
 
 if sys.version_info >= (3, 8):
     from contextlib import AsyncExitStack

@@ -1,16 +1,14 @@
-import aiohttp
 import asyncio
-from asyncio import CancelledError
-from collections import defaultdict
 import contextlib
-from copy import deepcopy
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from decimal import Decimal
 import itertools
 import logging
 import os
 import sys
+from asyncio import CancelledError
+from collections import defaultdict
+from copy import deepcopy
+from datetime import datetime, timezone
+from decimal import Decimal
 from typing import (
     AsyncContextManager,
     Awaitable,
@@ -24,6 +22,9 @@ from typing import (
     Union,
     cast,
 )
+
+import aiohttp
+from dataclasses import dataclass
 from typing_extensions import AsyncGenerator, Final
 
 from yapapi.config import ApiConfig

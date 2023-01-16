@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 import asyncio
-from asyncio import TimeoutError
 import datetime
+from asyncio import TimeoutError
+
 from typing_extensions import Final
 
 import ya_market

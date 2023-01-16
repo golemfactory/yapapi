@@ -1,11 +1,12 @@
-import aiohttp
 import asyncio
-from dataclasses import dataclass
 import datetime
 import logging
 import random
 import sys
 from typing import Callable, Dict, NamedTuple, Optional
+
+import aiohttp
+from dataclasses import dataclass
 
 from yapapi import events
 from yapapi.props import Activity, NodeInfo

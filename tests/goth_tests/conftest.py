@@ -1,8 +1,9 @@
 import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
-import pytest
 from typing import List, cast
+
+import pytest
 
 from goth.configuration import Override
 

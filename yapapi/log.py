@@ -41,17 +41,18 @@ as an argument to `log_summary`:
     )
 ```
 """
-from asyncio import CancelledError, get_event_loop
-from collections import Counter, defaultdict
-from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from decimal import Decimal
 import inspect
 import logging
 import os
 import sys
 import time
+from asyncio import CancelledError, get_event_loop
+from collections import Counter, defaultdict
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from typing import Any, Callable, Dict, List, Optional, Set
+
+from dataclasses import dataclass
 
 if sys.version_info >= (3, 8):
     from typing import Final

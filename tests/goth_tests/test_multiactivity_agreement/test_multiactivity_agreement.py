@@ -1,11 +1,12 @@
 """A goth test scenario for multi-activity agreements."""
-from functools import partial
 import logging
 import os
-from pathlib import Path
-import pytest
 import re
+from functools import partial
+from pathlib import Path
 from typing import List
+
+import pytest
 
 import goth.configuration
 from goth.runner import Runner

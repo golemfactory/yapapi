@@ -11,8 +11,9 @@ if sys.version_info > (3, 8):
 else:
     from typing_extensions import Literal
 
-from dataclasses import MISSING, Field, dataclass, field, fields
 from datetime import datetime, timezone
+
+from dataclasses import MISSING, Field, dataclass, field, fields
 
 Props = Dict[str, str]
 

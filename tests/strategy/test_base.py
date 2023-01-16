@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+
 import pytest
 
 from tests.factories.rest.market import OfferProposalFactory

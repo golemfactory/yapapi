@@ -1,4 +1,5 @@
 import asyncio
+
 import pytest
 
 from tests.factories.events import AgreementConfirmedFactory as AgreementConfirmed

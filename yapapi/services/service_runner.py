@@ -4,16 +4,8 @@ import inspect
 import logging
 import sys
 from types import TracebackType
-from typing import (
-    TYPE_CHECKING,
-    AsyncContextManager,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    Union,
-)
+from typing import TYPE_CHECKING, AsyncContextManager, List, Optional, Set, Tuple, Type, Union
+
 from typing_extensions import Final
 
 if TYPE_CHECKING:

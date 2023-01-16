@@ -1,6 +1,7 @@
-from dataclasses import dataclass
 import enum
 from typing import Dict, Optional
+
+from dataclasses import dataclass
 
 
 class CaptureMode(enum.Enum):

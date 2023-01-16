@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import asyncio
 import base64
-from datetime import datetime
 import pathlib
 import sys
+from datetime import datetime
 
 from yapapi import Golem
 from yapapi.payload import vm

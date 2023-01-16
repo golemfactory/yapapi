@@ -2,19 +2,15 @@
 Golem File Transfer Storage Provider
 """
 
-from async_exit_stack import AsyncExitStack  # type: ignore
 import asyncio
 import contextlib
-from dataclasses import dataclass
 import json
-import jsonrpc_base  # type: ignore
 import logging
 import os
-from os import PathLike
-from pathlib import Path
-import semantic_version  # type: ignore
 import sys
 import tempfile
+from os import PathLike
+from pathlib import Path
 from types import TracebackType
 from typing import (
     AsyncContextManager,
@@ -28,6 +24,11 @@ from typing import (
     Union,
     cast,
 )
+
+import jsonrpc_base  # type: ignore
+import semantic_version  # type: ignore
+from async_exit_stack import AsyncExitStack  # type: ignore
+from dataclasses import dataclass
 from typing_extensions import Literal, Protocol, TypedDict
 
 from yapapi.storage import Content, Destination, Source, StorageProvider

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import argparse
 import asyncio
-from datetime import datetime, timedelta
 import math
-from pathlib import Path
 import sys
+from datetime import datetime, timedelta
+from pathlib import Path
 from tempfile import gettempdir
 from typing import AsyncIterable, List, Optional
 

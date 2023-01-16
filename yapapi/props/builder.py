@@ -1,11 +1,12 @@
 import abc
-from dataclasses import asdict
-from datetime import datetime
 import enum
+from datetime import datetime
 from typing import List
 
-from . import Model
+from dataclasses import asdict
+
 from ..rest.market import Market, Subscription
+from . import Model
 from .base import constraint_model_serialize, join_str_constraints
 
 

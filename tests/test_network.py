@@ -1,7 +1,8 @@
-import pytest
-from statemachine.exceptions import TransitionNotAllowed
 import sys
 from unittest import mock
+
+import pytest
+from statemachine.exceptions import TransitionNotAllowed
 
 from yapapi.network import Network, NetworkError, NetworkState
 

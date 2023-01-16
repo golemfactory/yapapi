@@ -6,16 +6,11 @@ sends an error command in its `start()` method which results in the instance's
 termination before going to the `running` state.
 """
 import asyncio
-from datetime import datetime
 import sys
+from datetime import datetime
 
 from yapapi import Golem
-from yapapi.log import (  # noqa
-    enable_default_logger,
-    log_event_repr,
-    log_summary,
-    pluralize,
-)
+from yapapi.log import enable_default_logger, log_event_repr, log_summary, pluralize  # noqa
 from yapapi.payload import vm
 from yapapi.services import Service
 

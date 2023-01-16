@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """A requestor script used for testing agreement termination."""
 import asyncio
-from datetime import timedelta
 import logging
+from datetime import timedelta
 
 from yapapi import Golem, Task, WorkContext
 from yapapi.log import enable_default_logger

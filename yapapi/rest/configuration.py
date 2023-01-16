@@ -1,5 +1,6 @@
 import os
 from typing import Optional
+
 from typing_extensions import Final
 
 import ya_activity  # type: ignore

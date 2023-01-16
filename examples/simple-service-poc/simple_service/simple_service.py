@@ -9,15 +9,16 @@ distribution and time-series plots of the collected data.
 """
 import argparse
 import contextlib
-from datetime import datetime
 import enum
 import json
-import matplotlib.pyplot as plt
-import numpy
-from pathlib import Path
 import random
 import sqlite3
 import string
+from datetime import datetime
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy
 
 DB_PATH = Path(__file__).absolute().parent / "service.db"
 PLOT_PATH = Path("/golem/out").absolute()

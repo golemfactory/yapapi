@@ -1,8 +1,9 @@
-from asyncio import CancelledError
-from dataclasses import dataclass
-from decimal import Decimal
 import sys
+from asyncio import CancelledError
+from decimal import Decimal
 from typing import TYPE_CHECKING, Awaitable, Callable, Dict, Optional, Set
+
+from dataclasses import dataclass
 
 from yapapi import events
 

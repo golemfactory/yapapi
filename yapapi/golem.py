@@ -1,8 +1,8 @@
 import asyncio
-from datetime import datetime, timedelta
-from decimal import Decimal
 import json
 import sys
+from datetime import datetime, timedelta
+from decimal import Decimal
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -17,6 +17,7 @@ from typing import (
     TypeVar,
     Union,
 )
+
 from typing_extensions import AsyncGenerator
 
 from yapapi.config import ApiConfig
@@ -39,10 +40,7 @@ from yapapi.payload import Payload
 from yapapi.props import com
 from yapapi.script import Script
 from yapapi.services import Cluster, ServiceType
-from yapapi.strategy import (
-    DecreaseScoreForUnconfirmedAgreement,
-    LeastExpensiveLinearPayuMS,
-)
+from yapapi.strategy import DecreaseScoreForUnconfirmedAgreement, LeastExpensiveLinearPayuMS
 
 if TYPE_CHECKING:
     from yapapi.strategy import BaseMarketStrategy

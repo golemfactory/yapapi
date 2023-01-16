@@ -1,9 +1,10 @@
 from collections import defaultdict
-from dataclasses import dataclass
 from decimal import Decimal
-from deprecated import deprecated  # type: ignore
 from types import MappingProxyType
 from typing import Dict, Mapping, Optional, Union
+
+from dataclasses import dataclass
+from deprecated import deprecated  # type: ignore
 
 from yapapi import rest
 from yapapi.props import Activity, com

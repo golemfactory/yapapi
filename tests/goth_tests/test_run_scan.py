@@ -2,11 +2,12 @@
 import asyncio
 import logging
 import os
-from pathlib import Path
-import pytest
 import re
 import signal
+from pathlib import Path
 from typing import List
+
+import pytest
 
 from goth.configuration import Override, load_yaml
 from goth.runner import Runner

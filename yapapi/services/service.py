@@ -1,7 +1,6 @@
 import asyncio
-from dataclasses import dataclass, field
 import logging
-import statemachine  # type: ignore
+import uuid
 from types import TracebackType
 from typing import (
     TYPE_CHECKING,
@@ -16,7 +15,9 @@ from typing import (
     TypeVar,
     Union,
 )
-import uuid
+
+import statemachine  # type: ignore
+from dataclasses import dataclass, field
 
 from ya_activity.exceptions import ApiException
 

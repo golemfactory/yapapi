@@ -1,10 +1,11 @@
 """An integration test scenario that runs custom usage counter example requestor app."""
 import logging
 import os
-from pathlib import Path
-import pytest
 import re
+from pathlib import Path
 from typing import List
+
+import pytest
 
 from goth.assertions import EventStream
 from goth.configuration import Override, load_yaml

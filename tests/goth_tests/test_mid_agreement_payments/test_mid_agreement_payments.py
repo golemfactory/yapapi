@@ -1,10 +1,11 @@
 """A goth test scenario for mid-agreement payments."""
 import logging
 import os
-from pathlib import Path
-import pytest
 import re
+from pathlib import Path
 from typing import List, Optional
+
+import pytest
 
 from goth.assertions import EventStream
 from goth.configuration import Override, load_yaml

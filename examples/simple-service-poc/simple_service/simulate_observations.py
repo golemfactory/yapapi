@@ -10,9 +10,9 @@ singular value
 [ part of the VM image that's deployed by the runtime on the Provider's end. ]
 """
 import os
-from pathlib import Path
 import random
 import time
+from pathlib import Path
 
 MU = 14
 SIGMA = 3

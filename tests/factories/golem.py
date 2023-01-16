@@ -1,7 +1,7 @@
 import factory
 
-from tests.factories.config import ApiConfigFactory
 import yapapi.golem
+from tests.factories.config import ApiConfigFactory
 
 
 class GolemFactory(factory.Factory):

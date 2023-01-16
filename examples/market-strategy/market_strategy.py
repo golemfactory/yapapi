@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-from collections import defaultdict
 import itertools
 import pathlib
 import sys
+from collections import defaultdict
 
 from yapapi import Golem, Task, WorkContext
 from yapapi.payload import vm

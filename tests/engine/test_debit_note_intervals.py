@@ -1,9 +1,10 @@
-from datetime import datetime, timedelta
 import functools
-import pytest
 import re
 import sys
+from datetime import datetime, timedelta
 from unittest import mock
+
+import pytest
 
 from tests.factories.rest.market import AgreementFactory
 from tests.factories.rest.payment import DebitNoteFactory

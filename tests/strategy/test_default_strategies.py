@@ -1,13 +1,14 @@
 from decimal import Decimal
 from itertools import product
-import pytest
 from unittest.mock import Mock
 
+import pytest
+
+import yapapi.rest.configuration
 from tests.factories.golem import GolemFactory
 from tests.factories.rest.market import OfferProposalFactory
 from yapapi import Golem
 from yapapi.props.com import Counter
-import yapapi.rest.configuration
 from yapapi.strategy import (
     SCORE_NEUTRAL,
     SCORE_REJECTED,

@@ -1,10 +1,11 @@
 """An integration test scenario that runs the Simple Service example requestor app."""
 import logging
 import os
-from pathlib import Path
-import pytest
 import time
+from pathlib import Path
 from typing import List
+
+import pytest
 
 from goth.configuration import Override, load_yaml
 from goth.runner import Runner

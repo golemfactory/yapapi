@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import pytest
+from dataclasses import dataclass
 
 from yapapi.payload import Payload
 from yapapi.props import constraint, inf, prop

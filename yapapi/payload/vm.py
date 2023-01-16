@@ -1,9 +1,10 @@
-from dataclasses import dataclass
-from dns.exception import DNSException
-from enum import Enum
 import logging
 import sys
+from enum import Enum
 from typing import List, Optional
+
+from dataclasses import dataclass
+from dns.exception import DNSException
 from typing_extensions import Final
 
 if sys.version_info > (3, 8):
@@ -22,13 +23,7 @@ from yapapi.payload.package import (
 from yapapi.props import base as prop_base
 from yapapi.props import inf
 from yapapi.props.builder import DemandBuilder, Model
-from yapapi.props.inf import (
-    INF_CORES,
-    RUNTIME_VM,
-    ExeUnitManifestRequest,
-    ExeUnitRequest,
-    InfBase,
-)
+from yapapi.props.inf import INF_CORES, RUNTIME_VM, ExeUnitManifestRequest, ExeUnitRequest, InfBase
 
 _DEFAULT_REPO_SRV: Final[str] = "_girepo._tcp.dev.golem.network"
 _FALLBACK_REPO_URL: Final[str] = "http://girepo.dev.golem.network:8000"

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """A requestor script for testing if multiple workers are run for an agreement."""
 import asyncio
-from datetime import timedelta
 import logging
+from datetime import timedelta
 
 from yapapi import Golem, Task
 from yapapi.log import enable_default_logger, log_event_repr  # noqa

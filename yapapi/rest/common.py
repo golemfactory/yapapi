@@ -1,8 +1,9 @@
-import aiohttp
 import asyncio
 import functools
 import logging
 from typing import Callable, Optional
+
+import aiohttp
 
 import ya_activity
 import ya_market

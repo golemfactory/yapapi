@@ -1,12 +1,13 @@
 """Implementation of strategies for choosing offers from market."""
 
 import abc
+import logging
 from copy import deepcopy
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
-import logging
 from typing import Dict, Optional
+
+from dataclasses import dataclass
 from typing_extensions import Final
 
 from yapapi import rest

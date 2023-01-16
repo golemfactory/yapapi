@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-from datetime import datetime, timedelta
 import pathlib
 import sys
+from datetime import datetime, timedelta
 
 from yapapi import Golem, Task, WorkContext
 from yapapi.payload import vm

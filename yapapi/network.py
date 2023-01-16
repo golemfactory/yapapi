@@ -1,17 +1,11 @@
 import asyncio
-from dataclasses import dataclass
-from ipaddress import (
-    IPv4Address,
-    IPv4Network,
-    IPv6Address,
-    IPv6Network,
-    ip_address,
-    ip_network,
-)
 import logging
-from statemachine import State, StateMachine  # type: ignore
+from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
 from typing import Dict, Optional, Union
 from urllib.parse import urlparse
+
+from dataclasses import dataclass
+from statemachine import State, StateMachine  # type: ignore
 
 from ya_net.exceptions import ApiException
 
