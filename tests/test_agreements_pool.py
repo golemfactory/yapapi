@@ -4,7 +4,7 @@ from operator import xor
 from unittest import mock
 
 import pytest
-from factories.agreements_pool import BufferedAgreement, BufferedAgreementFactory
+from tests.factories.agreements_pool import BufferedAgreement, BufferedAgreementFactory
 
 from yapapi import agreements_pool
 from yapapi.events import AgreementTerminated

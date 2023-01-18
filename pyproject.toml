@@ -85,7 +85,7 @@ autoflake = "^1"
 flake8 = "^5"
 flake8-docstrings = "^1.6"
 Flake8-pyproject = "^1.2.2"
-pyproject-autoflake = "^1.0.2"
+pyproject-autoflake = "^1.0.2" # TODO: Remove this after upgrading to Python 3.8+
 
 [tool.poe.tasks]
 checks = {sequence = ["checks_codestyle", "checks_typing", "checks_license"], help = "Run all available code checks"}
