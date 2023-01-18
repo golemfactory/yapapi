@@ -399,7 +399,7 @@ class Golem:
             :class:`~yapapi.services.Cluster` will be created with as many instances as there are
             elements in the `instance_params` iterable. if `num_instances` is set to < 1, the
             :class:`~yapapi.services.Cluster` will still be created but no instances will be spawned
-             within it.
+            within it.
         :param instance_params: optional list of dictionaries of keyword arguments that will be
             passed to consecutive, spawned instances. The number of elements in the iterable
             determines the number of instances spawned, unless `num_instances` is given, in which
