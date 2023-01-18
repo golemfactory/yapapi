@@ -266,7 +266,7 @@ class LocalHttpProxy:
 
         runner = web.ServerRunner(
             _Server(self._request_handler, client_max_size=self._max_request_size)
-        )  # type: ignore
+        )
         await runner.setup()
         site = web.TCPSite(runner, port=self._port)
         await site.start()

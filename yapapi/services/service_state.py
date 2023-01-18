@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-import statemachine  # type: ignore
+import statemachine
 
 if TYPE_CHECKING:
     from .service import ServiceInstance

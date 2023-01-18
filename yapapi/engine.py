@@ -32,7 +32,7 @@ from yapapi.config import ApiConfig
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
 else:
-    from async_exit_stack import AsyncExitStack  # type: ignore
+    from async_exit_stack import AsyncExitStack
 
 from yapapi import events, props, rest
 from yapapi.agreements_pool import AgreementsPool
@@ -222,7 +222,7 @@ class _Engine:
         This *must* be called at the end of the work, by the Engine user.
         """
         if exc_info[0] is not None:
-            self.emit(events.ExecutionInterrupted, exc_info=exc_info)  # type: ignore
+            self.emit(events.ExecutionInterrupted, exc_info=exc_info)
         return await self._stack.__aexit__(None, None, None)
 
     async def start(self):
@@ -426,7 +426,7 @@ class _Engine:
                 "message": f"Too many {payable_str}debit notes: {freq_descr} "
                 f"(activity: {activity_id})",
                 "golem.requestor.code": (
-                    "TooManyPayableDebitNotes" if payable else "TooManyDebitNotes",
+                    "TooManyPayableDebitNotes" if payable else "TooManyDebitNotes"
                 ),
             }
             logger.error(
@@ -592,7 +592,7 @@ class _Engine:
                 job.emit(
                     events.PaymentFailed,
                     agreement=agreement,
-                    exc_info=sys.exc_info(),  # type: ignore
+                    exc_info=sys.exc_info(),
                 )
 
     def accept_debit_notes_for_agreement(self, job_id: str, agreement_id: str) -> None:
@@ -607,7 +607,7 @@ class _Engine:
     def finalize_job(self, job: "Job"):
         """Mark a job as finished."""
         job.finished.set()
-        job.emit(events.JobFinished, exc_info=job._exc_info)  # type: ignore
+        job.emit(events.JobFinished, exc_info=job._exc_info)
 
     def register_generator(self, generator: AsyncGenerator) -> None:
         """Register a generator with this engine."""
@@ -657,9 +657,7 @@ class _Engine:
             try:
                 activity = await self.create_activity(agreement.id)
             except Exception:
-                job.emit(
-                    events.ActivityCreateFailed, agreement=agreement, exc_info=sys.exc_info()
-                )  # type: ignore
+                job.emit(events.ActivityCreateFailed, agreement=agreement, exc_info=sys.exc_info())
                 raise
 
             work_context = WorkContext(activity, agreement, self.storage_manager, emitter=job.emit)
@@ -947,7 +945,7 @@ class Job:
                     with contextlib.suppress(Exception):
                         self.emit(
                             events.ProposalFailed, proposal=proposal_, exc_info=sys.exc_info()
-                        )  # type: ignore
+                        )
                 finally:
                     semaphore.release()
 

@@ -12,7 +12,7 @@ if sys.version_info > (3, 8):
 else:
     from typing_extensions import Literal
 
-from srvresolver.srv_resolver import SRVRecord, SRVResolver  # type: ignore
+from srvresolver.srv_resolver import SRVRecord, SRVResolver
 
 from yapapi.payload.package import (
     Package,

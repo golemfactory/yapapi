@@ -8,7 +8,7 @@ import aiohttp
 from dataclasses import dataclass
 from typing_extensions import AsyncContextManager, Awaitable
 
-from ya_market import ApiClient, ApiException, RequestorApi, models  # type: ignore
+from ya_market import ApiClient, ApiException, RequestorApi, models
 
 from ..props import Model, NodeInfo
 from .common import SuppressedExceptions, is_intermittent_error

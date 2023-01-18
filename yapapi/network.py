@@ -5,7 +5,7 @@ from typing import Dict, Optional, Union
 from urllib.parse import urlparse
 
 from dataclasses import dataclass
-from statemachine import State, StateMachine  # type: ignore
+from statemachine import State, StateMachine
 
 from ya_net.exceptions import ApiException
 

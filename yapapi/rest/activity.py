@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type
 
 from aiohttp import ClientPayloadError
-from aiohttp_sse_client.client import MessageEvent  # type: ignore
+from aiohttp_sse_client.client import MessageEvent
 from dataclasses import dataclass
 from typing_extensions import AsyncContextManager, AsyncIterable
 
@@ -286,7 +286,7 @@ class StreamingBatch(Batch):
     """A `Batch` implementation that uses event streaming to return command status."""
 
     async def __aiter__(self) -> AsyncIterator[CommandEventData]:
-        from aiohttp_sse_client import client as sse_client  # type: ignore
+        from aiohttp_sse_client import client as sse_client
 
         api_client = self._activity._api.api_client
         host = api_client.configuration.host

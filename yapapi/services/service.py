@@ -16,7 +16,7 @@ from typing import (
     Union,
 )
 
-import statemachine  # type: ignore
+import statemachine
 from dataclasses import dataclass, field
 
 from ya_activity.exceptions import ApiException

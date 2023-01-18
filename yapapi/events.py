@@ -232,7 +232,7 @@ class Event(abc.ABC):
         If `exc_info` is not `None`, its underlying exception is included in the result string
         under the key `exception`.
         """
-        fields: Tuple[attr.Attribute] = attr.fields(self.__class__)  # type: ignore
+        fields: Tuple[attr.Attribute] = attr.fields(self.__class__)
         field_reprs: List[str] = []
 
         for field in fields:

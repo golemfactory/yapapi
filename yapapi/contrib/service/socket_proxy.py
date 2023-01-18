@@ -223,7 +223,7 @@ class ProxyServer:
         Preferred usage is through `:meth:`~SocketProxy.run_server`.
         """
         server = await asyncio.start_server(self.handler, self.local_address, self.local_port)
-        addrs = ", ".join(str(sock.getsockname()) for sock in server.sockets)  # type: ignore  # noqa
+        addrs = ", ".join(str(sock.getsockname()) for sock in server.sockets)
         logger.info("Listening on: %s, forwarding to: %s", addrs, self.instance_ws)
 
         try:

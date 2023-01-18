@@ -204,7 +204,7 @@ class Golem:
             return event_cls_or_name
         else:
             try:
-                return getattr(events, event_cls_or_name)  # type: ignore
+                return getattr(events, event_cls_or_name)
             except AttributeError:
                 raise ValueError(
                     "Second argument must be either an event class, or a name of "

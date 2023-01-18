@@ -1,7 +1,7 @@
 import enum
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, Optional, Type
+from typing import Any, Dict, Optional, Type
 
 from dataclasses import dataclass, field
 
@@ -195,7 +195,7 @@ class CaptureContext:
         return cls(mode=mode, fmt=cap_fmt, limit=limit)
 
     def to_dict(self) -> Dict:
-        inner = dict()
+        inner: Dict[str, Any] = dict()
 
         if self.limit:
             inner[self.mode.value] = self.limit

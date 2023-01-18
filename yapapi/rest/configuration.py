@@ -1,11 +1,11 @@
 from typing import Optional
 
-import ya_activity  # type: ignore
-import ya_market  # type: ignore
-import ya_net  # type: ignore
+import ya_activity
+import ya_market
+import ya_net
 import ya_payment
 
-from yapapi.config import ApiConfig  # type: ignore
+from yapapi.config import ApiConfig
 
 
 class Configuration(object):

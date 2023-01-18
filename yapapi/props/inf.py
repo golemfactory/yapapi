@@ -4,7 +4,7 @@ from enum import Enum
 from typing import List, Optional
 
 from dataclasses import dataclass
-from deprecated import deprecated  # type: ignore
+from deprecated import deprecated
 
 from .base import Model, prop
 

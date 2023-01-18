@@ -114,7 +114,7 @@ class InvoiceManager:
             ad.job.emit(
                 events.PaymentFailed,
                 agreement=ad.agreement,
-                exc_info=sys.exc_info(),  # type: ignore
+                exc_info=sys.exc_info(),
             )
             return False
         else:

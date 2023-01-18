@@ -9,7 +9,7 @@ if sys.version_info >= (3, 8):
     from typing import Final
 else:
     from typing_extensions import Final
-    from async_exit_stack import AsyncExitStack  # type: ignore
+    from async_exit_stack import AsyncExitStack
 
 from yapapi.engine import Job, _Engine
 from yapapi.network import Network
@@ -152,7 +152,7 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
             if network_addresses is not None and len(network_addresses) > ix:
                 network_address = network_addresses[ix]
 
-            service = self.service_class(**single_instance_params)  # type: ignore
+            service = self.service_class(**single_instance_params)
             self.service_runner.add_instance(service, self.network, network_address)
             service._set_cluster(self)
 

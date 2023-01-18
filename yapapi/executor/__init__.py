@@ -231,9 +231,7 @@ class Executor:
                         pass
                     work_context.emit(events.WorkerFinished)
                 except Exception as e:
-                    work_context.emit(
-                        events.WorkerFinished, exc_info=sys.exc_info()
-                    )  # type: ignore
+                    work_context.emit(events.WorkerFinished, exc_info=sys.exc_info())
                     await task_gen.athrow(type(e), e)
                     raise
                 finally:

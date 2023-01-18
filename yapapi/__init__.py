@@ -36,7 +36,7 @@ def windows_event_loop_fix():
         class _WindowsEventPolicy(asyncio.events.BaseDefaultEventLoopPolicy):
             _loop_factory = asyncio.windows_events.ProactorEventLoop
 
-        asyncio.set_event_loop_policy(_WindowsEventPolicy())  # type: ignore
+        asyncio.set_event_loop_policy(_WindowsEventPolicy())
 
 
 __version__: str = get_version()

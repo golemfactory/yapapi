@@ -4,7 +4,7 @@ from types import MappingProxyType
 from typing import Dict, Mapping, Optional, Union
 
 from dataclasses import dataclass
-from deprecated import deprecated  # type: ignore
+from deprecated import deprecated
 
 from yapapi import rest
 from yapapi.props import Activity, com
