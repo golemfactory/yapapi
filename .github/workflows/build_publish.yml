@@ -18,10 +18,10 @@ jobs:
         with:
           poetry-version: 1.2.2
       - run: poetry install
-      - run: poetry run poe test
-      - run: poetry run poe typecheck
-      - run: poetry run poe codestyle
-      - run: poetry run poe liccheck
+      - run: poetry run poe tests_unit
+      - run: poetry run poe checks_codestyle
+      - run: poetry run poe checks_typing
+      - run: poetry run poe checks_license
 
   build:
     needs: [test]
