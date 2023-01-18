@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 examples_dir = pathlib.Path(__file__).resolve().parents[2] / "examples"
 sys.path.append(str(examples_dir))
 
-from utils import (
+from utils import (  # noqa: E402
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_RED,
@@ -16,12 +16,12 @@ from utils import (
     build_parser,
 )
 
-from yapapi import Golem, NoPaymentAccountError, Task, WorkContext
-from yapapi import __version__ as yapapi_version
-from yapapi import windows_event_loop_fix
-from yapapi.log import enable_default_logger
-from yapapi.payload import vm
-from yapapi.rest.activity import BatchTimeoutError
+from yapapi import windows_event_loop_fix  # noqa: E402
+from yapapi import Golem, NoPaymentAccountError, Task, WorkContext  # noqa: E402
+from yapapi import __version__ as yapapi_version  # noqa: E402
+from yapapi.log import enable_default_logger  # noqa: E402
+from yapapi.payload import vm  # noqa: E402
+from yapapi.rest.activity import BatchTimeoutError  # noqa: E402
 
 
 async def main(subnet_tag, payment_driver=None, payment_network=None):
@@ -39,7 +39,7 @@ async def main(subnet_tag, payment_driver=None, payment_network=None):
             script.run("/usr/bin/stress-ng", "--cpu", "1", "--timeout", "1")
             script.run("/golem/task.sh", "-o", "1024", "-t", "5")
             script.run("/golem/task.sh", "-f", "/golem/output/output.txt,1048576")
-            script.download_file(f"/golem/output/output.txt", output_file)
+            script.download_file("/golem/output/output.txt", output_file)
             script.run("/golem/task.sh", "-e", "1024", "-t", "5")
 
             try:

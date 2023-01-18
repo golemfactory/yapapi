@@ -180,7 +180,8 @@ def test_verify_debit_note_intervals(
         ({}, {}, lambda: None, 0, 0, False, False),
         # payable debit note received even though mid-agrement payment have not been negotiated
         ({}, {"_base__payment_due_date": True}, datetime.now, 0, 0, False, True),
-        # more than one debit note received before the agreed-upon interval elapsed, we only allow one
+        # more than one debit note received before the agreed-upon interval elapsed,
+        # we only allow one
         (
             {"details___ref__demand__properties": {PROP_DEBIT_NOTE_INTERVAL_SEC: 100}},
             {},

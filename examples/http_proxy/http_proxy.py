@@ -177,7 +177,7 @@ if __name__ == "__main__":
         ),
     )
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
-    parser.set_defaults(log_file=f"http-proxy-{now}.log")
+    parser.set_defaults(log_file=f"http_proxy-{now}.log")
     args = parser.parse_args()
 
     run_golem_example(

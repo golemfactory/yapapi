@@ -1,3 +1,4 @@
+import logging
 import sys
 from asyncio import CancelledError
 from decimal import Decimal
@@ -12,6 +13,8 @@ if TYPE_CHECKING:
     from yapapi.rest.market import Agreement
     from yapapi.rest.payment import Allocation, Invoice
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class AgreementData:
@@ -20,11 +23,6 @@ class AgreementData:
     invoice: Optional["Invoice"] = None
     payable: bool = False
     paid: bool = False
-
-
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 class InvoiceManager:
@@ -42,12 +40,15 @@ class InvoiceManager:
         return any(ad.payable and not ad.paid for ad in self._agreement_data.values())
 
     def add_agreement(self, job: "Job", agreement: "Agreement") -> None:
-        """Inform the InvoiceManager about a new agreement (so that we can use the agreement_id in the future)"""
+        """Inform the InvoiceManager about a new agreement (so that we can use the agreement_id in \
+        the future)."""
+
         ad = self._agreement_data.get(agreement.id)
         if ad:
-            #   Currently possible if we're having more than one activity for a single agreement
-            #   (We could make some effort to ensure this method is called only once, when the agreement is created,
-            #   but it will make the code more complex as we'll have to reach here from the AgreeementsPool)
+            # Currently possible if we're having more than one activity for a single agreement
+            # (We could make some effort to ensure this method is called only once, when the
+            # agreement is created, but it will make the code more complex as we'll have to reach
+            # here from the AgreeementsPool)
             assert ad.job is job and ad.agreement is agreement
         else:
             self._agreement_data[agreement.id] = AgreementData(agreement, job)

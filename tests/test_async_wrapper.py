@@ -64,7 +64,7 @@ def test_aexit_doesnt_deadlock():
             raise KeyboardInterrupt()
 
     async def main():
-        """This coroutine mimics how an AsyncWrapper is used in an Executor."""
+        """Mimic how an AsyncWrapper is used in an Executor."""
 
         async with AsyncWrapper(func) as wrapper:
             try:

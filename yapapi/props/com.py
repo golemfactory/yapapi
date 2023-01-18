@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 
 from dataclasses import dataclass, field
 
-from .base import Model, Props, as_list
+from .base import Model, Props
 
 SCHEME: str = "golem.com.scheme"
 PRICE_MODEL: str = "golem.com.pricing.model"
@@ -39,7 +39,8 @@ class Com(Model):
 
     @abc.abstractmethod
     def calculate_cost(self, usage: List) -> float:
-        """Calculate the cost by applying the provided usage vector to the underlying pricing model."""
+        """Calculate the cost by applying the provided usage vector to the underlying pricing \
+        model."""
 
     @abc.abstractmethod
     def usage_as_dict(self, usage: List) -> Dict:

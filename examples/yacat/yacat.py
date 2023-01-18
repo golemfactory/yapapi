@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import asyncio
 import math
 import sys
 from datetime import datetime, timedelta
@@ -21,7 +20,6 @@ from utils import (
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_GREEN,
     TEXT_COLOR_RED,
-    TEXT_COLOR_YELLOW,
     build_parser,
     print_env_info,
     run_golem_example,

@@ -1,4 +1,4 @@
-"""Test if subscription expiration is handled correctly by Golem"""
+"""Test if subscription expiration is handled correctly by Golem."""
 import logging
 import os
 import time
@@ -33,19 +33,14 @@ SUBSCRIPTION_EXPIRATION_TIME = 5
 
 
 class RequestorApi(ya_market.api.requestor_api.RequestorApi):
-    """A replacement for market API that simulates early subscription expiration.
-
-    A call to `collect_offers(sub_id)` will raise `ApiException` indicating
-    subscription expiration when at least `SUBSCRIPTION_EXPIRATION_TIME`
-    elapsed after the given subscription has been created.
-    """
+    """A replacement for market API that simulates early subscription expiration."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.subscriptions: Dict[str, float] = {}
 
     def subscribe_demand(self, demand, **kwargs):
-        """Override `RequestorApi.subscribe_demand()` to register subscription create time."""
+        """Override parent call with register subscription create time."""
         id_coro = super().subscribe_demand(demand, **kwargs)
 
         async def coro():
@@ -56,7 +51,7 @@ class RequestorApi(ya_market.api.requestor_api.RequestorApi):
         return coro()
 
     def collect_offers(self, subscription_id, **kwargs):
-        """Override `RequestorApi.collect_offers()`.
+        """Override parent call with additional error handling.
 
         Raise `ApiException(404)` if at least `SUBSCRIPTION_EXPIRATION_TIME` elapsed
         since the subscription identified by `subscription_id` has been created.
@@ -93,7 +88,7 @@ async def unsubscribe_demand(sub_id: str) -> None:
 
 
 async def assert_demand_resubscribed(events: "EventStream[Event]"):
-    """A temporal assertion that the requestor will have to satisfy."""
+    """Assert a temporal condition that the requestor will have to satisfy."""
 
     subscription_ids: Set[str] = set()
 

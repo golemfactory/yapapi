@@ -7,9 +7,7 @@ from ya_payment import RequestorApi
 
 from tests.factories.golem import GolemFactory
 from yapapi import NoPaymentAccountError
-from yapapi.config import ApiConfig
 from yapapi.engine import DEFAULT_DRIVER, DEFAULT_NETWORK
-from yapapi.golem import Golem
 from yapapi.rest.payment import Account, Payment
 
 

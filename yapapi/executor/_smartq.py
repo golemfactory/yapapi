@@ -1,7 +1,4 @@
-""" YAPAPI internal module. This is not a part of the public API. It can change at any time.
-
-
-"""
+"""YAPAPI internal module. This is not a part of the public API. It can change at any time."""
 
 import asyncio
 import logging
@@ -48,7 +45,8 @@ class Handle(Generic[Item]):
 
 class SmartQueue(Generic[Item]):
     def __init__(self, items: AsyncIterator[Item]):
-        """
+        """Initialize instance.
+
         :param items: the items to be iterated over
         """
 
@@ -182,10 +180,8 @@ class Consumer(
     AsyncIterable[Handle[Item]],
     ContextManager["Consumer[Item]"],
 ):
-    """
-    Provides an interface to asynchronously iterate over items in the given queue
-    while cooperating with other consumers attached to this queue.
-    """
+    """Provides an interface to asynchronously iterate over items in the given queue while \
+    cooperating with other consumers attached to this queue."""
 
     def __init__(self, queue: SmartQueue[Item]):
         self._queue = queue
@@ -206,7 +202,8 @@ class Consumer(
 
     @property
     def current_item(self) -> Optional[Item]:
-        """The most-recent queue item that has been fetched to be processed by this consumer."""
+        """Return the most-recent queue item that has been fetched to be processed by this \
+        consumer."""
         return self._fetched.data if self._fetched else None
 
     def finish(self):

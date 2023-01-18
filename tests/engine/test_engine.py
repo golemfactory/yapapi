@@ -6,8 +6,6 @@ import pytest
 import yapapi.engine
 import yapapi.rest
 from tests.factories.golem import GolemFactory
-from yapapi import Golem
-from yapapi.config import ApiConfig
 from yapapi.engine import Job
 
 

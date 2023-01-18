@@ -218,9 +218,7 @@ class Subscription(object):
 
     @property
     def details(self) -> models.Demand:
-        """
-        :return: the Demand for which the Subscription has been registered.
-        """
+        """Return the Demand for which the Subscription has been registered."""
         assert self._details is not None, "expected details on list object"
         return self._details
 
@@ -293,9 +291,8 @@ class Market(object):
         self._api: RequestorApi = RequestorApi(api_client)
 
     def subscribe(self, props: dict, constraints: str) -> AsyncResource[Subscription]:
-        """
-        Create a subscription for a demand specified by the supplied properties and constraints.
-        """
+        """Create a subscription for a demand specified by the supplied properties and \
+        constraints."""
         request = models.DemandOfferBase(properties=props, constraints=constraints)
 
         async def create() -> Subscription:

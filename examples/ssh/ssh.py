@@ -22,7 +22,6 @@ from utils import (
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_RED,
-    TEXT_COLOR_YELLOW,
     build_parser,
     print_env_info,
     run_golem_example,

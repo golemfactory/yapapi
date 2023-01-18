@@ -1,7 +1,7 @@
 import enum
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Type
+from typing import Dict, Optional, Type
 
 from dataclasses import dataclass, field
 
@@ -13,12 +13,12 @@ except ImportError:
 from ya_activity.models import ActivityState as yaa_ActivityState
 from ya_activity.models import ActivityUsage as yaa_ActivityUsage
 
-from yapapi.events import ActivityEventType, CommandExecuted
+from yapapi.events import ActivityEventType
 from yapapi.props.com import ComLinear
 from yapapi.rest.activity import Activity
 from yapapi.rest.market import Agreement, AgreementDetails
 from yapapi.script import Script
-from yapapi.storage import DOWNLOAD_BYTES_LIMIT_DEFAULT, StorageProvider
+from yapapi.storage import StorageProvider
 from yapapi.utils import get_local_timezone
 
 logger = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ class WorkContext:
 
     @property
     def id(self) -> str:
-        """Unique identifier for this work context."""
+        """Return unique identifier for this work context."""
         return self._activity.id
 
     @property
@@ -109,7 +109,8 @@ class WorkContext:
     def new_script(
         self, timeout: Optional[timedelta] = None, wait_for_results: bool = True
     ) -> Script:
-        """Create an instance of :class:`~yapapi.script.Script` attached to this :class:`WorkContext` instance.
+        """Create an instance of :class:`~yapapi.script.Script` attached to this \
+        :class:`WorkContext` instance.
 
         This is equivalent to calling `Script(work_context)`. This method is intended to provide a
         direct link between the two object instances.

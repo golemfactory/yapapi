@@ -13,9 +13,7 @@ from yapapi.golem import Golem
 
 
 def get_version() -> str:
-    """
-    :return: the version of the yapapi library package
-    """
+    """Return the version of the yapapi library package."""
     pyproject_path = Path(__file__).parents[1] / "pyproject.toml"
     if pyproject_path.exists():
         with open(pyproject_path) as f:
@@ -27,8 +25,7 @@ def get_version() -> str:
 
 
 def windows_event_loop_fix():
-    """
-    Set up asyncio to use ProactorEventLoop implementation for new event loops on Windows.
+    """Set up asyncio to use ProactorEventLoop implementation for new event loops on Windows.
 
     This work-around is only needed for Python 3.6 and 3.7.
     With Python 3.8, `ProactorEventLoop` is already the default on Windows.
@@ -43,7 +40,7 @@ def windows_event_loop_fix():
 
 
 __version__: str = get_version()
-__all__ = [
+__all__ = (
     "Executor",
     "props",
     "rest",
@@ -54,4 +51,4 @@ __all__ = [
     "ExecOptions",
     "Golem",
     "NoPaymentAccountError",
-]
+)

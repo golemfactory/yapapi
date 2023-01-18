@@ -23,7 +23,7 @@ NodeInfoKeys = NodeInfo.property_keys()
 
 @dataclass()
 class Activity(Model):
-    """Activity-related Properties"""
+    """Activity-related Properties."""
 
     cost_cap: Optional[Decimal] = field(default=None, metadata={"key": "golem.activity.cost_cap"})
     """Sets a Hard cap on total cost of the Activity (regardless of the usage vector or
@@ -63,3 +63,14 @@ class Activity(Model):
 
 
 ActivityKeys = Activity.property_keys()
+
+__all__ = (
+    "InvalidPropertiesError",
+    "Model",
+    "constraint",
+    "prop",
+    "NodeInfo",
+    "NodeInfoKeys",
+    "Activity",
+    "ActivityKeys",
+)

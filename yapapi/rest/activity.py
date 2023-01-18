@@ -42,7 +42,7 @@ class ActivityService(object):
 
 
 class Activity(AsyncContextManager["Activity"]):
-    """Mid-level wrapper for REST's Activity endpoint"""
+    """Mid-level wrapper for REST's Activity endpoint."""
 
     def __init__(
         self,
@@ -328,7 +328,7 @@ class StreamingBatch(Batch):
 
 
 def _message_event_to_event_data(msg_event: MessageEvent) -> CommandEventData:
-    """Convert a `MessageEvent` to a matching events.Event subclass and it's kwargs"""
+    """Convert a `MessageEvent` to a matching events.Event subclass and it's kwargs."""
 
     if msg_event.type != "runtime":
         raise RuntimeError(f"Unsupported event: {msg_event.type}")

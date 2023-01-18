@@ -35,7 +35,8 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
         """Initialize this Cluster.
 
         :param engine: an engine for running service instance
-        :param service_class: a subclass of :class:`~yapapi.services.Service` that represents the service to be run
+        :param service_class: a subclass of :class:`~yapapi.services.Service` that represents the
+            service to be run
         :param payload: definition of service runtime for this Cluster
         :param expiration: a date before which all agreements related to running services
             in this Cluster should be terminated
@@ -59,17 +60,18 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
         await self._terminate(exc_type, exc_val, exc_tb)
 
     async def terminate(self):
-        """Signal the whole :class:`Cluster` and the underlying :class:`~yapapi.service.ServiceRunner` to stop."""
+        """Signal the whole :class:`Cluster` and the underlying \
+        :class:`~yapapi.service.ServiceRunner` to stop."""
         await self._terminate(None, None, None)
 
     def stop(self):
-        """Stop all services in this :class:`Cluster`"""
+        """Stop all services in this :class:`Cluster`."""
         for instance in self.instances:
             self.stop_instance(instance)
 
     async def _terminate(self, exc_type, exc_val, exc_tb):
-        #   NOTE: this might be called more then once (e.g. by `terminate()` followed by `__aexit__`),
-        #   but it's harmless, so we don't care
+        # NOTE: this might be called more then once (e.g. by `terminate()` followed by `__aexit__`),
+        #  but it's harmless, so we don't care
         self.stop()
         await self._stack.__aexit__(exc_type, exc_val, exc_tb)
 
@@ -79,7 +81,8 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
 
     @property
     def expiration(self) -> datetime:
-        """Return the expiration datetime for agreements related to services in this :class:`Cluster`."""
+        """Return the expiration datetime for agreements related to services in this \
+        :class:`Cluster`."""
         return self.service_runner._job.expiration_time
 
     @property
@@ -94,7 +97,8 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
 
     @property
     def network(self) -> Optional[Network]:
-        """Return the :class:`~yapapi.network.Network` record associated with the VPN used by this :class:`Cluster`."""
+        """Return the :class:`~yapapi.network.Network` record associated with the VPN used by this \
+        :class:`Cluster`."""
         return self._network
 
     def __repr__(self):

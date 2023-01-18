@@ -33,7 +33,7 @@ async def test_run_simple_service(
     # This is the default configuration with 2 wasm/VM providers
     goth_config = load_yaml(goth_config_path, config_overrides)
 
-    requestor_path = project_dir / "examples" / "simple-service-poc" / "simple_service.py"
+    requestor_path = project_dir / "examples" / "simple_service_poc" / "simple_service.py"
 
     runner = Runner(
         base_log_dir=log_dir,

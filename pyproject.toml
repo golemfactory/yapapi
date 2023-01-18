@@ -85,6 +85,7 @@ autoflake = "^1"
 flake8 = "^5"
 flake8-docstrings = "^1.6"
 Flake8-pyproject = "^1.2.2"
+pyproject-autoflake = "^1.0.2"
 
 [tool.poe.tasks]
 checks = {sequence = ["checks_codestyle", "checks_typing", "checks_license"], help = "Run all available code checks"}
@@ -92,12 +93,12 @@ checks_codestyle = {sequence = ["_checks_codestyle_flake8", "_checks_codestyle_i
 _checks_codestyle_flake8 = "flake8 yapapi tests"
 _checks_codestyle_isort = "isort --check-only --diff ."
 _checks_codestyle_black = "black --check --diff ."
-checks_typing  = {cmd = "mypy --install-types --non-interactive --ignore-missing-imports --check-untyped-defs --warn-unused-ignores --show-error-codes .", help = "Run only code typing checks" }
+checks_typing  = {cmd = "mypy --ignore-missing-imports --check-untyped-defs --warn-unused-ignores --show-error-codes .", help = "Run only code typing checks" }
 checks_license = {sequence = ["_checks_license_export", "_checks_license_verify"], help = "Run only license compatibility checks"}
 _checks_license_export = "poetry export -f requirements.txt -o .requirements.txt"
 _checks_license_verify = "liccheck -r .requirements.txt"
 format = {sequence = ["_format_autoflake", "_format_isort", "_format_black"], help = "Run code auto formatting"}
-_format_autoflake = "autoflake ."
+_format_autoflake = "pautoflake ."
 _format_isort = "isort ."
 _format_black = "black ."
 tests = {sequence = ["tests_unit", "tests_integration"], help = "Run all available tests"}
@@ -155,6 +156,11 @@ max-line-length = 100
 extend-ignore = [
     "E203", # See https://github.com/PyCQA/pycodestyle/issues/373
     "E231", # black ignores this rule when formatting
+    "D100", # TODO: To be fixed by #1087
+    "D101", # TODO: To be fixed by #1087
+    "D102", # TODO: To be fixed by #1087
+    "D103", # TODO: To be fixed by #1087
+    "D106", # TODO: To be fixed by #1087
     "D105", # No docs for magic method
     "D104", # No docs for public package
     "D107", # No docs for __init__

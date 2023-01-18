@@ -62,13 +62,13 @@ async def test_run_scan(
                 output = await cmd_monitor.wait_for_pattern(
                     ".*Task finished by provider", timeout=120
                 )
-                matches = re.match(".*by provider 'provider-(\d)', task data: (\d)", output)
+                matches = re.match(r".*by provider 'provider-(\d)', task data: (\d)", output)
                 providers.add(matches.group(1))
                 tasks.add(matches.group(2))
 
             assert providers == {"1", "2"}
             assert tasks == {"0", "1"}
-            logger.info(f"Scanner tasks completed for the two providers in the network.")
+            logger.info("Scanner tasks completed for the two providers in the network.")
 
             # ensure no more tasks are executed by the two providers
             logger.info("Waiting to see if another task gets started...")
@@ -79,7 +79,7 @@ async def test_run_scan(
             ]
 
             assert len(tasks_finished) == 2
-            logger.info(f"As expected, no more tasks started. Issuing a break...")
+            logger.info("As expected, no more tasks started. Issuing a break...")
 
             proc: asyncio.subprocess.Process = await process_monitor.get_process()
             proc.send_signal(signal.SIGINT)
@@ -87,4 +87,4 @@ async def test_run_scan(
             logger.info("SIGINT sent...")
 
             await cmd_monitor.wait_for_pattern(".*All jobs have finished", timeout=20)
-            logger.info(f"Requestor script finished.")
+            logger.info("Requestor script finished.")

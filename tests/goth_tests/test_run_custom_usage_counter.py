@@ -31,7 +31,7 @@ async def assert_counter_not_decremented(output_lines: EventStream[str]):
             value = float(m.group(1))
             logger.info(f"Custom usage counter value: {value}")
             if value < last_value:
-                raise AssertionError(f"Current custom usage counter was decremented.")
+                raise AssertionError("Current custom usage counter was decremented.")
             last_value = value
 
 
@@ -75,7 +75,7 @@ async def test_run_custom_usage_counter(
 
     # This is the default configuration with 2 wasm/VM providers
     goth_config = load_yaml(goth_config_path, config_overrides)
-    requestor_path = project_dir / "examples" / "custom-usage-counter" / "custom_usage_counter.py"
+    requestor_path = project_dir / "examples" / "custom_usage_counter" / "custom_usage_counter.py"
 
     runner = Runner(
         base_log_dir=log_dir,
@@ -98,4 +98,4 @@ async def test_run_custom_usage_counter(
             cmd_monitor.add_assertion(assert_counter_not_decremented)
 
             await cmd_monitor.wait_for_pattern(".*All jobs have finished", timeout=300)
-            logger.info(f"Requestor script finished")
+            logger.info("Requestor script finished")

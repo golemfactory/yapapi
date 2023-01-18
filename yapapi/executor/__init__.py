@@ -162,7 +162,7 @@ class Executor:
         done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
 
         def on_task_done(task: Task[D, R], status: TaskStatus) -> None:
-            """Callback run when `task` is accepted or rejected."""
+            """Execute callback when `task` is accepted or rejected."""
             if status == TaskStatus.ACCEPTED:
                 done_queue.put_nowait(task)
 
@@ -231,7 +231,9 @@ class Executor:
                         pass
                     work_context.emit(events.WorkerFinished)
                 except Exception as e:
-                    work_context.emit(events.WorkerFinished, exc_info=sys.exc_info())  # type: ignore
+                    work_context.emit(
+                        events.WorkerFinished, exc_info=sys.exc_info()
+                    )  # type: ignore
                     await task_gen.athrow(type(e), e)
                     raise
                 finally:

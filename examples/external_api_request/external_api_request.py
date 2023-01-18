@@ -81,7 +81,7 @@ async def main(subnet_tag, payment_driver, payment_network):
 if __name__ == "__main__":
     parser = build_parser("External API request example")
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
-    parser.set_defaults(log_file=f"external-api-request-yapapi-{now}.log")
+    parser.set_defaults(log_file=f"external_api_request-yapapi-{now}.log")
     args = parser.parse_args()
 
     run_golem_example(

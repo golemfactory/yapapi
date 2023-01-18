@@ -128,7 +128,7 @@ class Payment(object):
         expires: Optional[datetime] = None,
         make_deposit: bool = False,
     ) -> ResourceCtx[Allocation]:
-        """Creates new allocation.
+        """Create new allocation.
 
         - `amount`:  Allocation amount.
         - `expires`: expiration timestamp. set to default 10 years as a work-around.
@@ -157,10 +157,9 @@ class Payment(object):
         )
 
     async def allocations(self) -> AsyncIterator[Allocation]:
-        """Lists all active allocations.
+        """Iterate over all active allocations.
 
         Example:
-
         Listing all active allocations
 
             from yapapi import rest

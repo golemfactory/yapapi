@@ -48,7 +48,7 @@ import sys
 import time
 from asyncio import CancelledError, get_event_loop
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Callable, Dict, List, Optional, Set
 
@@ -443,12 +443,12 @@ class SummaryLogger:
             else:
                 msg = (
                     f"{offers_collected} {'offer has' if offers_collected == 1 else 'offers have'} "
-                    f"been collected from the market, but no provider has responded for "
+                    "been collected from the market, but no provider has responded for "
                     f"{self.time_waiting_for_proposals.seconds}s."
                 )
             msg += (
-                f" Make sure you're using the latest released versions of yagna and yapapi,"
-                f" and the correct subnet. "
+                " Make sure you're using the latest released versions of yagna and yapapi, and the"
+                " correct subnet. "
             )
             self.logger.warning(msg)
 

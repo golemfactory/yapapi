@@ -1,6 +1,4 @@
-"""
-Golem File Transfer Storage Provider
-"""
+"""Golem File Transfer Storage Provider."""
 
 import asyncio
 import contextlib
@@ -54,38 +52,33 @@ class GftpDriver(Protocol):
     """Golem FTP service API."""
 
     async def version(self) -> str:
-        """Gets driver version."""
-        pass
+        """Get driver version."""
 
     async def publish(self, *, files: List[str]) -> List[PubLink]:
-        """Exposes local file as GFTP url.
+        """Expose local file as GFTP url.
 
         `files`
         :   local files to be exposed
 
         """
-        pass
 
     async def close(self, *, urls: List[str]) -> List[CommandStatus]:
-        """Stops exposing GFTP urls created by [publish(files=[..])](#publish)."""
-        pass
+        """Stop exposing GFTP urls created by [publish(files=[..])](#publish)."""
 
     async def receive(self, *, output_file: str) -> PubLink:
-        """Creates GFTP url for receiving file.
+        """Create GFTP url for receiving file.
 
         :  `output_file` -
         """
-        pass
 
     async def upload(self, *, file: str, url: str):
         pass
 
     async def shutdown(self) -> CommandStatus:
-        """Stops GFTP service.
+        """Stop GFTP service.
 
         After shutdown all generated urls will be unavailable.
         """
-        pass
 
 
 def service(debug=False) -> AsyncContextManager[GftpDriver]:

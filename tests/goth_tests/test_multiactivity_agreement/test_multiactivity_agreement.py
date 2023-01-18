@@ -38,7 +38,7 @@ async def assert_multiple_workers_run(agr_id, events):
         if m:
             worker_agr_id = m.group(1)
             assert worker_agr_id == agr_id, "Worker run for another agreement"
-            assert not "exception" in line, "Worker finished with error"
+            assert "exception" not in line, "Worker finished with error"
             workers_finished += 1
         elif re.match("JobFinished", line):
             break

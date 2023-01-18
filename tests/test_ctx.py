@@ -3,7 +3,6 @@ import sys
 from functools import partial
 from unittest import mock
 
-import factory
 import pytest
 
 from yapapi.ctx import WorkContext

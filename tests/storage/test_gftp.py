@@ -113,7 +113,7 @@ async def test_gftp_provider(test_dir, temp_dir, mock_service, monkeypatch):
     byte_uploads = 0
 
     async def worker(id: int, provider: gftp.GftpProvider):
-        """A test worker."""
+        """Test worker."""
 
         nonlocal num_batches, temp_dir, file_uploads, byte_uploads
 

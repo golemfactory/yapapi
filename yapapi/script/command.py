@@ -23,12 +23,11 @@ class Command(abc.ABC):
         """Evaluate and serialize this command."""
 
     async def after(self) -> None:
-        """A hook to be executed on requestor's end after the script has finished."""
-        pass
+        """Execute a hook to be executed on requestor's end after the script has finished."""
 
     async def before(self) -> None:
-        """A hook to be executed on requestor's end before the script is sent to the provider."""
-        pass
+        """Execute a hook to be executed on requestor's end before the script is sent to the \
+        provider."""
 
     @staticmethod
     def _make_batch_command(cmd_name: str, **kwargs) -> BatchCommand:

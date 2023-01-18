@@ -20,7 +20,7 @@ async def main():
     first_worker = True
 
     async def worker(ctx: WorkContext, tasks):
-        """A worker function for `Golem.execute_tasks()`.
+        """Execute `Golem.execute_tasks()` as a worker.
 
         The first call to this function will produce a worker
         that sends an invalid `run` command to the provider.

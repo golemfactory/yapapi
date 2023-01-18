@@ -20,7 +20,6 @@ from utils import (
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_MAGENTA,
-    TEXT_COLOR_RED,
     TEXT_COLOR_YELLOW,
     build_parser,
     format_usage,
