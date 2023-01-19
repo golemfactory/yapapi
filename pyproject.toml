@@ -93,7 +93,7 @@ checks_codestyle = {sequence = ["_checks_codestyle_flake8", "_checks_codestyle_i
 _checks_codestyle_flake8 = "flake8 yapapi tests"
 _checks_codestyle_isort = "isort --check-only --diff ."
 _checks_codestyle_black = "black --check --diff ."
-checks_typing  = {cmd = "mypy --install-types --non-interactive --ignore-missing-imports --check-untyped-defs --warn-unused-ignores --show-error-codes .", help = "Run only code typing checks" }
+checks_typing  = {cmd = "mypy .", help = "Run only code typing checks" }
 checks_license = {sequence = ["_checks_license_export", "_checks_license_verify"], help = "Run only license compatibility checks"}
 _checks_license_export = "poetry export -f requirements.txt -o .requirements.txt"
 _checks_license_verify = "liccheck -r .requirements.txt"
@@ -172,6 +172,16 @@ exclude = [
     "^examples/",  # TODO: To be fixed by #1088
     "^tests/",  # TODO: To be fixed by #1088
 ]
+install_types = true
+non_interactive = true
+ignore_missing_imports = true
+check_untyped_defs = true
+show_error_codes = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]  # TODO: Remove this after upgrading to Python 3.8+
+module = "yapapi.props.base"
+warn_unused_ignores = false
 
 [tool.isort]
 profile = "black"

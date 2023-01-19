@@ -15,7 +15,7 @@ from goth.runner import Runner
 from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
 
-from goth_tests.assertions import assert_all_invoices_accepted, assert_no_errors  # isort:skip
+from tests.goth_tests.assertions import assert_all_invoices_accepted, assert_no_errors  # isort:skip
 
 logger = logging.getLogger("goth.test.recycle_ips")
 
