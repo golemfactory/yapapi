@@ -36,12 +36,13 @@ class ApiConfig:
             Uses YAGNA_ACTIVITY_URL environment variable
     """
 
-    app_key: str = field(
+    app_key: str = field(  # type: ignore[assignment]
         default_factory=partial(os.getenv, "YAGNA_APPKEY"),
-    )  # type: ignore[assignment]
-    api_url: str = field(
+    )
+
+    api_url: str = field(  # type: ignore[assignment]
         default_factory=partial(os.getenv, "YAGNA_API_URL", "http://127.0.0.1:7465"),
-    )  # type: ignore[assignment]
+    )
     market_url: Optional[str] = field(default_factory=partial(os.getenv, "YAGNA_MARKET_URL"))
     payment_url: Optional[str] = field(default_factory=partial(os.getenv, "YAGNA_PAYMENT_URL"))
     net_url: Optional[str] = field(default_factory=partial(os.getenv, "YAGNA_NET_URL"))
