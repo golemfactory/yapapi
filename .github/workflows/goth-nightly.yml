@@ -31,7 +31,7 @@ jobs:
         run: echo "matrix={\"include\":[{\"branch\":\"master\"},{\"branch\":\"${{ steps.latest-stable.outputs.branch }}\"}]}" >> $GITHUB_OUTPUT
 
   goth-tests:
-    runs-on: goth
+    runs-on: [goth, ubuntu-18.04]
     needs: prepare-matrix
     strategy:
       matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix-json) }}

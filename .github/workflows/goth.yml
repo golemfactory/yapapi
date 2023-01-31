@@ -14,7 +14,7 @@ on:
 jobs:
   goth-tests:
     name: Run integration tests
-    runs-on: goth
+    runs-on: [goth, ubuntu-18.04]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
