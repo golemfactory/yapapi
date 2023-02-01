@@ -46,7 +46,8 @@ class FirstInstanceFailsToStart(Service):
             yield script
 
         script = self._ctx.new_script()
-        future_result = script.run("/bin/echo", "STARTING", str(instances_started + 1))
+        future_result = script.run(
+            "/bin/echo", "STARTING", str(instances_started + 1))
         yield script
         result = await future_result
         log(f"{result.stdout.strip()}")
@@ -68,7 +69,8 @@ class FirstInstanceFailsToStart(Service):
         instances_running += 1
 
         script = self._ctx.new_script()
-        future_result = script.run("/bin/echo", "RUNNING", str(instances_started))
+        future_result = script.run(
+            "/bin/echo", "RUNNING", str(instances_started))
         yield script
         result = await future_result
         log(f"{result.stdout.strip()}")

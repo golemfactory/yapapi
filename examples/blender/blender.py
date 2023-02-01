@@ -1,15 +1,4 @@
 #!/usr/bin/env python3
-from datetime import datetime, timedelta
-import pathlib
-import sys
-
-from yapapi import Golem, Task, WorkContext
-from yapapi.payload import vm
-from yapapi.rest.activity import BatchTimeoutError
-
-examples_dir = pathlib.Path(__file__).resolve().parent.parent
-sys.path.append(str(examples_dir))
-
 from utils import (
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
@@ -20,6 +9,16 @@ from utils import (
     print_env_info,
     run_golem_example,
 )
+from datetime import datetime, timedelta
+import pathlib
+import sys
+
+from yapapi import Golem, Task, WorkContext
+from yapapi.payload import vm
+from yapapi.rest.activity import BatchTimeoutError
+
+examples_dir = pathlib.Path(__file__).resolve().parent.parent
+sys.path.append(str(examples_dir))
 
 
 async def main(
@@ -49,7 +48,8 @@ async def main(
 
         async for task in tasks:
             frame = task.data
-            crops = [{"outfilebasename": "out", "borders_x": [0.0, 1.0], "borders_y": [0.0, 1.0]}]
+            crops = [{"outfilebasename": "out", "borders_x": [
+                0.0, 1.0], "borders_y": [0.0, 1.0]}]
             script.upload_json(
                 {
                     "scene_file": "/golem/resource/scene.blend",
@@ -68,7 +68,8 @@ async def main(
 
             script.run("/golem/entrypoints/run-blender.sh")
             output_file = f"output_{frame}.png"
-            script.download_file(f"/golem/output/out{frame:04d}.png", output_file)
+            script.download_file(
+                f"/golem/output/out{frame:04d}.png", output_file)
             try:
                 yield script
                 # TODO: Check if job results are valid
@@ -107,7 +108,8 @@ async def main(
     # reach the providers.
     min_timeout, max_timeout = 6, 30
 
-    timeout = timedelta(minutes=max(min(init_overhead + len(frames) * 2, max_timeout), min_timeout))
+    timeout = timedelta(minutes=max(
+        min(init_overhead + len(frames) * 2, max_timeout), min_timeout))
 
     async with Golem(
         budget=10.0,
@@ -144,7 +146,8 @@ async def main(
 
 if __name__ == "__main__":
     parser = build_parser("Render a Blender scene")
-    parser.add_argument("--show-usage", action="store_true", help="show activity usage and cost")
+    parser.add_argument("--show-usage", action="store_true",
+                        help="show activity usage and cost")
     parser.add_argument(
         "--min-cpu-threads",
         type=int,

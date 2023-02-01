@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+from utils import (
+    TEXT_COLOR_CYAN,
+    TEXT_COLOR_DEFAULT,
+    TEXT_COLOR_RED,
+    TEXT_COLOR_YELLOW,
+    build_parser,
+    print_env_info,
+    run_golem_example,
+)
 import asyncio
 from datetime import datetime, timedelta
 import pathlib
@@ -17,16 +26,6 @@ STARTING_TIMEOUT = timedelta(minutes=4)
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
-
-from utils import (
-    TEXT_COLOR_CYAN,
-    TEXT_COLOR_DEFAULT,
-    TEXT_COLOR_RED,
-    TEXT_COLOR_YELLOW,
-    build_parser,
-    print_env_info,
-    run_golem_example,
-)
 
 
 class SshService(SocketProxyService):
@@ -53,12 +52,14 @@ class SshService(SocketProxyService):
         async for script in super().start():
             yield script
 
-        password = "".join(random.choice(string.ascii_letters + string.digits) for _ in range(8))
+        password = "".join(random.choice(
+            string.ascii_letters + string.digits) for _ in range(8))
 
         script = self._ctx.new_script(timeout=timedelta(seconds=10))
         script.run("/bin/bash", "-c", "syslogd")
         script.run("/bin/bash", "-c", "ssh-keygen -A")
-        script.run("/bin/bash", "-c", f'echo -e "{password}\n{password}" | passwd')
+        script.run("/bin/bash", "-c",
+                   f'echo -e "{password}\n{password}" | passwd')
         script.run("/bin/bash", "-c", "/usr/sbin/sshd")
         yield script
 
@@ -92,7 +93,8 @@ async def main(subnet_tag, payment_driver=None, payment_network=None, num_instan
                 SshService,
                 network=network,
                 num_instances=num_instances,
-                instance_params=[{"proxy": proxy} for _ in range(num_instances)],
+                instance_params=[{"proxy": proxy}
+                                 for _ in range(num_instances)],
             )
             instances = cluster.instances
 

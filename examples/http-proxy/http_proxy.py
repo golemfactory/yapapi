@@ -2,6 +2,13 @@
 """
 a simple http proxy example
 """
+from utils import (
+    TEXT_COLOR_CYAN,
+    TEXT_COLOR_DEFAULT,
+    build_parser,
+    print_env_info,
+    run_golem_example,
+)
 import asyncio
 from datetime import datetime, timedelta, timezone
 import pathlib
@@ -16,13 +23,6 @@ from yapapi.services import ServiceState
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
-from utils import (
-    TEXT_COLOR_CYAN,
-    TEXT_COLOR_DEFAULT,
-    build_parser,
-    print_env_info,
-    run_golem_example,
-)
 
 # the timeout after we commission our service instances
 # before we abort this script
@@ -59,7 +59,8 @@ class HttpService(HttpProxyService):
             "-c",
             f"echo {shlex.quote(msg)} > /usr/share/nginx/html/index.html",
         )
-        script.run("/bin/rm", "/var/log/nginx/access.log", "/var/log/nginx/error.log")
+        script.run("/bin/rm", "/var/log/nginx/access.log",
+                   "/var/log/nginx/error.log")
         script.run("/usr/sbin/nginx"),
         yield script
 

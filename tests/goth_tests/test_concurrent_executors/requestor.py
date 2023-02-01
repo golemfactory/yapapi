@@ -82,7 +82,8 @@ async def main():
 
         async def intermediate_tasks():
             async for task in computed_input_tasks:
-                print(f"ALEF computed task: {task.data} -> {task.result}", file=sys.stderr)
+                print(
+                    f"ALEF computed task: {task.data} -> {task.result}", file=sys.stderr)
                 yield Task(data=task.result)
 
         output_tasks = golem.execute_tasks(
@@ -94,7 +95,8 @@ async def main():
         )
 
         async for task in output_tasks:
-            print(f"BET computed task: {task.data} -> {task.result}", file=sys.stderr)
+            print(
+                f"BET computed task: {task.data} -> {task.result}", file=sys.stderr)
 
 
 if __name__ == "__main__":

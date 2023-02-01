@@ -30,8 +30,8 @@ from yapapi.props.inf import (
     InfBase,
 )
 
-_DEFAULT_REPO_SRV: Final[str] = "_girepo._tcp.dev.golem.network"
-_FALLBACK_REPO_URL: Final[str] = "http://girepo.dev.golem.network:8000"
+_DEFAULT_REPO_SRV: Final[str] = "_registry._tcp.dev.golem.network"
+_FALLBACK_REPO_URL: Final[str] = "http://girepo.new.golem.network:8000"
 _DEFAULT_TIMEOUT_SECONDS: Final[int] = 10
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,8 @@ class VmPackageFormat(Enum):
 
 @dataclass
 class VmRequest(ExeUnitRequest):
-    package_format: VmPackageFormat = prop_base.prop("golem.srv.comp.vm.package_format")
+    package_format: VmPackageFormat = prop_base.prop(
+        "golem.srv.comp.vm.package_format")
 
 
 @dataclass
@@ -71,14 +72,16 @@ class VmManifestRequest(ExeUnitManifestRequest):
 @dataclass(frozen=True)
 class _VmConstraints(Model):
     min_mem_gib: float = prop_base.constraint(inf.INF_MEM, operator=">=")
-    min_storage_gib: float = prop_base.constraint(inf.INF_STORAGE, operator=">=")
+    min_storage_gib: float = prop_base.constraint(
+        inf.INF_STORAGE, operator=">=")
     min_cpu_threads: int = prop_base.constraint(inf.INF_THREADS, operator=">=")
 
     capabilities: List[VmCaps] = prop_base.constraint(
         "golem.runtime.capabilities", operator="=", default_factory=list
     )
 
-    runtime: str = prop_base.constraint(inf.INF_RUNTIME_NAME, operator="=", default=RUNTIME_VM)
+    runtime: str = prop_base.constraint(
+        inf.INF_RUNTIME_NAME, operator="=", default=RUNTIME_VM)
 
     def __str__(self):
         return prop_base.join_str_constraints(prop_base.constraint_model_serialize(self))
@@ -148,7 +151,8 @@ async def manifest(
         )
     """
     capabilities = capabilities or list()
-    constraints = _VmConstraints(min_mem_gib, min_storage_gib, min_cpu_threads, capabilities)
+    constraints = _VmConstraints(
+        min_mem_gib, min_storage_gib, min_cpu_threads, capabilities)
 
     return _VmManifestPackage(
         manifest=manifest,
@@ -162,24 +166,32 @@ async def manifest(
 @dataclass
 class _VmPackage(Package):
     repo_url: str
-    image_hash: str
+    image_hash: Optional[str]
+    image_name: Optional[str]
     image_url: Optional[str]
     constraints: _VmConstraints
 
     async def resolve_url(self) -> str:
         if not self.image_url:
-            return await resolve_package_repo_url(self.repo_url, self.image_hash)
+            if self.image_hash:
+                return await resolve_package_repo_url(self.repo_url, image_hash=self.image_hash)
+            elif self.image_name:
+                return await resolve_package_repo_url(self.repo_url, image_name=self.image_name)
+            else:
+                raise ValueError("image_hash or image_name must be specified")
         return await resolve_package_url(self.image_url, self.image_hash)
 
     async def decorate_demand(self, demand: DemandBuilder):
         image_url = await self.resolve_url()
         demand.ensure(str(self.constraints))
-        demand.add(VmRequest(package_url=image_url, package_format=VmPackageFormat.GVMKIT_SQUASH))
+        demand.add(VmRequest(package_url=image_url,
+                   package_format=VmPackageFormat.GVMKIT_SQUASH))
 
 
 async def repo(
     *,
-    image_hash: str,
+    image_hash: Optional[str] = None,
+    image_name: Optional[str] = None,
     image_url: Optional[str] = None,
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,
@@ -189,7 +201,7 @@ async def repo(
     """
     Build a reference to application package.
 
-    :param image_hash: hash of the package's image
+    :param image: hash or tag of the package's image
     :param image_url: URL of the package's image
     :param min_mem_gib: minimal memory required to execute application code
     :param min_storage_gib: minimal disk storage to execute tasks
@@ -236,8 +248,10 @@ async def repo(
     return _VmPackage(
         repo_url=resolve_repo_srv(_DEFAULT_REPO_SRV),
         image_hash=image_hash,
+        image_name=image_name,
         image_url=image_url,
-        constraints=_VmConstraints(min_mem_gib, min_storage_gib, min_cpu_threads, capabilities),
+        constraints=_VmConstraints(
+            min_mem_gib, min_storage_gib, min_cpu_threads, capabilities),
     )
 
 
@@ -255,12 +269,15 @@ def resolve_repo_srv(
     """
     try:
         try:
-            srv: Optional[SRVRecord] = SRVResolver.resolve_random(repo_srv, timeout=timeout)
+            srv: Optional[SRVRecord] = SRVResolver.resolve_random(
+                repo_srv, timeout=timeout)
         except DNSException as e:
-            raise PackageException(f"Could not resolve Golem package repository address [{e}].")
+            raise PackageException(
+                f"Could not resolve Golem package repository address [{e}].")
 
         if not srv:
-            raise PackageException("Golem package repository is currently unavailable.")
+            raise PackageException(
+                "Golem package repository is currently unavailable.")
     except Exception as e:
         # this is a temporary fallback for a problem resolving the SRV record
         logger.warning(

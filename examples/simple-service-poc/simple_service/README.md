@@ -4,15 +4,15 @@ to the Yagna image repository.
 
 All Python scripts here are run within a VM on the Provider's end.
 
-The example (`../simple_service.py`) already contains the appropriate image hash 
+The example (`../simple_service.py`) already contains the appropriate image hash
 but if you'd like to experiment with it, feel free to re-build it.
 
 ## Building the image
 
 You'll need:
 
-* Docker: https://www.docker.com/products/docker-desktop
-* gvmkit-build: `pip install gvmkit-build`
+- Docker: https://www.docker.com/products/docker-desktop
+- gvmkit-build: `pip install gvmkit-build`
 
 Once you have those installed, run the following from this directory:
 

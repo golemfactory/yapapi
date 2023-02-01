@@ -131,7 +131,8 @@ async def test_demand_resubscription(
 
     configure_logging(log_dir)
 
-    goth_config = load_yaml(goth_config_path, config_overrides + [single_node_override])
+    goth_config = load_yaml(
+        goth_config_path, config_overrides + [single_node_override])
 
     vm_package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
@@ -139,7 +140,8 @@ async def test_demand_resubscription(
         min_storage_gib=2.0,
     )
 
-    runner = Runner(base_log_dir=log_dir, compose_config=goth_config.compose_config)
+    runner = Runner(base_log_dir=log_dir,
+                    compose_config=goth_config.compose_config)
 
     async with runner(goth_config.containers):
 
