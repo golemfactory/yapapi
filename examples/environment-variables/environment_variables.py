@@ -2,6 +2,7 @@ import asyncio
 from typing import AsyncIterable
 
 from yapapi import Golem, Task, WorkContext
+from yapapi.log import enable_default_logger
 from yapapi.payload import vm
 
 
@@ -33,4 +34,8 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    enable_default_logger(log_file="hello.log")
+
+    loop = asyncio.get_event_loop()
+    task = loop.create_task(main())
+    loop.run_until_complete(task)
