@@ -67,8 +67,10 @@ async def main(subnet_tag, driver=None, network=None):
         payment_driver=driver,
         payment_network=network,
     ) as golem:
+        network = await golem.create_network("192.168.8.0/24", owner_ip="192.168.8.12")
         cluster = await golem.run_service(
             OutboundGatewayRuntimeService,
+            network=network,
         )
 
         def instances():
