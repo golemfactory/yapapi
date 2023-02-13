@@ -1,7 +1,7 @@
 #!/usr/local/bin/python
-"""
-a very basic "stub" that exposes a few commands of an imagined, very simple CLI-based
-service that is able to accumulate some linear, time-based values and present it stats
+"""A very basic "stub" that exposes a few commands of an imagined, very simple CLI-based service.
+
+Service is able to accumulate some linear, time-based values and present it stats
 (characteristics of the statistical distribution of the data collected so far) or provide
 distribution and time-series plots of the collected data.
 

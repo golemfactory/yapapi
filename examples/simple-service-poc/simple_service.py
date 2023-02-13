@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-the requestor agent controlling and interacting with the "simple service"
-"""
+"""The requestor agent controlling and interacting with the "simple service"."""
 import asyncio
 import pathlib
 import random
@@ -54,7 +52,7 @@ class SimpleService(Service):
         )
 
     async def start(self):
-        """handler responsible for starting the service."""
+        """Handle starting the service."""
 
         # perform the initialization of the Service
         async for script in super().start():
@@ -147,7 +145,7 @@ async def main(
 
         def print_instances():
             print(
-                f"instances: "
+                "instances: "
                 + str(
                     [
                         f"{s.name}: {s.state.value}"

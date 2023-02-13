@@ -1,6 +1,5 @@
 #!/usr/local/bin/python
-"""
-the "hello world" service here just adds randomized numbers with normal distribution
+"""The "hello world" service here just adds randomized numbers with normal distribution.
 
 in a real-world example, this could be e.g. a thermometer connected to the provider's
 machine providing its inputs into the database or some other piece of information

@@ -2,23 +2,19 @@
 
 """Other version of the blender example.
 
-Instead of using Golem in the default way - as a context manager - we directly call `Golem.start()` and `Golem.stop()`.
-This way of using Golem might be more convenient for some specific use cases (although doesn't change a lot
-in the blender example).
+Instead of using Golem in the default way - as a context manager - we directly call `Golem.start()`
+and `Golem.stop()`. This way of using Golem might be more convenient for some specific use cases
+(although doesn't change a lot in the blender example).
 """
 
 import pathlib
-import sys
 from datetime import datetime, timedelta
 
 from yapapi import Golem, Task, WorkContext
 from yapapi.payload import vm
 from yapapi.rest.activity import BatchTimeoutError
 
-examples_dir = pathlib.Path(__file__).resolve().parent.parent
-sys.path.append(str(examples_dir))
-
-from utils import (
+from ..utils import (
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_MAGENTA,

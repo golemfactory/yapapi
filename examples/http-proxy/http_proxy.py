@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-a simple http proxy example
-"""
+"""A simple http proxy example."""
 import asyncio
 import pathlib
 import shlex
@@ -123,7 +121,8 @@ async def main(subnet_tag, payment_driver, payment_network, num_instances, port,
         await proxy.run()
 
         print(
-            f"{TEXT_COLOR_CYAN}Local HTTP server listening on:\nhttp://localhost:{port}{TEXT_COLOR_DEFAULT}"
+            f"{TEXT_COLOR_CYAN}Local HTTP server listening on:\n"
+            f"http://localhost:{port}{TEXT_COLOR_DEFAULT}"
         )
 
         # wait until Ctrl-C
@@ -177,7 +176,7 @@ if __name__ == "__main__":
         ),
     )
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
-    parser.set_defaults(log_file=f"http_proxy-{now}.log")
+    parser.set_defaults(log_file=f"http-proxy-{now}.log")
     args = parser.parse_args()
 
     run_golem_example(

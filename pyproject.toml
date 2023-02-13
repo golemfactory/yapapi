@@ -90,7 +90,7 @@ pyproject-autoflake = "^1.0.2" # TODO: Remove this after upgrading to Python 3.8
 [tool.poe.tasks]
 checks = {sequence = ["checks_codestyle", "checks_typing", "checks_license"], help = "Run all available code checks"}
 checks_codestyle = {sequence = ["_checks_codestyle_flake8", "_checks_codestyle_isort", "_checks_codestyle_black"], help = "Run only code style checks"}
-_checks_codestyle_flake8 = "flake8 yapapi tests"
+_checks_codestyle_flake8 = "flake8 yapapi tests examples/*"
 _checks_codestyle_isort = "isort --check-only --diff ."
 _checks_codestyle_black = "black --check --diff ."
 checks_typing  = {cmd = "mypy .", help = "Run only code typing checks" }
@@ -165,6 +165,9 @@ extend-ignore = [
     "D104", # No docs for public package
     "D107", # No docs for __init__
     "D202", # We prefer whitelines after docstrings
+]
+per-file-ignores = [
+    "examples/*:E402",
 ]
 
 [tool.mypy]
