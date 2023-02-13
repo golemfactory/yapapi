@@ -16,13 +16,11 @@ from yapapi.props.base import constraint, prop
 from yapapi.services import Service
 
 RUNTIME_NAME = "outbound-gateway"
-MANIFEST_PROPERTY = "golem.srv.comp.payload.@tag"
 CAPABILITIES = "golem.runtime.capabilities"
 
 
 @dataclass
 class GatewayPayload(Payload):
-    manifest_property: str = prop(MANIFEST_PROPERTY)
     runtime: str = constraint(inf.INF_RUNTIME_NAME, default=RUNTIME_NAME)
     capabilities: str = constraint(CAPABILITIES, default=RUNTIME_NAME)
 
@@ -30,9 +28,7 @@ class GatewayPayload(Payload):
 class OutboundGatewayRuntimeService(Service):
     @staticmethod
     async def get_payload():
-        manifest = open("manifest.json", "rb").read()
-        manifest = base64.b64encode(manifest).decode("utf-8")
-        return GatewayPayload(manifest_property=manifest, capabilities=[vm.VM_CAPS_VPN, vm.VM_CAPS_MANIFEST_SUPPORT, "net-gateway"])
+        return GatewayPayload(capabilities=[vm.VM_CAPS_VPN, "gateway"])
 
     async def run(self):
         # Perform mock command on runtime to check if it works
