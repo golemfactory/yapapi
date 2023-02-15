@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import asyncio
+import pathlib
+import sys
 from datetime import datetime, timedelta
 
 from yapapi import Golem
@@ -7,7 +9,10 @@ from yapapi.contrib.service.http_proxy import HttpProxyService, LocalHttpProxy
 from yapapi.payload import vm
 from yapapi.services import Service, ServiceState
 
-from ..utils import (
+examples_dir = pathlib.Path(__file__).resolve().parent.parent
+sys.path.append(str(examples_dir))
+
+from utils import (
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
     build_parser,

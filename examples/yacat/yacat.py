@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import argparse
 import math
+import pathlib
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 from tempfile import gettempdir
@@ -11,7 +13,11 @@ from yapapi.events import CommandExecuted
 from yapapi.payload import vm
 from yapapi.rest.activity import CommandExecutionError
 
-from ..utils import (
+examples_dir = pathlib.Path(__file__).resolve().parent.parent
+sys.path.append(str(examples_dir))
+
+
+from utils import (
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_GREEN,

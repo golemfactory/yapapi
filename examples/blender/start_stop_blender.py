@@ -8,13 +8,17 @@ and `Golem.stop()`. This way of using Golem might be more convenient for some sp
 """
 
 import pathlib
+import sys
 from datetime import datetime, timedelta
 
 from yapapi import Golem, Task, WorkContext
 from yapapi.payload import vm
 from yapapi.rest.activity import BatchTimeoutError
 
-from ..utils import (
+examples_dir = pathlib.Path(__file__).resolve().parent.parent
+sys.path.append(str(examples_dir))
+
+from utils import (
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_MAGENTA,
