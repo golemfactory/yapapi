@@ -102,6 +102,8 @@ if __name__ == "__main__":
         type=int,
         help="How long should the the service run (in seconds, default: %(default)s)",
     )
+    now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
+    parser.set_defaults(log_file=f"custom-counters-yapapi-{now}.log")
     args = parser.parse_args()
     enable_default_logger(
         log_file=args.log_file,
