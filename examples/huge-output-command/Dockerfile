@@ -1,5 +1,5 @@
 FROM alpine:3.17.2
 
-RUN apk add --no-cache bash
+COPY create_input_file.sh .
 
-RUN yes "Hello from Golem" | head -n 100000 > hello-from-golem.txt
+RUN ./create_input_file.sh
