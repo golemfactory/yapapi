@@ -22,7 +22,7 @@ jobs:
       - name: Configure python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.8.0'
+          python-version: '3.8'
 
       - name: Configure poetry
         uses: Gr1N/setup-poetry@v8
@@ -32,7 +32,7 @@ jobs:
       - name: Install dependencies
         run: |
           poetry env use python3.8
-          poetry install -E integration-tests
+          poetry install
 
       - name: Disconnect Docker containers from default network
         continue-on-error: true
