@@ -109,5 +109,3 @@ def log_dir() -> Path:
 @pytest.fixture(scope="session")
 def goth_config_path(request) -> Path:
     return request.config.option.config_path
-
-

@@ -99,8 +99,6 @@ async def test_power_outage(
             await cmd_monitor.wait_for_pattern(".*Unpaid agreements: .*")
             logger.info("Expected 1 unpaid agreement")
 
-            await cmd_monitor.wait_for_pattern(
-                f".*Golem engine has shut down", timeout=120
-            )
+            await cmd_monitor.wait_for_pattern(f".*Golem engine has shut down", timeout=120)
 
             logger.info("Requestor script finished")

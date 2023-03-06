@@ -96,7 +96,5 @@ async def test_run_yacat(
             await cmd_monitor.wait_for_pattern(".*Password found: yo", timeout=60)
             logger.info("Password found, waiting for Golem shutdown")
 
-            await cmd_monitor.wait_for_pattern(
-                f".*Golem engine has shut down", timeout=120
-            )
+            await cmd_monitor.wait_for_pattern(f".*Golem engine has shut down", timeout=120)
             logger.info("Requestor script finished")

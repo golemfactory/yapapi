@@ -82,8 +82,6 @@ async def test_run_blender(
             await all_computed.wait_for_result(timeout=120)
             logger.info("All tasks computed, waiting for Golem shutdown")
 
-            await cmd_monitor.wait_for_pattern(
-                f".*Golem engine has shut down", timeout=120
-            )
+            await cmd_monitor.wait_for_pattern(f".*Golem engine has shut down", timeout=120)
 
             logger.info("Requestor script finished")
