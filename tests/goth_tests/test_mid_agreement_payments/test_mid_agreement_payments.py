@@ -12,9 +12,7 @@ from goth.runner import Runner
 from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
 
-from yapapi.strategy import DEBIT_NOTE_INTERVAL_GRACE_PERIOD
-
-from . import requestor_agent
+DEBIT_NOTE_INTERVAL_GRACE_PERIOD = 30
 
 logger = logging.getLogger("goth.test.mid_agreement_payments")
 
@@ -64,7 +62,7 @@ async def test_mid_agreement_payments(
         # given
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
         # when
-        async with requestor.run_command_on_host(requestor_agent.__file__, env=os.environ) as (
+        async with requestor.run_command_on_host("requestor_agent.py", env=os.environ) as (
             _,
             cmd_monitor,
             _,

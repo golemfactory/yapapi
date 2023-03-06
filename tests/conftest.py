@@ -1,9 +1,6 @@
 import os
 import pytest
 
-from yapapi.config import ApiConfig
-from yapapi.golem import Golem
-
 
 def pytest_addoption(parser):
 

@@ -57,8 +57,8 @@ jobs:
         env:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          poetry run poe goth-assets
-          poetry run poe goth-tests
+          poetry run poe gothv-prepare
+          poetry run poe gothv-tests
 
       - name: Upload test logs
         uses: actions/upload-artifact@v2

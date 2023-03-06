@@ -10,8 +10,6 @@ from goth.runner import Runner
 from goth.runner.log import configure_logging
 from goth.runner.probe import ProviderProbe, RequestorProbe
 
-from yapapi.log import SummaryLogger
-
 from .assertions import assert_no_errors, assert_tasks_processed
 
 logger = logging.getLogger("goth.test.power_outage")
@@ -102,7 +100,7 @@ async def test_power_outage(
             logger.info("Expected 1 unpaid agreement")
 
             await cmd_monitor.wait_for_pattern(
-                f".*{SummaryLogger.GOLEM_SHUTDOWN_SUCCESSFUL_MESSAGE}", timeout=120
+                f".*Golem engine has shut down", timeout=120
             )
 
             logger.info("Requestor script finished")
