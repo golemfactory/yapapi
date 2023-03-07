@@ -25,7 +25,7 @@ async def main():
     first_task = True
 
     async def duplicator(work_ctx, tasks):
-        """A worker that executes `echo {task.data} {task.data}` command on provider.
+        """Execute `echo {task.data} {task.data}` command on provider as a worker.
 
         The command's output is the result of the whole task.
 

@@ -1,5 +1,6 @@
-import factory
 from unittest import mock
+
+import factory
 
 from yapapi.events import AgreementConfirmed, AgreementEvent, AgreementRejected
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import asyncio
-from datetime import datetime, timedelta
 import pathlib
 import sys
+from datetime import datetime, timedelta
 
 from yapapi import Golem
 from yapapi.contrib.service.http_proxy import HttpProxyService, LocalHttpProxy
@@ -50,12 +50,18 @@ class HttpService(HttpProxyService):
         script.run(
             "/bin/bash",
             "-c",
-            f"cd /webapp && python app.py --db-address {self._db_address} --db-port {self._db_port} initdb",
+            f"cd /webapp && python app.py "
+            f"--db-address {self._db_address} "
+            f"--db-port {self._db_port}"
+            f" initdb",
         )
         script.run(
             "/bin/bash",
             "-c",
-            f"cd /webapp && python app.py --db-address {self._db_address} --db-port {self._db_port} run > /webapp/out 2> /webapp/err &",
+            f"cd /webapp && python app.py "
+            f"--db-address {self._db_address} "
+            f"--db-port {self._db_port} "
+            f"run > /webapp/out 2> /webapp/err &",
         )
         yield script
 
@@ -144,7 +150,8 @@ async def main(subnet_tag, payment_driver, payment_network, port):
             await proxy.run()
 
             print(
-                f"{TEXT_COLOR_CYAN}Local HTTP server listening on:\nhttp://localhost:{port}{TEXT_COLOR_DEFAULT}"
+                f"{TEXT_COLOR_CYAN}Local HTTP server listening on:\n"
+                f"http://localhost:{port}{TEXT_COLOR_DEFAULT}"
             )
 
             # wait until Ctrl-C

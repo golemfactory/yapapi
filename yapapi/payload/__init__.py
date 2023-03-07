@@ -4,7 +4,7 @@ from yapapi.props.builder import AutodecoratingModel
 
 
 class Payload(AutodecoratingModel, abc.ABC):
-    """Base class for descriptions of the payload required by the requestor.
+    r"""Base class for descriptions of the payload required by the requestor.
 
     example usage::
 
@@ -40,4 +40,4 @@ class Payload(AutodecoratingModel, abc.ABC):
     output::
 
         {'properties': {'golem.srv.app.myprop': 'othervalue'}, 'constraints': ['(&(golem.runtime.name=my-runtime)\n\t(golem.inf.mem.gib>=32)\n\t(golem.inf.storage.gib>=1024))']}
-    """
+    """  # noqa: E501

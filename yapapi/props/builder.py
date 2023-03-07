@@ -1,11 +1,12 @@
 import abc
-from dataclasses import asdict
-from datetime import datetime
 import enum
+from datetime import datetime
 from typing import List
 
-from . import Model
+from dataclasses import asdict
+
 from ..rest.market import Market, Subscription
+from . import Model
 from .base import constraint_model_serialize, join_str_constraints
 
 
@@ -39,7 +40,6 @@ class DemandBuilder:
     def __init__(self):
         self._properties: dict = {}
         self._constraints: List[str] = []
-        pass
 
     def __repr__(self):
         return repr({"properties": self._properties, "constraints": self._constraints})
@@ -89,16 +89,17 @@ class DemandBuilder:
 
 
 class DemandDecorator(abc.ABC):
-    """An interface that specifies classes that can add properties and constraints through a DemandBuilder"""
+    """An interface that specifies classes that can add properties and constraints through a \
+    DemandBuilder."""
 
     @abc.abstractmethod
     async def decorate_demand(self, demand: DemandBuilder) -> None:
-        """Add appropriate properties and constraints to a Demand"""
+        """Add appropriate properties and constraints to a Demand."""
 
 
 class AutodecoratingModel(Model, DemandDecorator):
-    """
-    Base class, implementing the DemandDecorator interface to automatically decorate a demand using the model's properties and constraints.
+    """Base class, implementing the DemandDecorator interface to automatically decorate a demand \
+    using the model's properties and constraints.
 
     example:
     ```python

@@ -1,7 +1,8 @@
-from dataclasses import dataclass, field
-from functools import partial
 import os
+from functools import partial
 from typing import Optional
+
+from dataclasses import dataclass, field
 
 
 class MissingConfiguration(Exception):
@@ -15,13 +16,15 @@ class MissingConfiguration(Exception):
 
 @dataclass
 class ApiConfig:
-    """
-    Yagna low level API configuration
+    """Yagna low level API configuration.
+
     Attributes:
         app_key: Yagna application key.
-            If not provided, the default is to get the value from `YAGNA_APPKEY` environment variable.
+            If not provided, the default is to get the value from `YAGNA_APPKEY` environment
+            variable.
             If no value will be found MissingConfiguration error will be thrown
-        api_url: base URL or all REST API URLs. Example value: http://127.0.10.10:7500 (no trailing slash).
+        api_url: base URL or all REST API URLs. Example value: http://127.0.10.10:7500
+            (no trailing slash).
             Uses YAGNA_API_URL environment variable
         market_url: If not provided `api_url` will be used to construct it.
             Uses YAGNA_MARKET_URL environment variable
@@ -33,8 +36,13 @@ class ApiConfig:
             Uses YAGNA_ACTIVITY_URL environment variable
     """
 
-    app_key: str = field(default_factory=partial(os.getenv, "YAGNA_APPKEY"))  # type: ignore[assignment]
-    api_url: str = field(default_factory=partial(os.getenv, "YAGNA_API_URL", "http://127.0.0.1:7465"))  # type: ignore[assignment]
+    app_key: str = field(  # type: ignore[assignment]
+        default_factory=partial(os.getenv, "YAGNA_APPKEY"),
+    )
+
+    api_url: str = field(  # type: ignore[assignment]
+        default_factory=partial(os.getenv, "YAGNA_API_URL", "http://127.0.0.1:7465"),
+    )
     market_url: Optional[str] = field(default_factory=partial(os.getenv, "YAGNA_MARKET_URL"))
     payment_url: Optional[str] = field(default_factory=partial(os.getenv, "YAGNA_PAYMENT_URL"))
     net_url: Optional[str] = field(default_factory=partial(os.getenv, "YAGNA_NET_URL"))

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import asyncio
-from datetime import datetime, timedelta
 import pathlib
 import random
 import string
 import sys
+from datetime import datetime, timedelta
 
 from yapapi import Golem
 from yapapi.contrib.service.socket_proxy import SocketProxy, SocketProxyService
@@ -22,7 +22,6 @@ from utils import (
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_RED,
-    TEXT_COLOR_YELLOW,
     build_parser,
     print_env_info,
     run_golem_example,

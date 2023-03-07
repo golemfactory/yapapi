@@ -1,13 +1,12 @@
 from decimal import Decimal
 from itertools import product
-import pytest
 from unittest.mock import Mock
+
+import pytest
 
 from tests.factories.golem import GolemFactory
 from tests.factories.rest.market import OfferProposalFactory
-from yapapi import Golem
 from yapapi.props.com import Counter
-import yapapi.rest.configuration
 from yapapi.strategy import (
     SCORE_NEUTRAL,
     SCORE_REJECTED,
@@ -78,12 +77,12 @@ async def test_LeastExpensiveLinearPayuMS_price_caps():
             (None, time_price - epsilon, time_price, time_price + epsilon),
             (None, fixed_price - epsilon, fixed_price, fixed_price + epsilon),
         ):
-            if cpu_price_cap == time_price_cap == fixed_price_cap == None:
+            if cpu_price_cap is time_price_cap is fixed_price_cap is None:
                 strategies = (
                     LeastExpensiveLinearPayuMS(),
                     LeastExpensiveLinearPayuMS(max_price_for={}),
                 )
-            elif cpu_price_cap == time_price_cap == None:
+            elif cpu_price_cap is time_price_cap is None:
                 strategies = (
                     LeastExpensiveLinearPayuMS(max_fixed_price=fixed_price_cap),
                     LeastExpensiveLinearPayuMS(max_fixed_price=fixed_price_cap, max_price_for={}),

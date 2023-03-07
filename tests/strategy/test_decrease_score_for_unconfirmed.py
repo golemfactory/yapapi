@@ -1,4 +1,5 @@
 import asyncio
+
 import pytest
 
 from tests.factories.events import AgreementConfirmedFactory as AgreementConfirmed
@@ -33,7 +34,7 @@ async def test_6():
 @pytest.mark.asyncio
 @pytest.mark.parametrize("events_def, decreased_providers", sample_data)
 async def test_decrease_score_for(events_def, decreased_providers):
-    """Test if DecreaseScoreForUnconfirmedAgreement works as expected"""
+    """Test if DecreaseScoreForUnconfirmedAgreement works as expected."""
     strategy = DecreaseScoreForUnconfirmedAgreement(Always6(), 0.5)
 
     for event_cls, event_provider_id in events_def:
@@ -47,16 +48,14 @@ async def test_decrease_score_for(events_def, decreased_providers):
 
 
 def empty_event_consumer(event):
-    """To silience the default logger - it doesn't work with mocked events"""
-    pass
+    """To silience the default logger - it doesn't work with mocked events."""
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("events_def, decreased_providers", sample_data)
 async def test_full_DSFUA_workflow(dummy_yagna_engine, events_def, decreased_providers):
-    """Test if DecreaseScoreForUnconfirmedAgreement is correctly initialized as a default strategy
-
-    that is - if events emitted by the engine reach the event consumer of the default strategy"""
+    """Test if DecreaseScoreForUnconfirmedAgreement is correctly initialized as a default strategy \
+    that is - if events emitted by the engine reach the event consumer of the default strategy."""
 
     golem = Golem(budget=1, event_consumer=empty_event_consumer, app_key="NOT_A_REAL_APPKEY")
     async with golem:

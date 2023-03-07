@@ -1,6 +1,7 @@
+from unittest import mock
+
 from dns.exception import DNSException
 from srvresolver.srv_resolver import SRVRecord  # type: ignore
-from unittest import mock
 
 from yapapi.payload.vm import _FALLBACK_REPO_URL, resolve_repo_srv
 

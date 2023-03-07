@@ -2,21 +2,20 @@
 import asyncio
 import logging
 import os
-from pathlib import Path
-import pexpect
-import pytest
 import re
 import signal
-import sys
-import time
+from pathlib import Path
 from typing import List
+
+import pexpect
+import pytest
 
 from goth.configuration import Override, load_yaml
 from goth.runner import Runner
 from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
 
-from goth_tests.assertions import assert_all_invoices_accepted, assert_no_errors  # isort:skip
+from tests.goth_tests.assertions import assert_all_invoices_accepted, assert_no_errors  # isort:skip
 
 logger = logging.getLogger("goth.test.recycle_ips")
 

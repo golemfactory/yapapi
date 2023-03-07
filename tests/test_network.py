@@ -1,7 +1,8 @@
-import pytest
-from statemachine.exceptions import TransitionNotAllowed
 import sys
 from unittest import mock
+
+import pytest
+from statemachine.exceptions import TransitionNotAllowed
 
 from yapapi.network import Network, NetworkError, NetworkState
 
@@ -106,9 +107,9 @@ class TestNetwork:
 
     @pytest.mark.asyncio
     async def test_id_when_initialized(self):
-        network = Network(mock.Mock(), f"192.168.0.0/24", "0xdeadbeef")
-        with pytest.raises(TransitionNotAllowed, match=".*Can't get_id when in initialized.*") as e:
-            im_gonna_fail = network.network_id
+        network = Network(mock.Mock(), "192.168.0.0/24", "0xdeadbeef")
+        with pytest.raises(TransitionNotAllowed, match=".*Can't get_id when in initialized.*"):
+            getattr(network, "network_id")
 
     @pytest.mark.asyncio
     async def test_id_when_removed(self):
@@ -117,8 +118,8 @@ class TestNetwork:
 
         await network.remove()
 
-        with pytest.raises(TransitionNotAllowed, match=".*Can't get_id when in removed.*") as e:
-            im_gonna_fail = network.network_id
+        with pytest.raises(TransitionNotAllowed, match=".*Can't get_id when in removed.*"):
+            getattr(network, "network_id")
 
     @pytest.mark.asyncio
     async def test_remove(self):
@@ -130,8 +131,8 @@ class TestNetwork:
 
     @pytest.mark.asyncio
     async def test_remove_when_initialized(self):
-        network = Network(mock.Mock(), f"192.168.0.0/24", "0xdeadbeef")
-        with pytest.raises(TransitionNotAllowed, match=".*Can't stop when in initialized.*") as e:
+        network = Network(mock.Mock(), "192.168.0.0/24", "0xdeadbeef")
+        with pytest.raises(TransitionNotAllowed, match=".*Can't stop when in initialized.*"):
             await network.remove()
 
     @pytest.mark.asyncio
@@ -140,7 +141,7 @@ class TestNetwork:
 
         await network.remove()
 
-        with pytest.raises(TransitionNotAllowed, match=".*Can't stop when in removed.*") as e:
+        with pytest.raises(TransitionNotAllowed, match=".*Can't stop when in removed.*"):
             await network.remove()
 
     @pytest.mark.asyncio

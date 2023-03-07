@@ -2,13 +2,14 @@
 import asyncio
 import logging
 import os
-from pathlib import Path
-import pexpect
-import pytest
 import re
 import signal
 import time
+from pathlib import Path
 from typing import List
+
+import pexpect
+import pytest
 
 from goth.configuration import Override, load_yaml
 from goth.runner import Runner

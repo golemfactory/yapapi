@@ -1,8 +1,9 @@
 import asyncio
 from concurrent import futures
+from unittest import mock
+
 import factory
 import faker
-from unittest import mock
 
 from yapapi.network import Network
 

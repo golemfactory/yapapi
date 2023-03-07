@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-from collections import defaultdict
 import itertools
 import pathlib
 import sys
+from collections import defaultdict
 
 from yapapi import Golem, Task, WorkContext
 from yapapi.payload import vm
@@ -21,11 +21,13 @@ TASK_CMD = ["/usr/local/bin/python", "-c", "for i in range(10000000): i * 7"]
 
 
 class FastestProviderStrategy(MarketStrategy):
-    """Strategy that ignores all offer parameters (including pricing) and just selects the fastest provider.
+    """Strategy that ignores all offer parameters (including pricing) and just selects the fastest \
+    provider.
 
     Decision algorithm:
     * we always try any new provider
-    * if there are no new providers, we select the one with shortest average execution time in past runs
+    * if there are no new providers, we select the one with shortest average execution time in past
+      runs
     """
 
     def __init__(self):
@@ -45,7 +47,8 @@ class FastestProviderStrategy(MarketStrategy):
             #   Non-draft offers are not shown to limit the number of lines printed
             if previous_runs:
                 print(
-                    f"Scored known provider: {provider_id}: {score} ({len(previous_runs)} runs, avg time {avg_time})"
+                    f"Scored known provider: {provider_id}: "
+                    f"{score} ({len(previous_runs)} runs, avg time {avg_time})"
                 )
             else:
                 print(f"Found new provider: {provider_id}, default score {SCORE_TRUSTED}")

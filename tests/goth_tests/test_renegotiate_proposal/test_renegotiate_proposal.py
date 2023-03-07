@@ -1,8 +1,9 @@
 import logging
 import os
 from pathlib import Path
-import pytest
 from typing import List
+
+import pytest
 
 from goth.configuration import Override, load_yaml
 from goth.runner import Runner
