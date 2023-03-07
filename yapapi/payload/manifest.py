@@ -1,17 +1,18 @@
-from datetime import datetime
-from dateutil.tz import UTC
 import sys
+from datetime import datetime
 from typing import Dict, List, Optional
 
-from yapapi.payload import vm
-from yapapi.utils import explode_dict
+from dataclasses import dataclass, field
 
 if sys.version_info >= (3, 8):
     from typing import Literal
 else:
     from typing_extensions import Literal
 
-from dataclasses import dataclass, field
+from dateutil.tz import UTC
+
+from yapapi.payload import vm
+from yapapi.utils import explode_dict
 
 
 @dataclass

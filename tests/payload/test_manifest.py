@@ -1,8 +1,9 @@
-from datetime import datetime
-from dateutil.tz import UTC
 import json
-import pytest
+from datetime import datetime
 from unittest import mock
+
+import pytest
+from dateutil.tz import UTC
 
 from yapapi.payload.manifest import (
     CompManifest,
