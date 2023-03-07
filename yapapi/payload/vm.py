@@ -90,6 +90,7 @@ class _VmManifestPackage(Package):
     manifest_sig: Optional[str]
     manifest_sig_algorithm: Optional[str]
     manifest_cert: Optional[str]
+    node_descriptor: Optional[str]
     constraints: _VmConstraints
 
     async def resolve_url(self) -> str:
@@ -103,6 +104,7 @@ class _VmManifestPackage(Package):
                 manifest_sig=self.manifest_sig,
                 manifest_sig_algorithm=self.manifest_sig_algorithm,
                 manifest_cert=self.manifest_cert,
+                node_descriptor=self.node_descriptor,
                 package_format=VmPackageFormat.GVMKIT_SQUASH,
             )
         )
@@ -113,6 +115,7 @@ async def manifest(
     manifest_sig: Optional[str] = None,
     manifest_sig_algorithm: Optional[str] = None,
     manifest_cert: Optional[str] = None,
+    node_descriptor: Optional[str] = None,
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,
     min_cpu_threads: int = 1,
@@ -155,6 +158,7 @@ async def manifest(
         manifest_sig=manifest_sig,
         manifest_sig_algorithm=manifest_sig_algorithm,
         manifest_cert=manifest_cert,
+        node_descriptor=node_descriptor,
         constraints=constraints,
     )
 

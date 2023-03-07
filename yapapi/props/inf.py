@@ -45,6 +45,7 @@ class ExeUnitManifestRequest(Model):
         "golem.srv.comp.payload.sig.algorithm", default=None
     )
     manifest_cert: Optional[str] = prop("golem.srv.comp.payload.cert", default=None)
+    node_descriptor: Optional[str] = prop("golem.node.descriptor", default=None)
 
 
 @deprecated(version="0.6.0", reason="this is part of yapapi.payload.vm now")
