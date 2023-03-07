@@ -4,7 +4,7 @@ A local HTTP proxy that enables easy connections to any VPN-enabled, HTTP-based 
 Golem providers using yapapi's Services API.
 
 For usage in a complete requestor agent app, see the
-`http_proxy <https://github.com/golemfactory/yapapi/tree/master/examples/http-proxy>`_ and
+`http-proxy <https://github.com/golemfactory/yapapi/tree/master/examples/http-proxy>`_ and
 `webapp <https://github.com/golemfactory/yapapi/tree/master/examples/webapp>`_ examples in the
 yapapi repository.
 """
