@@ -18,6 +18,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      
+      - name: Lucjan debug 1
+        run: |
+          pwd
+          ls -al
+          ls -al .github/workflows/
+          cat .github/workflows/goth.yml
+          ls -al tests/goth_tests/
+          cat tests/goth_tests/test_run_webapp.py
 
       - name: Configure python
         uses: actions/setup-python@v4
@@ -52,6 +61,15 @@ jobs:
 
       - name: Log in to GitHub Docker repository
         run: echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{github.actor}} --password-stdin
+
+      - name: Lucjan debug 2
+        run: |
+          pwd
+          ls -al
+          ls -al .github/workflows/
+          cat .github/workflows/goth.yml
+          ls -al tests/goth_tests/
+          cat tests/goth_tests/test_run_webapp.py
 
       - name: Run test suite
         env:
