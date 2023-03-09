@@ -25,9 +25,9 @@ jobs:
           python-version: '3.8.0'
 
       - name: Configure poetry
-        uses: Gr1N/setup-poetry@v4
+        uses: Gr1N/setup-poetry@v8
         with:
-          poetry-version: 1.1.6
+          poetry-version: 1.2.2
 
       - name: Install dependencies
         run: |
