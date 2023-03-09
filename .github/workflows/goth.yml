@@ -53,6 +53,9 @@ jobs:
       - name: Log in to GitHub Docker repository
         run: echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{github.actor}} --password-stdin
 
+      - name: Lucjan debug
+        run: cat tests/goth_tests/test_run_webapp.py
+
       - name: Run test suite
         env:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
