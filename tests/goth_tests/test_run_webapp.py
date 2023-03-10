@@ -28,7 +28,7 @@ port = get_free_port()
 ONELINER_URL = f"http://localhost:{port}/"
 
 
-@pytest.mark.skip  # TODO: https://github.com/golemfactory/yagna/issues/2387
+# @pytest.mark.skip  # TODO: https://github.com/golemfactory/yagna/issues/2387
 @pytest.mark.asyncio
 async def test_run_webapp(
     log_dir: Path,
