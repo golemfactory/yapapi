@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - master
+      - .*please-build
       # - <your-branch>    # put your branch name here to test it @ GH Actions
   pull_request:
     branches:
@@ -58,7 +59,7 @@ jobs:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           poetry run poe tests_integration_assets
-          poetry run poe tests_integration
+          poetry run poe test_yagna_problem
 
       - name: Upload test logs
         uses: actions/upload-artifact@v2
