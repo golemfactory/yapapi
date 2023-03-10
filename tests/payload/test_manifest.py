@@ -170,7 +170,7 @@ def test_manifest_to_dict_missing_values(
 
 def test_manifest_to_json(manifest_obj, manifest_dict):
     manifest_obj_json = json.dumps(manifest_obj.dict())
-    manifest_dict_json = json.dumps(manifest_obj.dict())
+    manifest_dict_json = json.dumps(manifest_dict)
 
     assert json.loads(manifest_obj_json) == json.loads(manifest_dict_json)
 
@@ -285,6 +285,7 @@ async def test_manifest_payload_resolve_urls_from_hash():
     ]
 
 
+@mock.patch("yapapi.payload.vm.repo", mock.AsyncMock(**{'return_value.resolve_url': mock.AsyncMock(return_value='dupa')}))
 @pytest.mark.asyncio
 async def test_manifest_payload_resolve_urls_from_hash_is_not_duplicating_or_overriding_values():
     urls = [
