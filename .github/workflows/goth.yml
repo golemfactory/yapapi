@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - master
-      - .*please-build
       # - <your-branch>    # put your branch name here to test it @ GH Actions
   pull_request:
     branches:
