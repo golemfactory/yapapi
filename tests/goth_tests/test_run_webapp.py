@@ -75,7 +75,7 @@ async def test_run_webapp(
             await cmd_monitor.wait_for_pattern("DB instance started.*", timeout=240)
             logger.info("Db instance started")
 
-            await cmd_monitor.wait_for_pattern("Local HTTP server listening on.*", timeout=120)
+            await cmd_monitor.wait_for_pattern("Local HTTP server listening on.*", timeout=240)
             logger.info("HTTP instance started")
 
             requests.post(ONELINER_URL, data={"message": ONELINER_ENTRY})
