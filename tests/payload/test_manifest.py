@@ -269,6 +269,12 @@ def test_manifest_generate(mocked_datetime):
     }
 
 
+@mock.patch(
+    "yapapi.payload.vm.repo",
+    mock.AsyncMock(
+        **{"return_value.resolve_url.return_value": "hash:sha3:some_image_hash:some_image_url"}
+    ),
+)
 @pytest.mark.asyncio
 async def test_manifest_payload_resolve_urls_from_hash():
     payload = ManifestPayload(
@@ -280,24 +286,27 @@ async def test_manifest_payload_resolve_urls_from_hash():
     await payload.resolve_urls_from_hash()
 
     assert payload.urls == [
-        "http://girepo.dev.golem.network:8000/"
-        "docker-gas_scanner_backend_image-latest-91c471517a.gvmi",
+        "some_image_url",
     ]
 
 
-@mock.patch("yapapi.payload.vm.repo", mock.AsyncMock(**{'return_value.resolve_url': mock.AsyncMock(return_value='dupa')}))
+@mock.patch(
+    "yapapi.payload.vm.repo",
+    mock.AsyncMock(
+        **{"return_value.resolve_url.return_value": "hash:sha3:some_image_hash:some_image_url"}
+    ),
+)
 @pytest.mark.asyncio
 async def test_manifest_payload_resolve_urls_from_hash_is_not_duplicating_or_overriding_values():
     urls = [
-        "some url",
-        "http://girepo.dev.golem.network:8000/"
-        "docker-gas_scanner_backend_image-latest-91c471517a.gvmi",
-        "other url",
+        "some_url",
+        "some_image_url",
+        "other_url",
     ]
 
     payload = ManifestPayload(
         hash="05270a8a938ff5f5e30b0e61bc983a8c3e286c5cd414a32e1a077657",
-        urls=urls,
+        urls=urls.copy(),
     )
 
     assert payload.urls == urls
