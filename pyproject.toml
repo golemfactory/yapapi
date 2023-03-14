@@ -94,7 +94,7 @@ tests_integration_init = { sequence = ["_gothv_env", "_gothv_requirements", "_go
 _gothv_env = "python -m venv .envs/yapapi-goth"
 _gothv_requirements = ".envs/yapapi-goth/bin/pip install --extra-index-url https://test.pypi.org/simple/ goth==0.14.1 pytest pytest-asyncio pexpect"
 _gothv_assets = ".envs/yapapi-goth/bin/python -m goth create-assets tests/goth_tests/assets"
-tests_integration = { cmd = ".envs/yapapi-goth/bin/pytest -svx tests/goth_tests  --config-override docker-compose.build-environment.use-prerelease=true --config-path tests/goth_tests/assets/goth-config-testing.yml --ssh-verify-connection", help = "Run the integration tests"}
+tests_integration = { cmd = ".envs/yapapi-goth/bin/python -m pytest -svx tests/goth_tests  --config-override docker-compose.build-environment.use-prerelease=true --config-path tests/goth_tests/assets/goth-config-testing.yml --ssh-verify-connection", help = "Run the integration tests"}
 
 clean = {cmd = "rm -rf .coverage .requirements.txt dist md handbook build", help = "Clean all development related files" }
 clean_examples = {sequence = ["clean_examples_blender", "clean_examples_hello", "clean_examples_http_proxy", "clean_examples_simple_service", "clean_examples_ssh", "clean_examples_webapp", "clean_examples_yacat"], help = "Clean all example related files"}
