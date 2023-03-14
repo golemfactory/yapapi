@@ -107,8 +107,6 @@ ya-market = "0.1.0"
 
 [tool.poe.tasks]
 test = "pytest --cov=yapapi --ignore tests/goth_tests"
-goth-assets = "python -m goth create-assets tests/goth_tests/assets"
-goth-tests = "pytest -svx tests/goth_tests  --config-override docker-compose.build-environment.use-prerelease=true --config-path tests/goth_tests/assets/goth-config-testing.yml --ssh-verify-connection --reruns 3 --only-rerun AssertionError --only-rerun TimeoutError --only-rerun goth.runner.exceptions.TemporalAssertionError --only-rerun urllib.error.URLError --only-rerun goth.runner.exceptions.CommandError"
 typecheck = "mypy --check-untyped-defs --no-implicit-optional --show-error-codes ."
 _codestyle_isort = "isort --check-only --diff ."
 _codestyle_black = "black --check --diff ."
@@ -128,8 +126,8 @@ clean_yacat = "rm -f examples/yacat/*.log"
 clean_examples = ["clean_blender", "clean_hello", "clean_http_proxy", "clean_simple_service", "clean_ssh", "clean_webapp", "clean_yacat"]
 sphinx = "sphinx-build docs/sphinx/ build -E"
 
-_gothv-env = "python -m venv .envs/yapapi-goth"
-_gothv-requirements = ".envs/yapapi-goth/bin/pip install goth pytest pytest-asyncio pexpect"
-_gothv-assets = ".envs/yapapi-goth/bin/python -m goth create-assets tests/goth_tests/assets"
-gothv-prepare = ["_gothv-env", "_gothv-requirements", "_gothv-assets"]
-gothv-tests = ".envs/yapapi-goth/bin/pytest -svx tests/goth_tests  --config-override docker-compose.build-environment.use-prerelease=true --config-path tests/goth_tests/assets/goth-config-testing.yml --ssh-verify-connection"
+gothv_prepare = ["_gothv_env", "_gothv_requirements", "_gothv_assets"]
+_gothv_env = "python -m venv .envs/yapapi-goth"
+_gothv_requirements = ".envs/yapapi-goth/bin/pip install --extra-index-url https://test.pypi.org/simple/ goth==0.14.1 pytest pytest-asyncio pexpect"
+_gothv_assets = ".envs/yapapi-goth/bin/python -m goth create-assets tests/goth_tests/assets"
+gothv_tests = ".envs/yapapi-goth/bin/pytest -svx tests/goth_tests  --config-override docker-compose.build-environment.use-prerelease=true --config-path tests/goth_tests/assets/goth-config-testing.yml --ssh-verify-connection"
