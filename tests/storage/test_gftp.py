@@ -1,10 +1,11 @@
 import asyncio
-from collections import defaultdict
-from pathlib import Path
-import pytest
 import random
 import tempfile
+from collections import defaultdict
+from pathlib import Path
 from typing import List, cast
+
+import pytest
 
 from yapapi.storage import gftp
 
@@ -112,7 +113,7 @@ async def test_gftp_provider(test_dir, temp_dir, mock_service, monkeypatch):
     byte_uploads = 0
 
     async def worker(id: int, provider: gftp.GftpProvider):
-        """A test worker."""
+        """Test worker."""
 
         nonlocal num_batches, temp_dir, file_uploads, byte_uploads
 

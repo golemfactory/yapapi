@@ -1,20 +1,14 @@
-"""
-Golem File Transfer Storage Provider
-"""
+"""Golem File Transfer Storage Provider."""
 
-from async_exit_stack import AsyncExitStack  # type: ignore
 import asyncio
 import contextlib
-from dataclasses import dataclass
 import json
-import jsonrpc_base  # type: ignore
 import logging
 import os
-from os import PathLike
-from pathlib import Path
-import semantic_version  # type: ignore
 import sys
 import tempfile
+from os import PathLike
+from pathlib import Path
 from types import TracebackType
 from typing import (
     AsyncContextManager,
@@ -28,6 +22,11 @@ from typing import (
     Union,
     cast,
 )
+
+import jsonrpc_base
+import semantic_version
+from async_exit_stack import AsyncExitStack
+from dataclasses import dataclass
 from typing_extensions import Literal, Protocol, TypedDict
 
 from yapapi.storage import Content, Destination, Source, StorageProvider
@@ -53,38 +52,33 @@ class GftpDriver(Protocol):
     """Golem FTP service API."""
 
     async def version(self) -> str:
-        """Gets driver version."""
-        pass
+        """Get driver version."""
 
     async def publish(self, *, files: List[str]) -> List[PubLink]:
-        """Exposes local file as GFTP url.
+        """Expose local file as GFTP url.
 
         `files`
         :   local files to be exposed
 
         """
-        pass
 
     async def close(self, *, urls: List[str]) -> List[CommandStatus]:
-        """Stops exposing GFTP urls created by [publish(files=[..])](#publish)."""
-        pass
+        """Stop exposing GFTP urls created by [publish(files=[..])](#publish)."""
 
     async def receive(self, *, output_file: str) -> PubLink:
-        """Creates GFTP url for receiving file.
+        """Create GFTP url for receiving file.
 
         :  `output_file` -
         """
-        pass
 
     async def upload(self, *, file: str, url: str):
         pass
 
     async def shutdown(self) -> CommandStatus:
-        """Stops GFTP service.
+        """Stop GFTP service.
 
         After shutdown all generated urls will be unavailable.
         """
-        pass
 
 
 def service(debug=False) -> AsyncContextManager[GftpDriver]:

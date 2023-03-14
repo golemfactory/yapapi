@@ -1,12 +1,13 @@
 import asyncio
-from dataclasses import dataclass
+import logging
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-import logging
 from typing import AsyncIterator, Iterable, List, Optional, Union, cast
 
-from ya_payment import Account, ApiClient, RequestorApi
+from dataclasses import dataclass
+
 import ya_payment.models as yap
+from ya_payment import Account, ApiClient, RequestorApi
 
 from .common import SuppressedExceptions, is_intermittent_error, repeat_on_error
 from .resource import ResourceCtx
@@ -127,7 +128,7 @@ class Payment(object):
         expires: Optional[datetime] = None,
         make_deposit: bool = False,
     ) -> ResourceCtx[Allocation]:
-        """Creates new allocation.
+        """Create new allocation.
 
         - `amount`:  Allocation amount.
         - `expires`: expiration timestamp. set to default 10 years as a work-around.
@@ -156,10 +157,9 @@ class Payment(object):
         )
 
     async def allocations(self) -> AsyncIterator[Allocation]:
-        """Lists all active allocations.
+        """Iterate over all active allocations.
 
         Example:
-
         Listing all active allocations
 
             from yapapi import rest

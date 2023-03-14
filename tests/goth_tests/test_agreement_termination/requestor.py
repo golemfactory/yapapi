@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """A requestor script used for testing agreement termination."""
 import asyncio
-from datetime import timedelta
 import logging
+from datetime import timedelta
 
 from yapapi import Golem, Task, WorkContext
 from yapapi.log import enable_default_logger
@@ -20,7 +20,7 @@ async def main():
     first_worker = True
 
     async def worker(ctx: WorkContext, tasks):
-        """A worker function for `Golem.execute_tasks()`.
+        """Execute `Golem.execute_tasks()` as a worker.
 
         The first call to this function will produce a worker
         that sends an invalid `run` command to the provider.

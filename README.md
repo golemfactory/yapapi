@@ -68,7 +68,7 @@ All of the project's dependencies will be installed to that virtual environment.
 Declarations of project tasks can be found in `pyproject.toml`.
 
 ```bash
-poetry run poe test
+poetry run poe tests_unit
 ```
 
 ### Running `goth` integration tests
@@ -96,7 +96,7 @@ poetry install -E integration-tests
 Finally, generate goth's default assets:
 
 ```bash
-poetry run poe goth-assets
+poetry run poe tests_integration_assets
 ```
 
 #### Running the tests
@@ -104,7 +104,7 @@ poetry run poe goth-assets
 Once you have the environment set up, to run all the integration tests, use:
 
 ```bash
-poetry run poe goth-tests
+poetry run poe tests_integration
 ```
 
 ### Contributing
@@ -112,7 +112,7 @@ poetry run poe goth-tests
 It is recommended to run unit tests and static code analysis before committing changes.
 
 ```bash
-poetry run poe check
+poetry run poe checks
 ```
 
 You can clean up the artifacts created during the test runs with:

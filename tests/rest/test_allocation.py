@@ -1,4 +1,5 @@
 from decimal import Decimal
+
 import pytest
 
 from yapapi.config import ApiConfig

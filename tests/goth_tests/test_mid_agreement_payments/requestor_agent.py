@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import asyncio
-from datetime import timedelta
 import logging
+from datetime import timedelta
 from typing import AsyncIterable, List
 
 from yapapi import Golem, Task, WorkContext

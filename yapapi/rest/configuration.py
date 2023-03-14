@@ -1,13 +1,11 @@
-import os
 from typing import Optional
-from typing_extensions import Final
 
-import ya_activity  # type: ignore
-import ya_market  # type: ignore
-import ya_net  # type: ignore
+import ya_activity
+import ya_market
+import ya_net
 import ya_payment
 
-from yapapi.config import ApiConfig  # type: ignore
+from yapapi.config import ApiConfig
 
 
 class Configuration(object):
@@ -44,27 +42,27 @@ class Configuration(object):
 
     @property
     def market_url(self) -> str:
-        """The URL of the Market REST API"""
+        """Return URL of the Market REST API."""
         return self.__market_url
 
     @property
     def payment_url(self) -> str:
-        """The URL of the Payment REST API"""
+        """Return URL of the Payment REST API."""
         return self.__payment_url
 
     @property
     def activity_url(self) -> str:
-        """The URL of the Activity REST API"""
+        """Return URL of the Activity REST API."""
         return self.__activity_url
 
     @property
     def net_url(self) -> str:
-        """The URL of the Activity REST API"""
+        """Return URL of the Activity REST API."""
         return self.__net_url
 
     @property
     def root_url(self) -> str:
-        """The root URL of the REST API"""
+        """Return root URL of the REST API."""
         return self.__url
 
     def market(self) -> ya_market.ApiClient:

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """A requestor script for testing asynchronous generation of input tasks."""
 import asyncio
-from datetime import timedelta
 import pathlib
 import sys
+from datetime import timedelta
 
 from yapapi import Golem, Task
 from yapapi.log import enable_default_logger, log_event_repr

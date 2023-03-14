@@ -1,4 +1,5 @@
 import asyncio
+
 from dataclasses import dataclass
 
 from yapapi import Golem

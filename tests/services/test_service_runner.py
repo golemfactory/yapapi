@@ -1,9 +1,10 @@
 import asyncio
-import pytest
-from statemachine import State
 import sys
 from typing import Optional
 from unittest import mock
+
+import pytest
+from statemachine import State
 
 from ya_activity.exceptions import ApiException
 

@@ -1,16 +1,14 @@
-import aiohttp
 import asyncio
-from asyncio import CancelledError
-from collections import defaultdict
 import contextlib
-from copy import deepcopy
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from decimal import Decimal
 import itertools
 import logging
 import os
 import sys
+from asyncio import CancelledError
+from collections import defaultdict
+from copy import deepcopy
+from datetime import datetime, timezone
+from decimal import Decimal
 from typing import (
     AsyncContextManager,
     Awaitable,
@@ -24,6 +22,9 @@ from typing import (
     Union,
     cast,
 )
+
+import aiohttp
+from dataclasses import dataclass
 from typing_extensions import AsyncGenerator, Final
 
 from yapapi.config import ApiConfig
@@ -31,7 +32,7 @@ from yapapi.config import ApiConfig
 if sys.version_info >= (3, 7):
     from contextlib import AsyncExitStack
 else:
-    from async_exit_stack import AsyncExitStack  # type: ignore
+    from async_exit_stack import AsyncExitStack
 
 from yapapi import events, props, rest
 from yapapi.agreements_pool import AgreementsPool
@@ -113,7 +114,8 @@ class _Engine:
         :param budget: maximum budget for payments
         :param strategy: market strategy used to select providers from the market
             (e.g. LeastExpensiveLinearPayuMS or DummyMS)
-        :param event_consumer: callable that will be directly executed on every Event this Engine creates.
+        :param event_consumer: callable that will be directly executed on every Event this Engine
+            creates.
             NOTE: it is expected to be fast or async - if not, it will block the _Engine.
         :param subnet_tag: use only providers in the subnet with the subnet_tag name.
             Uses `YAGNA_SUBNET` environment variable, defaults to `None`
@@ -220,7 +222,7 @@ class _Engine:
         This *must* be called at the end of the work, by the Engine user.
         """
         if exc_info[0] is not None:
-            self.emit(events.ExecutionInterrupted, exc_info=exc_info)  # type: ignore
+            self.emit(events.ExecutionInterrupted, exc_info=exc_info)
         return await self._stack.__aexit__(None, None, None)
 
     async def start(self):
@@ -381,7 +383,7 @@ class _Engine:
                 if allocation.payment_address == item.payer_addr
                 and allocation.payment_platform == item.payment_platform
             )
-        except:
+        except Exception:
             raise ValueError(f"No allocation for {item.payment_platform} {item.payer_addr}.")
 
     async def _process_invoices(self) -> None:
@@ -415,15 +417,17 @@ class _Engine:
     ) -> Optional[Dict[str, str]]:
         freq_descr = f"{num_notes} notes/{duration}s"
         logger.debug(
-            f"{'Payable Debit notes' if payable else 'Debit notes'} for activity {activity_id}: {freq_descr}"
+            f"{'Payable Debit notes' if payable else 'Debit notes'} for activity"
+            f" {activity_id}: {freq_descr}"
         )
         if duration + DEBIT_NOTE_INTERVAL_GRACE_PERIOD < (num_notes - 1) * interval:
             payable_str = "payable " if payable else ""
             reason = {
-                "message": f"Too many {payable_str}debit notes: {freq_descr} (activity: {activity_id})",
-                "golem.requestor.code": "TooManyPayableDebitNotes"
-                if payable
-                else "TooManyDebitNotes",
+                "message": f"Too many {payable_str}debit notes: {freq_descr} "
+                f"(activity: {activity_id})",
+                "golem.requestor.code": (
+                    "TooManyPayableDebitNotes" if payable else "TooManyDebitNotes"
+                ),
             }
             logger.error(
                 f"Too many {payable_str}debit notes received. %s, activity: %s",
@@ -586,7 +590,9 @@ class _Engine:
                 raise
             except Exception:
                 job.emit(
-                    events.PaymentFailed, agreement=agreement, exc_info=sys.exc_info()  # type: ignore
+                    events.PaymentFailed,
+                    agreement=agreement,
+                    exc_info=sys.exc_info(),
                 )
 
     def accept_debit_notes_for_agreement(self, job_id: str, agreement_id: str) -> None:
@@ -601,7 +607,7 @@ class _Engine:
     def finalize_job(self, job: "Job"):
         """Mark a job as finished."""
         job.finished.set()
-        job.emit(events.JobFinished, exc_info=job._exc_info)  # type: ignore
+        job.emit(events.JobFinished, exc_info=job._exc_info)
 
     def register_generator(self, generator: AsyncGenerator) -> None:
         """Register a generator with this engine."""
@@ -634,10 +640,10 @@ class _Engine:
         loop = asyncio.get_event_loop()
 
         async def worker_task(agreement: Agreement):
-            """A coroutine run by every worker task.
+            """Run `run_worker` in a `WorkContext` for activity from given `Agreement`.
 
-            It creates an Activity for a given Agreement, then creates a WorkContext for this Activity
-            and then executes `run_worker` with this WorkContext.
+            It creates an Activity for a given Agreement, then creates a WorkContext for this
+            Activity and then executes `run_worker` with this WorkContext.
             """
             if on_agreement_ready:
                 on_agreement_ready(agreement)
@@ -651,7 +657,7 @@ class _Engine:
             try:
                 activity = await self.create_activity(agreement.id)
             except Exception:
-                job.emit(events.ActivityCreateFailed, agreement=agreement, exc_info=sys.exc_info())  # type: ignore
+                job.emit(events.ActivityCreateFailed, agreement=agreement, exc_info=sys.exc_info())
                 raise
 
             work_context = WorkContext(activity, agreement, self.storage_manager, emitter=job.emit)
@@ -734,15 +740,20 @@ class _Engine:
                 script = await batch_generator.asend(future_results)
 
     def recycle_offer(self, offer: OfferProposal) -> None:
-        """This offer was already processed, but something happened and we should treat it as a fresh one.
+        """Mark given offer as a fresh one, regardless of its previous processing.
+
+        This offer was already processed, but something happened and we should treat it as a
+        fresh one.
 
         Currently this "something" is always "we couldn't confirm the agreement with the provider",
         but someday this might be useful also in other scenarios.
 
         Purpose:
-        *   we want to rescore the offer (score might change because of the event that caused recycling)
-        *   if this is a draft offer (and in the current usecase it always is), we want to return to the
-            negotiations and get a new draft - e.g. because this draft already has an Agreement
+        *   we want to rescore the offer (score might change because of the event that caused
+            recycling)
+        *   if this is a draft offer (and in the current usecase it always is), we want to return
+            to the negotiations and get a new draft - e.g. because this draft already has an
+            Agreement
 
         We don't care which Job initiated recycling - it should be recycled by all unfinished Jobs.
         """
@@ -932,7 +943,9 @@ class Job:
                     raise
                 except Exception:
                     with contextlib.suppress(Exception):
-                        self.emit(events.ProposalFailed, proposal=proposal_, exc_info=sys.exc_info())  # type: ignore
+                        self.emit(
+                            events.ProposalFailed, proposal=proposal_, exc_info=sys.exc_info()
+                        )
                 finally:
                     semaphore.release()
 
