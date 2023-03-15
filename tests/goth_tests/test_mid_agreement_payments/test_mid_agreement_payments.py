@@ -75,7 +75,7 @@ async def test_mid_agreement_payments(
         async with requestor.run_command_on_host(
             f"{requestor_path} --log-file {(log_dir / logfile).resolve()}", env=os.environ
         ) as (
-            cmd_task,
+            _,
             cmd_monitor,
             _,
         ):
