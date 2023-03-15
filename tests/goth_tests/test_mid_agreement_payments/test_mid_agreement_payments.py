@@ -1,4 +1,6 @@
 """A goth test scenario for mid-agreement payments."""
+import asyncio
+from datetime import datetime
 import logging
 import os
 import re
@@ -50,6 +52,7 @@ async def assert_debit_note_freq(events: EventStream) -> str:
 
 @pytest.mark.asyncio
 async def test_mid_agreement_payments(
+    project_dir: Path,
     log_dir: Path,
     goth_config_path: Path,
     config_overrides: List[Override],
@@ -58,16 +61,20 @@ async def test_mid_agreement_payments(
     # goth setup
     config = load_yaml(goth_config_path, config_overrides + [single_node_override])
     configure_logging(log_dir)
+
+    logfile = f"mid-agreement-payments-{datetime.now().strftime('%Y-%m-%d_%H.%M.%S')}.log"
+
+    requestor_path = project_dir / "tests" / "goth_tests" / "test_mid_agreement_payments" / "requestor_agent.py"
+
     runner = Runner(base_log_dir=log_dir, compose_config=config.compose_config)
     async with runner(config.containers):
         # given
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
         # when
-        async with requestor.run_command_on_host("requestor_agent.py", env=os.environ) as (
-            _,
-            cmd_monitor,
-            _,
-        ):
+        async with requestor.run_command_on_host(
+                f"{requestor_path} --log-file {(log_dir / logfile).resolve()}",
+                env=os.environ
+        ) as (cmd_task, cmd_monitor, _, ):
             # then
             cmd_monitor.add_assertion(assert_debit_note_freq)
             # assert mid-agreement payments were enabled

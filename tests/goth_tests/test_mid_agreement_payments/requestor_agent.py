@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import asyncio
 import logging
 from datetime import timedelta
@@ -51,7 +52,13 @@ async def main():
 
 
 if __name__ == "__main__":
-    enable_default_logger(log_file="mid_agreement_payments.log")
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--log-file",
+        default=str("mid_agreement_payments.log"),
+    )
+    args = parser.parse_args()
+    enable_default_logger(log_file=args.log_file)
 
     loop = asyncio.get_event_loop()
     task = loop.create_task(main())
