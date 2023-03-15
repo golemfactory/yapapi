@@ -10,7 +10,6 @@ from yapapi.payload import vm
 
 
 async def main():
-
     vm_package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         min_mem_gib=0.5,
@@ -43,7 +42,6 @@ async def main():
 
 
 if __name__ == "__main__":
-
     enable_default_logger()
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.DEBUG)

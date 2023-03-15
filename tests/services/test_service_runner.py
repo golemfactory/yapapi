@@ -54,7 +54,6 @@ async def test_ensure_alive(
     with mock.patch(
         "yapapi.ctx.WorkContext.get_raw_state", mock.AsyncMock(side_effect=side_effect)
     ) as grs_mock:
-
         service_runner = ServiceRunner(
             mock.Mock(),
             health_check_interval=0.001,

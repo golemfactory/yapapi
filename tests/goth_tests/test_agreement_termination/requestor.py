@@ -10,7 +10,6 @@ from yapapi.payload import vm
 
 
 async def main():
-
     package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         min_mem_gib=0.5,
@@ -36,7 +35,6 @@ async def main():
         first_worker = False
 
         async for task in tasks:
-
             script = ctx.new_script()
 
             if should_fail:
@@ -54,7 +52,6 @@ async def main():
         budget=10.0,
         subnet_tag="goth",
     ) as golem:
-
         tasks = [Task(data=n) for n in range(6)]
         async for task in golem.execute_tasks(
             worker,
@@ -69,7 +66,6 @@ async def main():
 
 
 if __name__ == "__main__":
-
     enable_default_logger(log_file="test.log")
 
     console_handler = logging.StreamHandler()

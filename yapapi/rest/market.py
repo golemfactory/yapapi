@@ -231,7 +231,6 @@ class Subscription(object):
     async def events(self) -> AsyncIterator[OfferProposal]:
         """Yield counter-proposals based on the incoming, matching Offers."""
         while self._open:
-
             proposals = []
             try:
                 async with SuppressedExceptions(is_intermittent_error):

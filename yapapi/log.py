@@ -465,7 +465,6 @@ class SummaryLogger:
             )
 
         elif isinstance(event, events.AgreementConfirmed):
-
             self.logger.info(
                 "Agreement confirmed by provider '%s'",
                 self.agreement_provider_info[event.agr_id].name,

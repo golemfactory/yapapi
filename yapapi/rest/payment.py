@@ -113,7 +113,6 @@ class _AllocationTask(ResourceCtx[Allocation]):
 
 
 class Payment(object):
-
     __slots__ = ("_api",)
 
     def __init__(self, api_client: ApiClient):
@@ -206,7 +205,6 @@ class Payment(object):
         return DebitNote(_api=self._api, _base=debit_note)
 
     async def invoices(self) -> AsyncIterator[Invoice]:
-
         for invoice_obj in cast(Iterable[yap.Invoice], await self._api.get_invoices()):
             yield Invoice(_api=self._api, _base=invoice_obj)
 

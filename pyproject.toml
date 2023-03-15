@@ -57,7 +57,7 @@ pip = [
   { version = "*", python = ">=3.7" },
   { version = "^21.0.0", python = ">=3.6.2, <3.7" },
 ]
-black = "^21.7b0"
+black = "^23.1.0"
 factory-boy = "^3.2.0"
 isort = "^5.10.1"
 liccheck = "^0.4.7"

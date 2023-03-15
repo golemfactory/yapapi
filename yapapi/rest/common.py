@@ -69,7 +69,6 @@ def repeat_on_error(
             """Make at most `max_tries` attempts to call `func`."""
 
             for try_num in range(1, max_tries + 1):
-
                 if try_num > 1:
                     await asyncio.sleep(interval)
 

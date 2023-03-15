@@ -36,7 +36,6 @@ async def assert_all_tasks_computed(output_lines: EventStream[str]):
 async def test_run_blender(
     project_dir: Path, log_dir: Path, goth_config_path: Path, config_overrides: List[Override]
 ) -> None:
-
     # This is the default configuration with 2 wasm/VM providers
     goth_config = load_yaml(goth_config_path, config_overrides)
 
@@ -50,14 +49,12 @@ async def test_run_blender(
     )
 
     async with runner(goth_config.containers):
-
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
             f"{blender_path} --subnet-tag goth --min-cpu-threads 1",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor, _process_monitor):
-
             # Add assertions to the command output monitor `cmd_monitor`:
             cmd_monitor.add_assertion(assert_no_errors)
             cmd_monitor.add_assertion(assert_all_invoices_accepted)
@@ -79,6 +76,6 @@ async def test_run_blender(
             await all_computed.wait_for_result(timeout=120)
             logger.info("All tasks computed, waiting for Golem shutdown")
 
-            await cmd_monitor.wait_for_pattern(f".*Golem engine has shut down", timeout=120)
+            await cmd_monitor.wait_for_pattern(".*Golem engine has shut down", timeout=120)
 
             logger.info("Requestor script finished")

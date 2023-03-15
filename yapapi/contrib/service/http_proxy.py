@@ -26,9 +26,9 @@ from .chunk import chunks
 
 logger = logging.getLogger(__name__)
 
-WEBSOCKET_CHUNK_LIMIT: Final[int] = 2 ** 16
+WEBSOCKET_CHUNK_LIMIT: Final[int] = 2**16
 DEFAULT_TIMEOUT: Final[float] = 30.0
-DEFAULT_MAX_REQUEST_SIZE: Final[int] = 128 * 1024 ** 2
+DEFAULT_MAX_REQUEST_SIZE: Final[int] = 128 * 1024**2
 
 
 class _ResponseParser:
@@ -281,7 +281,7 @@ class LocalHttpProxy:
 class _Server(web.Server):
     """Override of aiohttp.web.Server to allow for an increase of the request size."""
 
-    def __init__(self, *args, client_max_size=1024 ** 2, **kwargs):
+    def __init__(self, *args, client_max_size=1024**2, **kwargs):
         self._client_max_size = client_max_size
         super().__init__(*args, **kwargs)
 

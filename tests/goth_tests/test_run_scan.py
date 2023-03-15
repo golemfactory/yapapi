@@ -28,7 +28,6 @@ async def test_run_scan(
     goth_config_path: Path,
     config_overrides: List[Override],
 ) -> None:
-
     configure_logging(log_dir)
 
     # This is the default configuration with 2 wasm/VM providers
@@ -42,7 +41,6 @@ async def test_run_scan(
     )
 
     async with runner(goth_config.containers):
-
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(

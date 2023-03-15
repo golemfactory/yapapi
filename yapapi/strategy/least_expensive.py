@@ -64,7 +64,6 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
         expected_usage = []
 
         for resource in linear.usage_vector:
-
             if linear.price_for[resource] > self._max_price_for[resource]:
                 self._logger.debug(
                     "Rejected offer %s: price for '%s' higher than price cap %f.",

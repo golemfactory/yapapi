@@ -16,7 +16,6 @@ async def async_iter(iterable):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("length", [0, 1, 100])
 async def test_smart_queue(length: int):
-
     q = SmartQueue(async_iter(range(length)))
 
     async def worker(i, queue):
@@ -54,7 +53,6 @@ async def test_smart_queue(length: int):
 
 @pytest.mark.asyncio
 async def test_smart_queue_empty():
-
     q: SmartQueue = SmartQueue(async_iter([]))
     with q.new_consumer() as c:
         async for _item in c:

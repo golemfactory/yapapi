@@ -138,7 +138,6 @@ async def test_demand_resubscription(
     runner = Runner(base_log_dir=log_dir, compose_config=goth_config.compose_config)
 
     async with runner(goth_config.containers):
-
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
         env = dict(os.environ)
         env.update(requestor.get_agent_env_vars())
@@ -166,7 +165,6 @@ async def test_demand_resubscription(
             budget=10.0,
             event_consumer=monitor.add_event_sync,
         ) as golem:
-
             task: Task  # mypy needs this for some reason
             async for task in golem.execute_tasks(
                 worker,

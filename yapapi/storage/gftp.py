@@ -369,13 +369,11 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
         return await self.upload_file(file_name, _temporary=True)
 
     async def upload_file(self, path: os.PathLike, _temporary: bool = False) -> Source:
-
         path = Path(path)
         _logger.debug("Publishing file %s...", path)
         process = await self.__get_process()
 
         async with self._lock:
-
             links = await process.publish(files=[str(path)])
             assert len(links) == 1, "Invalid gftp publish response"
 
@@ -407,7 +405,6 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
         return source
 
     async def release_source(self, source: Source) -> None:
-
         if not isinstance(source, GftpSource):
             raise ValueError(f"Expected an instance of GftpSource, got {type(source)} instead")
 
@@ -415,7 +412,6 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
         _logger.debug("Releasing file %s with URL = %s ...", source.path, url)
 
         async with self._lock:
-
             if url not in self._published_sources:
                 raise ValueError(
                     f"Trying to release an unpublished URL {url}, path = {source.path}"
@@ -428,7 +424,6 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
             )
 
             if info.publish_count == 0:
-
                 _logger.debug("Unpublishing URL %s...", url)
                 if self._close_urls:
                     process = await self.__get_process()

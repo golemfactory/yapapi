@@ -1,9 +1,8 @@
 """A goth test scenario for mid-agreement payments."""
-import asyncio
-from datetime import datetime
 import logging
 import os
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
@@ -64,7 +63,9 @@ async def test_mid_agreement_payments(
 
     logfile = f"mid-agreement-payments-{datetime.now().strftime('%Y-%m-%d_%H.%M.%S')}.log"
 
-    requestor_path = project_dir / "tests" / "goth_tests" / "test_mid_agreement_payments" / "requestor_agent.py"
+    requestor_path = (
+        project_dir / "tests" / "goth_tests" / "test_mid_agreement_payments" / "requestor_agent.py"
+    )
 
     runner = Runner(base_log_dir=log_dir, compose_config=config.compose_config)
     async with runner(config.containers):
@@ -72,9 +73,12 @@ async def test_mid_agreement_payments(
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
         # when
         async with requestor.run_command_on_host(
-                f"{requestor_path} --log-file {(log_dir / logfile).resolve()}",
-                env=os.environ
-        ) as (cmd_task, cmd_monitor, _, ):
+            f"{requestor_path} --log-file {(log_dir / logfile).resolve()}", env=os.environ
+        ) as (
+            cmd_task,
+            cmd_monitor,
+            _,
+        ):
             # then
             cmd_monitor.add_assertion(assert_debit_note_freq)
             # assert mid-agreement payments were enabled

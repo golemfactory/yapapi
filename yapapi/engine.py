@@ -308,7 +308,6 @@ class _Engine:
         # Wait for some time for invoices for unpaid agreements,
         # then cancel the invoices service
         if self._process_invoices_job:
-
             unpaid_agreements = self._invoice_manager.payable_unpaid_agreement_ids
             if unpaid_agreements:
                 logger.info(
@@ -336,7 +335,6 @@ class _Engine:
             logger.debug("Got error when waiting for services to finish", exc_info=True)
 
     async def _create_allocations(self) -> rest.payment.MarketDecoration:
-
         if not self._budget_allocations:
             async for account in self._payment_api.accounts():
                 driver = account.driver.lower()
