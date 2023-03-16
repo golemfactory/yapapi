@@ -59,6 +59,7 @@ html_theme = "sphinx_rtd_theme"
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path: List[str] = []
 
+
 #   This removes the `yapapi.log` docstrings.
 #   There are two reasons:
 #   *   there are some sections/subsections declared there and it messes up the docs

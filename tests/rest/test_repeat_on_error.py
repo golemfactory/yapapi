@@ -42,7 +42,6 @@ from yapapi.rest.common import SuppressedExceptions, is_intermittent_error, repe
 )
 @pytest.mark.asyncio
 async def test_repeat_on_error(max_tries, exceptions, calls_expected, expected_error):
-
     calls_made = 0
 
     @repeat_on_error(max_tries=max_tries, interval=0.0)
@@ -67,7 +66,6 @@ async def test_repeat_on_error(max_tries, exceptions, calls_expected, expected_e
 
 @pytest.mark.asyncio
 async def test_suppressed_exceptions():
-
     async with SuppressedExceptions(is_intermittent_error) as se:
         pass
     assert se.exception is None

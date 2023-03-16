@@ -55,7 +55,6 @@ async def test_LeastExpensiveLinearPayuMS_price_caps():
     triples = list(product(prices, repeat=3))  # get triples of (cpu_price, time_price, fixed_price)
 
     for cpu_price, time_price, fixed_price in triples:
-
         offer = OfferProposalFactory(coeffs=(cpu_price, time_price, fixed_price))
 
         async def _test_strategy(strategy, cpu_price_cap, time_price_cap, fixed_price_cap):

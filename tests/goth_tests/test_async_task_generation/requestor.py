@@ -11,7 +11,6 @@ from yapapi.payload import vm
 
 
 async def main():
-
     vm_package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         min_mem_gib=0.5,
@@ -31,7 +30,6 @@ async def main():
         subnet_tag="goth",
         event_consumer=log_event_repr,
     ) as golem:
-
         # We use an async task generator that yields tasks removed from
         # an async queue. Each computed task will potentially spawn
         # new tasks -- this is made possible thanks to using async task

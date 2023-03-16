@@ -34,7 +34,6 @@ class FirstInstanceFailsToStart(Service):
         )
 
     async def start(self):
-
         global instances_started
 
         async for script in super().start():
@@ -58,7 +57,6 @@ class FirstInstanceFailsToStart(Service):
             await asyncio.sleep(30)
 
     async def run(self):
-
         global instances_running
         instances_running += 1
 
@@ -74,7 +72,6 @@ class FirstInstanceFailsToStart(Service):
         await future_result
 
     async def shutdown(self):
-
         global instances_stopped
 
         log("STOPPING", instances_started)
@@ -84,9 +81,7 @@ class FirstInstanceFailsToStart(Service):
 
 
 async def main():
-
     async with Golem(budget=1.0, subnet_tag="goth") as golem:
-
         # Start a cluster with a single service.
         # The first instance will fail before reaching the `running` state
         # due to an error. Another instance should be spawned in its place.

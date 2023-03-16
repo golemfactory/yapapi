@@ -55,7 +55,6 @@ class CustomCounterService(Service):
 
 
 async def main(running_time_sec, subnet_tag, driver=None, network=None):
-
     # necessary to set maximum price for one unit of custom counter,
     # default strategy does not take custom counter prices into account
     strategy = LeastExpensiveLinearPayuMS(

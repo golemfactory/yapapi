@@ -210,7 +210,6 @@ class MarketStrategy(BaseMarketStrategy, abc.ABC):
             if prop_value is not None and (
                 mid_agreement_payments_enabled or prop_key not in MID_AGREEMENT_PAYMENTS_PROPS
             ):
-
                 if prop_value not in acceptable_range:
                     our_value = acceptable_range.clamp(prop_value)
                     logger.debug(

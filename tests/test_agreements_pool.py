@@ -68,7 +68,6 @@ async def test_use_agreement_shuffles_proposals():
     all_proposal_ids = range(5)
 
     for i in range(100):
-
         # Prepare proposal data, all proposals have the same score except the one with id 0
         proposals = []
         for n in all_proposal_ids:

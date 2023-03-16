@@ -38,7 +38,6 @@ class CustomRuntimeService(Service):
 
 
 async def main(subnet_tag, driver=None, network=None):
-
     async with Golem(
         budget=10.0,
         subnet_tag=subnet_tag,

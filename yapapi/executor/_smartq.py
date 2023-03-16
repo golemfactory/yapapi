@@ -112,7 +112,6 @@ class SmartQueue(Generic[Item]):
         """Get a handle to the next item to be processed (either a new one or rescheduled)."""
         async with self._lock:
             while not self.finished():
-
                 handle = self.__find_rescheduled_item(consumer)
                 if handle:
                     self._rescheduled_items.remove(handle)

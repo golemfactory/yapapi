@@ -7,8 +7,6 @@ import pytest
 
 from goth.configuration import Override
 
-from yapapi.payload import vm
-
 
 #  `pytest-rerunfailures` and `pytest-asyncio` don't work together
 #   (https://github.com/pytest-dev/pytest-rerunfailures/issues/154)
@@ -112,15 +110,3 @@ def log_dir() -> Path:
 @pytest.fixture(scope="session")
 def goth_config_path(request) -> Path:
     return request.config.option.config_path
-
-
-@pytest.fixture()
-def blender_vm_package():
-    async def coro():
-        return await vm.repo(
-            image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-            min_mem_gib=0.5,
-            min_storage_gib=2.0,
-        )
-
-    return coro()

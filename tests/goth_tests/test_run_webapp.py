@@ -55,7 +55,6 @@ async def test_run_webapp(
     )
 
     async with runner(goth_config.containers):
-
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(

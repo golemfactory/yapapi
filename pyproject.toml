@@ -19,18 +19,17 @@ requires = ["poetry_core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.dependencies]
-python = "^3.6.2"
+python = "^3.8"
 
 setuptools = [
-  { version = "*", python = ">=3.7" },
-  { version = "^59.0.0", python = ">=3.6.2, <3.7" },
+  { version = "*", python = ">=3.8" },
 ]
 aiohttp = "^3.6"
 aiohttp-sse-client = "^0.1.7"
 dataclasses = { version = "^0.8", python = ">=3.6, <3.7" }
 more-itertools = "^8.6.0"
 urllib3 = "^1.25.9"
-typing_extensions = "^3.10.0"
+typing-extensions = "^4.5.0"
 
 async_exit_stack = "^1.0.1"
 jsonrpc-base = "^1.0.3"
@@ -42,20 +41,8 @@ colorama = "^0.4.4"
 semantic-version = "^2.8"
 attrs = ">=19.3"
 
-# Adding `goth` to dependencies causes > 40 additional packages to be installed. Given
-# that dependency resolution in `poetry` is rather slow, we'd like to avoid installing
-# `goth` for example in a CI pipeline that only runs linters/unit tests, not integration
-# tests. Therefore we specify `goth` as an "extra" dependency, with `optional = "true"`.
-# It will be then installable with `poetry install -E integration-tests`.
-# Note that putting `goth` in `poetry.dev-dependencies` instead of `poetry.dependencies`
-# would not work: see https://github.com/python-poetry/poetry/issues/129.
-goth = { version = "^0.14", optional = true, python = "^3.8.0" }
-# goth = { git = "https://github.com/golemfactory/goth.git", branch = "master", optional = true, python = "^3.8.0", develop = true }
 Deprecated = "^1.2.12"
 python-statemachine = "^0.8.0"
-
-# goth tests
-pexpect = { version = "^4.8.0", optional = true }
 
 # Docs
 sphinx = { version = "^4.0.1", optional = true }
@@ -63,7 +50,6 @@ sphinx-autodoc-typehints = { version = "^1.12.0", optional = true }
 sphinx-rtd-theme = { version = "^1.0.0", optional = true }
 
 [tool.poetry.extras]
-integration-tests = ['goth', 'pytest', 'pytest-asyncio', 'pexpect']
 docs = ['sphinx', 'sphinx-autodoc-typehints', 'sphinx-rtd-theme']
 
 [tool.poetry.group.dev.dependencies]
@@ -71,7 +57,7 @@ pip = [
   { version = "*", python = ">=3.7" },
   { version = "^21.0.0", python = ">=3.6.2, <3.7" },
 ]
-black = "^21.7b0"
+black = "^23.1.0"
 factory-boy = "^3.2.0"
 isort = "^5.10.1"
 liccheck = "^0.4.7"
@@ -97,14 +83,19 @@ checks_typing  = {cmd = "mypy .", help = "Run only code typing checks" }
 checks_license = {sequence = ["_checks_license_export", "_checks_license_verify"], help = "Run only license compatibility checks"}
 _checks_license_export = "poetry export -f requirements.txt -o .requirements.txt"
 _checks_license_verify = "liccheck -r .requirements.txt"
+
 format = {sequence = ["_format_autoflake", "_format_isort", "_format_black"], help = "Run code auto formatting"}
 _format_autoflake = "pautoflake ."
 _format_isort = "isort ."
 _format_black = "black ."
-tests = {sequence = ["tests_unit", "tests_integration"], help = "Run all available tests"}
+
 tests_unit = {cmd = "pytest --cov=yapapi --cov-report html --cov-report term -sv --ignore tests/goth_tests", help = "Run only unit tests"}
-tests_integration = {cmd = "pytest -svx tests/goth_tests  --config-override docker-compose.build-environment.use-prerelease=true --config-path tests/goth_tests/assets/goth-config-testing.yml --ssh-verify-connection --reruns 3 --only-rerun AssertionError --only-rerun TimeoutError --only-rerun goth.runner.exceptions.TemporalAssertionError --only-rerun urllib.error.URLError --only-rerun goth.runner.exceptions.CommandError", help = "Run only integration tests"}
-tests_integration_assets = {cmd = "python -m goth create-assets tests/goth_tests/assets", help = "Generate assets files for integration tests"}
+tests_integration_init = { sequence = ["_gothv_env", "_gothv_requirements", "_gothv_assets"], help="Initialize the integration test environment"}
+tests_integration = { cmd = ".envs/yapapi-goth/bin/python -m pytest -svx tests/goth_tests  --config-override docker-compose.build-environment.use-prerelease=false --config-path tests/goth_tests/assets/goth-config.yml --ssh-verify-connection --reruns 3 --only-rerun AssertionError --only-rerun TimeoutError --only-rerun goth.runner.exceptions.TemporalAssertionError --only-rerun urllib.error.URLError --only-rerun goth.runner.exceptions.CommandError", help = "Run the integration tests"}
+_gothv_env = "python -m venv .envs/yapapi-goth"
+_gothv_requirements = ".envs/yapapi-goth/bin/pip install -U --extra-index-url https://test.pypi.org/simple/ goth==0.14.1 pip pytest pytest-asyncio pytest-rerunfailures pexpect"
+_gothv_assets = ".envs/yapapi-goth/bin/python -m goth create-assets tests/goth_tests/assets"
+
 clean = {cmd = "rm -rf .coverage .requirements.txt dist md handbook build", help = "Clean all development related files" }
 clean_examples = {sequence = ["clean_examples_blender", "clean_examples_hello", "clean_examples_http_proxy", "clean_examples_simple_service", "clean_examples_ssh", "clean_examples_webapp", "clean_examples_yacat"], help = "Clean all example related files"}
 clean_examples_blender = {cmd = "rm -f examples/blender/*.png examples/blender/*.log", help = "Clean \"blender\" example related files"}
@@ -114,6 +105,7 @@ clean_examples_simple_service = {cmd = "rm -f examples/simple-service-poc/*.png 
 clean_examples_ssh = {cmd = "rm -f examples/ssh/*.log", help = "Clean \"ssh\" example related files"}
 clean_examples_webapp = {cmd = "rm -f examples/webapp/*.log", help = "Clean \"webapp\" example related files"}
 clean_examples_yacat = {cmd = "rm -f examples/yacat/*.log", help = "Clean \"yacat\" example related files"}
+
 sphinx = {cmd = "sphinx-build docs/sphinx/ build -E", help = "Build Sphinx docs"}
 
 [tool.liccheck.authorized_packages]

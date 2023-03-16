@@ -19,7 +19,6 @@ async def test_renegotiation(
     goth_config_path: Path,
     config_overrides: List[Override],
 ) -> None:
-
     # This is the default configuration with 2 wasm/VM providers
     goth_config = load_yaml(goth_config_path, config_overrides)
     test_script_path = str(Path(__file__).parent / "requestor.py")
@@ -32,7 +31,6 @@ async def test_renegotiation(
     )
 
     async with runner(goth_config.containers):
-
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(test_script_path, env=os.environ) as (
@@ -40,7 +38,6 @@ async def test_renegotiation(
             cmd_monitor,
             _process_monitor,
         ):
-
             await cmd_monitor.wait_for_pattern(r"\[.+\] Renegotiating", timeout=50)
             await cmd_monitor.wait_for_pattern(r"agreement.terminate\(\): True", timeout=50)
             # assert not "Main timeout triggered :("

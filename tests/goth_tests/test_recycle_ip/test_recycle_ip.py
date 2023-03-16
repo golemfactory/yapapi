@@ -31,7 +31,6 @@ async def test_recycle_ip(
     config_overrides: List[Override],
     ssh_verify_connection: bool,
 ) -> None:
-
     if ssh_verify_connection:
         ssh_check = pexpect.spawn("/usr/bin/which ssh")
         exit_code = ssh_check.wait()
@@ -59,7 +58,6 @@ async def test_recycle_ip(
     )
 
     async with runner(goth_config.containers):
-
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(

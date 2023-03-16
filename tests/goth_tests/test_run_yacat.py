@@ -13,8 +13,6 @@ from goth.runner import Runner
 from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
 
-from yapapi.log import SummaryLogger
-
 from .assertions import assert_all_invoices_accepted, assert_no_errors, assert_tasks_processed
 
 logger = logging.getLogger("goth.test.run_yacat")
@@ -46,7 +44,6 @@ async def test_run_yacat(
     goth_config_path: Path,
     config_overrides: List[Override],
 ) -> None:
-
     configure_logging(log_dir)
 
     # This is the default configuration with 2 wasm/VM providers
@@ -60,7 +57,6 @@ async def test_run_yacat(
     )
 
     async with runner(goth_config.containers):
-
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         logfile = f"hashcat-yapapi-{datetime.now().strftime('%Y-%m-%d_%H.%M.%S')}.log"
@@ -71,7 +67,6 @@ async def test_run_yacat(
             f"--log-file {(log_dir /  logfile).resolve()}",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor, _process_monitor):
-
             # Add assertions to the command output monitor `cmd_monitor`:
             cmd_monitor.add_assertion(assert_no_errors)
             cmd_monitor.add_assertion(assert_all_invoices_accepted)
@@ -95,7 +90,5 @@ async def test_run_yacat(
             await cmd_monitor.wait_for_pattern(".*Password found: yo", timeout=60)
             logger.info("Password found, waiting for Golem shutdown")
 
-            await cmd_monitor.wait_for_pattern(
-                f".*{SummaryLogger.GOLEM_SHUTDOWN_SUCCESSFUL_MESSAGE}", timeout=120
-            )
+            await cmd_monitor.wait_for_pattern(".*Golem engine has shut down", timeout=120)
             logger.info("Requestor script finished")

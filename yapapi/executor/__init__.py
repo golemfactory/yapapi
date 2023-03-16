@@ -158,7 +158,6 @@ class Executor:
         workers: Set[asyncio.Task],
         job: Job,
     ) -> AsyncGenerator[Task[D, R], None]:
-
         done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
 
         def on_task_done(task: Task[D, R], status: TaskStatus) -> None:
@@ -185,7 +184,6 @@ class Executor:
 
             with work_queue.new_consumer() as consumer:
                 try:
-
                     # the `task_generator` here is passed as the `tasks` argument to the user's
                     # `worker` function
                     #
@@ -278,7 +276,6 @@ class Executor:
 
         try:
             while wait_until_done in services or not done_queue.empty():
-
                 now = datetime.now(timezone.utc)
                 if now > job.expiration_time:
                     raise TimeoutError(f"Job timed out after {self._timeout}")
@@ -324,7 +321,6 @@ class Executor:
                 raise
 
         finally:
-
             await work_queue.close()
 
             # Importing this at the beginning would cause circular dependencies
