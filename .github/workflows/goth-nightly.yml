@@ -108,3 +108,17 @@ jobs:
         # In future we'll be able to use the `--all` flag here to remove envs for
         # all Python versions (https://github.com/python-poetry/poetry/issues/3208).
         run: poetry env remove python3.8
+
+      - name: Send Discord notification on failure
+        uses: Ilshidur/action-discord@0.3.2
+        if: failure()
+        env:
+          BRANCH_NAME: ${{ matrix.branch }}
+          DISCORD_AVATAR: https://i.imgur.com/EOX16Mx.jpg
+          DISCORD_USERNAME: 'Goth night watch'
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          REPO_NAME: ${{ github.repository }}
+          WORKFLOW_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          # <@&717623005911580713> = @sdk-integrations
+          args: '<@&717623005911580713> Goth nightly run failed for `{{ REPO_NAME }}` on branch `{{ BRANCH_NAME }}`! <{{ WORKFLOW_URL }}>'

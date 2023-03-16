@@ -63,9 +63,7 @@ async def test_mid_agreement_payments(
 
     logfile = f"mid-agreement-payments-{datetime.now().strftime('%Y-%m-%d_%H.%M.%S')}.log"
 
-    requestor_path = (
-        project_dir / "tests" / "goth_tests" / "test_mid_agreement_payments" / "requestor_agent.py"
-    )
+    requestor_path = Path(__file__).parent / "requestor_agent.py"
 
     runner = Runner(base_log_dir=log_dir, compose_config=config.compose_config)
     async with runner(config.containers):
