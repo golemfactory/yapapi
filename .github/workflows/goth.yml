@@ -21,8 +21,8 @@ jobs:
           sudo curl -L "https://github.com/docker/compose/releases/download/1.28.4/docker-compose-Linux-x86_64" -o /usr/local/bin/docker-compose
           sudo chmod a+x /usr/local/bin/docker-compose
 
-      - name: install ffi
-        run: sudo apt-get install libffi-dev
+      - name: install ffi and gcc
+        run: sudo apt-get install -y libffi-dev build-essential
 
       - name: Checkout
         uses: actions/checkout@v3
