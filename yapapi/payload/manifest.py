@@ -288,5 +288,13 @@ class Manifest:
         return cls(**obj_copy)
 
     @classmethod
-    def parse_imploded_obj(cls, obj: Dict) -> "Manifest":
-        return cls.parse_obj(explode_dict(obj))
+    def generate(
+        cls, image_hash: str = None, outbound_urls: List[str] = None, **kwargs
+    ) -> "Manifest":
+        if image_hash is not None:
+            kwargs["payload.0.hash"] = image_hash
+
+        if outbound_urls is not None:
+            kwargs["comp_manifest.net.inet.out.urls"] = outbound_urls
+
+        return cls.parse_obj(explode_dict(kwargs))

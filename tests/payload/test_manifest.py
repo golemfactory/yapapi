@@ -223,19 +223,21 @@ def test_manifest_generate(mocked_datetime):
     metadata_name = "example"
     metadata_version = "0.0.1"
     comp_manifest_script_match = "strict"
+    outbound_urls = ["url1", "url2"]
 
-    assert Manifest.parse_imploded_obj(
-        {
+    assert Manifest.generate(
+        image_hash=payload_hash,
+        outbound_urls=outbound_urls,
+        **{
             "metadata.name": metadata_name,
             "metadata.version": metadata_version,
-            "payload.0.hash": payload_hash,
             "payload.0.urls": [
                 payload_urls[0],
                 payload_urls[1],
             ],
             "payload.0.urls.2": payload_urls[2],
             "comp_manifest.script.match": comp_manifest_script_match,
-        }
+        },
     ).dict() == {
         "metadata": {
             "name": metadata_name,
@@ -250,6 +252,14 @@ def test_manifest_generate(mocked_datetime):
                     "run .*",
                 ],
                 "match": comp_manifest_script_match,
+            },
+            "net": {
+                "inet": {
+                    "out": {
+                        "protocols": ["http", "https", "ws", "wss"],
+                        "urls": outbound_urls,
+                    },
+                },
             },
             "version": "",
         },
