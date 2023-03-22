@@ -1,3 +1,4 @@
+import asyncio
 import sys
 from datetime import datetime
 from typing import Dict, List, Optional
@@ -288,7 +289,7 @@ class Manifest:
         return cls(**obj_copy)
 
     @classmethod
-    def generate(
+    async def generate(
         cls, image_hash: str = None, outbound_urls: List[str] = None, **kwargs
     ) -> "Manifest":
         if image_hash is not None:
@@ -297,4 +298,8 @@ class Manifest:
         if outbound_urls is not None:
             kwargs["comp_manifest.net.inet.out.urls"] = outbound_urls
 
-        return cls.parse_obj(explode_dict(kwargs))
+        manifest = cls.parse_obj(explode_dict(kwargs))
+
+        await asyncio.gather(*[payload.resolve_urls_from_hash() for payload in manifest.payload])
+
+        return manifest

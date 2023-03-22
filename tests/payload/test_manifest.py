@@ -210,10 +210,17 @@ def test_manifest_with_minimal_data(mocked_datetime):
     }
 
 
+@pytest.mark.asyncio
 @mock.patch(
     "yapapi.payload.manifest.datetime", **{"utcnow.return_value": datetime(2020, 1, 1, tzinfo=UTC)}
 )
-def test_manifest_generate(mocked_datetime):
+@mock.patch(
+    "yapapi.payload.vm.repo",
+    mock.AsyncMock(
+        **{"return_value.resolve_url.return_value": "hash:sha3:some_image_hash:some_image_url"}
+    ),
+)
+async def test_manifest_generate(mocked_datetime):
     payload_urls = [
         "some url",
         "some other url",
@@ -225,7 +232,7 @@ def test_manifest_generate(mocked_datetime):
     comp_manifest_script_match = "strict"
     outbound_urls = ["url1", "url2"]
 
-    assert Manifest.generate(
+    manifest = await Manifest.generate(
         image_hash=payload_hash,
         outbound_urls=outbound_urls,
         **{
@@ -238,7 +245,9 @@ def test_manifest_generate(mocked_datetime):
             "payload.0.urls.2": payload_urls[2],
             "comp_manifest.script.match": comp_manifest_script_match,
         },
-    ).dict() == {
+    )
+
+    assert manifest.dict() == {
         "metadata": {
             "name": metadata_name,
             "version": metadata_version,
@@ -268,7 +277,12 @@ def test_manifest_generate(mocked_datetime):
         "payload": [
             {
                 "hash": payload_hash,
-                "urls": payload_urls,
+                "urls": [
+                    payload_urls[0],
+                    payload_urls[1],
+                    payload_urls[2],
+                    "some_image_url",
+                ],
                 "platform": {
                     "arch": "x86_64",
                     "os": "linux",
