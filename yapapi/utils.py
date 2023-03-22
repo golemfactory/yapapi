@@ -264,7 +264,6 @@ def explode_dict(imploded_dict: Dict, separator=".") -> Dict:
                 else:
                     nested_obj = nested_obj.setdefault(part, {})
             else:
-
                 try:
                     nested_obj = nested_obj[part_index]
                 except IndexError:
