@@ -37,6 +37,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          poetry config experimental.new-installer false
           poetry env use python3.8
           poetry install
 
