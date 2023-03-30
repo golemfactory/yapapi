@@ -180,7 +180,7 @@ def test_manifest_parse_obj(manifest_obj, manifest_dict):
 
 
 @mock.patch(
-    "yapapi.payload.manifest.datetime", **{"utcnow.return_value": datetime(2020, 1, 1, tzinfo=UTC)}
+    "yapapi.payload.manifest.datetime", **{"now.return_value": datetime(2020, 1, 1, tzinfo=UTC)}
 )
 def test_manifest_with_minimal_data(mocked_datetime):
     payload_hash = "asd"
@@ -206,13 +206,13 @@ def test_manifest_with_minimal_data(mocked_datetime):
                 },
             },
         ],
-        "version": "",
+        "version": "0.0.0",
     }
 
 
 @pytest.mark.asyncio
 @mock.patch(
-    "yapapi.payload.manifest.datetime", **{"utcnow.return_value": datetime(2020, 1, 1, tzinfo=UTC)}
+    "yapapi.payload.manifest.datetime", **{"now.return_value": datetime(2020, 1, 1, tzinfo=UTC)}
 )
 @mock.patch(
     "yapapi.payload.vm.repo",
@@ -270,13 +270,13 @@ async def test_manifest_generate(mocked_datetime):
                     },
                 },
             },
-            "version": "",
+            "version": "0.0.0",
         },
         "created_at": "2020-01-01T00:00:00+00:00",
         "expires_at": "2100-01-01T00:00:00+00:00",
         "payload": [
             {
-                "hash": payload_hash,
+                "hash": f"sha3:{payload_hash}",
                 "urls": [
                     payload_urls[0],
                     payload_urls[1],
@@ -289,7 +289,7 @@ async def test_manifest_generate(mocked_datetime):
                 },
             },
         ],
-        "version": "",
+        "version": "0.0.0",
     }
 
 
