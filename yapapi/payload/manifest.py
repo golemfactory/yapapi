@@ -101,6 +101,9 @@ class ManifestPayload:
     async def resolve_urls_from_hash(self) -> None:
         package = await vm.repo(image_hash=self.hash)
 
+        if ":" not in self.hash:
+            self.hash = f"sha3:{self.hash}"
+
         full_url = await package.resolve_url()
 
         image_url = full_url.split(":", 3)[3]
@@ -206,7 +209,7 @@ class CompManifestNet:
 
 @dataclass
 class CompManifest:
-    version: str = ""
+    version: str = "0.0.0"
     script: Optional[CompManifestScript] = None
     net: Optional[CompManifestNet] = None
 
@@ -239,10 +242,10 @@ class CompManifest:
 @dataclass
 class Manifest:
     payload: List[ManifestPayload]
-    version: str = ""
+    version: str = "0.0.0"
     comp_manifest: Optional[CompManifest] = None
     # Using lambda helps with mocking in tests
-    created_at: datetime = field(default_factory=lambda: datetime.utcnow())
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     expires_at: datetime = datetime(2100, 1, 1, tzinfo=UTC)
     metadata: Optional[ManifestMetadata] = None
 
