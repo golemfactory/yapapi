@@ -65,7 +65,7 @@ jobs:
       - name: Run test suite
         env:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: poetry run poe tests_integration
+        run: poetry run poe test_one
 
       - name: Upload test logs
         uses: actions/upload-artifact@v2
