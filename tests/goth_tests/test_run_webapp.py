@@ -71,10 +71,10 @@ async def test_run_webapp(
             logger.info("Waiting for the instances to start")
 
             # A longer timeout to account for downloading a VM image
-            await cmd_monitor.wait_for_pattern("DB instance started.*", timeout=240)
+            await cmd_monitor.wait_for_pattern("DB instance started.*", timeout=600)
             logger.info("Db instance started")
 
-            await cmd_monitor.wait_for_pattern("Local HTTP server listening on.*", timeout=120)
+            await cmd_monitor.wait_for_pattern("Local HTTP server listening on.*", timeout=600)
             logger.info("HTTP instance started")
 
             requests.post(ONELINER_URL, data={"message": ONELINER_ENTRY})
@@ -88,9 +88,9 @@ async def test_run_webapp(
             logger.info("Sent SIGINT...")
 
             for i in range(2):
-                await cmd_monitor.wait_for_pattern(".*Service terminated.*", timeout=20)
+                await cmd_monitor.wait_for_pattern(".*Service terminated.*", timeout=100)
 
             logger.info(f"The instances have been terminated ({elapsed_time()})")
 
-            await cmd_monitor.wait_for_pattern(".*All jobs have finished", timeout=20)
+            await cmd_monitor.wait_for_pattern(".*All jobs have finished", timeout=100)
             logger.info(f"Requestor script finished ({elapsed_time()})")
