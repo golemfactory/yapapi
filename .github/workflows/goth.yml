@@ -22,7 +22,9 @@ jobs:
           sudo chmod a+x /usr/local/bin/docker-compose
 
       - name: install ffi and gcc
-        run: sudo apt-get install -y libffi-dev build-essential
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libffi-dev build-essential
 
       - name: Checkout
         uses: actions/checkout@v3
