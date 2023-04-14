@@ -1,2 +1,2 @@
 #!/bin/bash
-/bin/rqlited -http-addr 0.0.0.0:4001 /rqlite/file/data > /run/out 2> /run/err &
+/bin/rqlited -http-addr 0.0.0.0:4001 /rqlite/file/data > out.log 2> err.log &
