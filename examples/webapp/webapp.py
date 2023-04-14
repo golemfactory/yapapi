@@ -23,7 +23,7 @@ from utils import (
 HTTP_IMAGE_HASH = "c37c1364f637c199fe710ca62241ff486db92c875b786814c6030aa1"
 DB_IMAGE_HASH = "85021afecf51687ecae8bdc21e10f3b11b82d2e3b169ba44e177340c"
 
-STARTING_TIMEOUT = timedelta(minutes=4)
+STARTING_TIMEOUT = timedelta(minutes=5)
 
 
 class HttpService(HttpProxyService):
@@ -45,7 +45,7 @@ class HttpService(HttpProxyService):
         async for script in super().start():
             yield script
 
-        script = self._ctx.new_script(timeout=timedelta(seconds=20))
+        script = self._ctx.new_script(timeout=timedelta(seconds=200))
 
         script.run(
             "/bin/bash",
@@ -80,7 +80,7 @@ class DbService(Service):
         async for script in super().start():
             yield script
 
-        script = self._ctx.new_script(timeout=timedelta(seconds=30))
+        script = self._ctx.new_script(timeout=timedelta(seconds=200))
         script.run("/bin/run_rqlite.sh")
         yield script
 
