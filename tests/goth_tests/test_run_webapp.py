@@ -71,15 +71,11 @@ async def test_run_webapp(
             logger.info("Waiting for the instances to start")
 
             # A longer timeout to account for downloading a VM image
-            await cmd_monitor.wait_for_pattern("DB instance started.*", timeout=600)
+            await cmd_monitor.wait_for_pattern("DB instance started.*", timeout=240)
             logger.info("Db instance started")
 
-            await asyncio.sleep(120)
-
-            await cmd_monitor.wait_for_pattern("Local HTTP server listening on.*", timeout=300)
+            await cmd_monitor.wait_for_pattern("Local HTTP server listening on.*", timeout=120)
             logger.info("HTTP instance started")
-
-            await asyncio.sleep(30)
 
             requests.post(ONELINER_URL, data={"message": ONELINER_ENTRY})
             r = requests.get(ONELINER_URL)
