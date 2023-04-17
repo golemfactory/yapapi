@@ -23,7 +23,7 @@ from utils import (
 HTTP_IMAGE_HASH = "c37c1364f637c199fe710ca62241ff486db92c875b786814c6030aa1"
 DB_IMAGE_HASH = "85021afecf51687ecae8bdc21e10f3b11b82d2e3b169ba44e177340c"
 
-STARTING_TIMEOUT = timedelta(minutes=5)
+STARTING_TIMEOUT = timedelta(minutes=20)
 
 
 class HttpService(HttpProxyService):
@@ -45,7 +45,7 @@ class HttpService(HttpProxyService):
         async for script in super().start():
             yield script
 
-        script = self._ctx.new_script(timeout=timedelta(seconds=200))
+        script = self._ctx.new_script(timeout=timedelta(seconds=600))
 
         script.run(
             "/bin/bash",
@@ -80,7 +80,7 @@ class DbService(Service):
         async for script in super().start():
             yield script
 
-        script = self._ctx.new_script(timeout=timedelta(seconds=200))
+        script = self._ctx.new_script(timeout=timedelta(seconds=600))
         script.run("/bin/run_rqlite.sh")
         yield script
 
@@ -119,7 +119,7 @@ async def main(subnet_tag, payment_driver, payment_network, port):
                 and datetime.now() < commissioning_time + STARTING_TIMEOUT
             ):
                 print(db_cluster.instances)
-                await asyncio.sleep(5)
+                await asyncio.sleep(1)
 
             raise_exception_if_still_starting(db_cluster)
 
@@ -140,7 +140,7 @@ async def main(subnet_tag, payment_driver, payment_network, port):
                 and datetime.now() < commissioning_time + STARTING_TIMEOUT
             ):
                 print(web_cluster.instances + db_cluster.instances)
-                await asyncio.sleep(5)
+                await asyncio.sleep(1)
 
             raise_exception_if_still_starting(web_cluster)
 
@@ -159,7 +159,7 @@ async def main(subnet_tag, payment_driver, payment_network, port):
             while True:
                 print(web_cluster.instances + db_cluster.instances)
                 try:
-                    await asyncio.sleep(10)
+                    await asyncio.sleep(1)
                 except (KeyboardInterrupt, asyncio.CancelledError):
                     break
 
