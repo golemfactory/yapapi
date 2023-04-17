@@ -74,7 +74,7 @@ async def test_run_webapp(
             await cmd_monitor.wait_for_pattern("DB instance started.*", timeout=600)
             logger.info("Db instance started")
 
-            await asyncio.sleep(30)
+            await asyncio.sleep(120)
 
             await cmd_monitor.wait_for_pattern("Local HTTP server listening on.*", timeout=300)
             logger.info("HTTP instance started")
