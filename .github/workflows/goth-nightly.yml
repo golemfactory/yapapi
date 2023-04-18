@@ -111,7 +111,7 @@ jobs:
 
       - name: Send Discord notification on failure
         uses: Ilshidur/action-discord@0.3.2
-        if: failure()
+        if: steps.tests.outcome != 'success'  # continue-on-error doesn't work with `failure()` https://github.com/actions/toolkit/issues/1034
         env:
           BRANCH_NAME: ${{ matrix.branch }}
           DISCORD_AVATAR: https://i.imgur.com/EOX16Mx.jpg
