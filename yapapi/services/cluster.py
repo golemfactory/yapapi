@@ -11,9 +11,10 @@ else:
     from typing_extensions import Final
     from async_exit_stack import AsyncExitStack
 
+from golem_core.core.market_api import Payload
+
 from yapapi.engine import Job, _Engine
 from yapapi.network import Network
-from golem_core.core.market_api import Payload
 
 from .service import ServiceType
 from .service_runner import ServiceRunner

@@ -1,8 +1,9 @@
 import logging
 from typing import Set
 
-from yapapi import events, rest
 from golem_core.core.market_api import DemandBuilder
+
+from yapapi import events, rest
 
 from .wrapping_strategy import WrappingMarketStrategy
 

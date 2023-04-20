@@ -6,9 +6,10 @@ from typing import Dict, Mapping, Union
 
 from dataclasses import dataclass
 
+from golem_core.core.market_api import DemandBuilder
+
 from yapapi import rest
 from yapapi.props import com
-from golem_core.core.market_api import DemandBuilder
 from yapapi.props.com import Counter
 
 from .base import SCORE_REJECTED, SCORE_TRUSTED, MarketStrategy

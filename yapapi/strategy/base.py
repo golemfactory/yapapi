@@ -10,9 +10,10 @@ from typing import Dict, Optional
 from dataclasses import dataclass
 from typing_extensions import Final
 
-from yapapi import rest
 from golem_core.core.activity_api import Activity
 from golem_core.core.market_api import DemandBuilder, DemandBuilderDecorator
+
+from yapapi import rest
 
 SCORE_NEUTRAL: Final[float] = 0.0
 SCORE_REJECTED: Final[float] = -1.0

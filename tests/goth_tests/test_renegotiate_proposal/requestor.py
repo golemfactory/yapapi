@@ -5,10 +5,11 @@ from asyncio import TimeoutError
 
 from typing_extensions import Final
 
+from golem_core.core.market_api import DemandBuilder
+
 from yapapi import props as yp
 from yapapi.config import ApiConfig
 from yapapi.log import enable_default_logger
-from golem_core.core.market_api import DemandBuilder
 from yapapi.rest import Configuration, Market
 from yapapi.rest.market import OfferProposal
 

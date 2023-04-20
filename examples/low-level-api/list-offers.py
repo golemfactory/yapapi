@@ -6,10 +6,11 @@ import sys
 from asyncio import TimeoutError
 from datetime import datetime, timezone
 
+from golem_core.core.market_api import DemandBuilder
+
 from yapapi import props as yp
 from yapapi.config import ApiConfig
 from yapapi.log import enable_default_logger
-from golem_core.core.market_api import DemandBuilder
 from yapapi.rest import Activity, Configuration, Market, Payment  # noqa
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent

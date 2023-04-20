@@ -6,9 +6,10 @@ from typing import Dict, Mapping, Optional, Union
 from dataclasses import dataclass
 from deprecated import deprecated
 
-from yapapi import rest
 from golem_core.core.activity_api import Activity
 from golem_core.core.market_api import DemandBuilder
+
+from yapapi import rest
 from yapapi.props import com
 
 from .base import SCORE_NEUTRAL, SCORE_REJECTED, MarketStrategy

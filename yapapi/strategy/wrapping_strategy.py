@@ -1,8 +1,9 @@
 import abc
 from decimal import Decimal
 
-from yapapi import rest
 from golem_core.core.market_api import DemandBuilder
+
+from yapapi import rest
 
 from .base import BaseMarketStrategy
 
