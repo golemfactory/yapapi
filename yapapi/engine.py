@@ -34,12 +34,12 @@ if sys.version_info >= (3, 7):
 else:
     from async_exit_stack import AsyncExitStack
 
+from golem_core.core.market_api import DemandBuilder, DemandBuilderDecorator, Payload
+
 from yapapi import events, props, rest
 from yapapi.agreements_pool import AgreementsPool
 from yapapi.ctx import WorkContext
 from yapapi.invoice_manager import InvoiceManager
-from yapapi.payload import Payload
-from yapapi.props.builder import DemandBuilder, DemandDecorator
 from yapapi.rest.activity import Activity
 from yapapi.rest.market import Agreement, OfferProposal, Subscription
 from yapapi.rest.payment import DebitNote
@@ -612,12 +612,12 @@ class _Engine:
         self._generators.add(generator)
 
     @dataclass
-    class PaymentDecorator(DemandDecorator):
+    class PaymentDecorator(DemandBuilderDecorator):
         """A `DemandDecorator` that adds payment-related constraints and properties to a Demand."""
 
         market_decoration: rest.payment.MarketDecoration
 
-        async def decorate_demand(self, demand: DemandBuilder):
+        async def decorate_demand_builder(self, demand: DemandBuilder):
             """Add properties and constraints to a Demand."""
             for constraint in self.market_decoration.constraints:
                 demand.ensure(constraint)

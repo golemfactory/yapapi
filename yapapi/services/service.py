@@ -19,12 +19,12 @@ from typing import (
 import statemachine
 from dataclasses import dataclass, field
 
+from golem_core.core.market_api import Payload
 from ya_activity.exceptions import ApiException
 
 from yapapi import events
 from yapapi.ctx import WorkContext
 from yapapi.network import Network, Node
-from yapapi.payload import Payload
 from yapapi.script import Script
 
 from .service_state import ServiceState

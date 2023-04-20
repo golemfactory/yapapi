@@ -8,12 +8,12 @@ import aiohttp
 from dataclasses import dataclass
 from typing_extensions import AsyncContextManager, Awaitable
 
+from golem_core.core.market_api import DemandOfferBaseModel, NodeInfo
 from ya_market import ApiClient, ApiException, RequestorApi, models
 
-from ..props import Model, NodeInfo
 from .common import SuppressedExceptions, is_intermittent_error
 
-_ModelType = TypeVar("_ModelType", bound=Model)
+_ModelType = TypeVar("_ModelType", bound=DemandOfferBaseModel)
 
 logger = logging.getLogger(__name__)
 

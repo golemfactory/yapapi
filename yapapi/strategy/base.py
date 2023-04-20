@@ -11,8 +11,8 @@ from dataclasses import dataclass
 from typing_extensions import Final
 
 from yapapi import rest
-from yapapi.props import Activity
-from yapapi.props.builder import DemandBuilder, DemandDecorator
+from golem_core.core.activity_api import Activity
+from golem_core.core.market_api import DemandBuilder, DemandBuilderDecorator
 
 SCORE_NEUTRAL: Final[float] = 0.0
 SCORE_REJECTED: Final[float] = -1.0
@@ -89,7 +89,7 @@ DEFAULT_PROPERTY_VALUE_RANGES: Dict[str, PropValueRange] = {
 logger = logging.getLogger(__name__)
 
 
-class BaseMarketStrategy(DemandDecorator, abc.ABC):
+class BaseMarketStrategy(DemandBuilderDecorator, abc.ABC):
     """Base market strategy interface."""
 
     @abc.abstractmethod
@@ -225,7 +225,7 @@ class MarketStrategy(BaseMarketStrategy, abc.ABC):
                 updated_demand.properties[prop_key] = prop_value
         return updated_demand
 
-    async def decorate_demand(self, demand: DemandBuilder) -> None:
+    async def decorate_demand_builder(self, demand: DemandBuilder) -> None:
         """Optionally add relevant constraints to a Demand."""
 
     async def invoice_accepted_amount(self, invoice: rest.payment.Invoice) -> Decimal:

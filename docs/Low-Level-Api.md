@@ -7,7 +7,7 @@
 ```python
 from yapapi.rest import Configuration, Market, Activity, Payment
 from yapapi import props as yp
-from yapapi.props.builder import DemandBuilder
+from golem_core.core.market_api import DemandBuilder
 from datetime import datetime, timezone
 
 

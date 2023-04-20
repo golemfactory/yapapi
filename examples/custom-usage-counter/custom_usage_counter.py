@@ -7,12 +7,12 @@ from decimal import Decimal
 
 from dataclasses import dataclass
 
+from golem_core.core.market_api import RUNTIME_NAME, Payload, constraint
+
 from yapapi import Golem
 from yapapi.ctx import ActivityUsage
 from yapapi.log import enable_default_logger
-from yapapi.payload import Payload
-from yapapi.props import com, inf
-from yapapi.props.base import constraint
+from yapapi.props import com
 from yapapi.services import Service, ServiceState
 from yapapi.strategy import LeastExpensiveLinearPayuMS
 
@@ -24,7 +24,7 @@ from utils import build_parser
 
 @dataclass
 class CustomCounterServicePayload(Payload):
-    runtime: str = constraint(inf.INF_RUNTIME_NAME, default="test-counters")
+    runtime: str = constraint(RUNTIME_NAME, default="test-counters")
 
 
 class CustomCounterService(Service):

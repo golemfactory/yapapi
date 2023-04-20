@@ -2,7 +2,7 @@ import logging
 from typing import Set
 
 from yapapi import events, rest
-from yapapi.props.builder import DemandBuilder
+from golem_core.core.market_api import DemandBuilder
 
 from .wrapping_strategy import WrappingMarketStrategy
 
@@ -41,9 +41,9 @@ class DecreaseScoreForUnconfirmedAgreement(WrappingMarketStrategy):
         elif isinstance(event, events.AgreementRejected):
             self._rejecting_providers.add(event.provider_id)
 
-    async def decorate_demand(self, demand: DemandBuilder) -> None:
+    async def decorate_demand_builder(self, demand: DemandBuilder) -> None:
         """Decorate `demand` using the base strategy."""
-        await self.base_strategy.decorate_demand(demand)
+        await self.base_strategy.decorate_demand_builder(demand)
 
     async def score_offer(self, offer: rest.market.OfferProposal) -> float:
         """Score `offer` using the base strategy and apply penalty if needed.

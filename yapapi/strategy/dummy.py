@@ -7,9 +7,9 @@ from dataclasses import dataclass
 from deprecated import deprecated
 
 from yapapi import rest
-from yapapi.props import Activity, com
-from yapapi.props.builder import DemandBuilder
-from yapapi.props.com import Counter
+from golem_core.core.activity_api import Activity
+from golem_core.core.market_api import DemandBuilder
+from yapapi.props import com
 
 from .base import SCORE_NEUTRAL, SCORE_REJECTED, MarketStrategy
 
@@ -29,7 +29,7 @@ class DummyMS(MarketStrategy, object):
     def __init__(
         self,
         max_fixed_price: Decimal = Decimal("0.05"),
-        max_price_for: Mapping[Union[Counter, str], Decimal] = MappingProxyType({}),
+        max_price_for: Mapping[Union[com.Counter, str], Decimal] = MappingProxyType({}),
         activity: Optional[Activity] = None,
     ):
         self._max_fixed_price = max_fixed_price
@@ -38,12 +38,12 @@ class DummyMS(MarketStrategy, object):
             {com.Counter.TIME.value: Decimal("0.002"), com.Counter.CPU.value: Decimal("0.002") * 10}
         )
         self._max_price_for.update(
-            {(c.value if isinstance(c, Counter) else c): v for (c, v) in max_price_for.items()}
+            {(c.value if isinstance(c, com.Counter) else c): v for (c, v) in max_price_for.items()}
         )
         self._activity = activity
 
-    async def decorate_demand(self, demand: DemandBuilder) -> None:
-        await super().decorate_demand(demand)
+    async def decorate_demand_builder(self, demand: DemandBuilder) -> None:
+        await super().decorate_demand_builder(demand)
 
         # Ensure that the offer uses `PriceModel.LINEAR` price model
         demand.ensure(f"({com.PRICE_MODEL}={com.PriceModel.LINEAR.value})")

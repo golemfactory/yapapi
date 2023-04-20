@@ -2,7 +2,7 @@ import abc
 from decimal import Decimal
 
 from yapapi import rest
-from yapapi.props.builder import DemandBuilder
+from golem_core.core.market_api import DemandBuilder
 
 from .base import BaseMarketStrategy
 
@@ -28,8 +28,8 @@ class WrappingMarketStrategy(BaseMarketStrategy, abc.ABC):
         """
         self.base_strategy = base_strategy
 
-    async def decorate_demand(self, demand: DemandBuilder) -> None:
-        await self.base_strategy.decorate_demand(demand)
+    async def decorate_demand_builder(self, demand: DemandBuilder) -> None:
+        await self.base_strategy.decorate_demand_builder(demand)
 
     async def score_offer(self, offer: rest.market.OfferProposal) -> float:
         return await self.base_strategy.score_offer(offer)

@@ -28,6 +28,8 @@ if sys.version_info > (3, 8):
 else:
     from typing_extensions import TypedDict
 
+from golem_core.core.market_api import Payload
+
 import yapapi
 from yapapi import events
 from yapapi.ctx import WorkContext
@@ -36,7 +38,6 @@ from yapapi.event_dispatcher import AsyncEventDispatcher
 from yapapi.executor import Executor
 from yapapi.executor.task import Task
 from yapapi.network import Network
-from yapapi.payload import Payload
 from yapapi.props import com
 from yapapi.script import Script
 from yapapi.services import Cluster, ServiceType

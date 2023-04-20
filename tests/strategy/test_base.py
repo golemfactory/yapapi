@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 import pytest
 
 from tests.factories.rest.market import OfferProposalFactory
-from yapapi.props import Activity
-from yapapi.props.builder import DemandBuilder
+from golem_core.core.activity_api import Activity
+from golem_core.core.market_api import DemandBuilder
 from yapapi.strategy import (
     PROP_DEBIT_NOTE_ACCEPTANCE_TIMEOUT,
     PROP_DEBIT_NOTE_INTERVAL_SEC,

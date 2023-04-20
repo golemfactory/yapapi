@@ -13,7 +13,7 @@ else:
 
 from yapapi.engine import Job, _Engine
 from yapapi.network import Network
-from yapapi.payload import Payload
+from golem_core.core.market_api import Payload
 
 from .service import ServiceType
 from .service_runner import ServiceRunner

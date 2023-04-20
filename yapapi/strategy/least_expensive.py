@@ -8,14 +8,14 @@ from dataclasses import dataclass
 
 from yapapi import rest
 from yapapi.props import com
-from yapapi.props.builder import DemandBuilder
+from golem_core.core.market_api import DemandBuilder
 from yapapi.props.com import Counter
 
 from .base import SCORE_REJECTED, SCORE_TRUSTED, MarketStrategy
 
 
 @dataclass
-class LeastExpensiveLinearPayuMS(MarketStrategy, object):
+class LeastExpensiveLinearPayuMS(MarketStrategy):
     """A strategy that scores offers according to cost for given computation time."""
 
     def __init__(
@@ -32,8 +32,8 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
             {(c.value if isinstance(c, Counter) else c): v for (c, v) in max_price_for.items()}
         )
 
-    async def decorate_demand(self, demand: DemandBuilder) -> None:
-        await super().decorate_demand(demand)
+    async def decorate_demand_builder(self, demand: DemandBuilder) -> None:
+        await super().decorate_demand_builder(demand)
 
         # Ensure that the offer uses `PriceModel.LINEAR` price model.
         demand.ensure(f"({com.PRICE_MODEL}={com.PriceModel.LINEAR.value})")

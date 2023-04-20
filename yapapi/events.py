@@ -189,6 +189,8 @@ from typing import List, Optional, Tuple, Type, TypeVar
 
 import attr
 
+from golem_core.core.market_api import NodeInfo
+
 #   Q: Why `import yapapi` here?
 #   A: Because we want to have typing annotations without circular imports
 #   Q: Why not `if TYPE_CHECKING:`?
@@ -196,7 +198,6 @@ import attr
 #      https://github.com/tox-dev/sphinx-autodoc-typehints/issues/22
 #      -> Compare e.g. "MarketStrategy" typing in `yapapi.golem.Golem.__init__`
 import yapapi
-from yapapi.props import NodeInfo
 
 logger = logging.getLogger(__name__)
 

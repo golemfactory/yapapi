@@ -2,10 +2,9 @@ import asyncio
 
 from dataclasses import dataclass
 
+from golem_core.core.market_api import INF_MEM, INF_STORAGE, RUNTIME_NAME, Payload, constraint, prop
+
 from yapapi import Golem
-from yapapi.payload import Payload
-from yapapi.props import inf
-from yapapi.props.base import constraint, prop
 from yapapi.services import Service
 
 RUNTIME_NAME = "my-runtime"
@@ -26,9 +25,9 @@ SOME_CUSTOM_PROPERTY = "golem.srv.app.eth.network"
 class CustomPayload(Payload):
     custom_property: str = prop(SOME_CUSTOM_PROPERTY)
 
-    runtime: str = constraint(inf.INF_RUNTIME_NAME, default=RUNTIME_NAME)
-    min_mem_gib: float = constraint(inf.INF_MEM, operator=">=", default=16)
-    min_storage_gib: float = constraint(inf.INF_STORAGE, operator=">=", default=1024)
+    runtime: str = constraint(RUNTIME_NAME, default=RUNTIME_NAME)
+    min_mem_gib: float = constraint(INF_MEM, operator=">=", default=16)
+    min_storage_gib: float = constraint(INF_STORAGE, operator=">=", default=1024)
 
 
 class CustomRuntimeService(Service):

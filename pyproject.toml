@@ -21,6 +21,8 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.dependencies]
 python = "^3.8"
 
+golem-core = { git = "https://github.com/golemfactory/golem-core-python.git", rev = "f34061cc875a2ff01a49e8578ef9d19677c9d5e0" }
+
 setuptools = [
   { version = "*", python = ">=3.8" },
 ]
@@ -181,7 +183,7 @@ warn_unused_ignores = false
 [tool.isort]
 profile = "black"
 py_version = 36
-known_golem = "goth, ya_activity, ya_market, ya_net, ya_payment"
+known_golem = "goth, ya_activity, ya_market, ya_net, ya_payment, golem_core"
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "GOLEM", "FIRSTPARTY", "LOCALFOLDER"]
 line_length = 100
 

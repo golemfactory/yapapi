@@ -8,8 +8,10 @@ from typing import Callable, Dict, NamedTuple, Optional
 import aiohttp
 from dataclasses import dataclass
 
+from golem_core.core.activity_api import Activity
+from golem_core.core.market_api import NodeInfo
+
 from yapapi import events
-from yapapi.props import Activity, NodeInfo
 from yapapi.rest.market import Agreement, AgreementDetails, ApiException, OfferProposal
 
 logger = logging.getLogger(__name__)

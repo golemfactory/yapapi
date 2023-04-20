@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 
 from dataclasses import dataclass, field
 
-from .base import Model, Props
+from golem_core.core.market_api import DemandOfferBaseModel
 
 SCHEME: str = "golem.com.scheme"
 PRICE_MODEL: str = "golem.com.pricing.model"
@@ -30,8 +30,8 @@ class Counter(enum.Enum):
     UNKNOWN = ""
 
 
-@dataclass(frozen=True)  # type: ignore  # mypy doesn't allow abstract methods in dataclasses
-class Com(Model):
+@dataclass  # type: ignore  # mypy doesn't allow abstract methods in dataclasses
+class Com(DemandOfferBaseModel):
     """Base model representing the payment model used."""
 
     scheme: BillingScheme = field(metadata={"key": SCHEME})
@@ -47,7 +47,7 @@ class Com(Model):
         """Return usage as a dictionary where keys are the appropriate usage counters."""
 
 
-@dataclass(frozen=True)
+@dataclass
 class ComLinear(Com):
     """Linear payment model."""
 
@@ -55,7 +55,7 @@ class ComLinear(Com):
     usage_vector: List[str] = field(metadata={"key": DEFINED_USAGES})
 
     @classmethod
-    def _custom_mapping(cls, props: Props, data: Dict[str, Any]):
+    def _custom_mapping(cls, props: Dict[str, str], data: Dict[str, Any]):
         # we don't need mapping per-se but we'll do some validation instead
         assert data["price_model"] == PriceModel.LINEAR, "expected linear pricing model"
         assert (

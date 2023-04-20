@@ -18,11 +18,12 @@ from typing import (
 
 from typing_extensions import AsyncGenerator, Final
 
+from golem_core.core.market_api import Payload
+
 import yapapi.utils
 from yapapi import events
 from yapapi.ctx import WorkContext
 from yapapi.engine import Job, _Engine
-from yapapi.payload import Payload
 from yapapi.script import Script
 from yapapi.script.command import Deploy, Start
 
