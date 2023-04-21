@@ -6,9 +6,10 @@ import sys
 from datetime import datetime
 from typing import List
 
+from golem_core.core.market_api import RepositoryVmPayload
+
 from yapapi import Golem, Task, WorkContext
 from yapapi.log import pluralize
-from yapapi.payload import vm
 from yapapi.strategy import SCORE_REJECTED, SCORE_TRUSTED, MarketStrategy
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
@@ -46,7 +47,7 @@ class ScanStrategy(MarketStrategy):
 async def main(
     scan_size: int, max_workers: int, subnet_tag, payment_driver=None, payment_network=None
 ):
-    payload = await vm.repo(image_hash=IMAGE_HASH)
+    payload = RepositoryVmPayload(image_hash=IMAGE_HASH)
 
     async def worker(ctx: WorkContext, tasks):
         assert ctx.provider_id not in scanned_nodes

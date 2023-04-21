@@ -4,9 +4,10 @@ import pathlib
 import sys
 from datetime import datetime, timedelta
 
+from golem_core.core.market_api import RepositoryVmPayload
+
 from yapapi import Golem
 from yapapi.contrib.service.http_proxy import HttpProxyService, LocalHttpProxy
-from yapapi.payload import vm
 from yapapi.services import Service, ServiceState
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
@@ -35,9 +36,9 @@ class HttpService(HttpProxyService):
 
     @staticmethod
     async def get_payload():
-        return await vm.repo(
+        return RepositoryVmPayload(
             image_hash=HTTP_FILE_UPLOAD_IMAGE_HASH,
-            capabilities=[vm.VM_CAPS_VPN],
+            capabilities=["vpn"],
         )
 
     async def start(self):
@@ -70,9 +71,9 @@ class HttpService(HttpProxyService):
 class DbService(Service):
     @staticmethod
     async def get_payload():
-        return await vm.repo(
+        return RepositoryVmPayload(
             image_hash=DB_IMAGE_HASH,
-            capabilities=[vm.VM_CAPS_VPN],
+            capabilities=["vpn"],
         )
 
     async def start(self):

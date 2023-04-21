@@ -8,9 +8,10 @@ from pathlib import Path
 from tempfile import gettempdir
 from typing import AsyncIterable, List, Optional
 
+from golem_core.core.market_api import RepositoryVmPayload
+
 from yapapi import Golem, Task, WorkContext
 from yapapi.events import CommandExecuted
-from yapapi.payload import vm
 from yapapi.rest.activity import CommandExecutionError
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
@@ -150,7 +151,7 @@ def _parse_result(potfile_line: str) -> Optional[str]:
 
 
 async def main(args):
-    package = await vm.repo(
+    package = RepositoryVmPayload(
         image_hash="055911c811e56da4d75ffc928361a78ed13077933ffa8320fb1ec2db",
         min_mem_gib=0.5,
         min_storage_gib=2.0,

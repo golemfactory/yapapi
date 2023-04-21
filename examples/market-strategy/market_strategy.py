@@ -4,8 +4,9 @@ import pathlib
 import sys
 from collections import defaultdict
 
+from golem_core.core.market_api import RepositoryVmPayload
+
 from yapapi import Golem, Task, WorkContext
-from yapapi.payload import vm
 from yapapi.strategy import SCORE_TRUSTED, MarketStrategy
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
@@ -60,7 +61,7 @@ class FastestProviderStrategy(MarketStrategy):
 
 
 async def main(subnet_tag, payment_driver, payment_network):
-    payload = await vm.repo(image_hash=IMAGE_HASH)
+    payload = RepositoryVmPayload(image_hash=IMAGE_HASH)
 
     strategy = FastestProviderStrategy()
 

@@ -16,16 +16,17 @@ from utils import (  # noqa: E402
     build_parser,
 )
 
+from golem_core.core.market_api import RepositoryVmPayload  # noqa: E402
+
 from yapapi import windows_event_loop_fix  # noqa: E402
 from yapapi import Golem, NoPaymentAccountError, Task, WorkContext  # noqa: E402
 from yapapi import __version__ as yapapi_version  # noqa: E402
 from yapapi.log import enable_default_logger  # noqa: E402
-from yapapi.payload import vm  # noqa: E402
 from yapapi.rest.activity import BatchTimeoutError  # noqa: E402
 
 
 async def main(subnet_tag, payment_driver=None, payment_network=None):
-    package = await vm.repo(
+    package = RepositoryVmPayload(
         image_hash="a23ce2c0c29ea9711e4a293a2805700e2f0cb6450fddf9506812eb1b",
         min_mem_gib=0.5,
         min_storage_gib=2.0,

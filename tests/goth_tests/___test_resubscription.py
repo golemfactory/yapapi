@@ -11,6 +11,7 @@ import colors
 import pytest
 
 import ya_market.api.requestor_api
+from golem_core.core.market_api import RepositoryVmPayload
 from goth.assertions import EventStream
 from goth.assertions.monitor import EventMonitor
 from goth.assertions.operators import eventually
@@ -24,7 +25,6 @@ import yapapi.rest.market
 from yapapi import Golem, Task
 from yapapi.events import Event, JobFinished, JobStarted, SubscriptionCreated
 from yapapi.log import enable_default_logger
-from yapapi.payload import vm
 
 logger = logging.getLogger("goth.test")
 
@@ -129,7 +129,7 @@ async def test_demand_resubscription(
 
     goth_config = load_yaml(goth_config_path, config_overrides + [single_node_override])
 
-    vm_package = await vm.repo(
+    vm_package = RepositoryVmPayload(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         min_mem_gib=0.5,
         min_storage_gib=2.0,

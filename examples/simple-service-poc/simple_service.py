@@ -7,8 +7,9 @@ import string
 import sys
 from datetime import datetime, timedelta, timezone
 
+from golem_core.core.market_api import RepositoryVmPayload
+
 from yapapi import Golem
-from yapapi.payload import vm
 from yapapi.services import Service, ServiceState
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
@@ -45,7 +46,7 @@ class SimpleService(Service):
 
     @staticmethod
     async def get_payload():
-        return await vm.repo(
+        return RepositoryVmPayload(
             image_hash="8b11df59f84358d47fc6776d0bb7290b0054c15ded2d6f54cf634488",
             min_mem_gib=0.5,
             min_storage_gib=2.0,

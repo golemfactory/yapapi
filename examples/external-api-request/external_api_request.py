@@ -6,14 +6,14 @@ import sys
 from datetime import datetime
 
 from yapapi import Golem
-from yapapi.payload import vm
 from yapapi.services import Service
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
-
 from utils import build_parser, print_env_info, run_golem_example
+
+from golem_core.core.market_api import ManifestVmPayload
 
 
 class ApiCallService(Service):
@@ -31,7 +31,7 @@ class ApiCallService(Service):
         manifest_cert = open("golem_sign.pem", "rb").read()
         manifest_cert = base64.b64encode(manifest_cert).decode("utf-8")
 
-        return await vm.manifest(
+        return ManifestVmPayload(
             manifest=manifest,
             manifest_sig=manifest_sig,
             manifest_sig_algorithm=manifest_sig_algorithm,

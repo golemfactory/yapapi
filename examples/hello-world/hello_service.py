@@ -2,9 +2,10 @@
 import asyncio
 from datetime import datetime, timedelta
 
+from golem_core.core.market_api import RepositoryVmPayload
+
 from yapapi import Golem
 from yapapi.log import enable_default_logger
-from yapapi.payload import vm
 from yapapi.services import Service
 
 DATE_OUTPUT_PATH = "/golem/work/date.txt"
@@ -14,7 +15,7 @@ REFRESH_INTERVAL_SEC = 5
 class DateService(Service):
     @staticmethod
     async def get_payload():
-        return await vm.repo(
+        return RepositoryVmPayload(
             image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
         )
 

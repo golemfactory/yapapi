@@ -3,8 +3,9 @@ import pathlib
 import sys
 from datetime import datetime, timedelta
 
+from golem_core.core.market_api import RepositoryVmPayload
+
 from yapapi import Golem, Task, WorkContext
-from yapapi.payload import vm
 from yapapi.rest.activity import BatchTimeoutError
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
@@ -25,7 +26,7 @@ from utils import (
 async def main(
     subnet_tag, min_cpu_threads, payment_driver=None, payment_network=None, show_usage=False
 ):
-    package = await vm.repo(
+    package = RepositoryVmPayload(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         # only run on provider nodes that have more than 0.5gb of RAM available
         min_mem_gib=0.5,

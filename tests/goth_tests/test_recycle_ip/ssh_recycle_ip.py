@@ -4,9 +4,10 @@ import random
 import string
 from datetime import timedelta
 
+from golem_core.core.market_api import RepositoryVmPayload
+
 from yapapi import Golem
 from yapapi.contrib.service.socket_proxy import SocketProxy, SocketProxyService
-from yapapi.payload import vm
 
 first_time = True
 
@@ -20,9 +21,9 @@ class SshService(SocketProxyService):
 
     @staticmethod
     async def get_payload():
-        return await vm.repo(
+        return RepositoryVmPayload(
             image_hash="1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",  # ssh example
-            capabilities=[vm.VM_CAPS_VPN],
+            capabilities=["vpn"],
         )
 
     async def start(self):

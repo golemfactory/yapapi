@@ -5,9 +5,10 @@ import logging
 from datetime import timedelta
 from typing import AsyncIterable, List
 
+from golem_core.core.market_api import RepositoryVmPayload
+
 from yapapi import Golem, Task, WorkContext
 from yapapi.log import enable_default_logger, log_event_repr
-from yapapi.payload import vm
 from yapapi.strategy import (
     PROP_DEBIT_NOTE_INTERVAL_SEC,
     PROP_PAYMENT_TIMEOUT_SEC,
@@ -32,7 +33,9 @@ async def worker(context: WorkContext, tasks: AsyncIterable[Task]):
 
 
 async def main():
-    package = await vm.repo(image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376")
+    package = RepositoryVmPayload(
+        image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376"
+    )
 
     tasks: List[Task] = [Task(data=None)]
     timeout = timedelta(hours=24)

@@ -360,7 +360,7 @@ class Golem:
                     yield script
                     task.accept_result(result=await future_result)
 
-            package = await vm.repo(
+            package = RepositoryVmPayload(
                 image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
             )
 
@@ -431,7 +431,7 @@ class Golem:
             class DateService(Service):
                 @staticmethod
                 async def get_payload():
-                    return await vm.repo(
+                    return RepositoryVmPayload(
                         image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
                     )
 

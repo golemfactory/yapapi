@@ -6,9 +6,10 @@ import shlex
 import sys
 from datetime import datetime, timedelta, timezone
 
+from golem_core.core.market_api import RepositoryVmPayload
+
 from yapapi import Golem
 from yapapi.contrib.service.http_proxy import HttpProxyService, LocalHttpProxy
-from yapapi.payload import vm
 from yapapi.services import ServiceState
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
@@ -34,11 +35,11 @@ EXPIRATION_MARGIN = timedelta(minutes=5)
 class HttpService(HttpProxyService):
     @staticmethod
     async def get_payload():
-        return await vm.repo(
+        return RepositoryVmPayload(
             image_hash="16ad039c00f60a48c76d0644c96ccba63b13296d140477c736512127",
             # we're adding an additional constraint to only select those nodes that
             # are offering VPN-capable VM runtimes so that we can connect them to the VPN
-            capabilities=[vm.VM_CAPS_VPN],
+            capabilities=["vpn"],
         )
 
     async def start(self):

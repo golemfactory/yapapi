@@ -2,9 +2,10 @@
 import asyncio
 from typing import AsyncIterable
 
+from golem_core.core.market_api import RepositoryVmPayload
+
 from yapapi import Golem, Task, WorkContext
 from yapapi.log import enable_default_logger
-from yapapi.payload import vm
 
 
 async def worker(context: WorkContext, tasks: AsyncIterable[Task]):
@@ -18,7 +19,7 @@ async def worker(context: WorkContext, tasks: AsyncIterable[Task]):
 
 
 async def main():
-    package = await vm.repo(
+    package = RepositoryVmPayload(
         image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
     )
 
