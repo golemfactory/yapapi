@@ -2,8 +2,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from golem_core.core.activity_api import Activity
-from golem_core.core.market_api import DemandBuilder
+from golem_core.core.market_api import Activity, DemandBuilder
 
 from tests.factories.rest.market import OfferProposalFactory
 from yapapi.strategy import (
@@ -170,7 +169,7 @@ async def test_respond_to_provider_offer(offer_props, expiration_secs, expected_
     strategy = GoodStrategy()
     demand = DemandBuilder()
     expiration = datetime.now() + timedelta(seconds=expiration_secs)
-    demand.add(Activity(expiration=expiration))
+    await demand.add(Activity(expiration=expiration))
     offer_kwargs = {"proposal__proposal__properties": offer_props}
     offer = OfferProposalFactory(**offer_kwargs)
 

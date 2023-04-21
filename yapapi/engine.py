@@ -24,6 +24,7 @@ from typing import (
 )
 
 import aiohttp
+import dataclasses
 from dataclasses import dataclass
 from typing_extensions import AsyncGenerator, Final
 
@@ -34,9 +35,11 @@ if sys.version_info >= (3, 7):
 else:
     from async_exit_stack import AsyncExitStack
 
+from golem_core.core import market_api
 from golem_core.core.market_api import DemandBuilder, DemandBuilderDecorator, Payload
+from golem_core.core.market_api.resources.demand.demand_offer_base.model import PROP_KEY
 
-from yapapi import events, props, rest
+from yapapi import events, rest
 from yapapi.agreements_pool import AgreementsPool
 from yapapi.ctx import WorkContext
 from yapapi.invoice_manager import InvoiceManager
@@ -170,10 +173,15 @@ class _Engine:
     ) -> DemandBuilder:
         """Create a `DemandBuilder` for given `payload` and `expiration_time`."""
         builder = DemandBuilder()
-        builder.add(props.Activity(expiration=expiration_time, multi_activity=True))
-        builder.add(props.NodeInfo(subnet_tag=self._subnet))
+        await builder.add(market_api.Activity(expiration=expiration_time, multi_activity=True))
+        await builder.add(market_api.NodeInfo(subnet_tag=self._subnet))
         if self._subnet:
-            builder.ensure(f"({props.NodeInfoKeys.subnet_tag}={self._subnet})")
+            subnet_field = [  # TODO refactor
+                field
+                for field in dataclasses.fields(market_api.NodeInfo)
+                if field.name == "subnet_tag"
+            ][0]
+            builder.add_constraints(f"({subnet_field.metadata[PROP_KEY]}={self._subnet})")
         await builder.decorate(self.payment_decorator, self.strategy, payload)
         return builder
 

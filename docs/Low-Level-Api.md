@@ -15,8 +15,8 @@ async def list_offers(conf: Configuration):
     async with conf.market() as client:
         market_api = Market(client)
         dbuild = DemandBuilder()
-        dbuild.add(yp.NodeInfo(name="some scanning node"))
-        dbuild.add(yp.Activity(expiration=datetime.now(timezone.utc)))
+        await dbuild.add(yp.NodeInfo(name="some scanning node"))
+        await dbuild.add(yp.Activity(expiration=datetime.now(timezone.utc)))
 
         async with market_api.subscribe(
             dbuild.properties, dbuild.constraints

@@ -6,8 +6,7 @@ from typing import Dict, Mapping, Optional, Union
 from dataclasses import dataclass
 from deprecated import deprecated
 
-from golem_core.core.activity_api import Activity
-from golem_core.core.market_api import DemandBuilder
+from golem_core.core.market_api import Activity, DemandBuilder
 
 from yapapi import rest
 from yapapi.props import com

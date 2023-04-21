@@ -31,8 +31,8 @@ async def renegotiate_offers(conf: Configuration, subnet_tag: str):
     async with conf.market() as client:
         market_api = Market(client)
         dbuild = DemandBuilder()
-        dbuild.add(yp.NodeInfo(name="some renegotiating node", subnet_tag=subnet_tag))
-        dbuild.add(
+        await dbuild.add(yp.NodeInfo(name="some renegotiating node", subnet_tag=subnet_tag))
+        await dbuild.add(
             yp.Activity(
                 expiration=datetime.datetime.now(datetime.timezone.utc)
                 + datetime.timedelta(minutes=30)

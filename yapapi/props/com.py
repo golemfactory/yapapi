@@ -3,9 +3,9 @@ import abc
 import enum
 from typing import Any, Dict, List
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
-from golem_core.core.market_api import DemandOfferBaseModel
+from golem_core.core.market_api import DemandOfferBaseModel, prop
 
 SCHEME: str = "golem.com.scheme"
 PRICE_MODEL: str = "golem.com.pricing.model"
@@ -34,8 +34,8 @@ class Counter(enum.Enum):
 class Com(DemandOfferBaseModel):
     """Base model representing the payment model used."""
 
-    scheme: BillingScheme = field(metadata={"key": SCHEME})
-    price_model: PriceModel = field(metadata={"key": PRICE_MODEL})
+    scheme: BillingScheme = prop(SCHEME)
+    price_model: PriceModel = prop(PRICE_MODEL)
 
     @abc.abstractmethod
     def calculate_cost(self, usage: List) -> float:
@@ -51,8 +51,8 @@ class Com(DemandOfferBaseModel):
 class ComLinear(Com):
     """Linear payment model."""
 
-    linear_coeffs: List[float] = field(metadata={"key": LINEAR_COEFFS})
-    usage_vector: List[str] = field(metadata={"key": DEFINED_USAGES})
+    linear_coeffs: List[float] = prop(LINEAR_COEFFS)
+    usage_vector: List[str] = prop(DEFINED_USAGES)
 
     @classmethod
     def _custom_mapping(cls, props: Dict[str, str], data: Dict[str, Any]):

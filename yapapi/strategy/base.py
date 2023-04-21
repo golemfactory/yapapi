@@ -10,8 +10,7 @@ from typing import Dict, Optional
 from dataclasses import dataclass
 from typing_extensions import Final
 
-from golem_core.core.activity_api import Activity
-from golem_core.core.market_api import DemandBuilder, DemandBuilderDecorator
+from golem_core.core.market_api import Activity, DemandBuilder, DemandBuilderDecorator
 
 from yapapi import rest
 
@@ -169,6 +168,9 @@ class MarketStrategy(BaseMarketStrategy, abc.ABC):
         activity = Activity.from_properties(our_demand.properties)
 
         assert activity.expiration  # type/sanity check, normally always set by the Engine
+        activity.expiration = datetime.fromtimestamp(  # TODO waiting for golem-core fix
+            int(float(activity.expiration) * 0.001), timezone.utc
+        )
 
         expiration_secs = round((activity.expiration - datetime.now(timezone.utc)).total_seconds())
 

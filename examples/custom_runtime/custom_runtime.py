@@ -7,7 +7,7 @@ from golem_core.core.market_api import INF_MEM, INF_STORAGE, RUNTIME_NAME, Paylo
 from yapapi import Golem
 from yapapi.services import Service
 
-RUNTIME_NAME = "my-runtime"
+CUSTOM_RUNTIME_NAME = "my-runtime"
 SOME_CUSTOM_PROPERTY = "golem.srv.app.eth.network"
 
 # The `CustomPayload` in this example is an arbitrary definition of some demand
@@ -25,7 +25,7 @@ SOME_CUSTOM_PROPERTY = "golem.srv.app.eth.network"
 class CustomPayload(Payload):
     custom_property: str = prop(SOME_CUSTOM_PROPERTY)
 
-    runtime: str = constraint(RUNTIME_NAME, default=RUNTIME_NAME)
+    runtime: str = constraint(RUNTIME_NAME, default=CUSTOM_RUNTIME_NAME)
     min_mem_gib: float = constraint(INF_MEM, operator=">=", default=16)
     min_storage_gib: float = constraint(INF_STORAGE, operator=">=", default=1024)
 
