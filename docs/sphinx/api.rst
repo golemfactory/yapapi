@@ -61,26 +61,6 @@ Exceptions
 
 .. autoclass:: yapapi.network.NetworkError
 
-Payload definition
-==================
-
-Payload
--------
-
-.. autoclass:: yapapi.payload.Payload
-
-Package
--------
-
-.. autoclass:: yapapi.payload.package.Package
-
-
-vm
--------
-
-.. automodule:: yapapi.payload.vm
-    :members: repo, manifest
-
 
 Execution control
 =================
