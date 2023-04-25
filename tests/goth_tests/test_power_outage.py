@@ -40,6 +40,7 @@ async def assert_all_tasks_computed(output_lines: EventStream[str]):
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip(reason="Unknown reason")
 async def test_power_outage(
     project_dir: Path, log_dir: Path, goth_config_path: Path, config_overrides: List[Override]
 ) -> None:

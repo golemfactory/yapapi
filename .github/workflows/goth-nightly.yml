@@ -4,7 +4,11 @@ on:
   schedule:
     # run this workflow every day at 1:00 AM UTC
     - cron: '0 1 * * *'
-
+  pull_request:
+    branches:
+      - master
+      - b0.*
+  
 jobs:
   prepare-matrix:
     name: Prepare matrix JSON
