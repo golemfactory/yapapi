@@ -168,9 +168,6 @@ class MarketStrategy(BaseMarketStrategy, abc.ABC):
         activity = Activity.from_properties(our_demand.properties)
 
         assert activity.expiration  # type/sanity check, normally always set by the Engine
-        activity.expiration = datetime.fromtimestamp(  # TODO waiting for golem-core fix
-            int(float(activity.expiration) * 0.001), timezone.utc
-        )
 
         expiration_secs = round((activity.expiration - datetime.now(timezone.utc)).total_seconds())
 
