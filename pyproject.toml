@@ -21,7 +21,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.dependencies]
 python = "^3.8"
 
-golem-core = { git = "https://github.com/golemfactory/golem-core-python.git", branch = "92-refactor-modules-structure-in-golem-core-python" }
+golem-core = { git = "https://github.com/golemfactory/golem-core-python.git", branch = "main" }
 
 setuptools = [
   { version = "*", python = ">=3.8" },
