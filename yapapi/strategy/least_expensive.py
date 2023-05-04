@@ -37,7 +37,7 @@ class LeastExpensiveLinearPayuMS(MarketStrategy):
         await super().decorate_demand_builder(demand)
 
         # Ensure that the offer uses `PriceModel.LINEAR` price model.
-        demand.ensure(f"({com.PRICE_MODEL}={com.PriceModel.LINEAR.value})")
+        demand.add_constraints(f"({com.PRICE_MODEL}={com.PriceModel.LINEAR.value})")
 
     async def score_offer(self, offer: rest.market.OfferProposal) -> float:
         """Score `offer` according to cost for expected computation time."""

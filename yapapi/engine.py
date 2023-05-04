@@ -627,9 +627,8 @@ class _Engine:
 
         async def decorate_demand_builder(self, demand: DemandBuilder):
             """Add properties and constraints to a Demand."""
-            for constraint in self.market_decoration.constraints:
-                demand.ensure(constraint)
-            demand.properties.update({p.key: p.value for p in self.market_decoration.properties})
+            demand.add_constraints(self.market_decoration.constraints)
+            demand.add_properties({p.key: p.value for p in self.market_decoration.properties})
 
     async def create_activity(self, agreement_id: str) -> Activity:
         """Create an activity for given `agreement_id`."""
@@ -974,6 +973,7 @@ class Job:
         try:
             while True:
                 try:
+                    breakpoint()
                     subscription = await self._demand_builder.subscribe(self.engine._market_api)
                     self.emit(events.SubscriptionCreated, subscription=subscription)
                 except Exception as ex:
