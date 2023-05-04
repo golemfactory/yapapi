@@ -1,16 +1,16 @@
-"""Test if subscription expiration is handled correctly by Golem"""
-import colors
-from datetime import timedelta
+"""Test if subscription expiration is handled correctly by Golem."""
 import logging
 import os
-from pathlib import Path
-import pytest
 import time
+from datetime import timedelta
+from pathlib import Path
 from typing import Dict, List, Set, Type
 from unittest.mock import Mock
-from ya_market import ApiException
-import ya_market.api.requestor_api
 
+import colors
+import pytest
+
+import ya_market.api.requestor_api
 from goth.assertions import EventStream
 from goth.assertions.monitor import EventMonitor
 from goth.assertions.operators import eventually
@@ -18,12 +18,13 @@ from goth.configuration import Override, load_yaml
 from goth.runner import Runner
 from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
+from ya_market import ApiException
 
+import yapapi.rest.market
 from yapapi import Golem, Task
 from yapapi.events import Event, JobFinished, JobStarted, SubscriptionCreated
 from yapapi.log import enable_default_logger
 from yapapi.payload import vm
-import yapapi.rest.market
 
 logger = logging.getLogger("goth.test")
 
@@ -32,19 +33,14 @@ SUBSCRIPTION_EXPIRATION_TIME = 5
 
 
 class RequestorApi(ya_market.api.requestor_api.RequestorApi):
-    """A replacement for market API that simulates early subscription expiration.
-
-    A call to `collect_offers(sub_id)` will raise `ApiException` indicating
-    subscription expiration when at least `SUBSCRIPTION_EXPIRATION_TIME`
-    elapsed after the given subscription has been created.
-    """
+    """A replacement for market API that simulates early subscription expiration."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.subscriptions: Dict[str, float] = {}
 
     def subscribe_demand(self, demand, **kwargs):
-        """Override `RequestorApi.subscribe_demand()` to register subscription create time."""
+        """Override parent call with register subscription create time."""
         id_coro = super().subscribe_demand(demand, **kwargs)
 
         async def coro():
@@ -55,7 +51,7 @@ class RequestorApi(ya_market.api.requestor_api.RequestorApi):
         return coro()
 
     def collect_offers(self, subscription_id, **kwargs):
-        """Override `RequestorApi.collect_offers()`.
+        """Override parent call with additional error handling.
 
         Raise `ApiException(404)` if at least `SUBSCRIPTION_EXPIRATION_TIME` elapsed
         since the subscription identified by `subscription_id` has been created.
@@ -85,14 +81,14 @@ def patch_collect_offers(monkeypatch):
 
 async def unsubscribe_demand(sub_id: str) -> None:
     """Auxiliary function that calls `unsubscribeDemand` operation for given `sub_id`."""
-    config = yapapi.rest.Configuration()
+    config = yapapi.rest.Configuration(api_config=yapapi.config.ApiConfig())
     market_client = config.market()
     requestor_api = yapapi.rest.market.RequestorApi(market_client)
     await requestor_api.unsubscribe_demand(sub_id)
 
 
 async def assert_demand_resubscribed(events: "EventStream[Event]"):
-    """A temporal assertion that the requestor will have to satisfy."""
+    """Assert a temporal condition that the requestor will have to satisfy."""
 
     subscription_ids: Set[str] = set()
 
@@ -142,7 +138,6 @@ async def test_demand_resubscription(
     runner = Runner(base_log_dir=log_dir, compose_config=goth_config.compose_config)
 
     async with runner(goth_config.containers):
-
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
         env = dict(os.environ)
         env.update(requestor.get_agent_env_vars())
@@ -170,7 +165,6 @@ async def test_demand_resubscription(
             budget=10.0,
             event_consumer=monitor.add_event_sync,
         ) as golem:
-
             task: Task  # mypy needs this for some reason
             async for task in golem.execute_tasks(
                 worker,

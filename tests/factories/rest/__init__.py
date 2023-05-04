@@ -1,5 +1,7 @@
-import factory
 from unittest import mock
+
+import factory
+
 from ya_market.api.requestor_api import RequestorApi
 
 

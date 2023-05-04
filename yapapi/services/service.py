@@ -1,6 +1,6 @@
 import asyncio
-from dataclasses import dataclass, field
-import statemachine  # type: ignore
+import logging
+import uuid
 from types import TracebackType
 from typing import (
     TYPE_CHECKING,
@@ -15,7 +15,11 @@ from typing import (
     TypeVar,
     Union,
 )
-import uuid
+
+import statemachine
+from dataclasses import dataclass, field
+
+from ya_activity.exceptions import ApiException
 
 from yapapi import events
 from yapapi.ctx import WorkContext
@@ -28,6 +32,9 @@ from .service_state import ServiceState
 if TYPE_CHECKING:
     from .cluster import Cluster
     from .service_runner import ControlSignal
+
+
+logger = logging.getLogger(__name__)
 
 # Return type for `sys.exc_info()`
 ExcInfo = Union[
@@ -101,7 +108,7 @@ class Service:
 
     @property
     def network(self) -> Optional[Network]:
-        """Return the :class:`~yapapi.network.Network` to which this instance belongs (if any)"""
+        """Return the :class:`~yapapi.network.Network` to which this instance belongs (if any)."""
         return self.network_node.network if self.network_node else None
 
     @property
@@ -125,6 +132,9 @@ class Service:
 
     def _set_network_node(self, node: Node) -> None:
         self._network_node = node
+
+    def _clear_network_node(self) -> None:
+        self._network_node = None
 
     def __repr__(self):
         class_name = type(self).__name__
@@ -184,7 +194,6 @@ class Service:
         If :func:`get_payload` is not implemented, the payload will need to be provided in the
         :func:`~yapapi.Golem.run_service` call.
         """
-        pass
 
     def get_deploy_args(self) -> Dict:
         """Return the dictionary of kwargs needed to construct the `Deploy` exescript command."""
@@ -200,16 +209,16 @@ class Service:
 
         Should perform the minimum set of operations after which the instance of a service can be
         treated as "started", or, in other words, ready to receive service requests. It's up to the
-        developer of the specific :class:`Service` class to decide what exact operations constitute a
-        service startup. In the most common scenario :func:`~yapapi.script.Script.deploy()` and
+        developer of the specific :class:`Service` class to decide what exact operations constitute
+        a service startup. In the most common scenario :func:`~yapapi.script.Script.deploy()` and
         :func:`~yapapi.script.Script.start()` are required,
         check the `Default implementation` section for more details.
 
         As a handler implementing the `work generator pattern
         <https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern>`_,
-        it's expected to be a generator that yields :class:`~yapapi.script.Script` (generated using the
-        service's instance of the :class:`~yapapi.WorkContext` - :attr:`self._ctx`) that are then dispatched
-        to the activity by the engine.
+        it's expected to be a generator that yields :class:`~yapapi.script.Script` (generated using
+        the service's instance of the :class:`~yapapi.WorkContext` - :attr:`self._ctx`) that are
+        then dispatched to the activity by the engine.
 
         Results of those batches can then be retrieved by awaiting the values captured from yield
         statements.
@@ -242,19 +251,20 @@ class Service:
 
         The default implementation assumes that, in order to accept commands, the runtime needs to
         be first deployed using the :func:`~yapapi.script.Script.deploy` command, which is analogous
-        to creation of a container corresponding with the desired payload, and then started using the
-        :func:`~yapapi.script.Script.start` command,
-        actually launching the process that runs the aforementioned container.
+        to creation of a container corresponding with the desired payload, and then started using
+        the :func:`~yapapi.script.Script.start` command, actually launching the process that runs
+        the aforementioned container.
 
         Additionally, it also assumes that the exe-unit doesn't need any additional parameters
-        in its :func:`~yapapi.script.Script.start` call (e.g. for the VM runtime, all the required parameters are
-        already passed as part of the agreement between the requestor and the provider), and parameters
-        passed to :func:`~yapapi.script.Script.deploy` are returned by :func:`Service.get_deploy_args()` method.
+        in its :func:`~yapapi.script.Script.start` call (e.g. for the VM runtime, all the required
+        parameters are already passed as part of the agreement between the requestor and the
+        provider), and parameters passed to :func:`~yapapi.script.Script.deploy` are returned by
+        :func:`Service.get_deploy_args()` method.
 
         Therefore, this default implementation performs the minimum required for a VM payload to
         start responding to `run` commands. If your service requires any additional operations -
-        you'll need to override this method (possibly first yielding from the parent - `super().start()` - generator)
-        to add appropriate preparatory steps.
+        you'll need to override this method (possibly first yielding from the parent
+        - `super().start()` - generator) to add appropriate preparatory steps.
 
         In case of runtimes other than VM, `deploy` and/or `start` might be optional or altogether
         disallowed, or they may take some parameters. It is up to the author of the
@@ -277,9 +287,9 @@ class Service:
 
         As a handler implementing the `work generator pattern
         <https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern>`_,
-        it's expected to be a generator that yields :class:`~yapapi.script.Script` (generated using the
-        service's instance of the :class:`~yapapi.WorkContext` - :attr:`self._ctx`) that are then dispatched
-        to the activity by the engine.
+        it's expected to be a generator that yields :class:`~yapapi.script.Script` (generated using
+        the service's instance of the :class:`~yapapi.WorkContext` - :attr:`self._ctx`) that are
+        then dispatched to the activity by the engine.
 
         Results of those batches can then be retrieved by awaiting the values captured from `yield`
         statements.
@@ -302,10 +312,10 @@ class Service:
         **Default implementation**
 
         Because the nature of the operations required during the "running" state depends directly
-        on the specifics of a given :class:`Service` and because it's entirely plausible for a service
-        not to require any direct interaction with the exe-unit (runtime) from the requestor's end
-        after the service has been started, the default is to just wait indefinitely without
-        producing any batches.
+        on the specifics of a given :class:`Service` and because it's entirely plausible for a
+        service not to require any direct interaction with the exe-unit (runtime) from the
+        requestor's end after the service has been started, the default is to just wait indefinitely
+        without producing any batches.
         """
         assert self._ctx is not None
 
@@ -322,9 +332,9 @@ class Service:
 
         As a handler implementing the `work generator pattern
         <https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern>`_,
-        it's expected to be a generator that yields :class:`~yapapi.script.Script` (generated using the
-        service's instance of the :class:`~yapapi.WorkContext` - :attr:`self._ctx`) that are then dispatched
-        to the activity by the engine.
+        it's expected to be a generator that yields :class:`~yapapi.script.Script` (generated using
+        the service's instance of the :class:`~yapapi.WorkContext` - :attr:`self._ctx`) that are
+        then dispatched to the activity by the engine.
 
         Results of those batches can then be retrieved by awaiting the values captured from yield
         statements.
@@ -360,22 +370,25 @@ class Service:
     async def reset(self) -> None:
         """Reset the service to the initial state. The default implementation does nothing here.
 
-        This method is called internally when the service is restarted in :class:`yapapi.services.ServiceRunner`,
-        so it is not necessary for services that are never restarted (note that :func:`~yapapi.Golem.run_service()` by
-        default restarts services that didn't start properly based on :func:`Service.restart_condition()`).
+        This method is called internally when the service is restarted in
+        :class:`yapapi.services.ServiceRunner`, so it is not necessary for services that are never
+        restarted (note that :func:`~yapapi.Golem.run_service()` by default restarts services that
+        didn't start properly based on :func:`Service.restart_condition()`).
 
-        Handlers of a restarted service are called more then once - all of the cleanup necessary between calls
-        should be implemented here. E.g. if we initialize a counter in :func:`Service.__init__` and increment it
-        in :func:`Service.start()`, we might want to reset it here to the initial value.
+        Handlers of a restarted service are called more then once - all of the cleanup necessary
+        between calls should be implemented here. E.g. if we initialize a counter in
+        :func:`Service.__init__` and increment it in :func:`Service.start()`, we might want to reset
+        it here to the initial value.
         """
-        pass
 
     @property
     def restart_condition(self) -> bool:
-        """The condition, based on which :class:`yapapi.services.ServiceRunner` decides if it should restart this instance.
+        """Return the condition, based on which :class:`yapapi.services.ServiceRunner` decides if \
+        it should restart this instance.
 
-        If `restart_condition` returns `True`, the service is restarted. In such case, before putting the service back into the
-        `pending` state, the `ServiceRunner` calls this service's `reset` method.
+        If `restart_condition` returns `True`, the service is restarted. In such case, before
+        putting the service back into the `pending` state, the `ServiceRunner` calls this service's
+        `reset` method.
         """
         return (
             self.exc_info != (None, None, None) and not self.__service_instance.started_successfully
@@ -394,6 +407,24 @@ class Service:
     @property
     def service_instance(self):
         return self.__service_instance
+
+    async def is_activity_responsive(self) -> bool:
+        """Verify if the provider's activity is responsive.
+
+        Tries to get the state activity. Returns True if the activity state could be
+        queried successfully and false otherwise.
+
+        Can be overridden in case the specific implementation of `Service` wants to implement
+        a more appropriate health check of the particular service.
+        """
+        if not self._ctx:
+            return False
+
+        try:
+            return bool(await self._ctx.get_raw_state())
+        except ApiException as e:
+            logger.error("Couldn't retrieve the activity state (%s)", e)
+            return False
 
 
 ServiceType = TypeVar("ServiceType", bound=Service)

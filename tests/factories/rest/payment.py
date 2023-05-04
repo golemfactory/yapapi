@@ -1,6 +1,8 @@
 import datetime
-import factory
 from unittest import mock
+
+import factory
+
 from ya_payment import models as payment_models
 from ya_payment.api.requestor_api import RequestorApi
 

@@ -8,7 +8,7 @@ __pycache__/
 *.log
 *.png
 .coverage
-.requirements.txt
+requirements.txt
 
 tests/goth_tests/assets/
 
@@ -22,3 +22,5 @@ poetry.lock
 
 # local config files
 .pre-commit-config.yaml
+
+/build

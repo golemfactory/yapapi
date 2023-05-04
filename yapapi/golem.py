@@ -1,8 +1,8 @@
 import asyncio
-from datetime import datetime, timedelta
-from decimal import Decimal
 import json
 import sys
+from datetime import datetime, timedelta
+from decimal import Decimal
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -17,7 +17,11 @@ from typing import (
     TypeVar,
     Union,
 )
+
 from typing_extensions import AsyncGenerator
+
+from yapapi.config import ApiConfig
+from yapapi.utils import Deprecated, warn_deprecated
 
 if sys.version_info > (3, 8):
     from typing import TypedDict
@@ -36,10 +40,7 @@ from yapapi.payload import Payload
 from yapapi.props import com
 from yapapi.script import Script
 from yapapi.services import Cluster, ServiceType
-from yapapi.strategy import (
-    DecreaseScoreForUnconfirmedAgreement,
-    LeastExpensiveLinearPayuMS,
-)
+from yapapi.strategy import DecreaseScoreForUnconfirmedAgreement, LeastExpensiveLinearPayuMS
 
 if TYPE_CHECKING:
     from yapapi.strategy import BaseMarketStrategy
@@ -57,20 +58,21 @@ class _EngineKwargs(TypedDict):
     payment_driver: Optional[str]
     payment_network: Optional[str]
     stream_output: bool
-    app_key: Optional[str]
+    api_config: ApiConfig
 
 
 class Golem:
-    """The main entrypoint of Golem\\'s high-level API.
+    """The main entrypoint of Golem's high-level API.
 
     Its principal role is providing an interface to run the requestor's payload using one of two
     modes of operation - executing tasks and running services.
 
-    The first one, available through :func:`execute_tasks`, instructs :class:`Golem` to take a sequence of
-    tasks that the user wishes to compute on Golem and distributes those among the providers.
+    The first one, available through :func:`execute_tasks`, instructs :class:`Golem` to take a
+    sequence of tasks that the user wishes to compute on Golem and distributes those among the
+    providers.
 
-    The second one, invoked with :func:`run_service`, makes :class:`Golem` spawn a certain number of instances
-    of a service based on a single service specification (a specialized implementation
+    The second one, invoked with :func:`run_service`, makes :class:`Golem` spawn a certain number of
+    instances of a service based on a single service specification (a specialized implementation
     inheriting from :class:`~yapapi.services.Service`).
 
     While the two modes are not necessarily completely disjoint - in that we can create a
@@ -87,10 +89,11 @@ class Golem:
     certain, discrete phases of a lifetime of each service instance - startup, running and
     shutdown.
 
-    Internally, :class:`Golem`'s job includes running the engine which takes care of first finding the
-    providers interested in the jobs the requestors want to execute, then negotiating agreements
+    Internally, :class:`Golem`'s job includes running the engine which takes care of first finding
+    the providers interested in the jobs the requestors want to execute, then negotiating agreements
     with them and facilitating the execution of those jobs and lastly, processing payments. For this
-    reason, it's usually good to have just one instance of :class:`Golem` operative at any given time.
+    reason, it's usually good to have just one instance of :class:`Golem` operative at any given
+    time.
     """
 
     def __init__(
@@ -103,26 +106,32 @@ class Golem:
         payment_network: Optional[str] = None,
         event_consumer: Optional[Callable[[events.Event], None]] = None,
         stream_output: bool = False,
+        api_config: Optional[ApiConfig] = None,
+        # deprecate
         app_key: Optional[str] = None,
     ):
         """Initialize Golem engine.
 
         :param budget: maximum budget for payments
         :param strategy: market strategy used to select providers from the market
-            (e.g. :class:`yapapi.strategy.LeastExpensiveLinearPayuMS` or :class:`yapapi.strategy.DummyMS`)
+            (e.g. :class:`yapapi.strategy.LeastExpensiveLinearPayuMS` or
+            :class:`yapapi.strategy.DummyMS`)
         :param subnet_tag: use only providers in the subnet with the subnet_tag name.
             Uses `YAGNA_SUBNET` environment variable, defaults to `None`
         :param payment_driver: name of the payment driver to use. Uses `YAGNA_PAYMENT_DRIVER`
             environment variable, defaults to `erc20`. Only payment platforms with
             the specified driver will be used
-        :param payment_network: name of the network to use. Uses `YAGNA_NETWORK` environment
+        :param payment_network: name of the network to use. Uses `YAGNA_PAYMENT_NETWORK` environment
             variable, defaults to `rinkeby`. Only payment platforms with the specified
             network will be used
-        :param event_consumer: a callable that processes events related to the
-            computation; by default it is a function that logs all events
+        :param event_consumer: a callable that processes events related to the computation; by
+            default it is a function that logs all events
         :param stream_output: stream computation output from providers
-        :param app_key: optional Yagna application key. If not provided, the default is to
-                        get the value from `YAGNA_APPKEY` environment variable
+        :param api_config: configuration of yagna low level api including but not limited to
+            `YAGNA_APPKEY`, `YAGNA_API_URL` variables
+            See `:class:`yapapi.config.ApiConfig`` docs for more details
+        :param app_key: optional Yagna application key. If not provided, the default is to get the
+            value from `YAGNA_APPKEY` environment variable
         """
         self._event_dispatcher = AsyncEventDispatcher()
 
@@ -130,6 +139,14 @@ class Golem:
 
         if not strategy:
             strategy = self._initialize_default_strategy()
+
+        if api_config is None:
+            # load deprecate app_key
+            build_dict = {}
+            if app_key is not None:
+                warn_deprecated("app_key", "api_config", "0.11", Deprecated.parameter)
+                build_dict["app_key"] = app_key
+            api_config = ApiConfig(**build_dict)
 
         self._engine_kwargs: _EngineKwargs = {
             "budget": budget,
@@ -139,7 +156,7 @@ class Golem:
             "payment_driver": payment_driver,
             "payment_network": payment_network,
             "stream_output": stream_output,
-            "app_key": app_key,
+            "api_config": api_config,
         }
 
         self._engine: _Engine = self._get_new_engine()
@@ -150,12 +167,13 @@ class Golem:
         event_consumer: Callable[[events.Event], None],
         event_classes_or_names: Iterable[Union[Type[events.Event], str]] = (events.Event,),
     ):
-        """Initialize another `event_consumer`, working just like the `event_consumer` passed to :func:`Golem.__init__`
+        """Initialize another `event_consumer`, working just like the `event_consumer` passed to \
+        :func:`Golem.__init__`.
 
         :param event_consumer: A callable that will be executed on every event.
-        :param event_classes_or_names: An iterable defining classes of events that should be passed to
-            this `event_consumer`. Both classes and class names are accepted (in the latter case classes must be
-            available in the `yapapi.events` namespace).
+        :param event_classes_or_names: An iterable defining classes of events that should be passed
+            to this `event_consumer`. Both classes and class names are accepted (in the latter case
+            classes must be available in the `yapapi.events` namespace).
             If this argument is omitted, all events inheriting from :class:`yapapi.events.Event`
             (i.e. all currently implemented events) will be passed to the `event_consumer`.
 
@@ -186,7 +204,7 @@ class Golem:
             return event_cls_or_name
         else:
             try:
-                return getattr(events, event_cls_or_name)  # type: ignore
+                return getattr(events, event_cls_or_name)
             except AttributeError:
                 raise ValueError(
                     "Second argument must be either an event class, or a name of "
@@ -205,7 +223,7 @@ class Golem:
 
     @property
     def strategy(self) -> "BaseMarketStrategy":
-        """Return the instance of `BaseMarketStrategy` used by the engine"""
+        """Return the instance of `BaseMarketStrategy` used by the engine."""
         return self._engine.strategy
 
     @strategy.setter
@@ -228,7 +246,7 @@ class Golem:
 
     @property
     def operative(self) -> bool:
-        """Return True if Golem started and didn't stop"""
+        """Return True if Golem started and didn't stop."""
         engine_init_finished = hasattr(self, "_engine")  # to avoid special cases in __init__
         return engine_init_finished and self._engine.started
 
@@ -250,8 +268,10 @@ class Golem:
                 await golem.stop()
 
         A repeated call to :func:`Golem.start()`:
-            * If Golem is already starting, or started and wasn't stopped - will be ignored (and harmless)
-            * If Golem was stopped - will initialize a new engine that knows nothing about the previous operations
+            * If Golem is already starting, or started and wasn't stopped - will be ignored
+                (and harmless)
+            * If Golem was stopped - will initialize a new engine that knows nothing about the
+                previous operations
         """
         try:
             async with self._engine_state_lock:
@@ -261,14 +281,15 @@ class Golem:
 
                 self._event_dispatcher.start()
                 await self._engine.start()
-        except:
+        except Exception:
             await self._stop_with_exc_info(*sys.exc_info())
             raise
 
     async def stop(self) -> None:
         """Stop the Golem engine after it was started in non-contextmanager mode.
 
-        Details: :func:`Golem.start()`"""
+        Details: :func:`Golem.start()`
+        """
         await self._stop_with_exc_info(None, None, None)
 
     async def __aenter__(self) -> "Golem":
@@ -313,16 +334,19 @@ class Golem:
         :param worker: an async generator that takes a :class:`WorkContext` object and a sequence
             of tasks, and generates as sequence of scripts to be executed on providers in order
             to compute given tasks
-        :param data: an iterable or an async generator of :class:`Task` objects to be computed on providers
+        :param data: an iterable or an async generator of :class:`Task` objects to be computed on
+            providers
         :param payload: specification of the payload that needs to be deployed on providers
             (for example, a VM runtime package) in order to compute the tasks, passed to
             the created :class:`Executor` instance
-        :param max_workers: maximum number of concurrent workers, passed to the :class:`Executor` instance
+        :param max_workers: maximum number of concurrent workers, passed to the :class:`Executor`
+            instance
         :param timeout: timeout for computing all tasks, passed to the :class:`Executor` instance
         :param job_id: an optional string to identify the job created by this method.
             Passed as the value of the `id` parameter to :class:`yapapi.engine.Job`.
-        :param implicit_init: True -> :func:`~yapapi.script.Script.deploy()` and :func:`~yapapi.script.Script.start()`
-            will be called internally by the :class:`Executor`. False -> those calls must be in the `worker` function
+        :param implicit_init: True -> :func:`~yapapi.script.Script.deploy()` and
+            :func:`~yapapi.script.Script.start()` will be called internally by the
+            :class:`Executor`. False -> those calls must be in the `worker` function
 
         :return: an async iterator that yields completed `Task` objects
 
@@ -339,11 +363,11 @@ class Golem:
                 image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
             )
 
-            async with Golem(budget=1.0, subnet_tag="devnet-beta") as golem:
+            async with Golem(budget=1.0, subnet_tag="public") as golem:
                 async for completed in golem.execute_tasks(worker, [Task(data=None)], payload=package):
                     print(completed.result.stdout)
 
-        """
+        """  # noqa: 501
 
         kwargs: Dict[str, Any] = {"payload": payload, "implicit_init": implicit_init}
         if max_workers:
@@ -365,31 +389,36 @@ class Golem:
         network: Optional[Network] = None,
         network_addresses: Optional[List[str]] = None,
     ) -> Cluster[ServiceType]:
-        """Run a number of instances of a service represented by a given :class:`~yapapi.services.Service` subclass.
+        """Run a number of instances of a service represented by a given \
+        :class:`~yapapi.services.Service` subclass.
 
-        :param service_class: a subclass of :class:`~yapapi.services.Service` that represents the service to be run
+        :param service_class: a subclass of :class:`~yapapi.services.Service` that represents the
+            service to be run
         :param num_instances: optional number of service instances to run. Defaults to a single
-            instance, unless `instance_params` is given, in which case, the :class:`~yapapi.services.Cluster` will be
-            created with as many instances as there are elements in the `instance_params` iterable.
-            if `num_instances` is set to < 1, the :class:`~yapapi.services.Cluster` will still be created but no
-            instances will be spawned within it.
-        :param instance_params: optional list of dictionaries of keyword arguments that will be passed
-            to consecutive, spawned instances. The number of elements in the iterable determines the
-            number of instances spawned, unless `num_instances` is given, in which case the latter takes
-            precedence.
-            In other words, if both `num_instances` and `instance_params` are provided,
-            the :class:`~yapapi.services.Cluster` will be created with the number of instances determined by
-            `num_instances` and if there are too few elements in the `instance_params` iterable, it will results in
-            an error.
-        :param payload: optional runtime definition for the service; if not provided, the
-            payload specified by the :func:`~yapapi.services.Service.get_payload()` method of `service_class` is used
+            instance, unless `instance_params` is given, in which case, the
+            :class:`~yapapi.services.Cluster` will be created with as many instances as there are
+            elements in the `instance_params` iterable. if `num_instances` is set to < 1, the
+            :class:`~yapapi.services.Cluster` will still be created but no instances will be spawned
+            within it.
+        :param instance_params: optional list of dictionaries of keyword arguments that will be
+            passed to consecutive, spawned instances. The number of elements in the iterable
+            determines the number of instances spawned, unless `num_instances` is given, in which
+            case the latter takes precedence.
+            In other words, if both `num_instances` and `instance_params` are provided, the
+            :class:`~yapapi.services.Cluster` will be created with the number of instances
+            determined by `num_instances` and if there are too few elements in the `instance_params`
+            iterable, it will results in an error.
+        :param payload: optional runtime definition for the service; if not provided, the payload
+            specified by the :func:`~yapapi.services.Service.get_payload()` method of
+            `service_class` is used
         :param expiration: optional expiration datetime for the service
         :param network: optional :class:`~yapapi.network.Network`, representing a VPN to attach this
             :class:`~yapapi.services.Cluster`'s instances to
-        :param network_addresses: optional list of addresses to assign to consecutive spawned instances.
-            If there are too few addresses given in the `network_addresses` iterable to satisfy
-            all spawned instances, the rest (or all when the list is empty or not provided at all)
-            of the addresses will be assigned automatically.
+        :param network_addresses: optional list of addresses to assign to consecutive spawned
+            instances.
+            If there are too few addresses given in the `network_addresses` iterable to satisfy all
+            spawned instances, the rest (or all when the list is empty or not provided at all) of
+            the addresses will be assigned automatically.
             Requires the `network` argument to be provided at the same time.
 
         example usage::
@@ -435,7 +464,7 @@ class Golem:
 
 
             async def main():
-                async with Golem(budget=1.0, subnet_tag="devnet-beta") as golem:
+                async with Golem(budget=1.0, subnet_tag="public") as golem:
                     cluster = await golem.run_service(DateService, num_instances=1)
                     start_time = datetime.now()
 
@@ -444,7 +473,7 @@ class Golem:
                             print(f"Instance {num} is {instance.state.value} on {instance.provider_name}")
                         await asyncio.sleep(REFRESH_INTERVAL_SEC)
 
-        """
+        """  # noqa: E501
         payload = payload or await service_class.get_payload()
 
         if not payload:
@@ -476,13 +505,13 @@ class Golem:
         mask: Optional[str] = None,
         gateway: Optional[str] = None,
     ) -> Network:
-        """
-        Create a VPN inside Golem network.
+        """Create a VPN inside Golem network.
 
         Requires yagna >= 0.8
 
         :param ip: the IP address of the network. May contain netmask, e.g. "192.168.0.0/24"
-        :param owner_ip: the desired IP address of the requestor node within the newly-created Network
+        :param owner_ip: the desired IP address of the requestor node within the newly-created
+            Network
         :param mask: Optional netmask (only if not provided within the `ip` argument)
         :param gateway: Optional gateway address for the network
         """
@@ -502,7 +531,7 @@ class Golem:
         return log_summary(log_event_repr)
 
     def _initialize_default_strategy(self) -> DecreaseScoreForUnconfirmedAgreement:
-        """Create a default strategy and register it's event consumer"""
+        """Create a default strategy and register it's event consumer."""
         base_strategy = LeastExpensiveLinearPayuMS(
             max_fixed_price=Decimal("1.0"),
             max_price_for={com.Counter.CPU: Decimal("0.2"), com.Counter.TIME: Decimal("0.1")},

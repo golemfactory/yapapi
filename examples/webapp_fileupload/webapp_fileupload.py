@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import asyncio
-from datetime import datetime, timedelta
 import pathlib
 import sys
+from datetime import datetime, timedelta
 
 from yapapi import Golem
 from yapapi.contrib.service.http_proxy import HttpProxyService, LocalHttpProxy
@@ -51,22 +51,20 @@ class HttpService(HttpProxyService):
         script.run(
             "/bin/bash",
             "-c",
-            f"cd /webapp && python app.py --db-address {self._db_address} --db-port {self._db_port} initdb",
+            f"cd /webapp && python app.py "
+            f"--db-address {self._db_address} "
+            f"--db-port {self._db_port} "
+            f"initdb",
         )
         script.run(
             "/bin/bash",
             "-c",
-            f"cd /webapp && python app.py --db-address {self._db_address} --db-port {self._db_port} run > /logs/out 2> /logs/err &",
+            f"cd /webapp && python app.py "
+            f"--db-address {self._db_address} "
+            f"--db-port {self._db_port} "
+            f"run > /logs/out 2> /logs/err &",
         )
         yield script
-
-    async def run(self):
-        while True:
-            await asyncio.sleep(5)
-            script = self._ctx.new_script()
-            script.download_file("/logs/out", "webapp_out.txt")
-            script.download_file("/logs/err", "webapp_err.txt")
-            yield script
 
 
 class DbService(Service):
@@ -153,7 +151,8 @@ async def main(subnet_tag, payment_driver, payment_network, port):
             await proxy.run()
 
             print(
-                f"{TEXT_COLOR_CYAN}Local HTTP server listening on:\nhttp://localhost:{port}{TEXT_COLOR_DEFAULT}"
+                f"{TEXT_COLOR_CYAN}Local HTTP server listening on:\n"
+                f"http://localhost:{port}{TEXT_COLOR_DEFAULT}"
             )
 
             # wait until Ctrl-C
@@ -191,7 +190,7 @@ if __name__ == "__main__":
         help="The local port to listen on",
     )
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
-    parser.set_defaults(log_file=f"webapp-yapapi-{now}.log")
+    parser.set_defaults(log_file=f"webapp-fileupload-yapapi-{now}.log")
     args = parser.parse_args()
 
     run_golem_example(

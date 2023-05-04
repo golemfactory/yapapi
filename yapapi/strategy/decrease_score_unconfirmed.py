@@ -19,7 +19,8 @@ class DecreaseScoreForUnconfirmedAgreement(WrappingMarketStrategy):
     factor: float
 
     def __init__(self, base_strategy, factor):
-        """
+        """Initialize instance.
+
         :param base_strategy: the base strategy around which this strategy is wrapped
         :param factor: the factor by which the score of an offer for a provider which
                        failed to confirm the last agreement proposed to them will be multiplied
@@ -32,7 +33,8 @@ class DecreaseScoreForUnconfirmedAgreement(WrappingMarketStrategy):
     def on_event(self, event: events.Event) -> None:
         """Modify the internal `_rejecting_providers` list on `AgreementConfirmed/Rejected`.
 
-        This method needs to be added as an event consumer in :func:`yapapi.Golem.add_event_consumer`.
+        This method needs to be added as an event consumer in
+         :func:`yapapi.Golem.add_event_consumer`.
         """
         if isinstance(event, events.AgreementConfirmed):
             self._rejecting_providers.discard(event.provider_id)

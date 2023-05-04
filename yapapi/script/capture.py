@@ -1,6 +1,7 @@
-from dataclasses import dataclass
 import enum
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
+
+from dataclasses import dataclass
 
 
 class CaptureMode(enum.Enum):
@@ -46,7 +47,7 @@ class CaptureContext:
         return cls(mode=mode, fmt=cap_fmt, limit=limit)
 
     def to_dict(self) -> Dict:
-        inner = dict()
+        inner: Dict[str, Any] = dict()
 
         if self.limit:
             inner[self.mode.value] = self.limit

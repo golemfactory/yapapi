@@ -1,13 +1,15 @@
 import abc
-from aiohttp import ClientPayloadError
-from aiohttp_sse_client.client import MessageEvent  # type: ignore
 import asyncio
-from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
 import json
 import logging
+from datetime import datetime, timedelta, timezone
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type
+
+from aiohttp import ClientPayloadError
+from aiohttp_sse_client.client import MessageEvent
+from dataclasses import dataclass
 from typing_extensions import AsyncContextManager, AsyncIterable
+
 from ya_activity import ApiClient, ApiException, RequestorControlApi, RequestorStateApi
 from ya_activity import exceptions as yexc
 from ya_activity import models as yaa
@@ -40,7 +42,7 @@ class ActivityService(object):
 
 
 class Activity(AsyncContextManager["Activity"]):
-    """Mid-level wrapper for REST's Activity endpoint"""
+    """Mid-level wrapper for REST's Activity endpoint."""
 
     def __init__(
         self,
@@ -284,7 +286,7 @@ class StreamingBatch(Batch):
     """A `Batch` implementation that uses event streaming to return command status."""
 
     async def __aiter__(self) -> AsyncIterator[CommandEventData]:
-        from aiohttp_sse_client import client as sse_client  # type: ignore
+        from aiohttp_sse_client import client as sse_client
 
         api_client = self._activity._api.api_client
         host = api_client.configuration.host
@@ -326,7 +328,7 @@ class StreamingBatch(Batch):
 
 
 def _message_event_to_event_data(msg_event: MessageEvent) -> CommandEventData:
-    """Convert a `MessageEvent` to a matching events.Event subclass and it's kwargs"""
+    """Convert a `MessageEvent` to a matching events.Event subclass and it's kwargs."""
 
     if msg_event.type != "runtime":
         raise RuntimeError(f"Unsupported event: {msg_event.type}")

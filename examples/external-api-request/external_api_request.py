@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import asyncio
 import base64
-from datetime import datetime
 import pathlib
 import sys
+from datetime import datetime
 
 from yapapi import Golem
 from yapapi.payload import vm
@@ -22,13 +22,13 @@ class ApiCallService(Service):
         manifest = open("manifest.json", "rb").read()
         manifest = base64.b64encode(manifest).decode("utf-8")
 
-        manifest_sig = open("manifest.json.base64.sign.sha256", "rb").read()
+        manifest_sig = open("manifest.json.base64.sha256.sig", "rb").read()
         manifest_sig = base64.b64encode(manifest_sig).decode("utf-8")
 
         manifest_sig_algorithm = "sha256"
 
-        # both DER and PEM formats are supported
-        manifest_cert = open("requestor.cert.der", "rb").read()
+        # DER, PEM and PEM chain formats are supported
+        manifest_cert = open("golem_sign.pem", "rb").read()
         manifest_cert = base64.b64encode(manifest_cert).decode("utf-8")
 
         return await vm.manifest(
@@ -46,7 +46,7 @@ class ApiCallService(Service):
         future_result = script.run(
             "/bin/sh",
             "-c",
-            f"GOLEM_PRICE=`curl -X 'GET' \
+            "GOLEM_PRICE=`curl -X 'GET' \
                     'https://api.coingecko.com/api/v3/simple/price?ids=golem&vs_currencies=usd' \
                     -H 'accept: application/json' | jq .golem.usd`; \
                 echo ---; \

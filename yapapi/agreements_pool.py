@@ -1,11 +1,12 @@
-import aiohttp
 import asyncio
-from dataclasses import dataclass
 import datetime
 import logging
 import random
 import sys
 from typing import Callable, Dict, NamedTuple, Optional
+
+import aiohttp
+from dataclasses import dataclass
 
 from yapapi import events
 from yapapi.props import Activity, NodeInfo
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class _BufferedProposal(NamedTuple):
-    """Providers' proposal with additional local metadata"""
+    """Providers' proposal with additional local metadata."""
 
     ts: datetime.datetime
     score: float
@@ -24,7 +25,7 @@ class _BufferedProposal(NamedTuple):
 
 @dataclass
 class BufferedAgreement:
-    """Confirmed agreement with additional local metadata"""
+    """Confirmed agreement with additional local metadata."""
 
     agreement: Agreement
     agreement_details: AgreementDetails
@@ -35,7 +36,7 @@ class BufferedAgreement:
 
 
 class AgreementsPool:
-    """Manages proposals and agreements pool"""
+    """Manages proposals and agreements pool."""
 
     def __init__(
         self,
@@ -50,7 +51,7 @@ class AgreementsPool:
         self.confirmed = 0
 
     async def cycle(self):
-        """Performs cyclic tasks.
+        """Perform cyclic tasks.
 
         Should be called regularly.
         """
@@ -66,7 +67,7 @@ class AgreementsPool:
                 )
 
     async def add_proposal(self, score: float, proposal: OfferProposal) -> None:
-        """Adds providers' proposal to the pool of available proposals"""
+        """Add providers' proposal to the pool of available proposals."""
         async with self._lock:
             self._offer_buffer[proposal.issuer] = _BufferedProposal(
                 datetime.datetime.now(), score, proposal
@@ -93,7 +94,7 @@ class AgreementsPool:
         buffered_agreement.worker_task = task
 
     async def _get_agreement(self) -> Optional[Agreement]:
-        """Returns an Agreement
+        """Return an Agreement.
 
         Firstly it tries to reuse agreement from a pool of available agreements
         (no active worker_task). If that fails it tries to convert offer into agreement.
@@ -155,7 +156,7 @@ class AgreementsPool:
         return agreement
 
     async def release_agreement(self, agreement_id: str, allow_reuse: bool = True) -> None:
-        """Marks agreement as unused.
+        """Mark agreement as unused.
 
         If the agreement supports multiple activities and `allow_reuse` is set then
         it will be returned to the pool and will be available for reuse.
@@ -225,7 +226,7 @@ class AgreementsPool:
                 await self._terminate_agreement(agreement_id, reason)
 
     async def on_agreement_terminated(self, agr_id: str, reason: dict) -> None:
-        """Reacts to agreement termination event
+        """React to agreement termination event.
 
         Should be called when AgreementTerminated event is received.
         """

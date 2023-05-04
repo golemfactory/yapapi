@@ -27,7 +27,7 @@ Service
 -------
 
 .. autoclass:: yapapi.services.Service
-    :members: id, provider_name, state, is_available, start, run, shutdown, reset, send_message, send_message_nowait, receive_message, receive_message_nowait, get_payload, network, network_node
+    :members: id, provider_name, state, is_available, start, run, shutdown, reset, is_activity_responsive, restart_condition, send_message, send_message_nowait, receive_message, receive_message_nowait, get_payload, network, network_node
 
 Cluster
 -------
@@ -75,11 +75,11 @@ Package
 .. autoclass:: yapapi.payload.package.Package
 
 
-vm.repo
+vm
 -------
 
 .. automodule:: yapapi.payload.vm
-    :members: repo
+    :members: repo, manifest
 
 
 Execution control
@@ -151,10 +151,6 @@ Yapapi Contrib
 
 .. automodule:: yapapi.contrib
 
-.. automodule:: yapapi.contrib.strategy.provider_filter
-
-.. autoclass:: yapapi.contrib.strategy.ProviderFilter
-
 .. automodule:: yapapi.contrib.service.http_proxy
 
 .. autoclass:: yapapi.contrib.service.http_proxy.LocalHttpProxy
@@ -162,3 +158,15 @@ Yapapi Contrib
 
 .. autoclass:: yapapi.contrib.service.http_proxy.HttpProxyService
     :members: __init__, handle_request
+
+.. automodule:: yapapi.contrib.service.socket_proxy
+
+.. autoclass:: yapapi.contrib.service.socket_proxy.SocketProxy
+    :members: __init__, run, run_server, stop
+
+.. autoclass:: yapapi.contrib.service.socket_proxy.SocketProxyService
+    :members: remote_ports
+
+.. automodule:: yapapi.contrib.strategy.provider_filter
+
+.. autoclass:: yapapi.contrib.strategy.ProviderFilter

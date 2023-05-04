@@ -1,10 +1,11 @@
-from factories.agreements_pool import BufferedAgreement, BufferedAgreementFactory
-from operator import xor
-import pytest
 import random
 import sys
+from operator import xor
 from unittest import mock
 
+import pytest
+
+from tests.factories.agreements_pool import BufferedAgreement, BufferedAgreementFactory
 from yapapi import agreements_pool
 from yapapi.events import AgreementTerminated
 
@@ -67,7 +68,6 @@ async def test_use_agreement_shuffles_proposals():
     all_proposal_ids = range(5)
 
     for i in range(100):
-
         # Prepare proposal data, all proposals have the same score except the one with id 0
         proposals = []
         for n in all_proposal_ids:

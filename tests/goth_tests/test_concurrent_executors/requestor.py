@@ -15,7 +15,6 @@ from yapapi.payload import vm
 
 
 async def main():
-
     vm_package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         min_mem_gib=0.5,
@@ -25,7 +24,7 @@ async def main():
     first_task = True
 
     async def duplicator(work_ctx, tasks):
-        """A worker that executes `echo {task.data} {task.data}` command on provider.
+        """Execute `echo {task.data} {task.data}` command on provider as a worker.
 
         The command's output is the result of the whole task.
 
@@ -35,7 +34,6 @@ async def main():
         failures.
         """
         async for task in tasks:
-
             nonlocal first_task
 
             script = work_ctx.new_script()
@@ -53,7 +51,6 @@ async def main():
             task.accept_result(output)
 
     async with Golem(budget=1.0, subnet_tag="goth") as golem:
-
         # Construct a pipeline:
         #
         #   input_tasks

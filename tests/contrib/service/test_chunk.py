@@ -1,5 +1,6 @@
-import pytest
 import secrets
+
+import pytest
 
 from yapapi.contrib.service.chunk import chunks
 

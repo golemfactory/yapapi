@@ -1,6 +1,4 @@
-"""
-Local HTTP Proxy
-^^^^^^^^^^^^^^^^
+"""Local HTTP Proxy.
 
 A local HTTP proxy that enables easy connections to any VPN-enabled, HTTP-based services launched on
 Golem providers using yapapi's Services API.
@@ -11,14 +9,15 @@ For usage in a complete requestor agent app, see the
 yapapi repository.
 """
 import abc
-import aiohttp
-from aiohttp import client_ws, web
 import asyncio
 import logging
-from multidict import CIMultiDict
 import re
 import traceback
 from typing import Optional
+
+import aiohttp
+from aiohttp import client_ws, web
+from multidict import CIMultiDict
 from typing_extensions import Final
 
 from yapapi.services import Cluster, Service, ServiceState
@@ -27,9 +26,9 @@ from .chunk import chunks
 
 logger = logging.getLogger(__name__)
 
-WEBSOCKET_CHUNK_LIMIT: Final[int] = 2 ** 16
+WEBSOCKET_CHUNK_LIMIT: Final[int] = 2**16
 DEFAULT_TIMEOUT: Final[float] = 30.0
-DEFAULT_MAX_REQUEST_SIZE: Final[int] = 128 * 1024 ** 2
+DEFAULT_MAX_REQUEST_SIZE: Final[int] = 128 * 1024**2
 
 
 class _ResponseParser:
@@ -78,7 +77,18 @@ class _ResponseParser:
     async def get_response(self) -> web.Response:
         while not self.content_received:
             ws_response = await self.ws.receive(self.timeout)
-            self.receive_data(ws_response.data)
+            if ws_response.data:
+                self.receive_data(ws_response.data)
+            else:
+                logger.error(
+                    "Empty response data while handling a request, "
+                    "remote status: %s, remote headers: %s",
+                    self.status,
+                    self.headers,
+                )
+                return web.Response(
+                    status=504, text="Empty response data while handling a request."
+                )
 
         assert self.status
         return web.Response(status=self.status, headers=self.headers, body=self.content)
@@ -98,8 +108,7 @@ class HttpProxyService(Service, abc.ABC):
         remote_host: Optional[str] = None,
         response_timeout: float = DEFAULT_TIMEOUT,
     ):
-        """
-        Initialize the HTTP proxy service
+        """Initialize the HTTP proxy service.
 
         :param remote_port: the port on which the service on the provider's end listens
         :param remote_host: optional hostname to be used in the headers passed to the remote HTTP
@@ -112,9 +121,8 @@ class HttpProxyService(Service, abc.ABC):
         self._remote_response_timeout = response_timeout
 
     async def handle_request(self, request: web.Request) -> web.Response:
-        """
-        handle a single request coming from a :class:`~LocalHttpProxy` server
-        by passing it to the HTTP service on the provider's end through the VPN
+        """Handle a single request coming from a :class:`~LocalHttpProxy` server by passing it to \
+        the HTTP service on the provider's end through the VPN.
 
         :param request: an `aiohttp.web.Request`
         :return: an `aiohttp.web.Response`
@@ -179,7 +187,7 @@ class HttpProxyService(Service, abc.ABC):
 
 
 class LocalHttpProxy:
-    """Runs a local `aiohttp` server and processes requests through instances of
+    """Runs a local `aiohttp` server and processes requests through instances of \
     :class:`~HttpProxyService`.
 
     Using `yapapi`'s Network API (:meth:`~yapapi.Golem.create_network`), execution units on the
@@ -219,8 +227,7 @@ class LocalHttpProxy:
         port: int,
         max_request_size: int = DEFAULT_MAX_REQUEST_SIZE,
     ):
-        """
-        Initialize the local HTTP proxy
+        """Initialize the local HTTP proxy.
 
         :param cluster: a :class:`~yapapi.services.Cluster` of one or more VPN-connected
             :class:`~HttpProxyService` instances.
@@ -251,14 +258,15 @@ class LocalHttpProxy:
         return await instance.handle_request(request)
 
     async def run(self):
+        """Run a local HTTP server.
+
+        Will be listening on the specified port and passing subsequent requests to the
+        :meth:`~HttpProxyService.handle_request` of the specified cluster in a round-robin fashion.
         """
-        run a local HTTP server, listening on the specified port and passing subsequent requests to
-        the :meth:`~HttpProxyService.handle_request` of the specified cluster in a round-robin
-        fashion
-        """
+
         runner = web.ServerRunner(
             _Server(self._request_handler, client_max_size=self._max_request_size)
-        )  # type: ignore
+        )
         await runner.setup()
         site = web.TCPSite(runner, port=self._port)
         await site.start()
@@ -273,7 +281,7 @@ class LocalHttpProxy:
 class _Server(web.Server):
     """Override of aiohttp.web.Server to allow for an increase of the request size."""
 
-    def __init__(self, *args, client_max_size=1024 ** 2, **kwargs):
+    def __init__(self, *args, client_max_size=1024**2, **kwargs):
         self._client_max_size = client_max_size
         super().__init__(*args, **kwargs)
 
