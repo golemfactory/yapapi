@@ -180,7 +180,8 @@ def test_manifest_parse_obj(manifest_obj, manifest_dict):
 
 
 @mock.patch(
-    "yapapi.payload.manifest.datetime", **{"now.return_value": datetime(2020, 1, 1, tzinfo=UTC)}
+    "yapapi.payload.manifest.datetime",
+    **{"now.return_value": datetime(2020, 1, 1, tzinfo=UTC), "wraps": datetime},
 )
 def test_manifest_with_minimal_data(mocked_datetime):
     payload_hash = "asd"
@@ -212,7 +213,8 @@ def test_manifest_with_minimal_data(mocked_datetime):
 
 @pytest.mark.asyncio
 @mock.patch(
-    "yapapi.payload.manifest.datetime", **{"now.return_value": datetime(2020, 1, 1, tzinfo=UTC)}
+    "yapapi.payload.manifest.datetime",
+    **{"now.return_value": datetime(2020, 1, 1, tzinfo=UTC), "wraps": datetime},
 )
 @mock.patch(
     "yapapi.payload.vm.repo",
