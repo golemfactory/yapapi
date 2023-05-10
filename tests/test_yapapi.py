@@ -1,6 +1,7 @@
 import asyncio
-import toml
 from pathlib import Path
+
+import toml
 
 import yapapi
 
@@ -18,6 +19,6 @@ def test_windows_event_loop_fix():
 
     yapapi.windows_event_loop_fix()
 
-    l = asyncio.get_event_loop()
-    t = l.create_task(_asyncio_test())
-    l.run_until_complete(t)
+    loop = asyncio.get_event_loop()
+    task = loop.create_task(_asyncio_test())
+    loop.run_until_complete(task)

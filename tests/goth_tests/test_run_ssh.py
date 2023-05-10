@@ -2,22 +2,21 @@
 import asyncio
 import logging
 import os
-from pathlib import Path
-import pexpect
 import re
 import signal
 import time
+from pathlib import Path
 from typing import List
 
+import pexpect
 import pytest
 
-from goth.configuration import load_yaml, Override
-from goth.runner.log import configure_logging
+from goth.configuration import Override, load_yaml
 from goth.runner import Runner
+from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
 
-from .assertions import assert_no_errors, assert_all_invoices_accepted
-
+from .assertions import assert_all_invoices_accepted, assert_no_errors
 
 logger = logging.getLogger("goth.test.run_ssh")
 
@@ -32,13 +31,12 @@ async def test_run_ssh(
     config_overrides: List[Override],
     ssh_verify_connection: bool,
 ) -> None:
-
     if ssh_verify_connection:
-        websocat_check = pexpect.spawn("/usr/bin/which websocat")
-        exit_code = websocat_check.wait()
+        ssh_check = pexpect.spawn("/usr/bin/which ssh")
+        exit_code = ssh_check.wait()
         if exit_code != 0:
             raise ProcessLookupError(
-                "websocat binary not found, please install it or check your PATH. "
+                "ssh binary not found, please install it or check your PATH. "
                 "You may also skip the connection check by omitting `--ssh-verify-connection`."
             )
 
@@ -60,7 +58,6 @@ async def test_run_ssh(
     )
 
     async with runner(goth_config.containers):
-
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
@@ -79,33 +76,34 @@ async def test_run_ssh(
 
             # A longer timeout to account for downloading a VM image
             for i in range(2):
-                ssh_string = await cmd_monitor.wait_for_pattern("ssh -o ProxyCommand", timeout=120)
-                matches = re.match("ssh -o ProxyCommand=('.*') (root@.*)", ssh_string)
-                proxy_cmd = matches.group(1)
-                auth_str = matches.group(2)
+                ssh_string = await cmd_monitor.wait_for_pattern("ssh -o", timeout=120)
+                matches = re.match("ssh -o .* -p (\\d+) (root@.*)", ssh_string)
+                port = matches.group(1)
+                address = matches.group(2)
                 password = re.sub("password: ", "", await cmd_monitor.wait_for_pattern("password:"))
 
-                ssh_connections.append((proxy_cmd, auth_str, password))
+                ssh_connections.append((port, address, password))
 
             await cmd_monitor.wait_for_pattern(
                 ".*SshService running on provider.*SshService running on provider", timeout=10
             )
+            logger.info("SSH service instances started")
 
             if not ssh_verify_connection:
                 logger.warning(
                     "Skipping SSH connection check. Use `--ssh-verify-connection` to perform it."
                 )
             else:
-                for proxy_cmd, auth_str, password in ssh_connections:
+                for port, address, password in ssh_connections:
                     args = [
                         "ssh",
                         "-o",
                         "UserKnownHostsFile=/dev/null",
                         "-o",
                         "StrictHostKeyChecking=no",
-                        "-o",
-                        "ProxyCommand=" + proxy_cmd,
-                        auth_str,
+                        "-p",
+                        port,
+                        address,
                         "uname -v",
                     ]
 
@@ -116,7 +114,7 @@ async def test_run_ssh(
                     ssh.sendline(password)
                     ssh.expect("#1-Alpine SMP", timeout=5)
                     ssh.expect(pexpect.EOF, timeout=5)
-                    logger.info("Connection to %s confirmed.", auth_str)
+                    logger.info("Connection to port %s confirmed.", port)
 
                 logger.info("SSH connections confirmed.")
 

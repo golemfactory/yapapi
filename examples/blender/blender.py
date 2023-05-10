@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
-from datetime import datetime, timedelta
 import pathlib
 import sys
+from datetime import datetime, timedelta
 
-from yapapi import (
-    Golem,
-    Task,
-    WorkContext,
-)
+from yapapi import Golem, Task, WorkContext
 from yapapi.payload import vm
 from yapapi.rest.activity import BatchTimeoutError
 
@@ -15,14 +11,14 @@ examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
 from utils import (
-    build_parser,
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
-    TEXT_COLOR_RED,
     TEXT_COLOR_MAGENTA,
+    TEXT_COLOR_RED,
+    build_parser,
     format_usage,
-    run_golem_example,
     print_env_info,
+    run_golem_example,
 )
 
 
@@ -35,7 +31,8 @@ async def main(
         min_mem_gib=0.5,
         # only run on provider nodes that have more than 2gb of storage space available
         min_storage_gib=2.0,
-        # only run on provider nodes which a certain number of CPU threads (logical CPU cores) available
+        # only run on provider nodes which a certain number of CPU threads (logical CPU cores)
+        #  available
         min_cpu_threads=min_cpu_threads,
     )
 

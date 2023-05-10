@@ -1,5 +1,6 @@
 import argparse
-from flask import Flask, render_template, request, redirect, url_for
+
+from flask import Flask, redirect, render_template, request, url_for
 from flask_sqlalchemy import SQLAlchemy
 
 parser = argparse.ArgumentParser("simple flask app")

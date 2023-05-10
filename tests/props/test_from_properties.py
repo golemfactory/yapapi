@@ -1,8 +1,8 @@
-"""Unit tests for `yapapi.props.base.Model.from_properties` method"""
+"""Unit tests for `yapapi.props.base.Model.from_properties` method."""
 
 import pytest
 
-from yapapi.props import com, InvalidPropertiesError
+from yapapi.props import InvalidPropertiesError, com
 
 
 @pytest.mark.parametrize(
@@ -52,7 +52,8 @@ from yapapi.props import com, InvalidPropertiesError
                 "golem.com.usage.vector": ["golem.usage.cpu_sec", "golem.usage.duration_sec"],
                 "golem.com.scheme": "payu",
             },
-            "Invalid properties: expecting the number of linear_coeffs to correspond to usage_vector + 1 (fixed price)",
+            "Invalid properties: expecting the number of linear_coeffs to correspond to"
+            " usage_vector + 1 (fixed price)",
         ),
         (
             {
@@ -61,7 +62,8 @@ from yapapi.props import com, InvalidPropertiesError
                 "golem.com.usage.vector": ["golem.usage.cpu_sec"],
                 "golem.com.scheme": "payu",
             },
-            "Invalid properties: expecting the number of linear_coeffs to correspond to usage_vector + 1 (fixed price)",
+            "Invalid properties: expecting the number of linear_coeffs to correspond to"
+            " usage_vector + 1 (fixed price)",
         ),
         (
             {
@@ -79,7 +81,8 @@ from yapapi.props import com, InvalidPropertiesError
                 "golem.com.usage.vector": "not a vector",
                 "golem.com.scheme": "payu",
             },
-            "Invalid properties: expecting the number of linear_coeffs to correspond to usage_vector + 1 (fixed price)",
+            "Invalid properties: expecting the number of linear_coeffs to correspond to"
+            " usage_vector + 1 (fixed price)",
         ),
     ],
 )

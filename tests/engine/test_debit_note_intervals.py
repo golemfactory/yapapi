@@ -1,24 +1,28 @@
-from datetime import datetime, timedelta
 import functools
-import pytest
 import re
 import sys
+from datetime import datetime, timedelta
 from unittest import mock
 
+import pytest
+
+from tests.factories.rest.market import AgreementFactory
+from tests.factories.rest.payment import DebitNoteFactory
 from yapapi.engine import _Engine
 from yapapi.rest.market import Agreement
 from yapapi.rest.payment import DebitNote
 from yapapi.strategy import PROP_DEBIT_NOTE_INTERVAL_SEC, PROP_PAYMENT_TIMEOUT_SEC
 
-from tests.factories.rest.market import AgreementFactory
-from tests.factories.rest.payment import DebitNoteFactory
-
 
 def mock_engine(
     agreement: Agreement, debit_note: DebitNote, num_debit_notes=0, num_payable_debit_notes=0
 ) -> _Engine:
-    with mock.patch("yapapi.engine.rest.Configuration"):
-        engine = _Engine(budget=0.0, strategy=mock.Mock(), event_consumer=mock.Mock())
+    engine = _Engine(
+        budget=0.0,
+        strategy=mock.Mock(),
+        event_consumer=mock.Mock(),
+        api_config=mock.Mock(),
+    )
 
     engine._all_agreements[agreement.id] = agreement  # noqa
     engine._num_debit_notes[debit_note.activity_id] = num_debit_notes  # noqa
@@ -67,12 +71,12 @@ def _message_matches(regex):
             _is_none,
             _is_none,
         ),
-        # MAP active and we have received a debit note before an agreed-upon interval
+        # MAP active and we have received more than 1 debit note before an agreed-upon interval
         (
             {"details___ref__demand__properties": {PROP_DEBIT_NOTE_INTERVAL_SEC: 100}},
             {},
             10,
-            0,
+            1,
             0,
             _message_matches("^Too many debit notes"),
             _is_none,
@@ -87,27 +91,27 @@ def _message_matches(regex):
             _is_none,
             _is_none,
         ),
-        # MAP active and we have received a payable debit note earlier than expected
+        # MAP active and we have received more than one payable debit note earlier than expected
         (
             {"details___ref__demand__properties": {PROP_PAYMENT_TIMEOUT_SEC: 100}},
             {"_base__payment_due_date": True},
             10,
             0,
-            0,
+            1,
             _is_none,
             _message_matches("^Too many payable debit notes"),
         ),
-        # MAP active and we have received n-th debit note as allowed by the interval
+        # MAP active and we have received n-th+1 debit note as allowed by the interval
         (
             {"details___ref__demand__properties": {PROP_DEBIT_NOTE_INTERVAL_SEC: 100}},
             {},
             300,
-            2,
+            3,
             0,
             _is_none,
             _is_none,
         ),
-        # MAP active and we have received n-th debit note earlier than expected
+        # MAP active and we have received n-th+1 debit note earlier than expected
         (
             {"details___ref__demand__properties": {PROP_DEBIT_NOTE_INTERVAL_SEC: 100}},
             {},
@@ -117,17 +121,17 @@ def _message_matches(regex):
             _message_matches("^Too many debit notes"),
             _is_none,
         ),
-        # MAP active and we have received n-th payable debit note as allowed by the interval
+        # MAP active and we have received n-th+1 payable debit note as allowed by the interval
         (
             {"details___ref__demand__properties": {PROP_PAYMENT_TIMEOUT_SEC: 100}},
             {"_base__payment_due_date": True},
             300,
             0,
-            2,
+            3,
             _is_none,
             _is_none,
         ),
-        # MAP active and we have received n-th payable debit note earlier than expected
+        # MAP active and we have received n-th+1 payable debit note earlier than expected
         (
             {"details___ref__demand__properties": {PROP_PAYMENT_TIMEOUT_SEC: 100}},
             {"_base__payment_due_date": True},
@@ -176,12 +180,13 @@ def test_verify_debit_note_intervals(
         ({}, {}, lambda: None, 0, 0, False, False),
         # payable debit note received even though mid-agrement payment have not been negotiated
         ({}, {"_base__payment_due_date": True}, datetime.now, 0, 0, False, True),
-        # debit note received before the agreed-upon interval elapsed
+        # more than one debit note received before the agreed-upon interval elapsed,
+        # we only allow one
         (
             {"details___ref__demand__properties": {PROP_DEBIT_NOTE_INTERVAL_SEC: 100}},
             {},
             datetime.now,
-            0,
+            1,
             0,
             False,
             True,
@@ -196,33 +201,33 @@ def test_verify_debit_note_intervals(
             True,
             False,
         ),
-        # n-th debit note received in consistency with the agreed-upon interval
-        (
-            {"details___ref__demand__properties": {PROP_DEBIT_NOTE_INTERVAL_SEC: 100}},
-            {},
-            lambda: datetime.now() - timedelta(seconds=300),
-            2,
-            0,
-            True,
-            False,
-        ),
-        # n-th debit note received earlier than expected, based on the agreed-upon interval
+        # n-th+1 debit note received in consistency with the agreed-upon interval
         (
             {"details___ref__demand__properties": {PROP_DEBIT_NOTE_INTERVAL_SEC: 100}},
             {},
             lambda: datetime.now() - timedelta(seconds=300),
             3,
             0,
+            True,
+            False,
+        ),
+        # n-th+1 debit note received earlier than expected, based on the agreed-upon interval
+        (
+            {"details___ref__demand__properties": {PROP_DEBIT_NOTE_INTERVAL_SEC: 100}},
+            {},
+            lambda: datetime.now() - timedelta(seconds=300),
+            4,
+            0,
             False,
             True,
         ),
-        # payable debit note received before the agreed-upon interval elapsed
+        # more than 1 payable debit note received before the agreed-upon interval elapsed
         (
             {"details___ref__demand__properties": {PROP_PAYMENT_TIMEOUT_SEC: 100}},
             {"_base__payment_due_date": True},
             datetime.now,
             0,
-            0,
+            1,
             False,
             True,
         ),
@@ -236,23 +241,23 @@ def test_verify_debit_note_intervals(
             True,
             False,
         ),
-        # n-th payable debit note received in consistency with the agreed-upon interval
-        (
-            {"details___ref__demand__properties": {PROP_PAYMENT_TIMEOUT_SEC: 100}},
-            {"_base__payment_due_date": True},
-            lambda: datetime.now() - timedelta(seconds=300),
-            0,
-            2,
-            True,
-            False,
-        ),
-        # n-th payble debit note received earlier than expected, based on the agreed-upon interval
+        # n-th+1 payable debit note received in consistency with the agreed-upon interval
         (
             {"details___ref__demand__properties": {PROP_PAYMENT_TIMEOUT_SEC: 100}},
             {"_base__payment_due_date": True},
             lambda: datetime.now() - timedelta(seconds=300),
             0,
             3,
+            True,
+            False,
+        ),
+        # n-th+1 payble debit note received earlier than expected, based on the agreed-upon interval
+        (
+            {"details___ref__demand__properties": {PROP_PAYMENT_TIMEOUT_SEC: 100}},
+            {"_base__payment_due_date": True},
+            lambda: datetime.now() - timedelta(seconds=300),
+            0,
+            4,
             False,
             True,
         ),

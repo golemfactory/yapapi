@@ -10,7 +10,6 @@ from goth.runner import Runner
 from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
 
-
 logger = logging.getLogger("goth.test.async_task_generation")
 
 
@@ -33,7 +32,6 @@ async def test_async_task_generation(
     runner = Runner(base_log_dir=log_dir, compose_config=goth_config.compose_config)
 
     async with runner(goth_config.containers):
-
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(

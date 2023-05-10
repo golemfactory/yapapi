@@ -1,32 +1,27 @@
 #!/usr/bin/env python3
 import asyncio
-from datetime import datetime, timedelta
 import pathlib
-import sys
 import random
+import sys
+from datetime import datetime, timedelta
 
 examples_dir = pathlib.Path(__file__).resolve().parents[2] / "examples"
 sys.path.append(str(examples_dir))
 
-from yapapi import (
-    Golem,
-    NoPaymentAccountError,
-    Task,
-    __version__ as yapapi_version,
-    WorkContext,
-    windows_event_loop_fix,
-)
-from yapapi.log import enable_default_logger
-from yapapi.payload import vm
-from yapapi.rest.activity import BatchTimeoutError
-
-from utils import (
-    build_parser,
+from utils import (  # noqa: E402
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_RED,
     TEXT_COLOR_YELLOW,
+    build_parser,
 )
+
+from yapapi import windows_event_loop_fix  # noqa: E402
+from yapapi import Golem, NoPaymentAccountError, Task, WorkContext  # noqa: E402
+from yapapi import __version__ as yapapi_version  # noqa: E402
+from yapapi.log import enable_default_logger  # noqa: E402
+from yapapi.payload import vm  # noqa: E402
+from yapapi.rest.activity import BatchTimeoutError  # noqa: E402
 
 
 async def main(subnet_tag, payment_driver=None, payment_network=None):
@@ -44,7 +39,7 @@ async def main(subnet_tag, payment_driver=None, payment_network=None):
             script.run("/usr/bin/stress-ng", "--cpu", "1", "--timeout", "1")
             script.run("/golem/task.sh", "-o", "1024", "-t", "5")
             script.run("/golem/task.sh", "-f", "/golem/output/output.txt,1048576")
-            script.download_file(f"/golem/output/output.txt", output_file)
+            script.download_file("/golem/output/output.txt", output_file)
             script.run("/golem/task.sh", "-e", "1024", "-t", "5")
 
             try:
@@ -64,7 +59,6 @@ async def main(subnet_tag, payment_driver=None, payment_network=None):
         payment_driver=payment_driver,
         payment_network=payment_network,
     ) as golem:
-
         print(
             f"yapapi version: {TEXT_COLOR_YELLOW}{yapapi_version}{TEXT_COLOR_DEFAULT}\n"
             f"Using subnet: {TEXT_COLOR_YELLOW}{subnet_tag}{TEXT_COLOR_DEFAULT}, "

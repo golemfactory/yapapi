@@ -1,31 +1,27 @@
 #!/usr/bin/env python3
-from datetime import datetime
 import logging
 import pathlib
 import re
 import sys
+from datetime import datetime
 from typing import List
 
-from yapapi import (
-    Golem,
-    Task,
-    WorkContext,
-)
+from yapapi import Golem, Task, WorkContext
 from yapapi.log import pluralize
 from yapapi.payload import vm
-from yapapi.strategy import MarketStrategy, SCORE_REJECTED, SCORE_TRUSTED
+from yapapi.strategy import SCORE_REJECTED, SCORE_TRUSTED, MarketStrategy
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
 from utils import (
-    build_parser,
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
-    TEXT_COLOR_YELLOW,
     TEXT_COLOR_MAGENTA,
-    run_golem_example,
+    TEXT_COLOR_YELLOW,
+    build_parser,
     print_env_info,
+    run_golem_example,
 )
 
 logger = logging.getLogger(__name__)

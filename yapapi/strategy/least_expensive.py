@@ -1,16 +1,17 @@
-from collections import defaultdict
-from dataclasses import dataclass
-from decimal import Decimal
 import logging
+from collections import defaultdict
+from decimal import Decimal
 from types import MappingProxyType
 from typing import Dict, Mapping, Union
 
+from dataclasses import dataclass
+
+from yapapi import rest
 from yapapi.props import com
 from yapapi.props.builder import DemandBuilder
 from yapapi.props.com import Counter
-from yapapi import rest
 
-from .base import MarketStrategy, SCORE_REJECTED, SCORE_TRUSTED
+from .base import SCORE_REJECTED, SCORE_TRUSTED, MarketStrategy
 
 
 @dataclass
@@ -63,7 +64,6 @@ class LeastExpensiveLinearPayuMS(MarketStrategy, object):
         expected_usage = []
 
         for resource in linear.usage_vector:
-
             if linear.price_for[resource] > self._max_price_for[resource]:
                 self._logger.debug(
                     "Rejected offer %s: price for '%s' higher than price cap %f.",

@@ -6,15 +6,13 @@ sends an error command in its `start()` method which results in the instance's
 termination before going to the `running` state.
 """
 import asyncio
-from datetime import datetime
 import sys
+from datetime import datetime
 
 from yapapi import Golem
-from yapapi.services import Service
-
-from yapapi.log import enable_default_logger, log_summary, log_event_repr, pluralize  # noqa
+from yapapi.log import enable_default_logger, log_event_repr, log_summary, pluralize  # noqa
 from yapapi.payload import vm
-
+from yapapi.services import Service
 
 instances_started = 0
 instances_running = 0
@@ -36,7 +34,6 @@ class FirstInstanceFailsToStart(Service):
         )
 
     async def start(self):
-
         global instances_started
 
         async for script in super().start():
@@ -60,7 +57,6 @@ class FirstInstanceFailsToStart(Service):
             await asyncio.sleep(30)
 
     async def run(self):
-
         global instances_running
         instances_running += 1
 
@@ -76,7 +72,6 @@ class FirstInstanceFailsToStart(Service):
         await future_result
 
     async def shutdown(self):
-
         global instances_stopped
 
         log("STOPPING", instances_started)
@@ -86,9 +81,7 @@ class FirstInstanceFailsToStart(Service):
 
 
 async def main():
-
     async with Golem(budget=1.0, subnet_tag="goth") as golem:
-
         # Start a cluster with a single service.
         # The first instance will fail before reaching the `running` state
         # due to an error. Another instance should be spawned in its place.

@@ -1,12 +1,14 @@
-from os import PathLike
-from typing import Optional, AsyncIterator, List, NamedTuple
-from . import StorageProvider, Source, Destination, Content
-import aiohttp
-import uuid
-from dataclasses import dataclass
-from datetime import datetime
 import logging
-from urllib.parse import urlparse, urljoin
+import uuid
+from datetime import datetime
+from os import PathLike
+from typing import AsyncIterator, List, NamedTuple, Optional
+from urllib.parse import urljoin, urlparse
+
+import aiohttp
+from dataclasses import dataclass
+
+from . import Content, Destination, Source, StorageProvider
 
 _logger: logging.Logger = logging.getLogger(__name__)
 
@@ -19,9 +21,9 @@ class DavResource(NamedTuple):
 
 
 def _parse_prop_resp(xml: str) -> List[DavResource]:
+    from email.utils import parsedate_to_datetime
     from io import StringIO
     from xml.etree import ElementTree
-    from email.utils import parsedate_to_datetime
 
     tree = ElementTree.parse(StringIO(xml))
 

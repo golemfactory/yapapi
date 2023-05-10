@@ -1,12 +1,11 @@
 """Utility functions and classes used within yapapi."""
 import asyncio
-from datetime import datetime, timezone, tzinfo
 import enum
 import functools
 import logging
-from typing import AsyncContextManager, Callable, Optional
 import warnings
-
+from datetime import datetime, timezone, tzinfo
+from typing import AsyncContextManager, Callable, Dict, List, Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -184,3 +183,109 @@ def strtobool(val):
         return 0
     else:
         raise ValueError("invalid truth value %r" % (val,))
+
+
+def utc_now() -> datetime:
+    """Get a timezone-aware datetime for _now_."""
+    return datetime.now(tz=timezone.utc)
+
+
+def explode_dict(imploded_dict: Dict, separator=".") -> Dict:
+    """Return an exploded dictionary based on path found in keys.
+
+    Example usage:
+
+        assert explode_dict(
+            {
+                "root_field": 1,
+                "nested.field": 2,
+                "nested.obj": {
+                    "works": "fine",
+                },
+                "nested.obj.with_array": [
+                    "okay!",
+                ],
+                "even.more.nested.field": 3,
+                "arrays.0.are": {
+                    "supported": "too",
+                },
+                "arrays.1": "works fine",
+            }
+        ) == {
+            "root_field": 1,
+            "nested": {
+                "field": 2,
+                "obj": {
+                    "works": "fine",
+                    "with_array": [
+                        "okay!",
+                    ],
+                },
+            },
+            "even": {
+                "more": {
+                    "nested": {
+                        "field": 3,
+                    },
+                },
+            },
+            "arrays": [
+                {
+                    "are": {
+                        "supported": "too",
+                    },
+                },
+                "works fine",
+            ],
+        }
+
+    """
+    obj: Dict = {}
+
+    for path, value in imploded_dict.items():
+        parts = path.split(separator)
+
+        nested_obj: Union[List, Dict] = obj
+        for part, next_part in zip(parts, parts[1:]):
+            try:
+                int(next_part)
+            except ValueError:
+                is_next_part_number = False
+            else:
+                is_next_part_number = True
+
+            try:
+                part_index = int(part)
+            except ValueError:
+                assert isinstance(nested_obj, Dict)
+
+                if is_next_part_number:
+                    nested_obj = nested_obj.setdefault(part, [])
+                else:
+                    nested_obj = nested_obj.setdefault(part, {})
+            else:
+                try:
+                    nested_obj = nested_obj[part_index]
+                except IndexError:
+                    assert isinstance(nested_obj, List)
+
+                    new_nested_obj: Union[List, Dict] = [] if is_next_part_number else {}
+                    nested_obj.insert(part_index, new_nested_obj)
+                    nested_obj = new_nested_obj
+
+        try:
+            last_part = int(parts[-1])
+        except ValueError:
+            assert isinstance(nested_obj, Dict)
+            last_part = parts[-1]
+        else:
+            assert isinstance(nested_obj, List)
+
+            try:
+                nested_obj[last_part]
+            except IndexError:
+                nested_obj.insert(last_part, None)
+
+        nested_obj[last_part] = value
+
+    return obj

@@ -1,14 +1,13 @@
-"""
-Storage models.
-"""
+"""Storage models."""
 
 import abc
+import asyncio
+import io
 import os
 import pathlib
-import io
 from os import PathLike
-from typing import AsyncIterator, NamedTuple, Union, Optional
-import asyncio
+from typing import AsyncIterator, NamedTuple, Optional, Union
+
 import aiohttp
 
 _BUF_SIZE = 40960
@@ -100,15 +99,14 @@ class InputStorageProvider(abc.ABC):
     async def release_source(self, source: Source) -> None:
         """Release a source returned by `upload_file` or `upload_bytes`.
 
-        The default implementation is to do nothing."""
-        pass
+        The default implementation is to do nothing.
+        """
 
 
 class OutputStorageProvider(abc.ABC):
     @abc.abstractmethod
     async def new_destination(self, destination_file: Optional[PathLike] = None) -> Destination:
-        """
-        Creates slot for receiving file.
+        """Create slot for receiving file.
 
         Parameters
         ----------

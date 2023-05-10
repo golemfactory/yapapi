@@ -4,31 +4,23 @@ import inspect
 import logging
 import sys
 from types import TracebackType
-from typing import (
-    AsyncContextManager,
-    Callable,
-    List,
-    Optional,
-    Set,
-    Union,
-    Tuple,
-    Type,
-    TYPE_CHECKING,
-)
+from typing import TYPE_CHECKING, AsyncContextManager, List, Optional, Set, Tuple, Type, Union
 
-logger = logging.getLogger(__name__)
+from typing_extensions import Final
 
 if TYPE_CHECKING:
     from yapapi.engine import Job
 
 from yapapi import events
-
-from .service import Service, ServiceType, ServiceInstance
-from .service_state import ServiceState
 from yapapi.ctx import WorkContext
+from yapapi.network import Network
 from yapapi.rest.activity import BatchError
 from yapapi.rest.market import Agreement
-from yapapi.network import Network
+
+from .service import Service, ServiceInstance, ServiceType
+from .service_state import ServiceState
+
+logger = logging.getLogger(__name__)
 
 # Return type for `sys.exc_info()`
 ExcInfo = Union[
@@ -36,19 +28,42 @@ ExcInfo = Union[
     Tuple[None, None, None],
 ]
 
+DEFAULT_HEALTH_CHECK_INTERVAL: Final[float] = 10.0
+DEFAULT_HEALTH_CHECK_RETRIES: Final[int] = 3
+
+
+class ServiceRunnerError(Exception):
+    """An error while running a Service."""
+
 
 class ControlSignal(enum.Enum):
-    """Control signal, used to request an instance's state change from the controlling SeviceRunner."""
+    """Control signal, used to request an instance's state change from the controlling \
+    SeviceRunner."""
 
     stop = "stop"
 
 
 class ServiceRunner(AsyncContextManager):
-    def __init__(self, job: "Job"):
+    def __init__(
+        self,
+        job: "Job",
+        health_check_interval: Optional[float] = DEFAULT_HEALTH_CHECK_INTERVAL,
+        health_check_retries: int = DEFAULT_HEALTH_CHECK_RETRIES,
+    ):
+        """Initialize the ServiceRunner.
+
+        :param job: the engine's :class:`~yapapi.engine.Job` within which the ServiceRunner will run
+        :param health_check_interval: an interval in seconds between subsequent health checks.
+            Setting it to `None` turns off the health check.
+        :param health_check_retries: number of times the health check will be retried before
+            it's reported as failed
+        """
         self._job = job
         self._instances: List[Service] = []
         self._instance_tasks: List[asyncio.Task] = []
         self._stopped = False
+        self._health_check_interval = health_check_interval
+        self._health_check_retries = health_check_retries
 
     @property
     def id(self) -> str:
@@ -63,18 +78,15 @@ class ServiceRunner(AsyncContextManager):
         service: ServiceType,
         network: Optional[Network] = None,
         network_address: Optional[str] = None,
-        respawn_condition: Optional[Callable[[ServiceType], bool]] = None,
     ) -> None:
-        """Add service the the collection of services managed by this ServiceRunner.
+        """Add service to the collection of services managed by this ServiceRunner.
 
         The same object should never be managed by more than one ServiceRunner.
         """
         self._instances.append(service)
 
         loop = asyncio.get_event_loop()
-        task = loop.create_task(
-            self.spawn_instance(service, network, network_address, respawn_condition)
-        )
+        task = loop.create_task(self.spawn_instance(service, network, network_address))
         self._instance_tasks.append(task)
 
     def stop_instance(self, service: Service):
@@ -164,7 +176,8 @@ class ServiceRunner(AsyncContextManager):
                 service_cls_name = type(instance.service).__name__
                 handler_name = handler.__name__
                 raise TypeError(
-                    f"Service handler: `{service_cls_name}.{handler_name}` must be an asynchronous generator."
+                    f"Service handler: `{service_cls_name}.{handler_name}` must be an asynchronous"
+                    " generator."
                 )
 
     @staticmethod
@@ -195,6 +208,7 @@ class ServiceRunner(AsyncContextManager):
             logger.warning("Don't know how to handle control signal %s", event)
 
         if isinstance(event, tuple):
+            # TODO resolve issue with access to a protected attribute
             instance.service._exc_info = event
 
         if instance.state != prev_state:
@@ -206,6 +220,27 @@ class ServiceRunner(AsyncContextManager):
 
         return instance.state != prev_state
 
+    async def _ensure_alive(self, service: Service):
+        # wait indefinitely when the interval is not defined
+        if self._health_check_interval is None:
+            await asyncio.Future()
+            return
+
+        retries_left = self._health_check_retries
+        while True:
+            if service.is_available:
+                if await service.is_activity_responsive():
+                    retries_left = self._health_check_retries
+                else:
+                    retries_left -= 1
+                    logger.warning("Service health check failed, retries left: %s", retries_left)
+            if retries_left <= 0:
+                raise ServiceRunnerError(
+                    "Service health check failed after %s retries",
+                    self._health_check_retries,
+                )
+            await asyncio.sleep(self._health_check_interval)
+
     async def _run_instance(self, instance: ServiceInstance):
         loop = asyncio.get_event_loop()
 
@@ -214,6 +249,7 @@ class ServiceRunner(AsyncContextManager):
         handler = None
         batch_task: Optional[asyncio.Task] = None
         signal_task: Optional[asyncio.Task] = None
+        health_check_task: Optional[asyncio.Task] = None
 
         def update_handler(instance: ServiceInstance):
             nonlocal handler
@@ -255,9 +291,12 @@ class ServiceRunner(AsyncContextManager):
                 batch_task = loop.create_task(handler.__anext__())
             if signal_task is None:
                 signal_task = loop.create_task(instance.control_queue.get())
+            if health_check_task is None:
+                health_check_task = loop.create_task(self._ensure_alive(instance.service))
 
             done, _ = await asyncio.wait(
-                (batch_task, signal_task), return_when=asyncio.FIRST_COMPLETED
+                (batch_task, signal_task, health_check_task),
+                return_when=asyncio.FIRST_COMPLETED,
             )
 
             if batch_task in done:
@@ -305,15 +344,21 @@ class ServiceRunner(AsyncContextManager):
                 change_state(ctl)
                 signal_task = None
 
+            if health_check_task in done:
+                try:
+                    health_check_task.result()
+                except ServiceRunnerError as exception:
+                    logger.info("Health check task aborted: %s", exception)
+                    change_state(sys.exc_info())
+                    health_check_task = None
+
         logger.debug("No handler for %s in state %s", instance.service, instance.state.value)
 
         try:
-            if batch_task:
-                batch_task.cancel()
-                await batch_task
-            if signal_task:
-                signal_task.cancel()
-                await signal_task
+            for t in [batch_task, signal_task, health_check_task]:
+                if t is not None:
+                    t.cancel()
+                    await t
         except asyncio.CancelledError:
             pass
 
@@ -324,14 +369,12 @@ class ServiceRunner(AsyncContextManager):
         service: ServiceType,
         network: Optional[Network] = None,
         network_address: Optional[str] = None,
-        respawn_condition: Optional[Callable[[ServiceType], bool]] = None,
     ) -> None:
         """Lifecycle the service within this :class:`ServiceRunner`.
 
         :param service: instance of the service class, expected to be in a pending state
         :param network: a :class:`~yapapi.network.Network` this service should be attached to
         :param network_address: the address withing the network, ignored if network is None
-        :param respawn_condition: a bool-returning function called when a single lifecycle of the instance finished,
             determining whether service should be reset and lifecycle should restart
         """
 
@@ -350,11 +393,11 @@ class ServiceRunner(AsyncContextManager):
 
             service._set_ctx(work_context)
             self._change_state(instance)  # pending -> starting
-            if network:
-                service._set_network_node(
-                    await network.add_node(work_context.provider_id, network_address)
-                )
             try:
+                if network:
+                    service._set_network_node(
+                        await network.add_node(work_context.provider_id, network_address)
+                    )
                 if not self._stopped:
                     instance_batches = self._run_instance(instance)
                     try:
@@ -370,6 +413,9 @@ class ServiceRunner(AsyncContextManager):
                 work_context.emit(events.WorkerFinished, exc_info=sys.exc_info())
                 raise
             finally:
+                if network and service.network_node:
+                    await network.remove_node(work_context.provider_id)
+                    service._clear_network_node()
                 await self._job.engine.accept_payments_for_agreement(self._job.id, agreement.id)
                 await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
 
@@ -385,7 +431,7 @@ class ServiceRunner(AsyncContextManager):
                 continue
             try:
                 await task
-                if respawn_condition is not None and respawn_condition(service):
+                if service.restart_condition:
                     logger.info(f"Restarting service {service}")
                     await service.reset()
                     instance.service_state.restart()
@@ -398,15 +444,17 @@ class ServiceRunner(AsyncContextManager):
                     return
 
     async def _ensure_payload_matches(self, service: Service):
-        #   Possible improvement: maybe we should accept services with lower demands then our payload?
-        #   E.g. if service expects 2GB and we have 4GB in our payload, then this seems fine.
-        #   (Not sure how much effort this requires)
+        #   Possible improvement: maybe we should accept services with lower demands then our
+        #   payload? E.g. if service expects 2GB and we have 4GB in our payload, then this seems
+        #   fine. (Not sure how much effort this requires)
         service_payload = await service.get_payload()
         our_payload = self._job.payload
         if service_payload is not None and service_payload != our_payload:
             logger.error(
-                "Payload mismatch: service with {service_payload} was added to runner with {our_payload}"
+                f"Payload mismatch: service with {service_payload} was added to runner"
+                f" with {our_payload}"
             )
             raise ValueError(
-                f"Only payload accepted by this service runner is {our_payload}, got {service_payload}"
+                f"Only payload accepted by this service runner is {our_payload},"
+                f" got {service_payload}"
             )

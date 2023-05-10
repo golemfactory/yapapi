@@ -1,11 +1,11 @@
 import pytest
 
-from yapapi import Golem
-from yapapi.strategy import SCORE_REJECTED
-from yapapi.contrib.strategy import ProviderFilter
-
 from tests.factories.rest.market import OfferProposalFactory
-from .helpers import Always6, DEFAULT_OFFER_SCORE
+from yapapi import Golem
+from yapapi.contrib.strategy import ProviderFilter
+from yapapi.strategy import SCORE_REJECTED
+
+from .helpers import DEFAULT_OFFER_SCORE, Always6
 
 
 @pytest.mark.asyncio
@@ -14,7 +14,8 @@ from .helpers import Always6, DEFAULT_OFFER_SCORE
     ((), (1,), (2,), (1, 2)),
 )
 async def test_restricted_providers(bad_providers):
-    """Test if the strategy restricts correct providers"""
+    """Test if the strategy restricts correct providers."""
+
     strategy = ProviderFilter(Always6(), lambda provider_id: provider_id not in bad_providers)
 
     for provider_id in (1, 2, 3):
@@ -25,7 +26,8 @@ async def test_restricted_providers(bad_providers):
 
 @pytest.mark.asyncio
 async def test_dynamic_change():
-    """Test if changes in the is_allowed function are reflected in scores"""
+    """Test if changes in the is_allowed function are reflected in scores."""
+
     something_happened = False
 
     def is_allowed(provider_id):
@@ -46,7 +48,8 @@ async def test_dynamic_change():
 
 @pytest.mark.asyncio
 async def test_default_strategy_update(dummy_yagna_engine):
-    """Test if default strategy extended with ProviderFilter works as expected"""
+    """Test if default strategy extended with ProviderFilter works as expected."""
+
     golem = Golem(budget=1, app_key="NOT_A_REAL_APPKEY")
     golem.strategy = ProviderFilter(golem.strategy, lambda provider_id: provider_id == 2)
 

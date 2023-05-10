@@ -1,27 +1,23 @@
 #!/usr/bin/env python3
 import asyncio
-from datetime import timedelta
 import pathlib
 import sys
-
-
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from yapapi import Golem
+from yapapi.contrib.service.http_proxy import HttpProxyService, LocalHttpProxy
 from yapapi.payload import vm
 from yapapi.services import Service, ServiceState
-
-from yapapi.contrib.service.http_proxy import HttpProxyService, LocalHttpProxy
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
 from utils import (
-    build_parser,
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
-    run_golem_example,
+    build_parser,
     print_env_info,
+    run_golem_example,
 )
 
 HTTP_IMAGE_HASH = "c37c1364f637c199fe710ca62241ff486db92c875b786814c6030aa1"
@@ -49,23 +45,25 @@ class HttpService(HttpProxyService):
         async for script in super().start():
             yield script
 
-        script = self._ctx.new_script(timeout=timedelta(seconds=10))
+        script = self._ctx.new_script(timeout=timedelta(seconds=20))
 
         script.run(
             "/bin/bash",
             "-c",
-            f"cd /webapp && python app.py --db-address {self._db_address} --db-port {self._db_port} initdb",
+            f"cd /webapp && python app.py "
+            f"--db-address {self._db_address} "
+            f"--db-port {self._db_port}"
+            f" initdb",
         )
         script.run(
             "/bin/bash",
             "-c",
-            f"cd /webapp && python app.py --db-address {self._db_address} --db-port {self._db_port} run > /webapp/out 2> /webapp/err &",
+            f"cd /webapp && python app.py "
+            f"--db-address {self._db_address} "
+            f"--db-port {self._db_port} "
+            f"run > /webapp/out 2> /webapp/err &",
         )
         yield script
-
-    async def reset(self):
-        # We don't have to do anything when the service is restarted
-        pass
 
 
 class DbService(Service):
@@ -85,10 +83,6 @@ class DbService(Service):
         script = self._ctx.new_script(timeout=timedelta(seconds=30))
         script.run("/bin/run_rqlite.sh")
         yield script
-
-    async def reset(self):
-        # We don't have to do anything when the service is restarted
-        pass
 
 
 async def main(subnet_tag, payment_driver, payment_network, port):
@@ -156,7 +150,8 @@ async def main(subnet_tag, payment_driver, payment_network, port):
             await proxy.run()
 
             print(
-                f"{TEXT_COLOR_CYAN}Local HTTP server listening on:\nhttp://localhost:{port}{TEXT_COLOR_DEFAULT}"
+                f"{TEXT_COLOR_CYAN}Local HTTP server listening on:\n"
+                f"http://localhost:{port}{TEXT_COLOR_DEFAULT}"
             )
 
             # wait until Ctrl-C

@@ -1,23 +1,24 @@
 #!/usr/local/bin/python
-"""
-a very basic "stub" that exposes a few commands of an imagined, very simple CLI-based
-service that is able to accumulate some linear, time-based values and present it stats
+"""A very basic "stub" that exposes a few commands of an imagined, very simple CLI-based service.
+
+The Service is able to accumulate some linear, time-based values and present it stats
 (characteristics of the statistical distribution of the data collected so far) or provide
 distribution and time-series plots of the collected data.
 
 [ part of the VM image that's deployed by the runtime on the Provider's end. ]
 """
 import argparse
-from datetime import datetime
-import enum
 import contextlib
+import enum
 import json
-import matplotlib.pyplot as plt
-import numpy
 import random
 import sqlite3
 import string
+from datetime import datetime
 from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy
 
 DB_PATH = Path(__file__).absolute().parent / "service.db"
 PLOT_PATH = Path("/golem/out").absolute()

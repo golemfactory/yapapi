@@ -1,9 +1,9 @@
 import asyncio
-from collections import defaultdict
-from pathlib import Path
 import random
 import tempfile
-from typing import cast, List
+from collections import defaultdict
+from pathlib import Path
+from typing import List, cast
 
 import pytest
 
@@ -21,7 +21,6 @@ def test_dir():
     the directory.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
-
         try:
             test_files = set()
             dir_path = Path(tmpdir)
@@ -96,7 +95,6 @@ class MockService(gftp.GftpDriver):
 
 @pytest.fixture(scope="function")
 def mock_service(monkeypatch):
-
     service = MockService()
     monkeypatch.setattr(gftp, "service", lambda _debug: service)
     return service
@@ -113,7 +111,7 @@ async def test_gftp_provider(test_dir, temp_dir, mock_service, monkeypatch):
     byte_uploads = 0
 
     async def worker(id: int, provider: gftp.GftpProvider):
-        """A test worker."""
+        """Test worker."""
 
         nonlocal num_batches, temp_dir, file_uploads, byte_uploads
 
@@ -172,7 +170,6 @@ async def test_gftp_provider(test_dir, temp_dir, mock_service, monkeypatch):
     monkeypatch.setenv(gftp.USE_GFTP_CLOSE_ENV_VAR, "1")
 
     async with gftp.GftpProvider(tmpdir=temp_dir) as provider:
-
         assert isinstance(provider, gftp.GftpProvider)
         loop = asyncio.get_event_loop()
         workers = [loop.create_task(worker(n, provider)) for n in range(num_workers)]

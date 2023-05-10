@@ -1,7 +1,8 @@
-import factory
 from unittest import mock
 
-from yapapi.events import AgreementEvent, AgreementConfirmed, AgreementRejected
+import factory
+
+from yapapi.events import AgreementConfirmed, AgreementEvent, AgreementRejected
 
 
 class _JobFactory(factory.Factory):

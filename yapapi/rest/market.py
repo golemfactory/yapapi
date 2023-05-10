@@ -1,18 +1,17 @@
 import asyncio
-from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
 import logging
+from datetime import datetime, timedelta, timezone
 from types import TracebackType
-from typing import AsyncIterator, Optional, TypeVar, Type, Generator, Any, Generic
+from typing import Any, AsyncIterator, Generator, Generic, Optional, Type, TypeVar
 
 import aiohttp
-from typing_extensions import Awaitable, AsyncContextManager
+from dataclasses import dataclass
+from typing_extensions import AsyncContextManager, Awaitable
 
-from ya_market import ApiClient, ApiException, RequestorApi, models  # type: ignore
+from ya_market import ApiClient, ApiException, RequestorApi, models
 
-from .common import is_intermittent_error, SuppressedExceptions
 from ..props import Model, NodeInfo
-
+from .common import SuppressedExceptions, is_intermittent_error
 
 _ModelType = TypeVar("_ModelType", bound=Model)
 
@@ -219,9 +218,7 @@ class Subscription(object):
 
     @property
     def details(self) -> models.Demand:
-        """
-        :return: the Demand for which the Subscription has been registered.
-        """
+        """Return the Demand for which the Subscription has been registered."""
         assert self._details is not None, "expected details on list object"
         return self._details
 
@@ -234,7 +231,6 @@ class Subscription(object):
     async def events(self) -> AsyncIterator[OfferProposal]:
         """Yield counter-proposals based on the incoming, matching Offers."""
         while self._open:
-
             proposals = []
             try:
                 async with SuppressedExceptions(is_intermittent_error):
@@ -294,9 +290,8 @@ class Market(object):
         self._api: RequestorApi = RequestorApi(api_client)
 
     def subscribe(self, props: dict, constraints: str) -> AsyncResource[Subscription]:
-        """
-        Create a subscription for a demand specified by the supplied properties and constraints.
-        """
+        """Create a subscription for a demand specified by the supplied properties and \
+        constraints."""
         request = models.DemandOfferBase(properties=props, constraints=constraints)
 
         async def create() -> Subscription:

@@ -4,8 +4,8 @@ from unittest.mock import Mock
 import pytest
 
 from ya_activity.exceptions import ApiException
-from yapapi.rest.activity import BatchError, PollingBatch
 
+from yapapi.rest.activity import BatchError, PollingBatch
 
 GetExecBatchResultsSpec = Tuple[Optional[Exception], List[str]]
 

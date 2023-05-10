@@ -52,13 +52,11 @@ async def test_instance_restart(
     runner = Runner(base_log_dir=log_dir, compose_config=goth_config.compose_config)
 
     async with runner(goth_config.containers):
-
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
             str(Path(__file__).parent / "requestor.py"), env=os.environ
         ) as (_cmd_task, cmd_monitor, _process_monitor):
-
             cmd_monitor.add_assertion(count_instances)
 
             # The first attempt to create an instance should fail

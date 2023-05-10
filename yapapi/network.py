@@ -1,13 +1,15 @@
 import asyncio
 import logging
-from dataclasses import dataclass
-from ipaddress import ip_address, ip_network, IPv4Address, IPv6Address, IPv4Network, IPv6Network
-from statemachine import State, StateMachine  # type: ignore
+from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
 from typing import Dict, Optional, Union
 from urllib.parse import urlparse
 
-import yapapi
+from dataclasses import dataclass
+from statemachine import State, StateMachine
+
 from ya_net.exceptions import ApiException
+
+import yapapi
 
 logger = logging.getLogger("yapapi.network")
 
@@ -17,9 +19,7 @@ IpNetwork = Union[IPv4Network, IPv6Network]
 
 @dataclass
 class Node:
-    """
-    Describes a node in a VPN, mapping a Golem node id to an IP address.
-    """
+    """Describes a node in a VPN, mapping a Golem node id to an IP address."""
 
     network: "Network"
     """The :class:`Network` (the specific VPN) this node is part of."""
@@ -31,11 +31,9 @@ class Node:
     """IP address of this node in this particular VPN."""
 
     def get_deploy_args(self) -> Dict:
-        """
-        Generate a dictionary of arguments that are required for the appropriate
-        `Deploy` command of an exescript in order to pass the network configuration to the runtime
-        on the provider's end.
-        """
+        """Generate a dictionary of arguments that are required for the appropriate `Deploy` \
+        command of an exescript in order to pass the network configuration to the runtime on the \
+        provider's end."""
         deploy_args = {
             "net": [
                 {
@@ -83,9 +81,7 @@ class NetworkState(StateMachine):
 
 
 class Network:
-    """
-    Describes a VPN created between the requestor and the provider nodes within Golem Network.
-    """
+    """Describes a VPN created between the requestor and the provider nodes within Golem Network."""
 
     @classmethod
     async def create(
@@ -102,7 +98,8 @@ class Network:
         :param net_api: the mid-level binding used directly to perform calls to the REST API.
         :param ip: the IP address of the network. May contain netmask, e.g. "192.168.0.0/24"
         :param owner_id: the node ID of the owner of this VPN (the requestor)
-        :param owner_ip: the desired IP address of the requestor node within the newly-created network
+        :param owner_ip: the desired IP address of the requestor node within the newly-created
+            network
         :param mask: Optional netmask (only if not provided within the `ip` argument)
         :param gateway: Optional gateway address for the network
         """
@@ -131,11 +128,13 @@ class Network:
         mask: Optional[str] = None,
         gateway: Optional[str] = None,
     ):
-        """
+        """Initialize instance.
+
         :param net_api: the mid-level binding used directly to perform calls to the REST API.
         :param ip: the IP address of the network. May contain netmask, e.g. "192.168.0.0/24"
         :param owner_id: the node ID of the owner of this VPN (the requestor)
-        :param owner_ip: the desired IP address of the requestor node within the newly-created network
+        :param owner_ip: the desired IP address of the requestor node within the newly-created
+            network
         :param mask: Optional netmask (only if not provided within the `ip` argument)
         :param gateway: Optional gateway address for the network
         """
@@ -173,39 +172,39 @@ class Network:
 
     @property
     def owner_ip(self) -> str:
-        """The IP address of the requestor node within the network."""
+        """Return the IP address of the requestor node within the network."""
         return str(self._owner_ip)
 
     @property
     def state(self) -> State:
-        """Current state in this network's lifecycle."""
+        """Return current state in this network's lifecycle."""
         return self._state_machine.current_state
 
     @property
     def network_address(self) -> str:
-        """The network address of this network, without a netmask."""
+        """Return the network address of this network, without a netmask."""
         return str(self._ip_network.network_address)
 
     @property
     def netmask(self) -> str:
-        """The netmask of this network."""
+        """Return the netmask of this network."""
         return str(self._ip_network.netmask)
 
     @property
     def gateway(self) -> Optional[str]:
-        """The gateway address within this network, if provided."""
+        """Return the gateway address within this network, if provided."""
         if self._gateway:
             return str(self._gateway)
         return None
 
     @property
     def nodes_dict(self) -> Dict[str, str]:
-        """Mapping between the IP addresses and Node IDs of the nodes within this network."""
+        """Return mapping between the IP addresses and Node IDs of the nodes within this network."""
         return {str(v.ip): k for k, v in self._nodes.items()}
 
     @property
     def network_id(self) -> str:
-        """The automatically-generated, unique ID of this VPN."""
+        """Return the automatically-generated, unique ID of this VPN."""
         self._state_machine.get_id()
         assert self._network_id
         return self._network_id
@@ -214,7 +213,8 @@ class Network:
         """Ensure the given IP address belongs to the network address range within this VPN."""
         if ip_address(ip) not in self._ip_network:
             raise NetworkError(
-                f"The given IP ('{ip}') address must belong to the network ('{self._ip_network.with_netmask}')."
+                f"The given IP ('{ip}') address must belong to the network "
+                f"('{self._ip_network.with_netmask}')."
             )
 
     def _ensure_ip_unique(self, ip: str):
@@ -261,6 +261,17 @@ class Network:
 
         return node
 
+    async def remove_node(self, node_id: str) -> None:
+        """Remove the node from the network.
+
+        :param node_id: Node ID within the Golem network of the VPN node to be removed.
+        """
+
+        await self._net_api.remove_node(self.network_id, node_id)
+
+        async with self._nodes_lock:
+            del self._nodes[node_id]
+
     async def _refresh_node(self, node: Node):
         logger.debug("refreshing node %s", node)
         try:
@@ -306,4 +317,4 @@ class Network:
 
 
 class NetworkError(Exception):
-    """Exception raised by :class:`Network` when an operation is not possible"""
+    """Exception raised by :class:`Network` when an operation is not possible."""

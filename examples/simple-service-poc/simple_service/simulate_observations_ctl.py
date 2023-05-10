@@ -1,13 +1,12 @@
 #!/usr/local/bin/python
-"""
-a helper, control script that starts and stops our example `simulate_observations` service
+"""a helper, control script that starts and stops our example `simulate_observations` service.
 
 [ part of the VM image that's deployed by the runtime on the Provider's end. ]
 """
 import argparse
 import os
-import subprocess
 import signal
+import subprocess
 
 PIDFILE = "/var/run/simulate_observations.pid"
 SCRIPT_FILE = "/golem/run/simulate_observations.py"

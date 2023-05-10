@@ -17,9 +17,9 @@ Every event is described by a set of attributes that can be divided into three g
 * Additional event-specific information, e.g. the reason of the agreement termination for
   the :class:`AgreementTerminated` event, described along the particular event classes.
 
-Events should be consumed in a strict `read_only` mode: event objects are shared between all event consumers,
-and their attributes are used internally by the Golem engine, so any modification may have unexpected
-side effects.
+Events should be consumed in a strict `read_only` mode: event objects are shared between all event
+consumers, and their attributes are used internally by the Golem engine, so any modification may
+have unexpected side effects.
 
 
 Attributes shared by various events
@@ -72,8 +72,10 @@ Events inheritance tree
 *   Only leaf events are ever emitted, other events (named :class:`*Event`) are abstract classes
 *   Every abstract class has one more `yapapi` object attached then the parent, e.g.
 
-    *   :class:`JobEvent` is an :class:`Event` that happened in the context of a particular :attr:`job`
-    *   :class:`AgreementEvent` is a :class:`JobEvent` that happened in the context of a particular :attr:`agreement`
+    *   :class:`JobEvent` is an :class:`Event` that happened in the context of a particular
+        :attr:`job`
+    *   :class:`AgreementEvent` is a :class:`JobEvent` that happened in the context of a particular
+        :attr:`agreement`
 
 ::
 
@@ -179,14 +181,13 @@ List of event classes
 
 """
 
-import attr
 import abc
-from datetime import datetime, timedelta
 import logging
+from datetime import datetime, timedelta
 from types import TracebackType
-from typing import List, Optional, Type, Tuple, TypeVar
+from typing import List, Optional, Tuple, Type, TypeVar
 
-from yapapi.props import NodeInfo
+import attr
 
 #   Q: Why `import yapapi` here?
 #   A: Because we want to have typing annotations without circular imports
@@ -195,7 +196,7 @@ from yapapi.props import NodeInfo
 #      https://github.com/tox-dev/sphinx-autodoc-typehints/issues/22
 #      -> Compare e.g. "MarketStrategy" typing in `yapapi.golem.Golem.__init__`
 import yapapi
-
+from yapapi.props import NodeInfo
 
 logger = logging.getLogger(__name__)
 
@@ -225,12 +226,13 @@ class Event(abc.ABC):
     """Event creation time"""
 
     def __str__(self) -> str:
-        """Mimics Python's default `repr` format, but excludes the fields `exc_info` and `timestamp` from it.
+        """Mimics Python's default `repr` format, but excludes the fields `exc_info` and \
+        `timestamp` from it.
 
         If `exc_info` is not `None`, its underlying exception is included in the result string
         under the key `exception`.
         """
-        fields: Tuple[attr.Attribute] = attr.fields(self.__class__)  # type: ignore
+        fields: Tuple[attr.Attribute] = attr.fields(self.__class__)
         field_reprs: List[str] = []
 
         for field in fields:
@@ -251,7 +253,7 @@ class Event(abc.ABC):
 
     @property
     def exception(self) -> Optional[BaseException]:
-        """Exception associated with this event or `None`"""
+        """Exception associated with this event or `None`."""
         if self.exc_info:
             return self.exc_info[1]
         return None
@@ -391,7 +393,7 @@ class ProposalReceived(ProposalEvent):
 
 @attr.s(auto_attribs=True, repr=False)
 class ProposalRejected(ProposalEvent):
-    """We decided to reject provider's proposal because of a :attr:`reason`"""
+    """We decided to reject provider's proposal because of a :attr:`reason`."""
 
     reason: Optional[str] = None
 
@@ -410,7 +412,7 @@ class ProposalFailed(ProposalEvent):
 
 @attr.s(auto_attribs=True, repr=False)
 class NoProposalsConfirmed(JobEvent):
-    """We didn't confirm any proposal for a period of :attr:`timeout`"""
+    """We didn't confirm any proposal for a period of :attr:`timeout`."""
 
     timeout: timedelta
 
@@ -552,8 +554,8 @@ class DownloadFinished(CommandEvent):
 
 
 class ShutdownFinished(Event):
-    """Golem completed the shutdown sequence and is no longer operative"""
+    """Golem completed the shutdown sequence and is no longer operative."""
 
 
 class ExecutionInterrupted(Event):
-    """Golem was stopped by an unhandled exception in code not managed by yapapi"""
+    """Golem was stopped by an unhandled exception in code not managed by yapapi."""

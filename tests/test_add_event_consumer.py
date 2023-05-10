@@ -3,7 +3,6 @@ from attr import asdict
 
 from yapapi import Golem, events
 
-
 sample_events = [
     events.CollectFailed(job="foo", subscription="bar", reason="baz"),
     events.TaskStarted(job="a", agreement="b", activity="c", task="d"),

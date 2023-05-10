@@ -1,26 +1,24 @@
-from dataclasses import dataclass, field
-from datetime import timedelta, datetime
 import enum
 import logging
-from typing import Callable, Optional, Dict, List, Any, Awaitable, Type
+from datetime import datetime, timedelta
+from typing import Any, Dict, Optional, Type
+
+from dataclasses import dataclass, field
 
 try:
     from typing import Protocol
 except ImportError:
     from typing_extensions import Protocol  # type: ignore
 
+from ya_activity.models import ActivityState as yaa_ActivityState
+from ya_activity.models import ActivityUsage as yaa_ActivityUsage
 
-from ya_activity.models import (
-    ActivityUsage as yaa_ActivityUsage,
-    ActivityState as yaa_ActivityState,
-)
-
-from yapapi.events import ActivityEventType, CommandExecuted
+from yapapi.events import ActivityEventType
 from yapapi.props.com import ComLinear
-from yapapi.script import Script
-from yapapi.storage import StorageProvider, DOWNLOAD_BYTES_LIMIT_DEFAULT
-from yapapi.rest.market import Agreement, AgreementDetails
 from yapapi.rest.activity import Activity
+from yapapi.rest.market import Agreement, AgreementDetails
+from yapapi.script import Script
+from yapapi.storage import StorageProvider
 from yapapi.utils import get_local_timezone
 
 logger = logging.getLogger(__name__)
@@ -74,7 +72,7 @@ class WorkContext:
 
     @property
     def id(self) -> str:
-        """Unique identifier for this work context."""
+        """Return unique identifier for this work context."""
         return self._activity.id
 
     @property
@@ -111,7 +109,8 @@ class WorkContext:
     def new_script(
         self, timeout: Optional[timedelta] = None, wait_for_results: bool = True
     ) -> Script:
-        """Create an instance of :class:`~yapapi.script.Script` attached to this :class:`WorkContext` instance.
+        """Create an instance of :class:`~yapapi.script.Script` attached to this \
+        :class:`WorkContext` instance.
 
         This is equivalent to calling `Script(work_context)`. This method is intended to provide a
         direct link between the two object instances.
@@ -138,7 +137,7 @@ class WorkContext:
         return usage
 
     async def get_raw_state(self) -> yaa_ActivityState:
-        """Get the state activity bound to this work context.
+        """Get the state of the activity bound to this work context.
 
         The value comes directly from the low level API and is not interpreted in any way.
         """
@@ -196,7 +195,7 @@ class CaptureContext:
         return cls(mode=mode, fmt=cap_fmt, limit=limit)
 
     def to_dict(self) -> Dict:
-        inner = dict()
+        inner: Dict[str, Any] = dict()
 
         if self.limit:
             inner[self.mode.value] = self.limit

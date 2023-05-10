@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 import asyncio
+import json
+import pathlib
+import sys
 from asyncio import TimeoutError
 from datetime import datetime, timezone
-import json
-import sys
-import pathlib
-
 
 from yapapi import props as yp
+from yapapi.config import ApiConfig
 from yapapi.log import enable_default_logger
 from yapapi.props.builder import DemandBuilder
-from yapapi.rest import Configuration, Market, Activity, Payment  # noqa
+from yapapi.rest import Activity, Configuration, Market, Payment  # noqa
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
@@ -45,7 +45,7 @@ def main():
         asyncio.get_event_loop().run_until_complete(
             asyncio.wait_for(
                 list_offers(
-                    Configuration(),
+                    Configuration(api_config=ApiConfig()),  # YAGNA_APPKEY will be loaded from env
                     subnet_tag=subnet,
                 ),
                 timeout=4,

@@ -1,9 +1,11 @@
 """Infrastructural properties."""
 
-from typing import Optional, List
-from dataclasses import dataclass
-from deprecated import deprecated  # type: ignore
 from enum import Enum
+from typing import List, Optional
+
+from dataclasses import dataclass
+from deprecated import deprecated
+
 from .base import Model, prop
 
 INF_MEM: str = "golem.inf.mem.gib"

@@ -1,10 +1,11 @@
-from functools import partial
 import json
-import pytest
 import sys
+from functools import partial
 from unittest import mock
 
-from yapapi.events import CommandExecuted, CommandStdOut, CommandStdErr
+import pytest
+
+from yapapi.events import CommandExecuted, CommandStdErr, CommandStdOut
 from yapapi.script import Script
 
 if sys.version_info >= (3, 8):

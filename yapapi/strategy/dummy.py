@@ -1,16 +1,17 @@
 from collections import defaultdict
-from dataclasses import dataclass
-from deprecated import deprecated  # type: ignore
 from decimal import Decimal
 from types import MappingProxyType
 from typing import Dict, Mapping, Optional, Union
 
+from dataclasses import dataclass
+from deprecated import deprecated
+
 from yapapi import rest
-from yapapi.props import com, Activity
+from yapapi.props import Activity, com
 from yapapi.props.builder import DemandBuilder
 from yapapi.props.com import Counter
 
-from .base import MarketStrategy, SCORE_REJECTED, SCORE_NEUTRAL
+from .base import SCORE_NEUTRAL, SCORE_REJECTED, MarketStrategy
 
 
 @deprecated(version="0.9.0", reason="Use `LeastExpensiveLinearPayuMS` instead.")

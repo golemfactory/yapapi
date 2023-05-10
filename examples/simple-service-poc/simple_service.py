@@ -1,30 +1,25 @@
 #!/usr/bin/env python3
-"""
-the requestor agent controlling and interacting with the "simple service"
-"""
+"""The requestor agent controlling and interacting with the "simple service"."""
 import asyncio
-from datetime import datetime, timedelta, timezone
 import pathlib
 import random
 import string
 import sys
-
+from datetime import datetime, timedelta, timezone
 
 from yapapi import Golem
-from yapapi.services import Service, ServiceState
-
 from yapapi.payload import vm
+from yapapi.services import Service, ServiceState
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
 from utils import (
-    build_parser,
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
-    TEXT_COLOR_RED,
-    TEXT_COLOR_YELLOW,
     TEXT_COLOR_MAGENTA,
+    TEXT_COLOR_YELLOW,
+    build_parser,
     format_usage,
     print_env_info,
     run_golem_example,
@@ -57,7 +52,7 @@ class SimpleService(Service):
         )
 
     async def start(self):
-        """handler responsible for starting the service."""
+        """Handle starting the service."""
 
         # perform the initialization of the Service
         async for script in super().start():
@@ -113,10 +108,6 @@ class SimpleService(Service):
             cost = await self._ctx.get_cost()
             print(f"{TEXT_COLOR_MAGENTA} --- {self.name}  COST: {cost} {TEXT_COLOR_DEFAULT}")
 
-    async def reset(self):
-        # We don't have to do anything when the service is restarted
-        pass
-
 
 async def main(
     subnet_tag,
@@ -154,7 +145,7 @@ async def main(
 
         def print_instances():
             print(
-                f"instances: "
+                "instances: "
                 + str(
                     [
                         f"{s.name}: {s.state.value}"

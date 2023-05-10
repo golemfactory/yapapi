@@ -1,19 +1,18 @@
 """Implementation of strategies for choosing offers from market."""
 
 import abc
+import logging
 from copy import deepcopy
 from datetime import datetime, timezone
 from decimal import Decimal
-import logging
 from typing import Dict, Optional
 
 from dataclasses import dataclass
 from typing_extensions import Final
 
+from yapapi import rest
 from yapapi.props import Activity
 from yapapi.props.builder import DemandBuilder, DemandDecorator
-from yapapi import rest
-
 
 SCORE_NEUTRAL: Final[float] = 0.0
 SCORE_REJECTED: Final[float] = -1.0
@@ -112,16 +111,20 @@ class BaseMarketStrategy(DemandDecorator, abc.ABC):
         """Return the amount we accept to pay for the invoice.
 
         Current Golem Engine implementation accepts the invoice if returned amount is not lower than
-        `invoice.amount` and ignores the invoice otherwise. This will change in the future."""
+        `invoice.amount` and ignores the invoice otherwise. This will change in the future.
+        """
+
         raise NotImplementedError()
 
     @abc.abstractmethod
     async def debit_note_accepted_amount(self, debit_note: rest.payment.DebitNote) -> Decimal:
         """Return the amount we accept to pay for the debit note.
 
-        Current Golem Engine implementation accepts the debit note if returned amount is not lower than
-        `debit_note.total_amount_due` and ignores the debit note otherwise.
-        This will change in the future."""
+        Current Golem Engine implementation accepts the debit note if returned amount is not lower
+        than `debit_note.total_amount_due` and ignores the debit note otherwise.
+        This will change in the future.
+        """
+
         raise NotImplementedError()
 
 
@@ -135,7 +138,7 @@ class MarketStrategy(BaseMarketStrategy, abc.ABC):
 
     @property
     def acceptable_prop_value_ranges(self) -> Dict[str, PropValueRange]:
-        """The range of acceptable property values for negotiable properties."""
+        """Return the range of acceptable property values for negotiable properties."""
         if not hasattr(self, "__acceptable_prop_value_ranges"):
             # initialize with the overrides
             self.__acceptable_prop_value_ranges = getattr(
@@ -207,12 +210,11 @@ class MarketStrategy(BaseMarketStrategy, abc.ABC):
             if prop_value is not None and (
                 mid_agreement_payments_enabled or prop_key not in MID_AGREEMENT_PAYMENTS_PROPS
             ):
-
                 if prop_value not in acceptable_range:
                     our_value = acceptable_range.clamp(prop_value)
                     logger.debug(
-                        f"Negotiated property %s = %s outside of our accepted range: %s. "
-                        f"Proposing our own value instead: %s",
+                        "Negotiated property %s = %s outside of our accepted range: %s. "
+                        "Proposing our own value instead: %s",
                         prop_key,
                         prop_value,
                         acceptable_range,

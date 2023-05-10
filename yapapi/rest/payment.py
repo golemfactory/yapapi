@@ -1,15 +1,16 @@
 import asyncio
 import logging
-
-from ya_payment import Account, ApiClient, RequestorApi
-import ya_payment.models as yap
-from typing import Optional, AsyncIterator, cast, Iterable, Union, List
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from datetime import datetime, timezone, timedelta
-from dataclasses import dataclass
-from .common import repeat_on_error, is_intermittent_error, SuppressedExceptions
-from .resource import ResourceCtx
+from typing import AsyncIterator, Iterable, List, Optional, Union, cast
 
+from dataclasses import dataclass
+
+import ya_payment.models as yap
+from ya_payment import Account, ApiClient, RequestorApi
+
+from .common import SuppressedExceptions, is_intermittent_error, repeat_on_error
+from .resource import ResourceCtx
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +113,6 @@ class _AllocationTask(ResourceCtx[Allocation]):
 
 
 class Payment(object):
-
     __slots__ = ("_api",)
 
     def __init__(self, api_client: ApiClient):
@@ -127,7 +127,7 @@ class Payment(object):
         expires: Optional[datetime] = None,
         make_deposit: bool = False,
     ) -> ResourceCtx[Allocation]:
-        """Creates new allocation.
+        """Create new allocation.
 
         - `amount`:  Allocation amount.
         - `expires`: expiration timestamp. set to default 10 years as a work-around.
@@ -156,10 +156,9 @@ class Payment(object):
         )
 
     async def allocations(self) -> AsyncIterator[Allocation]:
-        """Lists all active allocations.
+        """Iterate over all active allocations.
 
         Example:
-
         Listing all active allocations
 
             from yapapi import rest
@@ -206,7 +205,6 @@ class Payment(object):
         return DebitNote(_api=self._api, _base=debit_note)
 
     async def invoices(self) -> AsyncIterator[Invoice]:
-
         for invoice_obj in cast(Iterable[yap.Invoice], await self._api.get_invoices()):
             yield Invoice(_api=self._api, _base=invoice_obj)
 

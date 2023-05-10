@@ -1,23 +1,19 @@
 #!/usr/bin/env python3
 import asyncio
 import base64
-from datetime import datetime
 import pathlib
 import sys
+from datetime import datetime
 
 from yapapi import Golem
-from yapapi.services import Service
 from yapapi.payload import vm
+from yapapi.services import Service
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
 
-from utils import (
-    build_parser,
-    run_golem_example,
-    print_env_info,
-)
+from utils import build_parser, print_env_info, run_golem_example
 
 
 class ApiCallService(Service):
@@ -25,7 +21,7 @@ class ApiCallService(Service):
     async def get_payload():
         manifest = open("manifest.json.base64", "rb").read().decode("utf-8")
 
-        manifest_sig = open("manifest.json.base64.sign.sha256", "rb").read()
+        manifest_sig = open("manifest.json.base64.sha256.sig", "rb").read()
         manifest_sig = base64.b64encode(manifest_sig).decode("utf-8")
 
         manifest_sig_algorithm = "sha256"
@@ -49,7 +45,7 @@ class ApiCallService(Service):
         future_result = script.run(
             "/bin/sh",
             "-c",
-            f"GOLEM_PRICE=`curl -X 'GET' \
+            "GOLEM_PRICE=`curl -X 'GET' \
                     'https://api.coingecko.com/api/v3/simple/price?ids=golem&vs_currencies=usd' \
                     -H 'accept: application/json' | jq .golem.usd`; \
                 echo ---; \

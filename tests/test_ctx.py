@@ -1,9 +1,9 @@
-import factory
-from functools import partial
 import json
-import pytest
 import sys
+from functools import partial
 from unittest import mock
+
+import pytest
 
 from yapapi.ctx import WorkContext
 from yapapi.script import Script

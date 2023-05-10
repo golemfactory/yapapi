@@ -1,24 +1,12 @@
-""" YAPAPI internal module. This is not a part of the public API. It can change at any time.
+"""YAPAPI internal module. This is not a part of the public API. It can change at any time."""
 
-
-"""
-
-from asyncio.locks import Lock, Condition
-from types import TracebackType
-from typing import (
-    TypeVar,
-    Generic,
-    AsyncIterator,
-    Set,
-    Optional,
-    ContextManager,
-    Type,
-    Dict,
-)
-from typing_extensions import AsyncIterable
 import asyncio
 import logging
+from asyncio.locks import Condition, Lock
+from types import TracebackType
+from typing import AsyncIterator, ContextManager, Dict, Generic, Optional, Set, Type, TypeVar
 
+from typing_extensions import AsyncIterable
 
 _logger = logging.getLogger("yapapi.executor")
 Item = TypeVar("Item")
@@ -57,7 +45,8 @@ class Handle(Generic[Item]):
 
 class SmartQueue(Generic[Item]):
     def __init__(self, items: AsyncIterator[Item]):
-        """
+        """Initialize instance.
+
         :param items: the items to be iterated over
         """
 
@@ -123,7 +112,6 @@ class SmartQueue(Generic[Item]):
         """Get a handle to the next item to be processed (either a new one or rescheduled)."""
         async with self._lock:
             while not self.finished():
-
                 handle = self.__find_rescheduled_item(consumer)
                 if handle:
                     self._rescheduled_items.remove(handle)
@@ -191,10 +179,8 @@ class Consumer(
     AsyncIterable[Handle[Item]],
     ContextManager["Consumer[Item]"],
 ):
-    """
-    Provides an interface to asynchronously iterate over items in the given queue
-    while cooperating with other consumers attached to this queue.
-    """
+    """Provides an interface to asynchronously iterate over items in the given queue while \
+    cooperating with other consumers attached to this queue."""
 
     def __init__(self, queue: SmartQueue[Item]):
         self._queue = queue
@@ -215,7 +201,8 @@ class Consumer(
 
     @property
     def current_item(self) -> Optional[Item]:
-        """The most-recent queue item that has been fetched to be processed by this consumer."""
+        """Return the most-recent queue item that has been fetched to be processed by this \
+        consumer."""
         return self._fetched.data if self._fetched else None
 
     def finish(self):
