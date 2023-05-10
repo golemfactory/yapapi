@@ -1,9 +1,10 @@
 import asyncio
+import re
 import sys
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -14,6 +15,30 @@ from dateutil.tz import UTC
 
 from yapapi.payload import vm
 from yapapi.utils import explode_dict
+
+
+class Aliased:
+    """Aliasing mixin for Manifest dataclasses."""
+
+    @classmethod
+    def _to_aliased_dict(cls, values: dict):
+        for f in fields(cls):
+            alias = f.metadata.get("alias")
+            if alias and f.name in values:
+                values[alias] = values.pop(f.name)
+
+    @classmethod
+    def _from_aliased_dict(cls, values: dict):
+        for f in fields(cls):
+            alias = f.metadata.get("alias")
+            if alias and alias in values:
+                values[f.name] = values.pop(alias)
+
+
+def parse_datetime(date_str: str) -> datetime:
+    """Parse input datetime from the manifest."""
+
+    return datetime.fromisoformat(re.sub("Z$", "+00:00", date_str))
 
 
 @dataclass
@@ -34,7 +59,7 @@ class ManifestMetadata:
         }
 
     @classmethod
-    def parse_obj(cls, obj: Dict) -> "ManifestMetadata":
+    def parse_obj(cls, obj: Dict, by_alias: bool = False) -> "ManifestMetadata":
         obj_copy = obj.copy()
 
         if obj_copy.get("authors") is not None:
@@ -44,25 +69,30 @@ class ManifestMetadata:
 
 
 @dataclass
-class ManifestPayloadPlatform:
+class ManifestPayloadPlatform(Aliased):
     arch: str = "x86_64"
     os: str = "linux"
-    os_version: Optional[str] = None
+    os_version: Optional[str] = field(default=None, metadata={"alias": "osVersion"})
 
     def dict(self, *, by_alias=False):
         obj = {
             "arch": self.arch,
             "os": self.os,
         }
-
         if self.os_version is not None:
-            obj["osVersion" if by_alias else "os_version"] = self.os_version
+            obj["os_version"] = self.os_version
+
+        if by_alias:
+            self._to_aliased_dict(obj)
 
         return obj
 
     @classmethod
-    def parse_obj(cls, obj: Dict) -> "ManifestPayloadPlatform":
+    def parse_obj(cls, obj: Dict, by_alias: bool = False) -> "ManifestPayloadPlatform":
         obj_copy = obj.copy()
+
+        if by_alias:
+            cls._from_aliased_dict(obj_copy)
 
         return cls(**obj_copy)
 
@@ -87,11 +117,13 @@ class ManifestPayload:
         return obj
 
     @classmethod
-    def parse_obj(cls, obj: Dict) -> "ManifestPayload":
+    def parse_obj(cls, obj: Dict, by_alias: bool = False) -> "ManifestPayload":
         obj_copy = obj.copy()
 
         if obj_copy.get("platform") is not None:
-            obj_copy["platform"] = ManifestPayloadPlatform.parse_obj(obj_copy["platform"])
+            obj_copy["platform"] = ManifestPayloadPlatform.parse_obj(
+                obj_copy["platform"], by_alias=by_alias
+            )
 
         if obj_copy.get("urls") is not None:
             obj_copy["urls"] = obj_copy["urls"].copy()
@@ -124,7 +156,7 @@ class CompManifestScript:
         }
 
     @classmethod
-    def parse_obj(cls, obj: Dict) -> "CompManifestScript":
+    def parse_obj(cls, obj: Dict, by_alias: bool = False) -> "CompManifestScript":
         obj_copy = obj.copy()
 
         if obj_copy.get("commands") is not None:
@@ -151,7 +183,7 @@ class CompManifestNetInetOut:
         return obj
 
     @classmethod
-    def parse_obj(cls, obj: Dict) -> "CompManifestNetInetOut":
+    def parse_obj(cls, obj: Dict, by_alias: bool = False) -> "CompManifestNetInetOut":
         obj_copy = obj.copy()
 
         if obj_copy.get("protocols") is not None:
@@ -176,11 +208,11 @@ class CompManifestNetInet:
         return obj
 
     @classmethod
-    def parse_obj(cls, obj: Dict) -> "CompManifestNetInet":
+    def parse_obj(cls, obj: Dict, by_alias: bool = False) -> "CompManifestNetInet":
         obj_copy = obj.copy()
 
         if obj_copy.get("out") is not None:
-            obj_copy["out"] = CompManifestNetInetOut.parse_obj(obj_copy["out"])
+            obj_copy["out"] = CompManifestNetInetOut.parse_obj(obj_copy["out"], by_alias=by_alias)
 
         return cls(**obj_copy)
 
@@ -198,11 +230,11 @@ class CompManifestNet:
         return obj
 
     @classmethod
-    def parse_obj(cls, obj: Dict) -> "CompManifestNet":
+    def parse_obj(cls, obj: Dict, by_alias: bool = False) -> "CompManifestNet":
         obj_copy = obj.copy()
 
         if obj_copy.get("inet") is not None:
-            obj_copy["inet"] = CompManifestNetInet.parse_obj(obj_copy["inet"])
+            obj_copy["inet"] = CompManifestNetInet.parse_obj(obj_copy["inet"], by_alias=by_alias)
 
         return cls(**obj_copy)
 
@@ -227,67 +259,78 @@ class CompManifest:
         return obj
 
     @classmethod
-    def parse_obj(cls, obj: Dict) -> "CompManifest":
+    def parse_obj(cls, obj: Dict, by_alias: bool = False) -> "CompManifest":
         obj_copy = obj.copy()
 
         if obj_copy.get("script") is not None:
-            obj_copy["script"] = CompManifestScript.parse_obj(obj_copy["script"])
+            obj_copy["script"] = CompManifestScript.parse_obj(obj_copy["script"], by_alias=by_alias)
 
         if obj_copy.get("net") is not None:
-            obj_copy["net"] = CompManifestNet.parse_obj(obj_copy["net"])
+            obj_copy["net"] = CompManifestNet.parse_obj(obj_copy["net"], by_alias=by_alias)
 
         return cls(**obj_copy)
 
 
 @dataclass
-class Manifest:
+class Manifest(Aliased):
     payload: List[ManifestPayload]
     version: str = "0.0.0"
-    comp_manifest: Optional[CompManifest] = None
+    comp_manifest: Optional[CompManifest] = field(default=None, metadata={"alias": "compManifest"})
     # Using lambda helps with mocking in tests
-    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
-    expires_at: datetime = datetime(2100, 1, 1, tzinfo=UTC)
+    created_at: datetime = field(
+        default_factory=lambda: datetime.now(UTC), metadata={"alias": "createdAt"}
+    )
+    expires_at: datetime = field(
+        default_factory=lambda: datetime(2100, 1, 1, tzinfo=UTC), metadata={"alias": "expiresAt"}
+    )
     metadata: Optional[ManifestMetadata] = None
 
     def dict(self, *, by_alias=False):
         obj = {
             "version": self.version,
-            "createdAt" if by_alias else "created_at": self.created_at.isoformat(),
-            "expiresAt" if by_alias else "expires_at": self.expires_at.isoformat(),
+            "created_at": self.created_at.isoformat(),
+            "expires_at": self.expires_at.isoformat(),
             "payload": [payload.dict(by_alias=by_alias) for payload in self.payload],
         }
 
         if self.comp_manifest is not None:
-            comp_manifest_field_name = "compManifest" if by_alias else "comp_manifest"
-            obj[comp_manifest_field_name] = self.comp_manifest.dict(by_alias=by_alias)
+            obj["comp_manifest"] = self.comp_manifest.dict(by_alias=by_alias)
 
         if self.metadata is not None:
             obj["metadata"] = self.metadata.dict(by_alias=by_alias)
 
+        if by_alias:
+            self._to_aliased_dict(obj)
+
         return obj
 
     @classmethod
-    def parse_obj(cls, obj: Dict) -> "Manifest":
+    def parse_obj(cls, obj: Dict, by_alias: bool = False) -> "Manifest":
         obj_copy = obj.copy()
 
+        if by_alias:
+            cls._from_aliased_dict(obj_copy)
+
         if isinstance(obj_copy.get("created_at"), str):
-            obj_copy["created_at"] = datetime.strptime(
-                obj_copy["created_at"], "%Y-%m-%dT%H:%M:%S%z"
-            )
+            obj_copy["created_at"] = parse_datetime(obj_copy["created_at"])
 
         if isinstance(obj_copy.get("expires_at"), str):
-            obj_copy["expires_at"] = datetime.strptime(
-                obj_copy["expires_at"], "%Y-%m-%dT%H:%M:%S%z"
-            )
+            obj_copy["expires_at"] = parse_datetime(obj_copy["expires_at"])
 
         if obj_copy.get("payload") is not None:
-            obj_copy["payload"] = [ManifestPayload.parse_obj(p) for p in obj_copy["payload"]]
+            obj_copy["payload"] = [
+                ManifestPayload.parse_obj(p, by_alias=by_alias) for p in obj_copy["payload"]
+            ]
 
         if obj_copy.get("comp_manifest") is not None:
-            obj_copy["comp_manifest"] = CompManifest.parse_obj(obj_copy["comp_manifest"])
+            obj_copy["comp_manifest"] = CompManifest.parse_obj(
+                obj_copy["comp_manifest"], by_alias=by_alias
+            )
 
         if obj_copy.get("metadata") is not None:
-            obj_copy["metadata"] = ManifestMetadata.parse_obj(obj_copy["metadata"])
+            obj_copy["metadata"] = ManifestMetadata.parse_obj(
+                obj_copy["metadata"], by_alias=by_alias
+            )
 
         return cls(**obj_copy)
 
