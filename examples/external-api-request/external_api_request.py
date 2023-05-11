@@ -22,20 +22,23 @@ class ApiCallService(Service):
         manifest = open("manifest.json", "rb").read()
         manifest = base64.b64encode(manifest).decode("utf-8")
 
-        manifest_sig = open("manifest.json.base64.sha256.sig", "rb").read()
-        manifest_sig = base64.b64encode(manifest_sig).decode("utf-8")
+        # manifest_sig = open("manifest.json.base64.sign.sha256", "rb").read()
+        # manifest_sig = base64.b64encode(manifest_sig).decode("utf-8")
 
-        manifest_sig_algorithm = "sha256"
+        # manifest_sig_algorithm = "sha256"
 
-        # DER, PEM and PEM chain formats are supported
-        manifest_cert = open("golem_sign.pem", "rb").read()
-        manifest_cert = base64.b64encode(manifest_cert).decode("utf-8")
+        # both DER and PEM formats are supported
+        # manifest_cert = open("foo_req.cert.pem", "rb").read()
+        # manifest_cert = base64.b64encode(manifest_cert).decode("utf-8")
+
+        node_descriptor = open("node-descriptor.signed.json", "r").read()
 
         return await vm.manifest(
             manifest=manifest,
-            manifest_sig=manifest_sig,
-            manifest_sig_algorithm=manifest_sig_algorithm,
-            manifest_cert=manifest_cert,
+            manifest_sig=None,
+            manifest_sig_algorithm=None,
+            manifest_cert=None,
+            node_descriptor=node_descriptor,
             min_mem_gib=0.5,
             min_cpu_threads=0.5,
             capabilities=["inet", "manifest-support"],
