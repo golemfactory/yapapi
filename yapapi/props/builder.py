@@ -72,7 +72,7 @@ class DemandBuilder:
                 value = int(value.timestamp() * 1000)
             if isinstance(value, enum.Enum):
                 value = value.value
-            assert isinstance(value, (str, int, list))
+            assert isinstance(value, (str, int, list, dict))
             self._properties[prop_id] = value
 
     def add_properties(self, props: dict):

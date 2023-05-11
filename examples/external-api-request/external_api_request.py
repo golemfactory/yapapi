@@ -4,6 +4,7 @@ import base64
 from datetime import datetime
 import pathlib
 import sys
+import json
 
 from yapapi import Golem
 from yapapi.payload import vm
@@ -31,7 +32,7 @@ class ApiCallService(Service):
         # manifest_cert = open("foo_req.cert.pem", "rb").read()
         # manifest_cert = base64.b64encode(manifest_cert).decode("utf-8")
 
-        node_descriptor = open("node-descriptor.signed.json", "r").read()
+        node_descriptor = json.loads(open("node-descriptor.signed.json", "r").read())
 
         return await vm.manifest(
             manifest=manifest,
