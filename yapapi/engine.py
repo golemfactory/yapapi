@@ -973,7 +973,6 @@ class Job:
         try:
             while True:
                 try:
-                    breakpoint()
                     subscription = await self._demand_builder.subscribe(self.engine._market_api)
                     self.emit(events.SubscriptionCreated, subscription=subscription)
                 except Exception as ex:
