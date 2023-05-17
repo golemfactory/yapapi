@@ -44,7 +44,7 @@ from yapapi.agreements_pool import AgreementsPool
 from yapapi.ctx import WorkContext
 from yapapi.invoice_manager import InvoiceManager
 from yapapi.rest.activity import Activity
-from yapapi.rest.market import Agreement, OfferProposal, Subscription
+from yapapi.rest.market import Agreement, Market, OfferProposal, Subscription
 from yapapi.rest.payment import DebitNote
 from yapapi.script import Script
 from yapapi.script.command import BatchCommand
@@ -973,7 +973,11 @@ class Job:
         try:
             while True:
                 try:
-                    subscription = await self._demand_builder.subscribe(self.engine._market_api)
+                    subscription = await self._subscribe_to_market(
+                        self.engine._market_api, 
+                        self._demand_builder.properties, 
+                        self._demand_builder.constraints,
+                    )
                     self.emit(events.SubscriptionCreated, subscription=subscription)
                 except Exception as ex:
                     self.emit(events.SubscriptionFailed, reason=str(ex))
@@ -999,3 +1003,9 @@ class Job:
             if allocation.payment_platform is not None
         }
         return req_platforms.intersection(prov_platforms)
+    
+    async def _subscribe_to_market(
+            self, market: Market, properties: Dict, constraints: str
+        ) -> Subscription:
+        """Create a Demand on the market and subscribe to Offers that will match that Demand."""
+        return await market.subscribe(properties, constraints)
