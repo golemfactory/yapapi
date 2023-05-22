@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-from datetime import datetime, timedelta
 import pathlib
 import sys
+from datetime import datetime, timedelta
 
 from yapapi import Golem, Task, WorkContext, events
 from yapapi.payload import vm
@@ -31,7 +31,8 @@ async def main(
         min_mem_gib=0.5,
         # only run on provider nodes that have more than 2gb of storage space available
         min_storage_gib=2.0,
-        # only run on provider nodes which a certain number of CPU threads (logical CPU cores) available
+        # only run on provider nodes which a certain number of CPU threads (logical CPU cores)
+        #  available
         min_cpu_threads=min_cpu_threads,
     )
 

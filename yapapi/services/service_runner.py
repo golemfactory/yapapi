@@ -4,16 +4,8 @@ import inspect
 import logging
 import sys
 from types import TracebackType
-from typing import (
-    TYPE_CHECKING,
-    AsyncContextManager,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    Union,
-)
+from typing import TYPE_CHECKING, AsyncContextManager, List, Optional, Set, Tuple, Type, Union
+
 from typing_extensions import Final
 
 if TYPE_CHECKING:
@@ -43,11 +35,10 @@ DEFAULT_HEALTH_CHECK_RETRIES: Final[int] = 3
 class ServiceRunnerError(Exception):
     """An error while running a Service."""
 
-    pass
-
 
 class ControlSignal(enum.Enum):
-    """Control signal, used to request an instance's state change from the controlling SeviceRunner."""
+    """Control signal, used to request an instance's state change from the controlling \
+    SeviceRunner."""
 
     stop = "stop"
 
@@ -185,7 +176,8 @@ class ServiceRunner(AsyncContextManager):
                 service_cls_name = type(instance.service).__name__
                 handler_name = handler.__name__
                 raise TypeError(
-                    f"Service handler: `{service_cls_name}.{handler_name}` must be an asynchronous generator."
+                    f"Service handler: `{service_cls_name}.{handler_name}` must be an asynchronous"
+                    " generator."
                 )
 
     @staticmethod
@@ -452,15 +444,17 @@ class ServiceRunner(AsyncContextManager):
                     return
 
     async def _ensure_payload_matches(self, service: Service):
-        #   Possible improvement: maybe we should accept services with lower demands then our payload?
-        #   E.g. if service expects 2GB and we have 4GB in our payload, then this seems fine.
-        #   (Not sure how much effort this requires)
+        #   Possible improvement: maybe we should accept services with lower demands then our
+        #   payload? E.g. if service expects 2GB and we have 4GB in our payload, then this seems
+        #   fine. (Not sure how much effort this requires)
         service_payload = await service.get_payload()
         our_payload = self._job.payload
         if service_payload is not None and service_payload != our_payload:
             logger.error(
-                "Payload mismatch: service with {service_payload} was added to runner with {our_payload}"
+                f"Payload mismatch: service with {service_payload} was added to runner"
+                f" with {our_payload}"
             )
             raise ValueError(
-                f"Only payload accepted by this service runner is {our_payload}, got {service_payload}"
+                f"Only payload accepted by this service runner is {our_payload},"
+                f" got {service_payload}"
             )

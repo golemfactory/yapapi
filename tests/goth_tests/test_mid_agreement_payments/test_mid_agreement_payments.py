@@ -1,10 +1,12 @@
 """A goth test scenario for mid-agreement payments."""
 import logging
 import os
-from pathlib import Path
-import pytest
 import re
+from datetime import datetime
+from pathlib import Path
 from typing import List, Optional
+
+import pytest
 
 from goth.assertions import EventStream
 from goth.configuration import Override, load_yaml
@@ -12,9 +14,7 @@ from goth.runner import Runner
 from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
 
-from yapapi.strategy import DEBIT_NOTE_INTERVAL_GRACE_PERIOD
-
-from . import requestor_agent
+DEBIT_NOTE_INTERVAL_GRACE_PERIOD = 30
 
 logger = logging.getLogger("goth.test.mid_agreement_payments")
 
@@ -51,6 +51,7 @@ async def assert_debit_note_freq(events: EventStream) -> str:
 
 @pytest.mark.asyncio
 async def test_mid_agreement_payments(
+    project_dir: Path,
     log_dir: Path,
     goth_config_path: Path,
     config_overrides: List[Override],
@@ -59,12 +60,19 @@ async def test_mid_agreement_payments(
     # goth setup
     config = load_yaml(goth_config_path, config_overrides + [single_node_override])
     configure_logging(log_dir)
+
+    logfile = f"mid-agreement-payments-{datetime.now().strftime('%Y-%m-%d_%H.%M.%S')}.log"
+
+    requestor_path = Path(__file__).parent / "requestor_agent.py"
+
     runner = Runner(base_log_dir=log_dir, compose_config=config.compose_config)
     async with runner(config.containers):
         # given
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
         # when
-        async with requestor.run_command_on_host(requestor_agent.__file__, env=os.environ) as (
+        async with requestor.run_command_on_host(
+            f"{requestor_path} --log-file {(log_dir / logfile).resolve()}", env=os.environ
+        ) as (
             _,
             cmd_monitor,
             _,

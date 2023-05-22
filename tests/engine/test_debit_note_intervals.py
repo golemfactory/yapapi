@@ -1,9 +1,10 @@
-from datetime import datetime, timedelta
 import functools
-import pytest
 import re
 import sys
+from datetime import datetime, timedelta
 from unittest import mock
+
+import pytest
 
 from tests.factories.rest.market import AgreementFactory
 from tests.factories.rest.payment import DebitNoteFactory
@@ -16,8 +17,12 @@ from yapapi.strategy import PROP_DEBIT_NOTE_INTERVAL_SEC, PROP_PAYMENT_TIMEOUT_S
 def mock_engine(
     agreement: Agreement, debit_note: DebitNote, num_debit_notes=0, num_payable_debit_notes=0
 ) -> _Engine:
-    with mock.patch("yapapi.engine.rest.Configuration"):
-        engine = _Engine(budget=0.0, strategy=mock.Mock(), event_consumer=mock.Mock())
+    engine = _Engine(
+        budget=0.0,
+        strategy=mock.Mock(),
+        event_consumer=mock.Mock(),
+        api_config=mock.Mock(),
+    )
 
     engine._all_agreements[agreement.id] = agreement  # noqa
     engine._num_debit_notes[debit_note.activity_id] = num_debit_notes  # noqa
@@ -175,7 +180,8 @@ def test_verify_debit_note_intervals(
         ({}, {}, lambda: None, 0, 0, False, False),
         # payable debit note received even though mid-agrement payment have not been negotiated
         ({}, {"_base__payment_due_date": True}, datetime.now, 0, 0, False, True),
-        # more than one debit note received before the agreed-upon interval elapsed, we only allow one
+        # more than one debit note received before the agreed-upon interval elapsed,
+        # we only allow one
         (
             {"details___ref__demand__properties": {PROP_DEBIT_NOTE_INTERVAL_SEC: 100}},
             {},

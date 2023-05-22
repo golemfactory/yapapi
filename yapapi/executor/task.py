@@ -1,19 +1,8 @@
 import asyncio
+import itertools
 from datetime import datetime, timedelta, timezone
 from enum import Enum, auto
-import itertools
-from typing import (
-    Callable,
-    ClassVar,
-    Generic,
-    Iterator,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Callable, ClassVar, Generic, Iterator, Optional, Set, Tuple, Type, TypeVar, Union
 
 try:
     from typing import Protocol

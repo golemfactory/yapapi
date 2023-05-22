@@ -1,6 +1,5 @@
 #!/usr/local/bin/python
-"""
-a helper, control script that starts and stops our example `simulate_observations` service
+"""a helper, control script that starts and stops our example `simulate_observations` service.
 
 [ part of the VM image that's deployed by the runtime on the Provider's end. ]
 """

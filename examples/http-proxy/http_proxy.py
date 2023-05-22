@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-"""
-a simple http proxy example
-"""
+"""A simple http proxy example."""
 import asyncio
-from datetime import datetime, timedelta, timezone
 import pathlib
 import shlex
 import sys
+from datetime import datetime, timedelta, timezone
 
 from yapapi import Golem
 from yapapi.contrib.service.http_proxy import HttpProxyService, LocalHttpProxy
@@ -123,7 +121,8 @@ async def main(subnet_tag, payment_driver, payment_network, num_instances, port,
         await proxy.run()
 
         print(
-            f"{TEXT_COLOR_CYAN}Local HTTP server listening on:\nhttp://localhost:{port}{TEXT_COLOR_DEFAULT}"
+            f"{TEXT_COLOR_CYAN}Local HTTP server listening on:\n"
+            f"http://localhost:{port}{TEXT_COLOR_DEFAULT}"
         )
 
         # wait until Ctrl-C
