@@ -3,7 +3,7 @@ import pathlib
 import sys
 from datetime import datetime, timedelta
 
-from yapapi import Golem, Task, WorkContext, events
+from yapapi import Golem, Task, WorkContext
 from yapapi.payload import vm
 from yapapi.rest.activity import BatchTimeoutError
 
@@ -115,15 +115,8 @@ async def main(
         subnet_tag=subnet_tag,
         payment_driver=payment_driver,
         payment_network=payment_network,
-        stream_output=True,
     ) as golem:
         print_env_info(golem)
-
-        def log_output(event):
-            if isinstance(event, events.CommandStdOut):
-                print(f"[{event.job.id}]: {event.output.strip()}")
-
-        golem.add_event_consumer(log_output)
 
         num_tasks = 0
         start_time = datetime.now()
