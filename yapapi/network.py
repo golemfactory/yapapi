@@ -315,6 +315,34 @@ class Network:
         except StopIteration:
             raise NetworkError(f"No more addresses available in '{self._ip_network.with_netmask}'.")
 
+    def serialize(self) -> dict:
+        """Provide a complete dictionary of values allowing reconstruction of a Network object."""
+        return {
+            "_network_id": self._network_id,
+            "ip": self._ip_network.with_netmask,
+            "gateway": self.gateway,
+            "owner_id": self._owner_id,
+            "owner_ip": self.owner_ip,
+            "state": self.state.value,
+            "nodes": {_id: n.ip for _id, n in self._nodes.items()},
+        }
+
+    @classmethod
+    def deserialize(cls, net_api: "yapapi.rest.net.Net", obj_dict: dict) -> "Network":
+        network = cls(
+            net_api,
+            ip=obj_dict.get("ip"),
+            owner_id=obj_dict.get("owner_id"),
+            owner_ip=obj_dict.get("owner_ip"),
+            gateway=obj_dict.get("gateway"),
+        )
+        network._network_id = obj_dict.get("_network_id")
+        network._state_machine.current_state_value = obj_dict.get("state")
+        if obj_dict.get("nodes"):
+            for _id, ip in obj_dict.get("nodes").items():
+                network._nodes[_id] = Node(network=network, node_id=_id, ip=ip)
+        return network
+
 
 class NetworkError(Exception):
     """Exception raised by :class:`Network` when an operation is not possible."""
