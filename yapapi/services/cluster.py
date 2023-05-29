@@ -15,7 +15,7 @@ from yapapi.engine import Job, _Engine
 from yapapi.network import Network
 from yapapi.payload import Payload
 
-from .service import ServiceType
+from .service import ServiceType, ServiceSerialization
 from .service_runner import ServiceRunner
 
 DEFAULT_SERVICE_EXPIRATION: Final[timedelta] = timedelta(minutes=180)
@@ -156,6 +156,20 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
             self.service_runner.add_instance(service, self.network, network_address)
             service._set_cluster(self)
 
+    def resume_instances(self,
+        serialized_instances: List[ServiceSerialization],
+    ):
+        for service_obj in serialized_instances:
+            service = self.service_class(**service_obj.get('params', dict()))
+            self.service_runner.add_instance(
+                service,
+                self.network,
+                service_obj.get("network_node", dict()).get("ip")
+            )
+            service._set_cluster(self)
+
+
+
     def _resolve_instance_params(
         self,
         num_instances: Optional[int],
@@ -180,3 +194,6 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
 
     def _default_expiration(self):
         return datetime.now(timezone.utc) + DEFAULT_SERVICE_EXPIRATION
+
+    def serialize_instances(self) -> List[ServiceSerialization]:
+        return [i.serialize() for i in self.instances]

@@ -12,6 +12,7 @@ from typing import (
     Optional,
     Tuple,
     Type,
+    TypedDict,
     TypeVar,
     Union,
 )
@@ -62,8 +63,8 @@ class Service:
     _ctx: Optional["WorkContext"] = None
     _network_node: Optional[Node] = None
 
-    def __init__(self):
-        self.__id = str(uuid.uuid4())
+    def __init__(self, _id: Optional[str] = None):
+        self.__id = _id or  str(uuid.uuid4())
 
         self.__inqueue: asyncio.Queue[ServiceSignal] = asyncio.Queue()
         self.__outqueue: asyncio.Queue[ServiceSignal] = asyncio.Queue()
@@ -426,6 +427,21 @@ class Service:
             logger.error("Couldn't retrieve the activity state (%s)", e)
             return False
 
+    def serialize(self) -> "ServiceSerialization":
+        return {
+            "params": {"id": self.id},
+            "activity_id": self._ctx._activity.id,
+            "agreement_id": self._ctx._agreement.id,
+            "state": self.state.value,
+            "network_node": {"network_id": self._network_node.network.network_id, "node_id": self._network_node.node_id, "ip": self._network_node.ip, }
+        }
+
+class ServiceSerialization(TypedDict):
+    params: Dict[str, Any]
+    activity_id: str
+    agreement_id: str
+    state: str
+    network_node: Dict[str, str]
 
 ServiceType = TypeVar("ServiceType", bound=Service)
 

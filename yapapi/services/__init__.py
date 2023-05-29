@@ -1,5 +1,5 @@
 from .cluster import Cluster
-from .service import Service, ServiceInstance, ServiceType
+from .service import Service, ServiceInstance, ServiceType, ServiceSerialization
 from .service_runner import ServiceRunner
 from .service_state import ServiceState
 
@@ -9,5 +9,6 @@ __all__ = (
     "ServiceInstance",
     "ServiceType",
     "ServiceRunner",
+    "ServiceSerialization",
     "ServiceState",
 )

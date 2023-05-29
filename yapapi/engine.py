@@ -290,6 +290,11 @@ class _Engine:
 
         # Some generators created by `execute_tasks` may still have elements;
         # if we don't close them now, their jobs will never be marked as finished.
+
+        print("-------------------------------------------------------------------------")
+        print(self._generators)
+        print("-------------------------------------------------------------------------")
+
         for gen in self._generators:
             await gen.aclose()
 
@@ -629,11 +634,19 @@ class _Engine:
             agreement_id, stream_events=self._stream_output
         )
 
+    async def fetch_activity(self, activity_id: str) -> Activity:
+        """Create an activity for given `agreement_id`."""
+        return await self._activity_api.use_activity(
+            activity_id, stream_events=self._stream_output
+        )
+
     async def start_worker(
         self,
         job: "Job",
         run_worker: Callable[[WorkContext], Awaitable],
         on_agreement_ready: Optional[Callable[[Agreement], None]] = None,
+        existing_agreement_id: Optional[str] = None,
+        existing_activity_id: Optional[str] = None,
     ) -> Optional[asyncio.Task]:
         loop = asyncio.get_event_loop()
 
@@ -653,7 +666,10 @@ class _Engine:
             activity_start_time = datetime.now()
 
             try:
-                activity = await self.create_activity(agreement.id)
+                if existing_activity_id:
+                    activity = await self.fetch_activity(existing_activity_id)
+                else:
+                    activity = await self.create_activity(agreement.id)
             except Exception:
                 job.emit(events.ActivityCreateFailed, agreement=agreement, exc_info=sys.exc_info())
                 raise
@@ -671,7 +687,8 @@ class _Engine:
                 self._activity_created_at.pop(activity.id, None)
 
         return await job.agreements_pool.use_agreement(
-            lambda agreement: loop.create_task(worker_task(agreement))
+            lambda agreement: loop.create_task(worker_task(agreement)),
+            agreement_id=existing_agreement_id,
         )
 
     async def process_batches(
@@ -683,9 +700,18 @@ class _Engine:
     ) -> None:
         """Send command batches produced by `batch_generator` to `activity`."""
 
-        script: Script = await batch_generator.__anext__()
+        print("-------Engine process_batches ---- start", batch_generator)
+
+        try:
+            script: Script = await batch_generator.__anext__()
+        except Exception as e:
+            print("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", str(e), type(e), sys.exc_info())
+            raise
+
+        print("-------Engine process_batches ---- script", script)
 
         while True:
+            print("-------Engine process_batches ---- while True")
             batch_deadline = (
                 datetime.now(timezone.utc) + script.timeout if script.timeout is not None else None
             )
@@ -718,6 +744,8 @@ class _Engine:
 
             loop = asyncio.get_event_loop()
 
+            print("-------Engine process_batches ---- before wait for results")
+
             if script.wait_for_results:
                 # Block until the results are available
                 try:
@@ -728,8 +756,10 @@ class _Engine:
                     # Raise the exception in `batch_generator` (the `worker` coroutine).
                     # If the client code is able to handle it then we'll proceed with
                     # subsequent batches. Otherwise the worker finishes with error.
+                    print("-------Engine process_batches ---- exception", sys.exc_info())
                     script = await batch_generator.athrow(*sys.exc_info())
                 else:
+                    print("-------Engine process_batches ---- results", future_results)
                     script = await batch_generator.asend(future_results)
 
             else:
@@ -737,7 +767,7 @@ class _Engine:
                 future_results = loop.create_task(get_batch_results())
                 script = await batch_generator.asend(future_results)
 
-    def recycle_offer(self, offer: OfferProposal) -> None:
+    def  recycle_offer(self, offer: OfferProposal) -> None:
         """Mark given offer as a fresh one, regardless of its previous processing.
 
         This offer was already processed, but something happened and we should treat it as a
@@ -819,7 +849,7 @@ class Job:
         self.expiration_time: datetime = expiration_time
         self.payload: Payload = payload
 
-        self.agreements_pool = AgreementsPool(self.emit, self.engine.recycle_offer)
+        self.agreements_pool = AgreementsPool(self.emit, self.engine.recycle_offer, market_api=self.engine._market_api)
         self.finished = asyncio.Event()
 
         self._demand_builder: Optional[DemandBuilder] = None

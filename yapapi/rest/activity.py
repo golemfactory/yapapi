@@ -40,6 +40,17 @@ class ActivityService(object):
         activity_id = await self._api.create_activity(agreement_id)
         return Activity(self._api, self._state, activity_id, stream_events)
 
+    async def use_activity(self, activity_id: str, stream_events: bool = False) -> "Activity":
+        """Instantiate an Activity object based on an existing activity_id.
+
+        :return: the object that represents the Activity
+                 and allows to query and control its state
+        :rtype: Activity
+        """
+        state = await self._state.get_activity_state(activity_id)
+        raise Exception(state)
+        return Activity(self._api, self._state, activity_id, stream_events)
+
 
 class Activity(AsyncContextManager["Activity"]):
     """Mid-level wrapper for REST's Activity endpoint."""

@@ -39,7 +39,7 @@ from yapapi.network import Network
 from yapapi.payload import Payload
 from yapapi.props import com
 from yapapi.script import Script
-from yapapi.services import Cluster, ServiceType
+from yapapi.services import Cluster, ServiceType, ServiceSerialization
 from yapapi.strategy import DecreaseScoreForUnconfirmedAgreement, LeastExpensiveLinearPayuMS
 
 if TYPE_CHECKING:
@@ -379,6 +379,50 @@ class Golem:
         async for t in executor.submit(worker, data, job_id=job_id):
             yield t
 
+    async def _init_cluster(
+        self,
+        service_class: Type[ServiceType],
+        payload: Optional[Payload] = None,
+        expiration: Optional[datetime] = None,
+        network: Optional[Network] = None,
+    ) -> Cluster[ServiceType]:
+        payload = payload or await service_class.get_payload()
+
+        if not payload:
+            raise ValueError(
+                f"No payload returned from {service_class.__name__}.get_payload()"
+                " nor given in the `payload` argument."
+            )
+
+        return Cluster(
+            engine=self._engine,
+            service_class=service_class,
+            payload=payload,
+            expiration=expiration,
+            network=network,
+        )
+
+    async def resume_service(
+        self,
+        service_class: Type[ServiceType],
+        instances: List[ServiceSerialization],
+        payload: Optional[Payload] = None,
+        expiration: Optional[datetime] = None,
+        network: Optional[Network] = None,
+    ) -> Cluster[ServiceType]:
+        cluster = await self._init_cluster(
+            service_class=service_class,
+            payload=payload,
+            expiration=expiration,
+            network=network,
+        )
+
+        await self._engine.add_to_async_context(cluster)
+
+        cluster.resume_instances(instances)
+
+        return cluster
+
     async def run_service(
         self,
         service_class: Type[ServiceType],
@@ -474,24 +518,15 @@ class Golem:
                         await asyncio.sleep(REFRESH_INTERVAL_SEC)
 
         """  # noqa: E501
-        payload = payload or await service_class.get_payload()
-
-        if not payload:
-            raise ValueError(
-                f"No payload returned from {service_class.__name__}.get_payload()"
-                " nor given in the `payload` argument."
-            )
-
-        if network_addresses and not network:
-            raise ValueError("`network_addresses` provided without a `network`.")
-
-        cluster = Cluster(
-            engine=self._engine,
+        cluster = await self._init_cluster(
             service_class=service_class,
             payload=payload,
             expiration=expiration,
             network=network,
         )
+
+        if network_addresses and not network:
+            raise ValueError("`network_addresses` provided without a `network`.")
 
         await self._engine.add_to_async_context(cluster)
         cluster.spawn_instances(num_instances, instance_params, network_addresses)
