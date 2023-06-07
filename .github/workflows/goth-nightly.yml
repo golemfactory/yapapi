@@ -46,16 +46,14 @@ jobs:
       - name: Configure python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.8.0'
+          python-version: '3.9'
 
       - name: Configure poetry
-        uses: Gr1N/setup-poetry@v4
-        with:
-          poetry-version: 1.1.6
+        uses: Gr1N/setup-poetry@v8
 
       - name: Install dependencies
         run: |
-          poetry env use python3.8
+          poetry env use python3.9
           poetry install -E integration-tests
 
       - name: Install websocat
@@ -107,7 +105,7 @@ jobs:
         # Python version below should agree with the version set up by this job.
         # In future we'll be able to use the `--all` flag here to remove envs for
         # all Python versions (https://github.com/python-poetry/poetry/issues/3208).
-        run: poetry env remove python3.8
+        run: poetry env remove python3.9
 
       - name: Send Discord notification on failure
         uses: Ilshidur/action-discord@0.3.2
