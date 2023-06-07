@@ -84,13 +84,19 @@ class AgreementsPool:
                 agreement = await self._get_agreement()
             else:
                 agreement = await self._fetch_existing_agreement(agreement_id)
+
+            print("------- Agreement pool: use_agreement: ", agreement)
+
             if agreement is None:
                 return None
             task = cbk(agreement)
-            await self._set_worker(agreement.id, task)
+            self._set_worker(agreement.id, task)
+
+            print("------- Agreement pool: worker task set: ", task)
+
             return task
 
-    async def _set_worker(self, agreement_id: str, task: asyncio.Task) -> None:
+    def _set_worker(self, agreement_id: str, task: asyncio.Task) -> None:
         try:
             buffered_agreement = self._agreements[agreement_id]
         except KeyError:

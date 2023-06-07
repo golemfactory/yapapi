@@ -48,7 +48,7 @@ class ActivityService(object):
         :rtype: Activity
         """
         state = await self._state.get_activity_state(activity_id)
-        raise Exception(state)
+        #raise Exception(state)
         return Activity(self._api, self._state, activity_id, stream_events)
 
 
@@ -93,6 +93,15 @@ class Activity(AsyncContextManager["Activity"]):
             return StreamingBatch(self, batch_id, len(script), deadline)
         return PollingBatch(self, batch_id, len(script), deadline)
 
+    async def destroy(self):
+        """Destroy the Activity and free the execution unit."""
+        try:
+            print("---------------------------- REST Activity ---------------- DESTROY!")
+            await self._api.destroy_activity(self._id)
+            _log.debug("Activity %s destroyed successfully", self._id)
+        except yexc.ApiException:
+            _log.debug("Got API Exception when destroying activity %s", self._id, exc_info=True)
+
     async def __aenter__(self) -> "Activity":
         return self
 
@@ -104,11 +113,7 @@ class Activity(AsyncContextManager["Activity"]):
             )
         else:
             _log.debug("Destroying activity %s", self._id)
-        try:
-            await self._api.destroy_activity(self._id)
-            _log.debug("Activity %s destroyed successfully", self._id)
-        except yexc.ApiException:
-            _log.debug("Got API Exception when destroying activity %s", self._id, exc_info=True)
+        await self.destroy()
 
 
 @dataclass

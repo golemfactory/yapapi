@@ -643,7 +643,7 @@ class _Engine:
     async def start_worker(
         self,
         job: "Job",
-        run_worker: Callable[[WorkContext], Awaitable],
+        run_worker: Callable[[WorkContext], Awaitable[bool]],
         on_agreement_ready: Optional[Callable[[Agreement], None]] = None,
         existing_agreement_id: Optional[str] = None,
         existing_activity_id: Optional[str] = None,
@@ -656,10 +656,19 @@ class _Engine:
             It creates an Activity for a given Agreement, then creates a WorkContext for this
             Activity and then executes `run_worker` with this WorkContext.
             """
+            print("-------------------- Engine: start_worker: worker_task -------------- start")
             if on_agreement_ready:
                 on_agreement_ready(agreement)
+
+            print("-------------------- Engine: start_worker: worker_task -------------- agreement ready 1")
+
             self._all_agreements[agreement.id] = agreement
-            self._invoice_manager.add_agreement(job, agreement)
+            try:
+                self._invoice_manager.add_agreement(job, agreement)
+            except Exception as e:
+                print("-------------------- Engine: start_worker exception --------------", str(e), type(e), sys.exc_info())
+
+            print("-------------------- Engine: start_worker: worker_task -------------- agreement ready 2")
 
             job.emit(events.WorkerStarted, agreement=agreement)
 
@@ -670,7 +679,8 @@ class _Engine:
                     activity = await self.fetch_activity(existing_activity_id)
                 else:
                     activity = await self.create_activity(agreement.id)
-            except Exception:
+            except Exception as e:
+                print("-------------------- Engine: start_worker: worker_task -------------- activity init failed", str(e), type(e), sys.exc_info())
                 job.emit(events.ActivityCreateFailed, agreement=agreement, exc_info=sys.exc_info())
                 raise
 
@@ -679,9 +689,22 @@ class _Engine:
 
             self._activity_created_at[activity.id] = activity_start_time
 
-            async with activity:
+            keep_activity = False
+
+            try:
                 self.accept_debit_notes_for_agreement(job.id, agreement.id)
-                await run_worker(work_context)
+                keep_activity = await run_worker(work_context)
+            except Exception:
+                logger.debug(
+                    "Error while working on activity %s : [%s]",
+                    activity.id,
+                    sys.exc_info(),
+                )
+            finally:
+                logger.debug("Finished working with activity %s", activity.id)
+
+            if not keep_activity:
+                await activity.destroy()
                 # Providers may issue debit notes after activity ends.
                 # This will prevent terminating agreements when this happens.
                 self._activity_created_at.pop(activity.id, None)
@@ -720,7 +743,8 @@ class _Engine:
                 await script._before()
                 batch: List[BatchCommand] = script._evaluate()
                 remote = await activity.send(batch, deadline=batch_deadline)
-            except Exception:
+            except Exception as e:
+                print("-------Engine process_batches ---- EXCEPTION -----------------", type(e), e)
                 script = await batch_generator.athrow(*sys.exc_info())
                 continue
 

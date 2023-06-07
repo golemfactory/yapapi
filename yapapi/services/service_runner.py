@@ -41,6 +41,7 @@ class ControlSignal(enum.Enum):
     SeviceRunner."""
 
     stop = "stop"
+    suspend = "suspend"
 
 
 class ServiceRunner(AsyncContextManager):
@@ -124,6 +125,10 @@ class ServiceRunner(AsyncContextManager):
         """Stop the specific :class:`Service` instance belonging to this :class:`ServiceRunner`."""
         service.service_instance.control_queue.put_nowait(ControlSignal.stop)
 
+    def suspend_instance(self, service: Service):
+        """Suspend the specific :class:`Service` instance belonging to this :class:`ServiceRunner`."""
+        service.service_instance.control_queue.put_nowait(ControlSignal.suspend)
+
     async def __aenter__(self):
         """Post a Demand and start collecting provider Offers for running service instances."""
 
@@ -205,6 +210,7 @@ class ServiceRunner(AsyncContextManager):
             ServiceState.starting: instance.service.start,
             ServiceState.running: instance.service.run,
             ServiceState.stopping: instance.service.shutdown,
+            ServiceState.suspended: None,
         }
         handler = _handlers.get(instance.state, None)
         if handler:
@@ -240,6 +246,8 @@ class ServiceRunner(AsyncContextManager):
         elif isinstance(event, tuple) or event == ControlSignal.stop:
             # Transition on error or `stop` signal
             instance.service_state.error_or_stop()
+        elif event == ControlSignal.suspend:
+            instance.service_state.suspend()
         else:
             # Unhandled signal, don't change the state
             assert isinstance(event, ControlSignal)
@@ -282,7 +290,10 @@ class ServiceRunner(AsyncContextManager):
     async def _run_instance(self, instance: ServiceInstance):
         loop = asyncio.get_event_loop()
 
-        logger.info("%s commissioned", instance.service)
+        if instance.state == ServiceState.starting:
+            logger.info("%s commissioned", instance.service)
+        else:
+            logger.info("%s resumed", instance.service)
 
         handler = None
         batch_task: Optional[asyncio.Task] = None
@@ -411,7 +422,7 @@ class ServiceRunner(AsyncContextManager):
         service: ServiceType,
         network: Optional[Network] = None,
         network_address: Optional[str] = None,
-        existing_agrement_id: Optional[str] = None,
+        existing_agreement_id: Optional[str] = None,
         existing_activity_id: Optional[str] = None,
 
     ) -> None:
@@ -430,7 +441,7 @@ class ServiceRunner(AsyncContextManager):
 
         instance = service.service_instance
 
-        async def _worker(work_context: WorkContext) -> None:
+        async def _worker(work_context: WorkContext) -> bool:
             nonlocal instance
             assert agreement is not None
 
@@ -448,7 +459,7 @@ class ServiceRunner(AsyncContextManager):
             print("----------------- ServiceRunner spawn_instance worker --- state2 ", instance.service_state, )
 
             try:
-                if network:
+                if network and not service.network_node:
                     service._set_network_node(
                         await network.add_node(work_context.provider_id, network_address)
                     )
@@ -479,14 +490,21 @@ class ServiceRunner(AsyncContextManager):
                 work_context.emit(events.WorkerFinished, exc_info=sys.exc_info())
                 raise
             finally:
-                print("----------------- ServiceRunner spawn_instance worker --- finally")
-                if network and service.network_node:
-                    await network.remove_node(work_context.provider_id)
-                    service._clear_network_node()
-                print("----------------- ServiceRunner spawn_instance worker --- accept payments")
-                await self._job.engine.accept_payments_for_agreement(self._job.id, agreement.id)
-                print("----------------- ServiceRunner spawn_instance worker --- release agreement")
-                await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
+                if service.state != ServiceState.suspended:
+                    print("----------------- ServiceRunner spawn_instance worker --- finally", service.state)
+                    if network and service.network_node:
+                        await network.remove_node(work_context.provider_id)
+                        service._clear_network_node()
+                    print("----------------- ServiceRunner spawn_instance worker --- accept payments")
+                    await self._job.engine.accept_payments_for_agreement(self._job.id, agreement.id)
+                    print("----------------- ServiceRunner spawn_instance worker --- release agreement")
+                    await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
+
+                    # keep activity?
+                    return False
+
+                # keep activity?
+                return True
 
         def on_agreement_ready(agreement_ready: Agreement) -> None:
             nonlocal agreement
@@ -499,7 +517,7 @@ class ServiceRunner(AsyncContextManager):
                 self._job,
                 _worker,
                 on_agreement_ready,
-                existing_agreement_id=existing_agrement_id,
+                existing_agreement_id=existing_agreement_id,
                 existing_activity_id=existing_activity_id
             )
             if not task:

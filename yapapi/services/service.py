@@ -427,9 +427,12 @@ class Service:
             logger.error("Couldn't retrieve the activity state (%s)", e)
             return False
 
+    def _serialize_init_params(self) -> Dict[str, Any]:
+        return {"_id": self.id}
+
     def serialize(self) -> "ServiceSerialization":
         return {
-            "params": {"id": self.id},
+            "params": self._serialize_init_params(),
             "activity_id": self._ctx._activity.id,
             "agreement_id": self._ctx._agreement.id,
             "state": self.state.value,

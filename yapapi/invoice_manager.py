@@ -43,15 +43,7 @@ class InvoiceManager:
         """Inform the InvoiceManager about a new agreement (so that we can use the agreement_id in \
         the future)."""
 
-        ad = self._agreement_data.get(agreement.id)
-        if ad:
-            # Currently possible if we're having more than one activity for a single agreement
-            # (We could make some effort to ensure this method is called only once, when the
-            # agreement is created, but it will make the code more complex as we'll have to reach
-            # here from the AgreeementsPool)
-            assert ad.job is job and ad.agreement is agreement
-        else:
-            self._agreement_data[agreement.id] = AgreementData(agreement, job)
+        self._agreement_data[agreement.id] = AgreementData(agreement, job)
 
     def agreement_job(self, agreement_id: str) -> "Job":
         #   NOTE: this has nothing to do with InvoiceManaging and is supposed to disappear

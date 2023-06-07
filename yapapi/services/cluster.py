@@ -57,6 +57,7 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
         await self._stack.enter_async_context(self.service_runner)
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        print("-------------------------------- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! CLUSTER aexit", self)
         await self._terminate(exc_type, exc_val, exc_tb)
 
     async def terminate(self):
@@ -68,6 +69,11 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
         """Stop all services in this :class:`Cluster`."""
         for instance in self.instances:
             self.stop_instance(instance)
+
+    def suspend(self):
+        """Suspend all services in this :class:`Cluster`."""
+        for instance in self.instances:
+            self.suspend_instance(instance)
 
     async def _terminate(self, exc_type, exc_val, exc_tb):
         # NOTE: this might be called more then once (e.g. by `terminate()` followed by `__aexit__`),
@@ -113,8 +119,12 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
         return self.service_runner.instances.copy()
 
     def stop_instance(self, service: ServiceType):
-        """Stop the specific :class:`Service` instance belonging to this :class:`Cluster`."""
+        """Stop the specific :class:`Service` instance."""
         self.service_runner.stop_instance(service)
+
+    def suspend_instance(self, service: ServiceType):
+        """Suspend the specific :class:`Service` instance."""
+        self.service_runner.suspend_instance(service)
 
     def spawn_instances(
         self,
@@ -161,10 +171,13 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
     ):
         for service_obj in serialized_instances:
             service = self.service_class(**service_obj.get('params', dict()))
-            self.service_runner.add_instance(
+            self.service_runner.add_existing_instance(
                 service,
+                service_obj.get("state"),
+                service_obj.get("agreement_id"),
+                service_obj.get("activity_id"),
                 self.network,
-                service_obj.get("network_node", dict()).get("ip")
+                service_obj.get("network_node", dict()),
             )
             service._set_cluster(self)
 
