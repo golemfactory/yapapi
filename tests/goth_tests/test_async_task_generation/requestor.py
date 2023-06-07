@@ -30,6 +30,7 @@ async def main():
         budget=10.0,
         subnet_tag="goth",
         event_consumer=log_event_repr,
+        payment_network="rinkeby",
     ) as golem:
 
         # We use an async task generator that yields tasks removed from

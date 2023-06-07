@@ -90,7 +90,7 @@ class FirstInstanceFailsToStart(Service):
 
 async def main():
 
-    async with Golem(budget=1.0, subnet_tag="goth") as golem:
+    async with Golem(budget=1.0, subnet_tag="goth", payment_network="rinkeby") as golem:
 
         # Start a cluster with a single service.
         # The first instance will fail before reaching the `running` state

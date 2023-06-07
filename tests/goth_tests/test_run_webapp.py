@@ -28,7 +28,6 @@ port = get_free_port()
 ONELINER_URL = f"http://localhost:{port}/"
 
 
-@pytest.mark.skip  # TODO: https://github.com/golemfactory/yagna/issues/2387
 @pytest.mark.asyncio
 async def test_run_webapp(
     log_dir: Path,
@@ -58,7 +57,7 @@ async def test_run_webapp(
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
-            f"{requestor_path} --subnet-tag {SUBNET_TAG} --port {port}",
+            f"{requestor_path} --subnet-tag {SUBNET_TAG} --port {port} --payment-network rinkeby",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor, process_monitor):
             start_time = time.time()
