@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
 import itertools
+import json
 import logging
 import os
 import sys
@@ -343,10 +344,14 @@ class _Engine:
         except Exception:
             logger.debug("Got error when waiting for services to finish", exc_info=True)
 
+    async def _id(self) -> str:
+        async with self._root_api_session.get(f"{self._api_config.root_url}/me") as resp:
+            return json.loads(await resp.text()).get("identity")
+
     async def _create_allocations(self) -> rest.payment.MarketDecoration:
         if not self._budget_allocations:
             platform = f"{self._payment_driver}-{self._payment_network}-{self._payment_token}"
-            address = None
+            address = await self._id()
             allocation = cast(
                 rest.payment.Allocation,
                 await self._stack.enter_async_context(
