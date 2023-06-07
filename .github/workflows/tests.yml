@@ -32,16 +32,14 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: Gr1N/setup-poetry@v7
-        with:
-          poetry-version: 1.1.13
+      - uses: Gr1N/setup-poetry@v8
 
       - run: echo "::set-output name=ENABLE::1"
         if: ${{ matrix.os == 'ubuntu-latest' }}
         name: Enable extended checks
         id: extended-checks
       - run: echo "::set-output name=ENABLE::1"
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.8' }}
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9' }}
         name: Enable sphinx check
         id: extended-checks-sphinx
 
