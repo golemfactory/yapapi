@@ -22,7 +22,6 @@ logger = logging.getLogger("goth.test.run_ssh")
 SUBNET_TAG = "goth"
 
 
-@pytest.mark.skip  # TODO: https://github.com/golemfactory/yagna/issues/2387
 @pytest.mark.asyncio
 async def test_run_ssh(
     log_dir: Path,
@@ -63,7 +62,7 @@ async def test_run_ssh(
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
-            f"{requestor_path} --subnet-tag {SUBNET_TAG}",
+            f"{requestor_path} --subnet-tag {SUBNET_TAG} --payment-network rinkeby",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor, process_monitor):
             start_time = time.time()
