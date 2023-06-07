@@ -1,11 +1,9 @@
 """Unit tests for code that selects payment platforms based on driver/network specification."""
 import pytest
 from unittest import mock
-import uuid
 
 from ya_payment import RequestorApi
 
-from yapapi import NoPaymentAccountError
 from yapapi.engine import (
     DEFAULT_DRIVER,
     DEFAULT_NETWORK,
@@ -13,7 +11,6 @@ from yapapi.engine import (
     TESTNET_TOKEN_NAME,
 )
 from yapapi.golem import Golem, _Engine
-from yapapi.rest.payment import Account, Payment
 
 
 @pytest.fixture(autouse=True)
@@ -60,7 +57,7 @@ async def test_default(_mock_engine_id, _mock_create_allocation):
 
     assert _mock_create_allocation.called
     assert (
-        _mock_create_allocation.call_args.args[0].payment_platform
+        _mock_create_allocation.mock_calls[0][1][0].payment_platform
         == f"{DEFAULT_DRIVER}-{DEFAULT_NETWORK}-{TESTNET_TOKEN_NAME}"
     )
 
@@ -75,7 +72,7 @@ async def test_mainnet(_mock_engine_id, _mock_create_allocation):
 
     assert _mock_create_allocation.called
     assert (
-        _mock_create_allocation.call_args.args[0].payment_platform
+        _mock_create_allocation.mock_calls[0][1][0].payment_platform
         == f"somedriver-mainnet-{MAINNET_TOKEN_NAME}"
     )
 
@@ -90,6 +87,6 @@ async def test_testnet(_mock_engine_id, _mock_create_allocation):
 
     assert _mock_create_allocation.called
     assert (
-        _mock_create_allocation.call_args.args[0].payment_platform
+        _mock_create_allocation.mock_calls[0][1][0].payment_platform
         == f"somedriver-othernet-{TESTNET_TOKEN_NAME}"
     )
