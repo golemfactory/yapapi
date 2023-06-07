@@ -51,6 +51,7 @@ from yapapi.strategy import (
     SCORE_NEUTRAL,
     BaseMarketStrategy,
 )
+
 DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "erc20").lower()
 DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "goerli").lower()
 DEFAULT_SUBNET: Optional[str] = os.getenv("YAGNA_SUBNET", "public")

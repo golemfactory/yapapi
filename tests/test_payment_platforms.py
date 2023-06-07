@@ -1,12 +1,18 @@
 """Unit tests for code that selects payment platforms based on driver/network specification."""
 import pytest
 from unittest import mock
+import uuid
 
 from ya_payment import RequestorApi
 
 from yapapi import NoPaymentAccountError
-from yapapi.engine import DEFAULT_DRIVER, DEFAULT_NETWORK, TESTNET_TOKEN_NAME, MAINNET_TOKEN_NAME
-from yapapi.golem import Golem
+from yapapi.engine import (
+    DEFAULT_DRIVER,
+    DEFAULT_NETWORK,
+    MAINNET_TOKEN_NAME,
+    TESTNET_TOKEN_NAME,
+)
+from yapapi.golem import Golem, _Engine
 from yapapi.rest.payment import Account, Payment
 
 
@@ -15,18 +21,21 @@ def _set_app_key(monkeypatch):
     monkeypatch.setenv("YAGNA_APPKEY", "mock-appkey")
 
 
-
 class _StopExecutor(Exception):
     """An exception raised to stop the test when reaching an expected checkpoint in executor."""
 
 
 @pytest.fixture()
-def _mock_decorate_demand(monkeypatch):
-    """Make `Payment.decorate_demand()` stop the test."""
+def _mock_engine_id(monkeypatch):
+    """Mock Engine `id`."""
+
+    async def _id(_):
+        return
+
     monkeypatch.setattr(
-        Payment,
-        "decorate_demand",
-        mock.Mock(side_effect=_StopExecutor("decorate_demand() called")),
+        _Engine,
+        "_id",
+        _id,
     )
 
 
@@ -36,17 +45,13 @@ def _mock_create_allocation(monkeypatch):
 
     create_allocation_mock = mock.Mock(side_effect=_StopExecutor("create_allocation() called"))
 
-    monkeypatch.setattr(
-        RequestorApi,
-        "create_allocation",
-        create_allocation_mock
-    )
+    monkeypatch.setattr(RequestorApi, "create_allocation", create_allocation_mock)
 
     return create_allocation_mock
 
 
 @pytest.mark.asyncio
-async def test_default(_mock_create_allocation):
+async def test_default(_mock_engine_id, _mock_create_allocation):
     """Test the allocation defaults."""
 
     with pytest.raises(_StopExecutor):
@@ -54,36 +59,37 @@ async def test_default(_mock_create_allocation):
             pass
 
     assert _mock_create_allocation.called
-    assert _mock_create_allocation.call_args.args[0].payment_platform == \
-           f"{DEFAULT_DRIVER}-{DEFAULT_NETWORK}-{TESTNET_TOKEN_NAME}"
-
-@pytest.mark.asyncio
-async def test_mainnet(_mock_create_allocation):
-    """Test the allocation for a mainnet account."""
-
-    with pytest.raises(_StopExecutor):
-        async with Golem(
-            budget=10.0, payment_driver="somedriver", payment_network="mainnet"
-        ):
-            pass
-
-    assert _mock_create_allocation.called
-    assert _mock_create_allocation.call_args.args[0].payment_platform == \
-           f"somedriver-mainnet-{MAINNET_TOKEN_NAME}"
+    assert (
+        _mock_create_allocation.call_args.args[0].payment_platform
+        == f"{DEFAULT_DRIVER}-{DEFAULT_NETWORK}-{TESTNET_TOKEN_NAME}"
+    )
 
 
 @pytest.mark.asyncio
-async def test_testnet(_mock_create_allocation):
+async def test_mainnet(_mock_engine_id, _mock_create_allocation):
     """Test the allocation for a mainnet account."""
 
     with pytest.raises(_StopExecutor):
-        async with Golem(
-            budget=10.0, payment_driver="somedriver", payment_network="othernet"
-        ):
+        async with Golem(budget=10.0, payment_driver="somedriver", payment_network="mainnet"):
             pass
 
     assert _mock_create_allocation.called
-    assert _mock_create_allocation.call_args.args[0].payment_platform == \
-           f"somedriver-othernet-{TESTNET_TOKEN_NAME}"
+    assert (
+        _mock_create_allocation.call_args.args[0].payment_platform
+        == f"somedriver-mainnet-{MAINNET_TOKEN_NAME}"
+    )
 
 
+@pytest.mark.asyncio
+async def test_testnet(_mock_engine_id, _mock_create_allocation):
+    """Test the allocation for a mainnet account."""
+
+    with pytest.raises(_StopExecutor):
+        async with Golem(budget=10.0, payment_driver="somedriver", payment_network="othernet"):
+            pass
+
+    assert _mock_create_allocation.called
+    assert (
+        _mock_create_allocation.call_args.args[0].payment_platform
+        == f"somedriver-othernet-{TESTNET_TOKEN_NAME}"
+    )
