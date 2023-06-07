@@ -5,7 +5,7 @@ from unittest import mock
 from ya_payment import RequestorApi
 
 from yapapi import NoPaymentAccountError
-from yapapi.engine import DEFAULT_DRIVER, DEFAULT_NETWORK
+from yapapi.engine import DEFAULT_DRIVER, DEFAULT_NETWORK, TESTNET_TOKEN_NAME, MAINNET_TOKEN_NAME
 from yapapi.golem import Golem
 from yapapi.rest.payment import Account, Payment
 
@@ -14,31 +14,6 @@ from yapapi.rest.payment import Account, Payment
 def _set_app_key(monkeypatch):
     monkeypatch.setenv("YAGNA_APPKEY", "mock-appkey")
 
-
-def _mock_accounts_iterator(*account_specs):
-    """Create an iterator over mock `Account` objects.
-
-    `account_specs` should contain pairs `(driver, network)`, where `driver` and `network`
-    are strings, or triples `(driver, network, params)` with `driver` and `network` as before
-    and `params` a dictionary containing additional keyword arguments for `Account()`.
-    """
-
-    async def _mock(*_args):
-        for spec in account_specs:
-            params = {
-                "platform": "mock-platform",
-                "address": "mock-address",
-                "driver": spec[0],
-                "network": spec[1],
-                "token": "mock-token",
-                "send": True,
-                "receive": True,
-            }
-            if len(spec) == 3:
-                params.update(**spec[2])
-            yield Account(**params)
-
-    return _mock
 
 
 class _StopExecutor(Exception):
@@ -58,113 +33,57 @@ def _mock_decorate_demand(monkeypatch):
 @pytest.fixture()
 def _mock_create_allocation(monkeypatch):
     """Make `RequestorApi.create_allocation()` stop the test."""
+
+    create_allocation_mock = mock.Mock(side_effect=_StopExecutor("create_allocation() called"))
+
     monkeypatch.setattr(
         RequestorApi,
         "create_allocation",
-        mock.Mock(side_effect=_StopExecutor("create_allocation() called")),
+        create_allocation_mock
     )
 
-
-@pytest.mark.asyncio
-async def test_no_accounts_raises(monkeypatch):
-    """Test that exception is raised if `Payment.accounts()` returns empty list."""
-
-    monkeypatch.setattr(Payment, "accounts", _mock_accounts_iterator())
-
-    with pytest.raises(NoPaymentAccountError):
-        async with Golem(budget=10.0):
-            pass
+    return create_allocation_mock
 
 
 @pytest.mark.asyncio
-async def test_no_matching_account_raises(monkeypatch):
-    """Test that exception is raised if `Payment.accounts()` returns no matching accounts."""
-
-    monkeypatch.setattr(
-        Payment,
-        "accounts",
-        _mock_accounts_iterator(
-            ("other-driver", "other-network"),
-            ("matching-driver", "other-network"),
-            ("other-driver", "matching-network"),
-        ),
-    )
-
-    with pytest.raises(NoPaymentAccountError) as exc_info:
-        async with Golem(
-            budget=10.0, payment_driver="matching-driver", payment_network="matching-network"
-        ):
-            pass
-
-    exc = exc_info.value
-    assert exc.required_driver == "matching-driver"
-    assert exc.required_network == "matching-network"
-
-
-@pytest.mark.asyncio
-async def test_matching_account_creates_allocation(monkeypatch, _mock_decorate_demand):
-    """Test that matching accounts are correctly selected and allocations are created for them."""
-
-    monkeypatch.setattr(
-        Payment,
-        "accounts",
-        _mock_accounts_iterator(
-            ("other-driver", "other-network"),
-            ("matching-driver", "matching-network", {"platform": "platform-1"}),
-            ("matching-driver", "other-network"),
-            ("other-driver", "matching-network"),
-            ("matching-driver", "matching-network", {"platform": "platform-2"}),
-        ),
-    )
-
-    create_allocation_args = []
-
-    async def mock_create_allocation(_self, model):
-        create_allocation_args.append(model)
-        return mock.Mock()
-
-    async def mock_release_allocation(*args, **kwargs):
-        pass
-
-    monkeypatch.setattr(RequestorApi, "create_allocation", mock_create_allocation)
-    monkeypatch.setattr(RequestorApi, "release_allocation", mock_release_allocation)
-
-    with pytest.raises(_StopExecutor):
-        async with Golem(
-            budget=10.0,
-            payment_driver="matching-driver",
-            payment_network="matching-network",
-        ):
-            pass
-
-    assert len(create_allocation_args) == 2
-    assert create_allocation_args[0].payment_platform == "platform-1"
-    assert create_allocation_args[1].payment_platform == "platform-2"
-
-
-@pytest.mark.asyncio
-async def test_driver_network_case_insensitive(monkeypatch, _mock_create_allocation):
-    """Test that matching driver and network names is not case sensitive."""
-
-    monkeypatch.setattr(Payment, "accounts", _mock_accounts_iterator(("dRIVER", "NetWORK")))
-
-    with pytest.raises(_StopExecutor):
-        async with Golem(
-            budget=10.0,
-            payment_driver="dRiVeR",
-            payment_network="NeTwOrK",
-        ):
-            pass
-
-
-@pytest.mark.asyncio
-async def test_default_driver_network(monkeypatch, _mock_create_allocation):
-    """Test that defaults are used if driver and network are not specified."""
-
-    monkeypatch.setattr(
-        Payment, "accounts", _mock_accounts_iterator((DEFAULT_DRIVER, DEFAULT_NETWORK))
-    )
+async def test_default(_mock_create_allocation):
+    """Test the allocation defaults."""
 
     with pytest.raises(_StopExecutor):
         async with Golem(budget=10.0):
             pass
+
+    assert _mock_create_allocation.called
+    assert _mock_create_allocation.call_args.args[0].payment_platform == \
+           f"{DEFAULT_DRIVER}-{DEFAULT_NETWORK}-{TESTNET_TOKEN_NAME}"
+
+@pytest.mark.asyncio
+async def test_mainnet(_mock_create_allocation):
+    """Test the allocation for a mainnet account."""
+
+    with pytest.raises(_StopExecutor):
+        async with Golem(
+            budget=10.0, payment_driver="somedriver", payment_network="mainnet"
+        ):
+            pass
+
+    assert _mock_create_allocation.called
+    assert _mock_create_allocation.call_args.args[0].payment_platform == \
+           f"somedriver-mainnet-{MAINNET_TOKEN_NAME}"
+
+
+@pytest.mark.asyncio
+async def test_testnet(_mock_create_allocation):
+    """Test the allocation for a mainnet account."""
+
+    with pytest.raises(_StopExecutor):
+        async with Golem(
+            budget=10.0, payment_driver="somedriver", payment_network="othernet"
+        ):
+            pass
+
+    assert _mock_create_allocation.called
+    assert _mock_create_allocation.call_args.args[0].payment_platform == \
+           f"somedriver-othernet-{TESTNET_TOKEN_NAME}"
+
+

@@ -50,14 +50,15 @@ from yapapi.strategy import (
     SCORE_NEUTRAL,
     BaseMarketStrategy,
 )
-
 DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "erc20").lower()
 DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "goerli").lower()
 DEFAULT_SUBNET: Optional[str] = os.getenv("YAGNA_SUBNET", "public")
 
 MAX_CONCURRENTLY_PROCESSED_DEBIT_NOTES: Final[int] = 10
 
-MAIN_NET_NETWORKS: Set[str] = {"mainnet", "polygon"}
+MAINNET_NETWORKS: Set[str] = {"mainnet", "polygon"}
+MAINNET_TOKEN_NAME: str = "glm"
+TESTNET_TOKEN_NAME: str = "tglm"
 
 logger = logging.getLogger("yapapi.executor")
 
@@ -141,9 +142,9 @@ class _Engine:
         self._payment_token: str = (
             payment_token.lower()
             if payment_token
-            else "glm"
-            if self._payment_network in MAIN_NET_NETWORKS
-            else "tglm"
+            else MAINNET_TOKEN_NAME
+            if self._payment_network in MAINNET_NETWORKS
+            else TESTNET_TOKEN_NAME
         )
         self._stream_output = stream_output
 
