@@ -1,9 +1,10 @@
-from dataclasses import dataclass
-from dns.exception import DNSException
-from enum import Enum
 import logging
 import sys
+from enum import Enum
 from typing import List, Optional
+
+from dataclasses import dataclass
+from dns.exception import DNSException
 from typing_extensions import Final
 
 if sys.version_info > (3, 8):
@@ -11,7 +12,7 @@ if sys.version_info > (3, 8):
 else:
     from typing_extensions import Literal
 
-from srvresolver.srv_resolver import SRVRecord, SRVResolver  # type: ignore
+from srvresolver.srv_resolver import SRVRecord, SRVResolver
 
 from yapapi.payload.package import (
     Package,
@@ -22,13 +23,7 @@ from yapapi.payload.package import (
 from yapapi.props import base as prop_base
 from yapapi.props import inf
 from yapapi.props.builder import DemandBuilder, Model
-from yapapi.props.inf import (
-    INF_CORES,
-    RUNTIME_VM,
-    ExeUnitManifestRequest,
-    ExeUnitRequest,
-    InfBase,
-)
+from yapapi.props.inf import INF_CORES, RUNTIME_VM, ExeUnitManifestRequest, ExeUnitRequest, InfBase
 
 _DEFAULT_REPO_SRV: Final[str] = "_girepo._tcp.dev.golem.network"
 _FALLBACK_REPO_URL: Final[str] = "http://girepo.dev.golem.network:8000"
@@ -121,10 +116,12 @@ async def manifest(
     """
     Build a reference to application payload.
 
-    :param manifest: base64 encoded Computation Payload Manifest https://handbook.golem.network/requestor-tutorials/vm-runtime/computation-payload-manifest
+    :param manifest: base64 encoded Computation Payload Manifest
+        https://handbook.golem.network/requestor-tutorials/vm-runtime/computation-payload-manifest
     :param manifest_sig: an optional signature of base64 encoded Computation Payload Manifest
     :param manifest_sig_algorithm: an optional signature algorithm, e.g. "sha256"
-    :param manifest_cert: an optional base64 encoded public certificate (DER or PEM) matching key used to generate signature
+    :param manifest_cert: an optional base64 encoded public certificate (DER or PEM) matching key
+        used to generate signature
     :param min_mem_gib: minimal memory required to execute application code
     :param min_storage_gib: minimal disk storage to execute tasks
     :param min_cpu_threads: minimal available logical CPU cores
@@ -205,7 +202,8 @@ async def repo(
             image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
         )
 
-    example usage with an explicit GVMI image URL (useful to host images outside the Golem repository)::
+    example usage with an explicit GVMI image URL (useful to host images outside the Golem
+    repository)::
 
         package = await vm.repo(
             # we still need to provide the image's hash because

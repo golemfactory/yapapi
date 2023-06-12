@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import asyncio
-from datetime import timedelta
 import random
 import string
+from datetime import timedelta
 
 from yapapi import Golem
 from yapapi.contrib.service.socket_proxy import SocketProxy, SocketProxyService

@@ -15,7 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10"]
+        python-version: ["3.8", "3.9", "3.10"]
         os:
           - ubuntu-latest
           - macos-latest
@@ -34,24 +34,25 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - uses: Gr1N/setup-poetry@v8
 
-      - run: echo "::set-output name=ENABLE::1"
+      - run: echo "ENABLE=1"  >> $GITHUB_OUTPUT
         if: ${{ matrix.os == 'ubuntu-latest' }}
         name: Enable extended checks
         id: extended-checks
-      - run: echo "::set-output name=ENABLE::1"
+      - run: echo "ENABLE=1" >> $GITHUB_OUTPUT
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9' }}
         name: Enable sphinx check
         id: extended-checks-sphinx
 
       - run: poetry install
+        if: ${{ !steps.extended-checks-sphinx.outputs.ENABLE }}
       - run: poetry install -E docs
         if: ${{ steps.extended-checks-sphinx.outputs.ENABLE }}
 
-      - run: poetry run poe test
-      - run: poetry run poe typecheck
-      - run: poetry run poe codestyle
+      - run: poetry run poe tests_unit
+      - run: poetry run poe checks_codestyle
+      - run: poetry run poe checks_typing
         if: ${{ steps.extended-checks.outputs.ENABLE }}
-      - run: poetry run poe liccheck
+      - run: poetry run poe checks_license
         if: ${{ steps.extended-checks.outputs.ENABLE }}
       - run: poetry run poe sphinx -W
         if: ${{ steps.extended-checks-sphinx.outputs.ENABLE }}

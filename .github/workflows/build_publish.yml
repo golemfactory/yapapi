@@ -16,10 +16,10 @@ jobs:
           python-version: '3.9'
       - uses: Gr1N/setup-poetry@v8
       - run: poetry install
-      - run: poetry run poe test
-      - run: poetry run poe typecheck
-      - run: poetry run poe codestyle
-      - run: poetry run poe liccheck
+      - run: poetry run poe tests_unit
+      - run: poetry run poe checks_codestyle
+      - run: poetry run poe checks_typing
+      - run: poetry run poe checks_license
 
   build:
     needs: [test]
@@ -33,10 +33,10 @@ jobs:
           python-version: '3.9'
       - uses: Gr1N/setup-poetry@v8
       - name: Get git release tag
-        run: echo "::set-output name=git-release-tag::yapapi $(git describe --tags)"
+        run: echo "git-release-tag=yapapi $(git describe --tags)" >> $GITHUB_OUTPUT
         id: git_describe
       - name: Get package version
-        run: echo "::set-output name=poetry-version::$(poetry version)"
+        run: echo "poetry-version=$(poetry version)" >> $GITHUB_OUTPUT
         id: poetry_version
       - name: Fail on version mismatch
         run: exit 1

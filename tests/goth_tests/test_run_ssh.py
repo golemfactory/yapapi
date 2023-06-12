@@ -2,13 +2,14 @@
 import asyncio
 import logging
 import os
-from pathlib import Path
-import pexpect
-import pytest
 import re
 import signal
 import time
+from pathlib import Path
 from typing import List
+
+import pexpect
+import pytest
 
 from goth.configuration import Override, load_yaml
 from goth.runner import Runner
@@ -30,7 +31,6 @@ async def test_run_ssh(
     config_overrides: List[Override],
     ssh_verify_connection: bool,
 ) -> None:
-
     if ssh_verify_connection:
         ssh_check = pexpect.spawn("/usr/bin/which ssh")
         exit_code = ssh_check.wait()
@@ -58,7 +58,6 @@ async def test_run_ssh(
     )
 
     async with runner(goth_config.containers):
-
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(

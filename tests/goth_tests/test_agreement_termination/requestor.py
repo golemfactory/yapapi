@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """A requestor script used for testing agreement termination."""
 import asyncio
-from datetime import timedelta
 import logging
+from datetime import timedelta
 
 from yapapi import Golem, Task, WorkContext
 from yapapi.log import enable_default_logger
@@ -10,7 +10,6 @@ from yapapi.payload import vm
 
 
 async def main():
-
     package = await vm.repo(
         image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         min_mem_gib=0.5,
@@ -20,7 +19,7 @@ async def main():
     first_worker = True
 
     async def worker(ctx: WorkContext, tasks):
-        """A worker function for `Golem.execute_tasks()`.
+        """Execute `Golem.execute_tasks()` as a worker.
 
         The first call to this function will produce a worker
         that sends an invalid `run` command to the provider.
@@ -36,7 +35,6 @@ async def main():
         first_worker = False
 
         async for task in tasks:
-
             script = ctx.new_script()
 
             if should_fail:
@@ -55,7 +53,6 @@ async def main():
         subnet_tag="goth",
         payment_network="rinkeby",
     ) as golem:
-
         tasks = [Task(data=n) for n in range(6)]
         async for task in golem.execute_tasks(
             worker,
@@ -70,7 +67,6 @@ async def main():
 
 
 if __name__ == "__main__":
-
     enable_default_logger(log_file="test.log")
 
     console_handler = logging.StreamHandler()

@@ -1,15 +1,12 @@
 """Unit tests for code that selects payment platforms based on driver/network specification."""
-import pytest
 from unittest import mock
+
+import pytest
 
 from ya_payment import RequestorApi
 
-from yapapi.engine import (
-    DEFAULT_DRIVER,
-    DEFAULT_NETWORK,
-    MAINNET_TOKEN_NAME,
-    TESTNET_TOKEN_NAME,
-)
+from tests.factories.golem import GolemFactory
+from yapapi.engine import DEFAULT_DRIVER, DEFAULT_NETWORK, MAINNET_TOKEN_NAME, TESTNET_TOKEN_NAME
 from yapapi.golem import Golem, _Engine
 
 
@@ -52,7 +49,7 @@ async def test_default(_mock_engine_id, _mock_create_allocation):
     """Test the allocation defaults."""
 
     with pytest.raises(_StopExecutor):
-        async with Golem(budget=10.0):
+        async with GolemFactory():
             pass
 
     assert _mock_create_allocation.called

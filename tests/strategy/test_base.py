@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
+
 import pytest
 
 from tests.factories.rest.market import OfferProposalFactory
@@ -12,7 +13,6 @@ from yapapi.strategy import (
     PropValueRange,
 )
 from yapapi.strategy.base import (
-    DEFAULT_DEBIT_NOTE_ACCEPTANCE_TIMEOUT_SEC,
     DEFAULT_DEBIT_NOTE_INTERVAL_SEC,
     DEFAULT_PAYMENT_TIMEOUT_SEC,
     DEFAULT_PROPERTY_VALUE_RANGES,

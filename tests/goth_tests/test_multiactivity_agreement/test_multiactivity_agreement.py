@@ -1,11 +1,12 @@
 """A goth test scenario for multi-activity agreements."""
-from functools import partial
 import logging
 import os
-from pathlib import Path
-import pytest
 import re
+from functools import partial
+from pathlib import Path
 from typing import List
+
+import pytest
 
 import goth.configuration
 from goth.runner import Runner
@@ -37,7 +38,7 @@ async def assert_multiple_workers_run(agr_id, events):
         if m:
             worker_agr_id = m.group(1)
             assert worker_agr_id == agr_id, "Worker run for another agreement"
-            assert not "exception" in line, "Worker finished with error"
+            assert "exception" not in line, "Worker finished with error"
             workers_finished += 1
         elif re.match("JobFinished", line):
             break
@@ -54,7 +55,6 @@ async def test_multiactivity_agreement(
     config_overrides: List[goth.configuration.Override],
     single_node_override: goth.configuration.Override,
 ) -> None:
-
     configure_logging(log_dir)
 
     goth_config = goth.configuration.load_yaml(
@@ -64,13 +64,11 @@ async def test_multiactivity_agreement(
     runner = Runner(base_log_dir=log_dir, compose_config=goth_config.compose_config)
 
     async with runner(goth_config.containers):
-
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
             str(Path(__file__).parent / "requestor.py"), env=os.environ
         ) as (_cmd_task, cmd_monitor, _process_monitor):
-
             # Wait for agreement
             assertion = cmd_monitor.add_assertion(assert_agreement_created)
             agr_id = await assertion.wait_for_result(timeout=30)

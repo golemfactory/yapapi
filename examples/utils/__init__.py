@@ -1,10 +1,11 @@
 """Utilities for yapapi example scripts."""
 import argparse
 import asyncio
-import colorama  # type: ignore
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-import tempfile
+
+import colorama  # type: ignore
 
 from yapapi import Golem, NoPaymentAccountError
 from yapapi import __version__ as yapapi_version

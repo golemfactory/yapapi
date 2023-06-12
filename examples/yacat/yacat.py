@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import argparse
-import asyncio
-from datetime import datetime, timedelta
 import math
-from pathlib import Path
+import pathlib
 import sys
+from datetime import datetime, timedelta
+from pathlib import Path
 from tempfile import gettempdir
 from typing import AsyncIterable, List, Optional
 
@@ -13,15 +13,15 @@ from yapapi.events import CommandExecuted
 from yapapi.payload import vm
 from yapapi.rest.activity import CommandExecutionError
 
-examples_dir = Path(__file__).resolve().parent.parent
+examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
+
 
 from utils import (
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_GREEN,
     TEXT_COLOR_RED,
-    TEXT_COLOR_YELLOW,
     build_parser,
     print_env_info,
     run_golem_example,
@@ -114,7 +114,7 @@ async def perform_mask_attack(ctx: WorkContext, tasks: AsyncIterable[Task]):
         worker_output_path = f"/golem/output/{output_name}"
 
         script = ctx.new_script(timeout=MASK_ATTACK_TIMEOUT)
-        script.run(f"/bin/sh", "-c", _make_attack_command(skip, limit, worker_output_path))
+        script.run("/bin/sh", "-c", _make_attack_command(skip, limit, worker_output_path))
         try:
             output_file = Path(gettempdir()) / output_name
             script.download_file(worker_output_path, str(output_file))
@@ -139,7 +139,7 @@ def _make_attack_command(skip: int, limit: int, output_path: str) -> str:
 
 
 def _parse_result(potfile_line: str) -> Optional[str]:
-    """Helper function which parses a single .potfile line and returns the password part.
+    """Parse a single .potfile line and returns the password part.
 
     Hashcat uses its .potfile format to report results. In this format, each line consists of the
     hash and its matching word, separated with a colon (e.g. `asdf1234:password`).
