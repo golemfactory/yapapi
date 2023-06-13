@@ -33,15 +33,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - uses: Gr1N/setup-poetry@v8
-        with:
-          poetry-version: 1.2.2
 
       - run: echo "ENABLE=1"  >> $GITHUB_OUTPUT
         if: ${{ matrix.os == 'ubuntu-latest' }}
         name: Enable extended checks
         id: extended-checks
       - run: echo "ENABLE=1" >> $GITHUB_OUTPUT
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.8' }}
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9' }}
         name: Enable sphinx check
         id: extended-checks-sphinx
 
