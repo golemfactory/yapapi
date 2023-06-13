@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import itertools
+import json
 import logging
 import os
 import sys
@@ -55,10 +56,14 @@ from yapapi.strategy import (
 )
 
 DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "erc20").lower()
-DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "rinkeby").lower()
+DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "goerli").lower()
 DEFAULT_SUBNET: Optional[str] = os.getenv("YAGNA_SUBNET", "public")
 
 MAX_CONCURRENTLY_PROCESSED_DEBIT_NOTES: Final[int] = 10
+
+MAINNET_NETWORKS: Set[str] = {"mainnet", "polygon"}
+MAINNET_TOKEN_NAME: str = "glm"
+TESTNET_TOKEN_NAME: str = "tglm"
 
 logger = logging.getLogger("yapapi.executor")
 
@@ -106,6 +111,7 @@ class _Engine:
         subnet_tag: Optional[str] = None,
         payment_driver: Optional[str] = None,
         payment_network: Optional[str] = None,
+        payment_token: Optional[str] = None,
         stream_output: bool = False,
         api_config: ApiConfig,
     ):
@@ -123,7 +129,7 @@ class _Engine:
             environment variable, defaults to `erc20`. Only payment platforms with
             the specified driver will be used
         :param payment_network: name of the payment network to use. Uses `YAGNA_PAYMENT_NETWORK`
-            environment variable, defaults to `rinkeby`. Only payment platforms with the specified
+            environment variable, defaults to `goerli`. Only payment platforms with the specified
             network will be used
         :param stream_output: stream computation output from providers
         :param api_config: configuration of yagna low level api
@@ -138,6 +144,13 @@ class _Engine:
         self._subnet: Optional[str] = subnet_tag or DEFAULT_SUBNET
         self._payment_driver: str = payment_driver.lower() if payment_driver else DEFAULT_DRIVER
         self._payment_network: str = payment_network.lower() if payment_network else DEFAULT_NETWORK
+        self._payment_token: str = (
+            payment_token.lower()
+            if payment_token
+            else MAINNET_TOKEN_NAME
+            if self._payment_network in MAINNET_NETWORKS
+            else TESTNET_TOKEN_NAME
+        )
         self._stream_output = stream_output
 
         # a set of `Job` instances used to track jobs - computations or services - started
@@ -334,39 +347,26 @@ class _Engine:
         except Exception:
             logger.debug("Got error when waiting for services to finish", exc_info=True)
 
+    async def _id(self) -> str:
+        async with self._root_api_session.get(f"{self._api_config.root_url}/me") as resp:
+            return json.loads(await resp.text()).get("identity")
+
     async def _create_allocations(self) -> rest.payment.MarketDecoration:
         if not self._budget_allocations:
-            async for account in self._payment_api.accounts():
-                driver = account.driver.lower()
-                network = account.network.lower()
-                if (driver, network) != (self._payment_driver, self._payment_network):
-                    logger.debug(
-                        "Not using payment platform `%s`, platform's driver/network "
-                        "`%s`/`%s` is different than requested driver/network `%s`/`%s`",
-                        account.platform,
-                        driver,
-                        network,
-                        self._payment_driver,
-                        self._payment_network,
+            platform = f"{self._payment_driver}-{self._payment_network}-{self._payment_token}"
+            address = await self._id()
+            allocation = cast(
+                rest.payment.Allocation,
+                await self._stack.enter_async_context(
+                    self._payment_api.new_allocation(
+                        self._budget_amount,
+                        payment_platform=platform,
+                        payment_address=address,
                     )
-                    continue
-                logger.debug("Creating allocation using payment platform `%s`", account.platform)
-                allocation = cast(
-                    rest.payment.Allocation,
-                    await self._stack.enter_async_context(
-                        self._payment_api.new_allocation(
-                            self._budget_amount,
-                            payment_platform=account.platform,
-                            payment_address=account.address,
-                            #   TODO what do to with this?
-                            #   expires=self._expires + CFG_INVOICE_TIMEOUT,
-                        )
-                    ),
-                )
-                self._budget_allocations.append(allocation)
-
-            if not self._budget_allocations:
-                raise NoPaymentAccountError(self._payment_driver, self._payment_network)
+                ),
+            )
+            logger.debug("Creating allocation using payment platform `%s`", platform)
+            self._budget_allocations.append(allocation)
 
         allocation_ids = [allocation.id for allocation in self._budget_allocations]
         return await self._payment_api.decorate_demand(allocation_ids)

@@ -42,6 +42,7 @@ async def main():
         strategy=ShortDebitNoteIntervalAndPaymentTimeout(),
         subnet_tag="goth",
         event_consumer=log_event_repr,
+        payment_network="rinkeby",
     ) as golem:
         logger = logging.getLogger("yapapi")
         logger.handlers[0].setLevel(logging.DEBUG)
