@@ -72,6 +72,7 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
 
     def suspend(self):
         """Suspend all services in this :class:`Cluster`."""
+        self.service_runner.suspend()
         for instance in self.instances:
             self.suspend_instance(instance)
 

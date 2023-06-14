@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, AsyncContextManager, Dict, List, Optional, Set
 
 from typing_extensions import Final
 
+import statemachine
+
 if TYPE_CHECKING:
     from yapapi.engine import Job
 
@@ -44,6 +46,16 @@ class ControlSignal(enum.Enum):
     suspend = "suspend"
 
 
+class ServiceRunnerState(statemachine.StateMachine):
+    """The state of a :class:`ServiceRunner`."""
+
+    active = statemachine.State("active", initial=True)
+    stopped = statemachine.State("stopped")
+    suspended = statemachine.State("suspended")
+
+    stop: statemachine.Transition = active.to(stopped)
+    suspend: statemachine.Transition = active.to(suspended)
+
 class ServiceRunner(AsyncContextManager):
     def __init__(
         self,
@@ -62,7 +74,8 @@ class ServiceRunner(AsyncContextManager):
         self._job = job
         self._instances: List[Service] = []
         self._instance_tasks: List[asyncio.Task] = []
-        self._stopped = False
+
+        self._state =
         self._health_check_interval = health_check_interval
         self._health_check_retries = health_check_retries
 
@@ -122,12 +135,16 @@ class ServiceRunner(AsyncContextManager):
         self._instance_tasks.append(task)
 
     def stop_instance(self, service: Service):
-        """Stop the specific :class:`Service` instance belonging to this :class:`ServiceRunner`."""
+        """Stop the specific :class:`Service` instance."""
         service.service_instance.control_queue.put_nowait(ControlSignal.stop)
 
     def suspend_instance(self, service: Service):
-        """Suspend the specific :class:`Service` instance belonging to this :class:`ServiceRunner`."""
+        """Suspend the specific :class:`Service` instance."""
         service.service_instance.control_queue.put_nowait(ControlSignal.suspend)
+
+    def suspend(self):
+        """Mark this runner suspended, so that its agreements are not killed when it exits."""
+        self._
 
     async def __aenter__(self):
         """Post a Demand and start collecting provider Offers for running service instances."""
@@ -149,14 +166,6 @@ class ServiceRunner(AsyncContextManager):
         task.add_done_callback(raise_if_failed)
         self.__services.add(task)
 
-        async def agreements_pool_cycler():
-            # shouldn't this be part of the Agreement pool itself? (or a task within Job?)
-            while True:
-                await asyncio.sleep(2)
-                await self._job.agreements_pool.cycle()
-
-        self.__services.add(loop.create_task(agreements_pool_cycler()))
-
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Release resources used by this ServiceRunner."""
         print("----------------- ServiceRunner __aexit__")
@@ -172,7 +181,7 @@ class ServiceRunner(AsyncContextManager):
         # Give the instance tasks some time to terminate gracefully.
         # Then cancel them without mercy!
         if self._instance_tasks:
-            print("----------------- ServiceRunner __aexit__ - awaiting instance tasks termination")
+            print("----------------- ServiceRunner __aexit__ - awaiting instance tasks termination", self._instance_tasks)
             logger.debug("Waiting for service instances to terminate...")
             _, still_running = await asyncio.wait(self._instance_tasks, timeout=10)
             if still_running:
@@ -189,6 +198,7 @@ class ServiceRunner(AsyncContextManager):
         }
 
         print("----------------- ServiceRunner __aexit__ - terminate agreements")
+
         try:
             logger.debug("Terminating agreements...")
             await self._job.agreements_pool.terminate_all(reason=termination_reason)
@@ -415,7 +425,8 @@ class ServiceRunner(AsyncContextManager):
         except asyncio.CancelledError:
             print("----------------- ServiceRunner _run_instance ---- CancelledError")
 
-        logger.info("%s decommissioned", instance.service)
+        if instance.state == ServiceState.terminated:
+            logger.info("%s decommissioned", instance.service)
 
     async def spawn_instance(
         self,

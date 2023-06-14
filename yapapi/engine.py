@@ -689,6 +689,7 @@ class _Engine:
 
             self._activity_created_at[activity.id] = activity_start_time
 
+            allow_agreement_reuse = True
             keep_activity = False
 
             try:
@@ -700,6 +701,7 @@ class _Engine:
                     activity.id,
                     sys.exc_info(),
                 )
+                allow_agreement_reuse = False
             finally:
                 logger.debug("Finished working with activity %s", activity.id)
 
@@ -708,6 +710,9 @@ class _Engine:
                 # Providers may issue debit notes after activity ends.
                 # This will prevent terminating agreements when this happens.
                 self._activity_created_at.pop(activity.id, None)
+
+                # and release the agreement
+                await job.agreements_pool.release_agreement(agreement.id, allow_agreement_reuse)
 
         return await job.agreements_pool.use_agreement(
             lambda agreement: loop.create_task(worker_task(agreement)),
