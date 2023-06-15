@@ -188,7 +188,7 @@ async def main(subnet_tag, payment_driver, payment_network, port):
         f"http://localhost:{port}{TEXT_COLOR_DEFAULT}"
     )
 
-    secs = 21
+    secs = 7
     print(f"{TEXT_COLOR_CYAN}waiting {secs} seconds...{TEXT_COLOR_DEFAULT}")
     await asyncio.sleep(secs)
 
@@ -219,7 +219,6 @@ async def main(subnet_tag, payment_driver, payment_network, port):
 
     print(json.dumps([network_serialized, db_serialized, web_serialized], indent=4))
 
-    secs = 21
     print(f"{TEXT_COLOR_CYAN}waiting {secs} seconds...{TEXT_COLOR_DEFAULT}")
     await asyncio.sleep(secs)
 

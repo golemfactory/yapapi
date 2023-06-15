@@ -74,8 +74,7 @@ class ServiceRunner(AsyncContextManager):
         self._job = job
         self._instances: List[Service] = []
         self._instance_tasks: List[asyncio.Task] = []
-
-        self._state =
+        self._state = ServiceRunnerState()
         self._health_check_interval = health_check_interval
         self._health_check_retries = health_check_retries
 
@@ -86,6 +85,14 @@ class ServiceRunner(AsyncContextManager):
     @property
     def instances(self):
         return self._instances.copy()
+
+    @property
+    def stopped(self):
+        return self._state == ServiceRunnerState.stopped
+
+    @property
+    def suspended(self):
+        return self._state == ServiceRunnerState.suspended
 
     def add_instance(
         self,
@@ -144,7 +151,7 @@ class ServiceRunner(AsyncContextManager):
 
     def suspend(self):
         """Mark this runner suspended, so that its agreements are not killed when it exits."""
-        self._
+        self._state.suspend()
 
     async def __aenter__(self):
         """Post a Demand and start collecting provider Offers for running service instances."""
@@ -169,11 +176,19 @@ class ServiceRunner(AsyncContextManager):
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Release resources used by this ServiceRunner."""
         print("----------------- ServiceRunner __aexit__")
-        self._stopped = True
+        try:
+            self._state.stop()
+            print("----------------- ServiceRunner __aexit__ - stopped")
+        except Exception as e:
+            print(e)
 
-        print("----------------- ServiceRunner __aexit__ - stopped")
+        try:
+            print("----------------- ServiceRunner __aexit__ - state: ", self._state)
+        except Exception as e:
+            print(e)
 
-        logger.debug("%s is shutting down...", self)
+
+        logger.debug("%s is shutting down... state: %s", self, self._state)
 
         if exc_type is not None:
             self._job.set_exc_info((exc_type, exc_val, exc_tb))
@@ -191,19 +206,20 @@ class ServiceRunner(AsyncContextManager):
                     task.cancel()
                 await asyncio.gather(*still_running, return_exceptions=True)
 
-        # TODO: should be different if we stop due to an error
-        termination_reason = {
-            "message": "Successfully finished all work",
-            "golem.requestor.code": "Success",
-        }
+        if self.stopped:
+            # TODO: should be different if we stop due to an error
+            termination_reason = {
+                "message": "Successfully finished all work",
+                "golem.requestor.code": "Success",
+            }
 
-        print("----------------- ServiceRunner __aexit__ - terminate agreements")
+            print("----------------- ServiceRunner __aexit__ - terminate agreements")
 
-        try:
-            logger.debug("Terminating agreements...")
-            await self._job.agreements_pool.terminate_all(reason=termination_reason)
-        except Exception:
-            logger.debug("Couldn't terminate agreements", exc_info=True)
+            try:
+                logger.debug("Terminating agreements...")
+                await self._job.agreements_pool.terminate_all(reason=termination_reason)
+            except Exception:
+                logger.debug("Couldn't terminate agreements", exc_info=True)
 
         for task in self.__services:
             if not task.done():
@@ -474,7 +490,7 @@ class ServiceRunner(AsyncContextManager):
                     service._set_network_node(
                         await network.add_node(work_context.provider_id, network_address)
                     )
-                if not self._stopped:
+                if not self.stopped:
                     instance_batches = self._run_instance(instance)
                     try:
                         print(
@@ -521,7 +537,7 @@ class ServiceRunner(AsyncContextManager):
             nonlocal agreement
             agreement = agreement_ready
 
-        while not self._stopped:
+        while not self.stopped:
             agreement = None
             await asyncio.sleep(1.0)
             task = await self._job.engine.start_worker(
