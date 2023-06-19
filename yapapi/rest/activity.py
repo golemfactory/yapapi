@@ -47,7 +47,7 @@ class ActivityService(object):
                  and allows to query and control its state
         :rtype: Activity
         """
-        state = await self._state.get_activity_state(activity_id)
+        await self._state.get_activity_state(activity_id)
         return Activity(self._api, self._state, activity_id, stream_events)
 
 
