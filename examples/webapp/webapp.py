@@ -209,7 +209,7 @@ async def main(subnet_tag, payment_driver, payment_network, port):
 
     print("=================================================================== STOPPING GOLEM ENGINE")
 
-    await golem.stop()
+    await golem.stop(wait_for_payments=False)
 
     print(f"{TEXT_COLOR_CYAN}waiting {secs} seconds...{TEXT_COLOR_DEFAULT}")
     await asyncio.sleep(secs)

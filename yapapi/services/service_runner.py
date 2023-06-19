@@ -74,7 +74,7 @@ class ServiceRunner(AsyncContextManager):
         self._job = job
         self._instances: List[Service] = []
         self._instance_tasks: List[asyncio.Task] = []
-        self._state = ServiceRunnerState()
+        self._state: ServiceRunnerState = ServiceRunnerState()
         self._health_check_interval = health_check_interval
         self._health_check_retries = health_check_retries
 
@@ -88,11 +88,11 @@ class ServiceRunner(AsyncContextManager):
 
     @property
     def stopped(self):
-        return self._state == ServiceRunnerState.stopped
+        return self._state.current_state == ServiceRunnerState.stopped
 
     @property
     def suspended(self):
-        return self._state == ServiceRunnerState.suspended
+        return self._state.current_state == ServiceRunnerState.suspended
 
     def add_instance(
         self,

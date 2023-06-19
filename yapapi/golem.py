@@ -285,12 +285,12 @@ class Golem:
             await self._stop_with_exc_info(*sys.exc_info())
             raise
 
-    async def stop(self) -> None:
+    async def stop(self, wait_for_payments: bool = True) -> None:
         """Stop the Golem engine after it was started in non-contextmanager mode.
 
         Details: :func:`Golem.start()`
         """
-        await self._stop_with_exc_info(None, None, None)
+        await self._stop_with_exc_info(None, None, None, wait_for_payments=wait_for_payments)
 
     async def __aenter__(self) -> "Golem":
         await self.start()
@@ -299,9 +299,9 @@ class Golem:
     async def __aexit__(self, *exc_info) -> Optional[bool]:
         return await self._stop_with_exc_info(*exc_info)
 
-    async def _stop_with_exc_info(self, *exc_info) -> Optional[bool]:
+    async def _stop_with_exc_info(self, *exc_info, wait_for_payments: bool = True) -> Optional[bool]:
         async with self._engine_state_lock:
-            res = await self._engine.stop(*exc_info)
+            res = await self._engine.stop(*exc_info, wait_for_payments=wait_for_payments)
             await self._event_dispatcher.stop()
 
         #   Engine that was stopped is not usable anymore, there is no "full" cleanup.

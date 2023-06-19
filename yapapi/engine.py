@@ -165,6 +165,7 @@ class _Engine:
         self._num_payable_debit_notes: Dict[ActivityId, int] = defaultdict(int)
         self._activity_created_at: Dict[ActivityId, datetime] = dict()
         self._payment_closing: bool = False
+        self._await_payments: bool = True
 
         self._process_invoices_job: Optional[asyncio.Task] = None
 
@@ -229,11 +230,12 @@ class _Engine:
     def _emit_event(self, event: events.Event) -> None:
         self._event_consumer(event)
 
-    async def stop(self, *exc_info) -> Optional[bool]:
+    async def stop(self, *exc_info, wait_for_payments: bool = True) -> Optional[bool]:
         """Stop the engine.
 
         This *must* be called at the end of the work, by the Engine user.
         """
+        self._await_payments = wait_for_payments
         if exc_info[0] is not None:
             self.emit(events.ExecutionInterrupted, exc_info=exc_info)
         return await self._stack.__aexit__(None, None, None)
@@ -325,7 +327,7 @@ class _Engine:
 
         # Wait for some time for invoices for unpaid agreements,
         # then cancel the invoices service
-        if self._process_invoices_job:
+        if self._process_invoices_job and self._await_payments:
             unpaid_agreements = self._invoice_manager.payable_unpaid_agreement_ids
             if unpaid_agreements:
                 logger.info(
@@ -391,11 +393,15 @@ class _Engine:
 
     async def _process_invoices(self) -> None:
         """Process incoming invoices."""
+
         invoice_manager = self._invoice_manager
         async for invoice in self._payment_api.incoming_invoices():
             invoice_manager.add_invoice(invoice)
             await self._agreement_payment_attempt(invoice.agreement_id)
-            if self._payment_closing and not invoice_manager.has_payable_unpaid_agreements:
+            if self._payment_closing and not (
+                    self._await_payments and invoice_manager.has_payable_unpaid_agreements
+            ):
+
                 break
 
     async def accept_payments_for_agreement(self, job_id: str, agreement_id: str) -> None:
