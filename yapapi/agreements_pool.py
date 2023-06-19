@@ -57,20 +57,19 @@ class AgreementsPool:
 
         Should be called regularly.
         """
-        # for agreement_id in frozenset(self._agreements):
-        #     try:
-        #         buffered_agreement = self._agreements[agreement_id]
-        #     except KeyError:
-        #         continue
-        #     task = buffered_agreement.worker_task
-        #     if task is not None and task.done():
-        #
-        #         print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Agreements pool -=-=-=-=-=-=- releasing agreement", buffered_agreement)
-        #
-        #
-        #         await self.release_agreement(
-        #             buffered_agreement.agreement.id, allow_reuse=task.exception() is None
-        #         )
+        for agreement_id in frozenset(self._agreements):
+            try:
+                buffered_agreement = self._agreements[agreement_id]
+            except KeyError:
+                continue
+            task = buffered_agreement.worker_task
+            if task is not None and task.done():
+
+                print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Agreements pool -=-=-=-=-=-=- releasing agreement", buffered_agreement)
+
+                await self.release_agreement(
+                    buffered_agreement.agreement.id, allow_reuse=task.exception() is None
+                )
 
     async def add_proposal(self, score: float, proposal: OfferProposal) -> None:
         """Add providers' proposal to the pool of available proposals."""

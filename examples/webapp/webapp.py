@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
+import json
 import pathlib
 import sys
 from datetime import datetime, timedelta
@@ -129,16 +130,6 @@ async def main(subnet_tag, payment_driver, payment_network, port):
     print_env_info(golem)
 
     network = await golem.create_network("192.168.0.1/24")
-
-    import json
-
-    from yapapi.network import Network
-
-    net_ser = json.dumps(network.serialize())
-    net2 = Network.deserialize(network._net_api, json.loads(net_ser))
-
-    network = net2
-
     db_cluster = await golem.run_service(DbService, network=network)
     db_instance = db_cluster.instances[0]
 
