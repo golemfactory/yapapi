@@ -48,7 +48,6 @@ class ActivityService(object):
         :rtype: Activity
         """
         state = await self._state.get_activity_state(activity_id)
-        #raise Exception(state)
         return Activity(self._api, self._state, activity_id, stream_events)
 
 
