@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, AsyncContextManager, Dict, List, Optional, Set
 from typing_extensions import Final
 
 import statemachine
+import statemachine.exceptions
 
 if TYPE_CHECKING:
     from yapapi.engine import Job
@@ -87,12 +88,16 @@ class ServiceRunner(AsyncContextManager):
         return self._instances.copy()
 
     @property
+    def state(self):
+        return self._state.current_state
+
+    @property
     def stopped(self):
-        return self._state.current_state == ServiceRunnerState.stopped
+        return self.state == ServiceRunnerState.stopped
 
     @property
     def suspended(self):
-        return self._state.current_state == ServiceRunnerState.suspended
+        return self.state == ServiceRunnerState.suspended
 
     def add_instance(
         self,
@@ -175,20 +180,13 @@ class ServiceRunner(AsyncContextManager):
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Release resources used by this ServiceRunner."""
-        print("----------------- ServiceRunner __aexit__")
         try:
             self._state.stop()
-            print("----------------- ServiceRunner __aexit__ - stopped")
-        except Exception as e:
-            print(e)
+        except statemachine.exceptions.TransitionNotAllowed:
+            """The ServiceRunner is not running, """
+            pass
 
-        try:
-            print("----------------- ServiceRunner __aexit__ - state: ", self._state)
-        except Exception as e:
-            print(e)
-
-
-        logger.debug("%s is shutting down... state: %s", self, self._state)
+        logger.debug("%s is shutting down... state: %s", self, self.state)
 
         if exc_type is not None:
             self._job.set_exc_info((exc_type, exc_val, exc_tb))
@@ -196,12 +194,10 @@ class ServiceRunner(AsyncContextManager):
         # Give the instance tasks some time to terminate gracefully.
         # Then cancel them without mercy!
         if self._instance_tasks:
-            print("----------------- ServiceRunner __aexit__ - awaiting instance tasks termination", self._instance_tasks)
-            logger.debug("Waiting for service instances to terminate...")
+            logger.debug("Waiting for service instances to terminate... %s", self._instance_tasks)
             _, still_running = await asyncio.wait(self._instance_tasks, timeout=10)
             if still_running:
                 for task in still_running:
-                    print("----------------- ServiceRunner __aexit__ - cancelling task", task)
                     logger.debug("Cancelling task: %s", task)
                     task.cancel()
                 await asyncio.gather(*still_running, return_exceptions=True)
@@ -213,18 +209,15 @@ class ServiceRunner(AsyncContextManager):
                 "golem.requestor.code": "Success",
             }
 
-            print("----------------- ServiceRunner __aexit__ - terminate agreements")
-
             try:
-                logger.debug("Terminating agreements...")
+                logger.debug("Terminating agreements on %s", self)
                 await self._job.agreements_pool.terminate_all(reason=termination_reason)
             except Exception:
                 logger.debug("Couldn't terminate agreements", exc_info=True)
 
         for task in self.__services:
             if not task.done():
-                print("----------------- ServiceRunner __aexit__ - cancelling task", task)
-                logger.debug("Cancelling task: %s", task)
+                logger.debug("Cancelling task: %s on %s", task, self)
                 task.cancel()
         await asyncio.gather(*self.__services, return_exceptions=True)
 
@@ -384,10 +377,6 @@ class ServiceRunner(AsyncContextManager):
                     #   the `except BatchError` clause below
                     batch = batch_task.result()
                 except StopAsyncIteration:
-                    print(
-                        "----------------- ServiceRunner _run_instance ---- StopAsyncIteration, state: ",
-                        instance.state,
-                    )
                     change_state()
 
                     # work-around an issue preventing nodes from getting correct information about
@@ -439,7 +428,7 @@ class ServiceRunner(AsyncContextManager):
                     t.cancel()
                     await t
         except asyncio.CancelledError:
-            print("----------------- ServiceRunner _run_instance ---- CancelledError")
+            pass
 
         if instance.state == ServiceState.terminated:
             logger.info("%s decommissioned", instance.service)
@@ -472,18 +461,14 @@ class ServiceRunner(AsyncContextManager):
             nonlocal instance
             assert agreement is not None
 
-            print("----------------- ServiceRunner spawn_instance worker --- start")
+            logger.debug("`spawn_instance` worker starting for %s on %s", instance, self)
 
             activity = work_context._activity
 
             service._set_ctx(work_context)
 
-            print("----------------- ServiceRunner spawn_instance worker --- state ", instance.service_state, instance.state, instance.state == ServiceState.pending)
-
             if instance.state == ServiceState.pending:
                 self._change_state(instance)  # pending -> starting
-
-            print("----------------- ServiceRunner spawn_instance worker --- state2 ", instance.service_state, )
 
             try:
                 if network and not service.network_node:
@@ -493,38 +478,23 @@ class ServiceRunner(AsyncContextManager):
                 if not self.stopped:
                     instance_batches = self._run_instance(instance)
                     try:
-                        print(
-                            "----------------- ServiceRunner spawn_instance worker --- await processbatches"
-                        )
                         await self._job.engine.process_batches(
                             self._job.id, agreement.id, activity, instance_batches
                         )
-                        print(
-                            "----------------- ServiceRunner spawn_instance worker --- after processbatches"
-                        )
                     except StopAsyncIteration:
-                        print(
-                            "----------------- ServiceRunner spawn_instance worker --- stopasynciteration"
-                        )
+                        pass
 
                 work_context.emit(events.ServiceFinished, service=service)
                 work_context.emit(events.WorkerFinished)
             except Exception:
-                print(
-                    "----------------- ServiceRunner spawn_instance worker --- exception",
-                    sys.exc_info(),
-                )
                 work_context.emit(events.WorkerFinished, exc_info=sys.exc_info())
                 raise
             finally:
                 if service.state != ServiceState.suspended:
-                    print("----------------- ServiceRunner spawn_instance worker --- finally", service.state)
                     if network and service.network_node:
                         await network.remove_node(work_context.provider_id)
                         service._clear_network_node()
-                    print("----------------- ServiceRunner spawn_instance worker --- accept payments")
                     await self._job.engine.accept_payments_for_agreement(self._job.id, agreement.id)
-                    print("----------------- ServiceRunner spawn_instance worker --- release agreement")
                     await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
 
                     # keep activity?

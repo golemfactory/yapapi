@@ -64,9 +64,6 @@ class AgreementsPool:
                 continue
             task = buffered_agreement.worker_task
             if task is not None and task.done():
-
-                print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Agreements pool -=-=-=-=-=-=- releasing agreement", buffered_agreement)
-
                 await self.release_agreement(
                     buffered_agreement.agreement.id, allow_reuse=task.exception() is None
                 )
@@ -88,14 +85,13 @@ class AgreementsPool:
             else:
                 agreement = await self._fetch_existing_agreement(agreement_id)
 
-            print("------- Agreement pool: use_agreement: ", agreement)
-
             if agreement is None:
                 return None
+
             task = cbk(agreement)
             self._set_worker(agreement.id, task)
 
-            print("------- Agreement pool: worker task set: ", task)
+            logger.debug("Using agreement: %s, worker task: %s", agreement, task)
 
             return task
 
@@ -196,7 +192,7 @@ class AgreementsPool:
                 buffered_agreement = self._agreements[agreement_id]
             except KeyError:
                 return
-            print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Agreements pool -=-=-=-=-=-=- releasing agreement", buffered_agreement)
+            logger.debug("Releasing agreement: %s", buffered_agreement)
             buffered_agreement.worker_task = None
             # Check whether agreement can be reused
             if not allow_reuse or not buffered_agreement.has_multi_activity:
@@ -253,7 +249,6 @@ class AgreementsPool:
 
         async with self._lock:
             for agreement_id, agreement in self._agreements.items():
-                print("------------- Agreements Pool ---- terminate all ---- terminate: ", agreement.worker_task)
                 await self._terminate_agreement(agreement_id, reason)
 
     async def on_agreement_terminated(self, agr_id: str, reason: dict) -> None:

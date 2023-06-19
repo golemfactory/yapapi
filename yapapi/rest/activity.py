@@ -96,7 +96,6 @@ class Activity(AsyncContextManager["Activity"]):
     async def destroy(self):
         """Destroy the Activity and free the execution unit."""
         try:
-            print("---------------------------- REST Activity ---------------- DESTROY!")
             await self._api.destroy_activity(self._id)
             _log.debug("Activity %s destroyed successfully", self._id)
         except yexc.ApiException:

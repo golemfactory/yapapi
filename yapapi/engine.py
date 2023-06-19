@@ -306,10 +306,6 @@ class _Engine:
         # Some generators created by `execute_tasks` may still have elements;
         # if we don't close them now, their jobs will never be marked as finished.
 
-        print("-------------------------------------------------------------------------")
-        print(self._generators)
-        print("-------------------------------------------------------------------------")
-
         for gen in self._generators:
             await gen.aclose()
 
@@ -662,19 +658,13 @@ class _Engine:
             It creates an Activity for a given Agreement, then creates a WorkContext for this
             Activity and then executes `run_worker` with this WorkContext.
             """
-            print("-------------------- Engine: start_worker: worker_task -------------- start")
             if on_agreement_ready:
                 on_agreement_ready(agreement)
 
-            print("-------------------- Engine: start_worker: worker_task -------------- agreement ready 1")
+            logger.debug("Starting worker task on agreement %s", agreement)
 
             self._all_agreements[agreement.id] = agreement
-            try:
-                self._invoice_manager.add_agreement(job, agreement)
-            except Exception as e:
-                print("-------------------- Engine: start_worker exception --------------", str(e), type(e), sys.exc_info())
-
-            print("-------------------- Engine: start_worker: worker_task -------------- agreement ready 2")
+            self._invoice_manager.add_agreement(job, agreement)
 
             job.emit(events.WorkerStarted, agreement=agreement)
 
@@ -686,7 +676,12 @@ class _Engine:
                 else:
                     activity = await self.create_activity(agreement.id)
             except Exception as e:
-                print("-------------------- Engine: start_worker: worker_task -------------- activity init failed", str(e), type(e), sys.exc_info())
+                logger.error(
+                    "Activity init failed with error: %s. agreement: %s, existing activity id: %s",
+                    e,
+                    agreement.id,
+                    existing_activity_id
+                )
                 job.emit(events.ActivityCreateFailed, agreement=agreement, exc_info=sys.exc_info())
                 raise
 
@@ -734,18 +729,12 @@ class _Engine:
     ) -> None:
         """Send command batches produced by `batch_generator` to `activity`."""
 
-        print("-------Engine process_batches ---- start", batch_generator)
-
         try:
             script: Script = await batch_generator.__anext__()
         except Exception as e:
-            print("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", str(e), type(e), sys.exc_info())
             raise
 
-        print("-------Engine process_batches ---- script", script)
-
         while True:
-            print("-------Engine process_batches ---- while True")
             batch_deadline = (
                 datetime.now(timezone.utc) + script.timeout if script.timeout is not None else None
             )
@@ -755,7 +744,6 @@ class _Engine:
                 batch: List[BatchCommand] = script._evaluate()
                 remote = await activity.send(batch, deadline=batch_deadline)
             except Exception as e:
-                print("-------Engine process_batches ---- EXCEPTION -----------------", type(e), e)
                 script = await batch_generator.athrow(*sys.exc_info())
                 continue
 
@@ -779,8 +767,6 @@ class _Engine:
 
             loop = asyncio.get_event_loop()
 
-            print("-------Engine process_batches ---- before wait for results")
-
             if script.wait_for_results:
                 # Block until the results are available
                 try:
@@ -791,10 +777,8 @@ class _Engine:
                     # Raise the exception in `batch_generator` (the `worker` coroutine).
                     # If the client code is able to handle it then we'll proceed with
                     # subsequent batches. Otherwise the worker finishes with error.
-                    print("-------Engine process_batches ---- exception", sys.exc_info())
                     script = await batch_generator.athrow(*sys.exc_info())
                 else:
-                    print("-------Engine process_batches ---- results", future_results)
                     script = await batch_generator.asend(future_results)
 
             else:

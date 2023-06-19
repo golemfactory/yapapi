@@ -57,7 +57,6 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
         await self._stack.enter_async_context(self.service_runner)
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        print("-------------------------------- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! CLUSTER aexit", self)
         await self._terminate(exc_type, exc_val, exc_tb)
 
     async def terminate(self):
