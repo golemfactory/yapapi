@@ -15,7 +15,7 @@ from yapapi.engine import Job, _Engine
 from yapapi.network import Network
 from yapapi.payload import Payload
 
-from .service import ServiceType
+from .service import ServiceType, ServiceSerialization
 from .service_runner import ServiceRunner
 
 DEFAULT_SERVICE_EXPIRATION: Final[timedelta] = timedelta(minutes=180)
@@ -69,6 +69,12 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
         for instance in self.instances:
             self.stop_instance(instance)
 
+    def suspend(self):
+        """Suspend all services in this :class:`Cluster`."""
+        self.service_runner.suspend()
+        for instance in self.instances:
+            self.suspend_instance(instance)
+
     async def _terminate(self, exc_type, exc_val, exc_tb):
         # NOTE: this might be called more then once (e.g. by `terminate()` followed by `__aexit__`),
         #  but it's harmless, so we don't care
@@ -113,8 +119,12 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
         return self.service_runner.instances.copy()
 
     def stop_instance(self, service: ServiceType):
-        """Stop the specific :class:`Service` instance belonging to this :class:`Cluster`."""
+        """Stop the specific :class:`Service` instance."""
         self.service_runner.stop_instance(service)
+
+    def suspend_instance(self, service: ServiceType):
+        """Suspend the specific :class:`Service` instance."""
+        self.service_runner.suspend_instance(service)
 
     def spawn_instances(
         self,
@@ -156,6 +166,23 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
             self.service_runner.add_instance(service, self.network, network_address)
             service._set_cluster(self)
 
+    def resume_instances(self,
+        serialized_instances: List[ServiceSerialization],
+    ):
+        for service_obj in serialized_instances:
+            service = self.service_class(**service_obj.get('params', dict()))
+            self.service_runner.add_existing_instance(
+                service,
+                service_obj.get("state"),
+                service_obj.get("agreement_id"),
+                service_obj.get("activity_id"),
+                self.network,
+                service_obj.get("network_node", dict()),
+            )
+            service._set_cluster(self)
+
+
+
     def _resolve_instance_params(
         self,
         num_instances: Optional[int],
@@ -180,3 +207,6 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
 
     def _default_expiration(self):
         return datetime.now(timezone.utc) + DEFAULT_SERVICE_EXPIRATION
+
+    def serialize_instances(self) -> List[ServiceSerialization]:
+        return [i.serialize() for i in self.instances]
