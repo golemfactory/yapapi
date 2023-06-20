@@ -338,17 +338,17 @@ class Network:
     ) -> "Network":
         network = cls(
             net_api,
-            ip=obj_dict.get("ip"),
-            owner_id=obj_dict.get("owner_id"),
-            owner_ip=obj_dict.get("owner_ip"),
+            ip=obj_dict["ip"],
+            owner_id=obj_dict["owner_id"],
+            owner_ip=obj_dict["owner_ip"],
             gateway=obj_dict.get("gateway"),
         )
-        network._network_id = obj_dict.get("_network_id")
-        network._state_machine.current_state_value = obj_dict.get("state")
-        if obj_dict.get("nodes"):
-            for _id, ip in obj_dict.get("nodes").items():
-                network._nodes[_id] = Node(network=network, node_id=_id, ip=ip)
+        network._network_id = obj_dict["_network_id"]
+        network._state_machine.current_state_value = obj_dict["state"]
+        for _id, ip in obj_dict["nodes"].items():
+            network._nodes[_id] = Node(network=network, node_id=_id, ip=ip)
         return network
+
 
 class NetworkSerialization(TypedDict):
     _network_id: str
@@ -358,6 +358,7 @@ class NetworkSerialization(TypedDict):
     owner_ip: str
     state: str
     nodes: Dict[str, str]
+
 
 class NetworkError(Exception):
     """Exception raised by :class:`Network` when an operation is not possible."""

@@ -39,7 +39,7 @@ from yapapi.network import Network
 from yapapi.payload import Payload
 from yapapi.props import com
 from yapapi.script import Script
-from yapapi.services import Cluster, ServiceType, ServiceSerialization
+from yapapi.services import Cluster, ServiceSerialization, ServiceType
 from yapapi.strategy import DecreaseScoreForUnconfirmedAgreement, LeastExpensiveLinearPayuMS
 
 if TYPE_CHECKING:
@@ -299,7 +299,9 @@ class Golem:
     async def __aexit__(self, *exc_info) -> Optional[bool]:
         return await self._stop_with_exc_info(*exc_info)
 
-    async def _stop_with_exc_info(self, *exc_info, wait_for_payments: bool = True) -> Optional[bool]:
+    async def _stop_with_exc_info(
+        self, *exc_info, wait_for_payments: bool = True
+    ) -> Optional[bool]:
         async with self._engine_state_lock:
             res = await self._engine.stop(*exc_info, wait_for_payments=wait_for_payments)
             await self._event_dispatcher.stop()

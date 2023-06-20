@@ -59,9 +59,7 @@ class Agreement(object):
     """Mid-level interface to the REST's Agreement model."""
 
     def __init__(
-        self, api: RequestorApi,
-        agreement_id: str,
-        subscription: Optional["Subscription"] = None
+        self, api: RequestorApi, agreement_id: str, subscription: Optional["Subscription"] = None
     ):
         self._api = api
         self._subscription = subscription

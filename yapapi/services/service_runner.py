@@ -6,10 +6,9 @@ import sys
 from types import TracebackType
 from typing import TYPE_CHECKING, AsyncContextManager, Dict, List, Optional, Set, Tuple, Type, Union
 
-from typing_extensions import Final
-
 import statemachine
 import statemachine.exceptions
+from typing_extensions import Final
 
 if TYPE_CHECKING:
     from yapapi.engine import Job
@@ -56,6 +55,7 @@ class ServiceRunnerState(statemachine.StateMachine):
 
     stop: statemachine.Transition = active.to(stopped)
     suspend: statemachine.Transition = active.to(suspended)
+
 
 class ServiceRunner(AsyncContextManager):
     def __init__(
@@ -119,10 +119,10 @@ class ServiceRunner(AsyncContextManager):
         self,
         service: ServiceType,
         state: str,
-        agreement_id: str,
-        activity_id: str,
+        agreement_id: Optional[str] = None,
+        activity_id: Optional[str] = None,
         network: Optional[Network] = None,
-        network_node_dict = Optional[Dict[str, str]],
+        network_node_dict: Optional[Dict[str, str]] = None,
     ) -> None:
         """Add an existing service to the collection of services managed by this ServiceRunner.
 
@@ -131,19 +131,26 @@ class ServiceRunner(AsyncContextManager):
 
         service.service_instance.service_state.current_state_value = state
 
-        if network_node_dict:
+        if network and network_node_dict:
             service._set_network_node(
                 Node(
                     network=network,
-                    node_id=network_node_dict.get("node_id"),
-                    ip=network_node_dict.get("ip")
+                    node_id=network_node_dict["node_id"],
+                    ip=network_node_dict["ip"],
                 )
             )
 
         self._instances.append(service)
 
         loop = asyncio.get_event_loop()
-        task = loop.create_task(self.spawn_instance(service, network, existing_agreement_id=agreement_id, existing_activity_id=activity_id))
+        task = loop.create_task(
+            self.spawn_instance(
+                service,
+                network,
+                existing_agreement_id=agreement_id,
+                existing_activity_id=activity_id,
+            )
+        )
         self._instance_tasks.append(task)
 
     def stop_instance(self, service: Service):
@@ -183,7 +190,7 @@ class ServiceRunner(AsyncContextManager):
         try:
             self._state.stop()
         except statemachine.exceptions.TransitionNotAllowed:
-            """The ServiceRunner is not running, """
+            """The ServiceRunner is not running,"""
             pass
 
         logger.debug("%s is shutting down... state: %s", self, self.state)
@@ -440,7 +447,6 @@ class ServiceRunner(AsyncContextManager):
         network_address: Optional[str] = None,
         existing_agreement_id: Optional[str] = None,
         existing_activity_id: Optional[str] = None,
-
     ) -> None:
         """Lifecycle the service within this :class:`ServiceRunner`.
 
@@ -448,6 +454,8 @@ class ServiceRunner(AsyncContextManager):
         :param network: a :class:`~yapapi.network.Network` this service should be attached to
         :param network_address: the address withing the network, ignored if network is None
             determining whether service should be reset and lifecycle should restart
+        :param existing_agreement_id: id of an existing agreement to attach the Service to
+        :param existing_activity_id: id of an existing activity to attach the Servide instance to
         """
 
         await self._ensure_payload_matches(service)
@@ -495,7 +503,9 @@ class ServiceRunner(AsyncContextManager):
                         await network.remove_node(work_context.provider_id)
                         service._clear_network_node()
                     await self._job.engine.accept_payments_for_agreement(self._job.id, agreement.id)
-                    await self._job.agreements_pool.release_agreement(agreement.id, allow_reuse=False)
+                    await self._job.agreements_pool.release_agreement(
+                        agreement.id, allow_reuse=False
+                    )
 
                     # keep activity?
                     return False
@@ -515,7 +525,7 @@ class ServiceRunner(AsyncContextManager):
                 _worker,
                 on_agreement_ready,
                 existing_agreement_id=existing_agreement_id,
-                existing_activity_id=existing_activity_id
+                existing_activity_id=existing_activity_id,
             )
             if not task:
                 continue

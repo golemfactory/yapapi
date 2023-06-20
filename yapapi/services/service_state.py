@@ -47,9 +47,9 @@ class ServiceState(statemachine.StateMachine):
 
     suspended = statemachine.State("suspended")
     """This service instance has been suspended.
-    
-    Its handlers should not be processed by the ServiceRunner anymore but no resultant changes 
-    to the activity itself should be made. 
+
+    Its handlers should not be processed by the ServiceRunner anymore but no resultant changes
+    to the activity itself should be made.
     """
 
     # transitions

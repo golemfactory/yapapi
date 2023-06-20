@@ -13,9 +13,9 @@ from yapapi.payload import vm
 from yapapi.props import com
 from yapapi.services import Service, ServiceState
 from yapapi.strategy import (
+    PROP_DEBIT_NOTE_INTERVAL_SEC,
     DecreaseScoreForUnconfirmedAgreement,
     LeastExpensiveLinearPayuMS,
-    PROP_DEBIT_NOTE_INTERVAL_SEC,
     PropValueRange,
 )
 
@@ -79,7 +79,10 @@ class HttpService(HttpProxyService):
         yield script
 
     def _serialize_init_params(self):
-        return {"db_address": self._db_address, "db_port": self._db_port, }
+        return {
+            "db_address": self._db_address,
+            "db_port": self._db_port,
+        }
 
 
 class DbService(Service):
@@ -108,7 +111,6 @@ class MyMarketStrategy(LeastExpensiveLinearPayuMS):
 
 
 async def main(subnet_tag, payment_driver, payment_network, port):
-
     base_strategy = MyMarketStrategy(
         max_fixed_price=Decimal("1.0"),
         max_price_for={com.Counter.CPU: Decimal("0.2"), com.Counter.TIME: Decimal("0.1")},
@@ -186,7 +188,7 @@ async def main(subnet_tag, payment_driver, payment_network, port):
     await proxy.stop()
     print(f"{TEXT_COLOR_CYAN}HTTP server stopped{TEXT_COLOR_DEFAULT}")
 
-    print("=================================================================== SERIALIZING AND DROPPING CURRENT STATE")
+    print("=============================================== SERIALIZING AND DROPPING CURRENT STATE")
 
     network_serialized = network.serialize()
     db_serialized = db_cluster.serialize_instances()
@@ -198,22 +200,21 @@ async def main(subnet_tag, payment_driver, payment_network, port):
     print(f"{TEXT_COLOR_CYAN}waiting {secs} seconds...{TEXT_COLOR_DEFAULT}")
     await asyncio.sleep(secs)
 
-    print("=================================================================== STOPPING GOLEM ENGINE")
+    print("=============================================== STOPPING GOLEM ENGINE")
 
     await golem.stop(wait_for_payments=False)
 
     print(f"{TEXT_COLOR_CYAN}waiting {secs} seconds...{TEXT_COLOR_DEFAULT}")
     await asyncio.sleep(secs)
 
-
-    print("=================================================================== SERIALIZED STATE: ")
+    print("=============================================== SERIALIZED STATE: ")
 
     print(json.dumps([network_serialized, db_serialized, web_serialized], indent=4))
 
     print(f"{TEXT_COLOR_CYAN}waiting {secs} seconds...{TEXT_COLOR_DEFAULT}")
     await asyncio.sleep(secs)
 
-    print("=================================================================== RESTARTING THE ENGINE AND THE SERVICES")
+    print("=============================================== RESTARTING THE ENGINE AND THE SERVICES")
 
     golem = Golem(
         budget=1.0,
@@ -225,7 +226,6 @@ async def main(subnet_tag, payment_driver, payment_network, port):
     await golem.start()
 
     print_env_info(golem)
-
 
     network = Network.deserialize(golem._engine._net_api, network_serialized)
 
@@ -262,9 +262,7 @@ async def main(subnet_tag, payment_driver, payment_network, port):
     db_cluster.stop()
 
     cnt = 0
-    while cnt < 3 and any(
-            s.is_available for s in web_cluster.instances + db_cluster.instances
-    ):
+    while cnt < 3 and any(s.is_available for s in web_cluster.instances + db_cluster.instances):
         print(web_cluster.instances + db_cluster.instances)
         await asyncio.sleep(5)
         cnt += 1

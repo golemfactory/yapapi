@@ -395,9 +395,8 @@ class _Engine:
             invoice_manager.add_invoice(invoice)
             await self._agreement_payment_attempt(invoice.agreement_id)
             if self._payment_closing and not (
-                    self._await_payments and invoice_manager.has_payable_unpaid_agreements
+                self._await_payments and invoice_manager.has_payable_unpaid_agreements
             ):
-
                 break
 
     async def accept_payments_for_agreement(self, job_id: str, agreement_id: str) -> None:
@@ -638,9 +637,7 @@ class _Engine:
 
     async def fetch_activity(self, activity_id: str) -> Activity:
         """Create an activity for given `agreement_id`."""
-        return await self._activity_api.use_activity(
-            activity_id, stream_events=self._stream_output
-        )
+        return await self._activity_api.use_activity(activity_id, stream_events=self._stream_output)
 
     async def start_worker(
         self,
@@ -650,6 +647,22 @@ class _Engine:
         existing_agreement_id: Optional[str] = None,
         existing_activity_id: Optional[str] = None,
     ) -> Optional[asyncio.Task]:
+        """Start a single worker (activity) within a Job.
+
+        :param job: :class:`Job` within which the worker is launched.
+        :param run_worker: an async function which receives the work context and performs
+            any neccessary operations on it. If the function returns `True`, the activity
+            respective :class:`WorkContext` won't be terminated after the worker finishes.
+        :param on_agreement_ready: an optional callable to be called when the agreement is
+            created or initialized
+        :param existing_agreement_id: optional identifier of an existing agreement.
+            if given, the engine will attempt to use this agreement to launch the activity,
+            instead of signing a new one.
+        :param existing_activity_id: optional identifier of an existing activity.
+            if given, the engine won't launch a new activity and will try to reuse an existing one
+            instead.
+        """
+
         loop = asyncio.get_event_loop()
 
         async def worker_task(agreement: Agreement):
@@ -680,7 +693,7 @@ class _Engine:
                     "Activity init failed with error: %s. agreement: %s, existing activity id: %s",
                     e,
                     agreement.id,
-                    existing_activity_id
+                    existing_activity_id,
                 )
                 job.emit(events.ActivityCreateFailed, agreement=agreement, exc_info=sys.exc_info())
                 raise
@@ -729,10 +742,7 @@ class _Engine:
     ) -> None:
         """Send command batches produced by `batch_generator` to `activity`."""
 
-        try:
-            script: Script = await batch_generator.__anext__()
-        except Exception as e:
-            raise
+        script: Script = await batch_generator.__anext__()
 
         while True:
             batch_deadline = (
@@ -744,6 +754,7 @@ class _Engine:
                 batch: List[BatchCommand] = script._evaluate()
                 remote = await activity.send(batch, deadline=batch_deadline)
             except Exception as e:
+                logger.error("Error executing script %s: %s(%s).", script, type(e), str(e))
                 script = await batch_generator.athrow(*sys.exc_info())
                 continue
 
@@ -786,7 +797,7 @@ class _Engine:
                 future_results = loop.create_task(get_batch_results())
                 script = await batch_generator.asend(future_results)
 
-    def  recycle_offer(self, offer: OfferProposal) -> None:
+    def recycle_offer(self, offer: OfferProposal) -> None:
         """Mark given offer as a fresh one, regardless of its previous processing.
 
         This offer was already processed, but something happened and we should treat it as a
@@ -868,7 +879,9 @@ class Job:
         self.expiration_time: datetime = expiration_time
         self.payload: Payload = payload
 
-        self.agreements_pool = AgreementsPool(self.emit, self.engine.recycle_offer, market_api=self.engine._market_api)
+        self.agreements_pool = AgreementsPool(
+            self.emit, self.engine.recycle_offer, market_api=self.engine._market_api
+        )
         self.finished = asyncio.Event()
 
         self._demand_builder: Optional[DemandBuilder] = None

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from yapapi import events
 from yapapi.props import Activity, NodeInfo
-from yapapi.rest.market import Agreement, AgreementDetails, ApiException, OfferProposal, Market
+from yapapi.rest.market import Agreement, AgreementDetails, ApiException, Market, OfferProposal
 
 logger = logging.getLogger(__name__)
 
