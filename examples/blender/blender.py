@@ -23,21 +23,7 @@ from utils import (
 )
 
 
-async def main(
-    subnet_tag, min_cpu_threads, image_tag, image_use_https, payment_driver=None, payment_network=None, show_usage=False
-):
-    package = await vm.repo(
-        image_tag=image_tag,
-        image_use_https=image_use_https,
-        # only run on provider nodes that have more than 0.5gb of RAM available
-        min_mem_gib=0.5,
-        # only run on provider nodes that have more than 2gb of storage space available
-        min_storage_gib=2.0,
-        # only run on provider nodes which a certain number of CPU threads (logical CPU cores)
-        #  available
-        min_cpu_threads=min_cpu_threads,
-    )
-
+async def start(subnet_tag, package, payment_driver=None, payment_network=None, show_usage=False):
     async def worker(ctx: WorkContext, tasks):
         script_dir = pathlib.Path(__file__).resolve().parent
         scene_path = str(script_dir / "cubes.blend")
@@ -145,6 +131,43 @@ async def main(
         )
 
 
+async def main(args):
+    # Use golem/blender:latest image tag, you can overwrite this option with --image-tag or --image-hash
+    default_image_tag = "golem/blender:latest"
+    if args.image_url and args.image_tag:
+        raise ValueError("Only one of --image-url and --image-tag can be specified")
+    if args.image_url and not args.image_hash:
+        raise ValueError("--image-url requires --image-hash to be specified")
+    if args.image_hash and args.image_tag:
+        raise ValueError("Only one of --image-hash and --image-tag can be specified")
+    elif args.image_hash:
+        image_tag = None
+    else:
+        image_tag = args.image_tag or default_image_tag
+
+    # resolve image by tag, hash or direct link
+    package = await vm.repo(
+        image_tag=image_tag,
+        image_hash=args.image_hash,
+        image_url=args.image_url,
+        image_use_https=args.image_use_https,
+        # only run on provider nodes that have more than 0.5gb of RAM available
+        min_mem_gib=0.5,
+        # only run on provider nodes that have more than 2gb of storage space available
+        min_storage_gib=2.0,
+        # only run on provider nodes which a certain number of CPU threads (logical CPU cores)
+        #  available
+        min_cpu_threads=args.min_cpu_threads,
+    )
+
+    await start(
+        subnet_tag=args.subnet_tag,
+        package=package,
+        payment_driver=args.payment_driver,
+        payment_network=args.payment_network,
+        show_usage=args.show_usage,
+    )
+
 if __name__ == "__main__":
     parser = build_parser("Render a Blender scene")
     parser.add_argument("--show-usage", action="store_true", help="show activity usage and cost")
@@ -158,16 +181,7 @@ if __name__ == "__main__":
     parser.set_defaults(log_file=f"blender-yapapi-{now}.log")
     args = parser.parse_args()
 
-    image_tag = args.image_tag or "golem/blender:latest"
     run_golem_example(
-        main(
-            subnet_tag=args.subnet_tag,
-            min_cpu_threads=args.min_cpu_threads,
-            image_tag=image_tag,
-            image_use_https=args.image_use_https,
-            payment_driver=args.payment_driver,
-            payment_network=args.payment_network,
-            show_usage=args.show_usage,
-        ),
+        main(args=args),
         log_file=args.log_file,
     )

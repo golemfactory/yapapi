@@ -1,3 +1,4 @@
+import logging
 import abc
 import os
 from typing import Optional
@@ -7,6 +8,8 @@ from dataclasses import dataclass
 
 from yapapi.payload import Payload
 from yapapi.config import ApiConfig
+
+logger = logging.getLogger(__name__)
 
 class PackageException(Exception):
     """Exception raised on any problems related to the package repository."""
@@ -47,7 +50,7 @@ async def resolve_package_url(repo_url: str,
         if image_tag:
             url_params = f"tag={image_tag}"
         else:
-            url_params = f"hash={image_tag}"
+            url_params = f"hash={image_hash}"
 
         if is_dev:
             # if dev, skip usage statistics, pass dev option for statistics
@@ -58,7 +61,14 @@ async def resolve_package_url(repo_url: str,
 
         resp = await client.get(f"{repo_url}/v1/image/info?{url_params}")
         if resp.status != 200:
-            resp.raise_for_status()
+            try:
+                text = await resp.text()
+            except Exception as ex:
+                logger.error(f"Failed to get body of response: {ex}")
+                text = "N/A"
+
+            logger.error(f"Failed to resolve image URL: {resp.status} {text}")
+            raise Exception(f"Failed to resolve image URL: {resp.status} {text}")
         json_resp = await resp.json()
         if image_use_https:
             image_url = json_resp["https"]

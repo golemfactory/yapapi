@@ -64,6 +64,12 @@ def build_parser(description: str) -> argparse.ArgumentParser:
         "--image-tag", help="Image tag to use when resolving image url from Golem Registry"
     )
     parser.add_argument(
+        "--image-hash", help="Image hash to use when resolving image url from Golem Registry"
+    )
+    parser.add_argument(
+        "--image-url", help="Direct image url to use instead of resolving from Golem Registry"
+    )
+    parser.add_argument(
         "--image-use-https", help="Whether to use https when resolving image url from Golem Registry",
         action="store_true"
     )
