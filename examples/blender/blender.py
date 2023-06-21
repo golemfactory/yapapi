@@ -26,10 +26,8 @@ from utils import (
 async def main(
     subnet_tag, min_cpu_threads, image_tag, payment_driver=None, payment_network=None, show_usage=False
 ):
-    image_hash, image_url = resolve_image_hash_and_url(image_tag)
     package = await vm.repo(
-        image_url=image_url,
-        image_hash=image_hash,
+        image_tag=image_tag,
         # only run on provider nodes that have more than 0.5gb of RAM available
         min_mem_gib=0.5,
         # only run on provider nodes that have more than 2gb of storage space available

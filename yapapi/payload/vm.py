@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from enum import Enum
 from typing import List, Optional
@@ -7,6 +8,8 @@ from dataclasses import dataclass
 from dns.exception import DNSException
 from typing_extensions import Final
 
+from yapapi.config import ApiConfig
+
 if sys.version_info > (3, 8):
     from typing import Literal
 else:
@@ -14,20 +17,11 @@ else:
 
 from srvresolver.srv_resolver import SRVRecord, SRVResolver
 
-from yapapi.payload.package import (
-    Package,
-    PackageException,
-    resolve_package_repo_url,
-    resolve_package_url,
-)
+from yapapi.payload.package import Package, resolve_package_url, check_package_url
 from yapapi.props import base as prop_base
 from yapapi.props import inf
 from yapapi.props.builder import DemandBuilder, Model
 from yapapi.props.inf import INF_CORES, RUNTIME_VM, ExeUnitManifestRequest, ExeUnitRequest, InfBase
-
-_DEFAULT_REPO_SRV: Final[str] = "_girepo._tcp.dev.golem.network"
-_FALLBACK_REPO_URL: Final[str] = "http://girepo.dev.golem.network:8000"
-_DEFAULT_TIMEOUT_SECONDS: Final[int] = 10
 
 logger = logging.getLogger(__name__)
 
@@ -158,25 +152,22 @@ async def manifest(
 
 @dataclass
 class _VmPackage(Package):
-    repo_url: str
-    image_hash: str
-    image_url: Optional[str]
+    image_url: str
     constraints: _VmConstraints
 
     async def resolve_url(self) -> str:
-        if not self.image_url:
-            return await resolve_package_repo_url(self.repo_url, self.image_hash)
-        return await resolve_package_url(self.image_url, self.image_hash)
+        # trivial implementation - already resolved before creation of _VmPackage
+        return self.image_url
 
     async def decorate_demand(self, demand: DemandBuilder):
-        image_url = await self.resolve_url()
         demand.ensure(str(self.constraints))
-        demand.add(VmRequest(package_url=image_url, package_format=VmPackageFormat.GVMKIT_SQUASH))
+        demand.add(VmRequest(package_url=self.image_url, package_format=VmPackageFormat.GVMKIT_SQUASH))
 
 
 async def repo(
     *,
-    image_hash: str,
+    image_hash: Optional[str] = None,
+    image_tag: Optional[str] = None,
     image_url: Optional[str] = None,
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,
@@ -187,6 +178,7 @@ async def repo(
     Build a reference to application package.
 
     :param image_hash: hash of the package's image
+    :param image_tag: Tag of the package to resolve from Golem Registry
     :param image_url: URL of the package's image
     :param min_mem_gib: minimal memory required to execute application code
     :param min_storage_gib: minimal disk storage to execute tasks
@@ -230,40 +222,25 @@ async def repo(
         )
 
     """
+
+    repo_url = ApiConfig().repository_url
+    print("USING repo_url", repo_url)
+    if not image_tag and not image_hash:
+        raise ValueError("Either image_tag or image_hash must be provided")
+    elif image_tag and image_url:
+        raise ValueError("You cannot override image_url when using image_tag, use image_hash instead")
+    elif not image_url and image_hash:
+        resolved_image_url = await resolve_package_url(repo_url, image_hash=image_hash)
+    elif not image_url and image_tag:
+        resolved_image_url = await resolve_package_url(repo_url, image_tag=image_tag)
+    elif image_hash and image_url:
+        resolved_image_url = await check_package_url(image_url, image_hash)
+    else:
+        raise ValueError("Invalid combination of arguments")
+
     capabilities = capabilities or list()
     return _VmPackage(
-        repo_url=resolve_repo_srv(_DEFAULT_REPO_SRV),
-        image_hash=image_hash,
-        image_url=image_url,
+        image_url=resolved_image_url,
         constraints=_VmConstraints(min_mem_gib, min_storage_gib, min_cpu_threads, capabilities),
     )
 
-
-def resolve_repo_srv(
-    repo_srv: str, fallback_url=_FALLBACK_REPO_URL, timeout=_DEFAULT_TIMEOUT_SECONDS
-) -> str:
-    """
-    Get the url of the package repository based on its SRV record address.
-
-    :param repo_srv: the SRV domain name
-    :param fallback_url: temporary hardcoded fallback url in case there's a problem resolving SRV
-    :param timeout: socket connection timeout in seconds
-    :return: the url of the package repository containing the port
-    :raises: PackageException if no valid service could be reached
-    """
-    try:
-        try:
-            srv: Optional[SRVRecord] = SRVResolver.resolve_random(repo_srv, timeout=timeout)
-        except DNSException as e:
-            raise PackageException(f"Could not resolve Golem package repository address [{e}].")
-
-        if not srv:
-            raise PackageException("Golem package repository is currently unavailable.")
-    except Exception as e:
-        # this is a temporary fallback for a problem resolving the SRV record
-        logger.warning(
-            "Problem resolving %s, falling back to %s, exception: %s", repo_srv, fallback_url, e
-        )
-        return fallback_url
-
-    return f"http://{srv.host}:{srv.port}"
