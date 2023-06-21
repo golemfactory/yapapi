@@ -169,6 +169,7 @@ async def repo(
     image_hash: Optional[str] = None,
     image_tag: Optional[str] = None,
     image_url: Optional[str] = None,
+    image_use_https: bool = False,
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,
     min_cpu_threads: int = 1,
@@ -180,6 +181,7 @@ async def repo(
     :param image_hash: hash of the package's image
     :param image_tag: Tag of the package to resolve from Golem Registry
     :param image_url: URL of the package's image
+    :param image_use_https: whether to resolve to HTTPS or HTTP link (some providers do not support https)
     :param min_mem_gib: minimal memory required to execute application code
     :param min_storage_gib: minimal disk storage to execute tasks
     :param min_cpu_threads: minimal available logical CPU cores
@@ -224,19 +226,23 @@ async def repo(
     """
 
     repo_url = ApiConfig().repository_url
-    print("USING repo_url", repo_url)
     if not image_tag and not image_hash:
         raise ValueError("Either image_tag or image_hash must be provided")
     elif image_tag and image_url:
         raise ValueError("You cannot override image_url when using image_tag, use image_hash instead")
     elif not image_url and image_hash:
-        resolved_image_url = await resolve_package_url(repo_url, image_hash=image_hash)
+        logger.info(f"Resolving using {repo_url} by image hash {image_hash}")
+        resolved_image_url = await resolve_package_url(repo_url, image_hash=image_hash, image_use_https=image_use_https)
     elif not image_url and image_tag:
-        resolved_image_url = await resolve_package_url(repo_url, image_tag=image_tag)
+        logger.info(f"Resolving using {repo_url} by image tag {image_tag}")
+        resolved_image_url = await resolve_package_url(repo_url, image_tag=image_tag, image_use_https=image_use_https)
     elif image_hash and image_url:
+        logger.info(f"Checking if image url is correct for {image_url} and {image_hash}")
         resolved_image_url = await check_package_url(image_url, image_hash)
     else:
         raise ValueError("Invalid combination of arguments")
+
+    logger.info(f"Resolved image full link: {resolved_image_url}")
 
     capabilities = capabilities or list()
     return _VmPackage(

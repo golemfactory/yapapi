@@ -24,10 +24,11 @@ from utils import (
 
 
 async def main(
-    subnet_tag, min_cpu_threads, image_tag, payment_driver=None, payment_network=None, show_usage=False
+    subnet_tag, min_cpu_threads, image_tag, image_use_https, payment_driver=None, payment_network=None, show_usage=False
 ):
     package = await vm.repo(
         image_tag=image_tag,
+        image_use_https=image_use_https,
         # only run on provider nodes that have more than 0.5gb of RAM available
         min_mem_gib=0.5,
         # only run on provider nodes that have more than 2gb of storage space available
@@ -157,12 +158,13 @@ if __name__ == "__main__":
     parser.set_defaults(log_file=f"blender-yapapi-{now}.log")
     args = parser.parse_args()
 
-    image_tag = args.image_tag or "yapapi/blender:latest"
+    image_tag = args.image_tag or "golem/blender:latest"
     run_golem_example(
         main(
             subnet_tag=args.subnet_tag,
             min_cpu_threads=args.min_cpu_threads,
             image_tag=image_tag,
+            image_use_https=args.image_use_https,
             payment_driver=args.payment_driver,
             payment_network=args.payment_network,
             show_usage=args.show_usage,

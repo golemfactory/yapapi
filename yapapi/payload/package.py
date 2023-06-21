@@ -30,7 +30,10 @@ async def check_package_url(image_url: str, image_hash: str) -> str:
         return f"hash:sha3:{image_hash}:{image_url}"
 
 
-async def resolve_package_url(repo_url: str, image_tag: Optional[str] = None, image_hash: Optional[str] = None) -> str:
+async def resolve_package_url(repo_url: str,
+                              image_tag: Optional[str] = None,
+                              image_hash: Optional[str] = None,
+                              image_use_https: bool = False) -> str:
     async with aiohttp.ClientSession() as client:
         is_dev = os.getenv("GOLEM_DEV_MODE", False)
         is_https = os.getenv("YAPAPI_RESOLVE_USING_HTTPS", False)
@@ -57,7 +60,7 @@ async def resolve_package_url(repo_url: str, image_tag: Optional[str] = None, im
         if resp.status != 200:
             resp.raise_for_status()
         json_resp = await resp.json()
-        if is_https:
+        if image_use_https:
             image_url = json_resp["https"]
         else:
             image_url = json_resp["http"]

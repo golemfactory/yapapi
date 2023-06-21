@@ -58,10 +58,14 @@ def build_parser(description: str) -> argparse.ArgumentParser:
         "--payment-driver", "--driver", help="Payment driver name, for example `erc20`"
     )
     parser.add_argument(
-        "--payment-network", "--network", help="Payment network name, for example `rinkeby`"
+        "--payment-network", "--network", help="Payment network name, for example `goerli`"
     )
     parser.add_argument(
-        "--image-tag", help="Image tag from golem registry"
+        "--image-tag", help="Image tag to use when resolving image url from Golem Registry"
+    )
+    parser.add_argument(
+        "--image-use-https", help="Whether to use https when resolving image url from Golem Registry",
+        action="store_true"
     )
     parser.add_argument("--subnet-tag", help="Subnet name, for example `public`")
     parser.add_argument(
