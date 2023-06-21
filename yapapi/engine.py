@@ -165,6 +165,7 @@ class _Engine:
         self._num_payable_debit_notes: Dict[ActivityId, int] = defaultdict(int)
         self._activity_created_at: Dict[ActivityId, datetime] = dict()
         self._payment_closing: bool = False
+        self._await_payments: bool = True
 
         self._process_invoices_job: Optional[asyncio.Task] = None
 
@@ -229,11 +230,12 @@ class _Engine:
     def _emit_event(self, event: events.Event) -> None:
         self._event_consumer(event)
 
-    async def stop(self, *exc_info) -> Optional[bool]:
+    async def stop(self, *exc_info, wait_for_payments: bool = True) -> Optional[bool]:
         """Stop the engine.
 
         This *must* be called at the end of the work, by the Engine user.
         """
+        self._await_payments = wait_for_payments
         if exc_info[0] is not None:
             self.emit(events.ExecutionInterrupted, exc_info=exc_info)
         return await self._stack.__aexit__(None, None, None)
@@ -303,6 +305,7 @@ class _Engine:
 
         # Some generators created by `execute_tasks` may still have elements;
         # if we don't close them now, their jobs will never be marked as finished.
+
         for gen in self._generators:
             await gen.aclose()
 
@@ -320,7 +323,7 @@ class _Engine:
 
         # Wait for some time for invoices for unpaid agreements,
         # then cancel the invoices service
-        if self._process_invoices_job:
+        if self._process_invoices_job and self._await_payments:
             unpaid_agreements = self._invoice_manager.payable_unpaid_agreement_ids
             if unpaid_agreements:
                 logger.info(
@@ -386,11 +389,14 @@ class _Engine:
 
     async def _process_invoices(self) -> None:
         """Process incoming invoices."""
+
         invoice_manager = self._invoice_manager
         async for invoice in self._payment_api.incoming_invoices():
             invoice_manager.add_invoice(invoice)
             await self._agreement_payment_attempt(invoice.agreement_id)
-            if self._payment_closing and not invoice_manager.has_payable_unpaid_agreements:
+            if self._payment_closing and not (
+                self._await_payments and invoice_manager.has_payable_unpaid_agreements
+            ):
                 break
 
     async def accept_payments_for_agreement(self, job_id: str, agreement_id: str) -> None:
@@ -629,12 +635,34 @@ class _Engine:
             agreement_id, stream_events=self._stream_output
         )
 
+    async def fetch_activity(self, activity_id: str) -> Activity:
+        """Create an activity for given `agreement_id`."""
+        return await self._activity_api.use_activity(activity_id, stream_events=self._stream_output)
+
     async def start_worker(
         self,
         job: "Job",
-        run_worker: Callable[[WorkContext], Awaitable],
+        run_worker: Callable[[WorkContext], Awaitable[bool]],
         on_agreement_ready: Optional[Callable[[Agreement], None]] = None,
+        existing_agreement_id: Optional[str] = None,
+        existing_activity_id: Optional[str] = None,
     ) -> Optional[asyncio.Task]:
+        """Start a single worker (activity) within a Job.
+
+        :param job: :class:`Job` within which the worker is launched.
+        :param run_worker: an async function which receives the work context and performs
+            any neccessary operations on it. If the function returns `True`, the activity
+            respective :class:`WorkContext` won't be terminated after the worker finishes.
+        :param on_agreement_ready: an optional callable to be called when the agreement is
+            created or initialized
+        :param existing_agreement_id: optional identifier of an existing agreement.
+            if given, the engine will attempt to use this agreement to launch the activity,
+            instead of signing a new one.
+        :param existing_activity_id: optional identifier of an existing activity.
+            if given, the engine won't launch a new activity and will try to reuse an existing one
+            instead.
+        """
+
         loop = asyncio.get_event_loop()
 
         async def worker_task(agreement: Agreement):
@@ -645,6 +673,9 @@ class _Engine:
             """
             if on_agreement_ready:
                 on_agreement_ready(agreement)
+
+            logger.debug("Starting worker task on agreement %s", agreement)
+
             self._all_agreements[agreement.id] = agreement
             self._invoice_manager.add_agreement(job, agreement)
 
@@ -653,8 +684,17 @@ class _Engine:
             activity_start_time = datetime.now()
 
             try:
-                activity = await self.create_activity(agreement.id)
-            except Exception:
+                if existing_activity_id:
+                    activity = await self.fetch_activity(existing_activity_id)
+                else:
+                    activity = await self.create_activity(agreement.id)
+            except Exception as e:
+                logger.error(
+                    "Activity init failed with error: %s. agreement: %s, existing activity id: %s",
+                    e,
+                    agreement.id,
+                    existing_activity_id,
+                )
                 job.emit(events.ActivityCreateFailed, agreement=agreement, exc_info=sys.exc_info())
                 raise
 
@@ -663,15 +703,34 @@ class _Engine:
 
             self._activity_created_at[activity.id] = activity_start_time
 
-            async with activity:
+            allow_agreement_reuse = True
+            keep_activity = False
+
+            try:
                 self.accept_debit_notes_for_agreement(job.id, agreement.id)
-                await run_worker(work_context)
+                keep_activity = await run_worker(work_context)
+            except Exception:
+                logger.debug(
+                    "Error while working on activity %s : [%s]",
+                    activity.id,
+                    sys.exc_info(),
+                )
+                allow_agreement_reuse = False
+            finally:
+                logger.debug("Finished working with activity %s", activity.id)
+
+            if not keep_activity:
+                await activity.destroy()
                 # Providers may issue debit notes after activity ends.
                 # This will prevent terminating agreements when this happens.
                 self._activity_created_at.pop(activity.id, None)
 
+                # and release the agreement
+                await job.agreements_pool.release_agreement(agreement.id, allow_agreement_reuse)
+
         return await job.agreements_pool.use_agreement(
-            lambda agreement: loop.create_task(worker_task(agreement))
+            lambda agreement: loop.create_task(worker_task(agreement)),
+            agreement_id=existing_agreement_id,
         )
 
     async def process_batches(
@@ -694,7 +753,8 @@ class _Engine:
                 await script._before()
                 batch: List[BatchCommand] = script._evaluate()
                 remote = await activity.send(batch, deadline=batch_deadline)
-            except Exception:
+            except Exception as e:
+                logger.error("Error executing script %s: %s(%s).", script, type(e), str(e))
                 script = await batch_generator.athrow(*sys.exc_info())
                 continue
 
@@ -819,7 +879,9 @@ class Job:
         self.expiration_time: datetime = expiration_time
         self.payload: Payload = payload
 
-        self.agreements_pool = AgreementsPool(self.emit, self.engine.recycle_offer)
+        self.agreements_pool = AgreementsPool(
+            self.emit, self.engine.recycle_offer, market_api=self.engine._market_api
+        )
         self.finished = asyncio.Event()
 
         self._demand_builder: Optional[DemandBuilder] = None
