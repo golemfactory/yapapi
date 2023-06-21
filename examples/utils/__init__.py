@@ -1,11 +1,9 @@
 """Utilities for yapapi example scripts."""
 import argparse
 import asyncio
-import json
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.request import urlopen
 
 import colorama  # type: ignore
 
@@ -25,7 +23,6 @@ TEXT_COLOR_WHITE = "\033[37;1m"
 TEXT_COLOR_DEFAULT = "\033[0m"
 
 colorama.init()
-
 
 
 def build_parser(description: str) -> argparse.ArgumentParser:
