@@ -248,7 +248,7 @@ class AgreementsPool:
         """Terminate all agreements."""
 
         async with self._lock:
-            for agreement_id, agreement in self._agreements.items():
+            for agreement_id in frozenset(self._agreements):
                 await self._terminate_agreement(agreement_id, reason)
 
     async def on_agreement_terminated(self, agr_id: str, reason: dict) -> None:
