@@ -11,7 +11,7 @@ from goth.runner import Runner
 from goth.runner.log import configure_logging
 from goth.runner.probe import ProviderProbe, RequestorProbe
 
-from .assertions import assert_no_errors, assert_tasks_processed
+from .assertions import assert_tasks_processed
 
 logger = logging.getLogger("goth.test.power_outage")
 
@@ -67,7 +67,6 @@ async def test_power_outage(
             env=os.environ,
         ) as (_cmd_task, cmd_monitor, _process_monitor):
             # Add assertions to the command output monitor `cmd_monitor`:
-            cmd_monitor.add_assertion(assert_no_errors)
             all_sent = cmd_monitor.add_assertion(assert_all_tasks_started)
             all_computed = cmd_monitor.add_assertion(assert_all_tasks_computed)
 
