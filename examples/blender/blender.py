@@ -131,7 +131,8 @@ async def start(subnet_tag, package, payment_driver=None, payment_network=None, 
 
 
 async def create_package(args, default_image_tag):
-    # Use golem/blender:latest image tag, you can overwrite this option with --image-tag or --image-hash
+    # Use golem/blender:latest image tag,
+    # you can overwrite this option with --image-tag or --image-hash
     if args.image_url and args.image_tag:
         raise ValueError("Only one of --image-url and --image-tag can be specified")
     if args.image_url and not args.image_hash:
@@ -191,7 +192,8 @@ if __name__ == "__main__":
         "--image-url", help="Direct image url to use instead of resolving from Golem Registry"
     )
     parser.add_argument(
-        "--image-use-https", help="Whether to use https when resolving image url from Golem Registry",
+        "--image-use-https",
+        help="Whether to use https when resolving image url from Golem Registry",
         action="store_true"
     )
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")

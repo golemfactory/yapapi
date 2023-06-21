@@ -1,23 +1,19 @@
 import logging
-import os
 import sys
+
 from enum import Enum
+
 from typing import List, Optional
 
 from dataclasses import dataclass
-from dns.exception import DNSException
-from typing_extensions import Final
-
-from yapapi.config import ApiConfig
 
 if sys.version_info > (3, 8):
     from typing import Literal
 else:
     from typing_extensions import Literal
 
-from srvresolver.srv_resolver import SRVRecord, SRVResolver
-
-from yapapi.payload.package import Package, resolve_package_url, check_package_url
+from yapapi.config import ApiConfig
+from yapapi.payload.package import Package, check_package_url, resolve_package_url
 from yapapi.props import base as prop_base
 from yapapi.props import inf
 from yapapi.props.builder import DemandBuilder, Model
@@ -161,7 +157,8 @@ class _VmPackage(Package):
 
     async def decorate_demand(self, demand: DemandBuilder):
         demand.ensure(str(self.constraints))
-        demand.add(VmRequest(package_url=self.image_url, package_format=VmPackageFormat.GVMKIT_SQUASH))
+        demand.add(VmRequest(package_url=self.image_url,
+                             package_format=VmPackageFormat.GVMKIT_SQUASH))
 
 
 async def repo(
@@ -181,7 +178,7 @@ async def repo(
     :param image_hash: hash of the package's image
     :param image_tag: Tag of the package to resolve from Golem Registry
     :param image_url: URL of the package's image
-    :param image_use_https: whether to resolve to HTTPS or HTTP link (some providers do not support https)
+    :param image_use_https: whether to resolve to HTTPS or HTTP when using Golem Registry
     :param min_mem_gib: minimal memory required to execute application code
     :param min_storage_gib: minimal disk storage to execute tasks
     :param min_cpu_threads: minimal available logical CPU cores
@@ -229,13 +226,18 @@ async def repo(
     if not image_tag and not image_hash:
         raise ValueError("Either image_tag or image_hash must be provided")
     elif image_tag and image_url:
-        raise ValueError("You cannot override image_url when using image_tag, use image_hash instead")
+        raise ValueError(
+            "You cannot override image_url when using image_tag, use image_hash instead")
     elif not image_url and image_hash:
         logger.info(f"Resolving using {repo_url} by image hash {image_hash}")
-        resolved_image_url = await resolve_package_url(repo_url, image_hash=image_hash, image_use_https=image_use_https)
+        resolved_image_url = await resolve_package_url(repo_url,
+                                                       image_hash=image_hash,
+                                                       image_use_https=image_use_https)
     elif not image_url and image_tag:
         logger.info(f"Resolving using {repo_url} by image tag {image_tag}")
-        resolved_image_url = await resolve_package_url(repo_url, image_tag=image_tag, image_use_https=image_use_https)
+        resolved_image_url = await resolve_package_url(repo_url,
+                                                       image_tag=image_tag,
+                                                       image_use_https=image_use_https)
     elif image_hash and image_url:
         logger.info(f"Checking if image url is correct for {image_url} and {image_hash}")
         resolved_image_url = await check_package_url(image_url, image_hash)
@@ -249,4 +251,3 @@ async def repo(
         image_url=resolved_image_url,
         constraints=_VmConstraints(min_mem_gib, min_storage_gib, min_cpu_threads, capabilities),
     )
-

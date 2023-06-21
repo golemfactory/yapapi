@@ -1,15 +1,13 @@
-import logging
 import abc
-import os
-from typing import Optional
-
 import aiohttp
 from dataclasses import dataclass
-
+import logging
+import os
+from typing import Optional
 from yapapi.payload import Payload
-from yapapi.config import ApiConfig
 
 logger = logging.getLogger(__name__)
+
 
 class PackageException(Exception):
     """Exception raised on any problems related to the package repository."""
@@ -47,7 +45,6 @@ async def resolve_package_url(repo_url: str,
                               image_use_https: bool = False) -> str:
     async with aiohttp.ClientSession() as client:
         is_dev = os.getenv("GOLEM_DEV_MODE", False)
-        is_https = os.getenv("YAPAPI_RESOLVE_USING_HTTPS", False)
 
         if image_tag is None and image_hash is None:
             raise PackageException("Neither image tag nor image hash specified")
@@ -93,4 +90,3 @@ async def resolve_package_url(repo_url: str,
         # image_arch = image_info["arch"]
 
         return f"hash:sha3:{image_hash}:{image_url}"
-

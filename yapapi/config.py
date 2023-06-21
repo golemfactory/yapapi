@@ -49,7 +49,8 @@ class ApiConfig:
     activity_url: Optional[str] = field(default_factory=partial(os.getenv, "YAGNA_ACTIVITY_URL"))
 
     repository_url: str = field(
-        default_factory=partial(os.getenv, "YAPAPI_REPOSITORY_URL", "https://registry.golem.network")
+        default_factory=partial(os.getenv,
+                                "YAPAPI_REPOSITORY_URL", "https://registry.golem.network")
     )
 
     def __post_init__(self):
