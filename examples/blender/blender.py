@@ -16,7 +16,6 @@ from utils import (
     TEXT_COLOR_MAGENTA,
     TEXT_COLOR_RED,
     build_parser,
-    resolve_image_hash_and_url,
     format_usage,
     print_env_info,
     run_golem_example,
@@ -158,6 +157,7 @@ async def create_package(args, default_image_tag):
         #  available
         min_cpu_threads=args.min_cpu_threads,
     )
+    return package
 
 
 async def main(args):

@@ -27,27 +27,6 @@ TEXT_COLOR_DEFAULT = "\033[0m"
 colorama.init()
 
 
-def sizeof_fmt(num, suffix="B"):
-    for unit in ["", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"]:
-        if abs(num) < 1024.0:
-            return f"{num:3.2f}{unit}{suffix}"
-        num /= 1024.0
-    return f"{num:.1f}Yi{suffix}"
-
-
-def resolve_image_hash_and_url(image_tag: str) -> tuple[str, str]:
-    print(f"Checking golem registry for tag: {image_tag}...")
-    url = f"https://registry.dev.golem.network/v1/image/info?tag={image_tag}"
-    resp = urlopen(url)
-    image_info = json.loads(resp.read())
-    image_hash = image_info["sha3"]
-    image_size = image_info["size"]
-    image_size_human = sizeof_fmt(image_size)
-    image_arch = image_info["arch"]
-    image_url = f"http://registry.dev.golem.network:8010/download/{image_hash}"
-    print(f"Image found: \n --tag: {image_tag}\n --sha224: {image_hash}\n --arch {image_arch}\n --size: {image_size} ({image_size_human})\n --url: {image_url}")
-    return image_hash, image_url
-
 
 def build_parser(description: str) -> argparse.ArgumentParser:
     current_time_str = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S%z")

@@ -33,6 +33,14 @@ async def check_package_url(image_url: str, image_hash: str) -> str:
         return f"hash:sha3:{image_hash}:{image_url}"
 
 
+def sizeof_fmt(num, suffix="B"):
+    for unit in ["", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"]:
+        if abs(num) < 1024.0:
+            return f"{num:3.2f}{unit}{suffix}"
+        num /= 1024.0
+    return f"{num:.1f}Yi{suffix}"
+
+
 async def resolve_package_url(repo_url: str,
                               image_tag: Optional[str] = None,
                               image_hash: Optional[str] = None,
@@ -59,7 +67,9 @@ async def resolve_package_url(repo_url: str,
             # resolved by yapapi, so count as used tag (for usage statistics)
             url_params += "&count=true"
 
-        resp = await client.get(f"{repo_url}/v1/image/info?{url_params}")
+        query_url = f"{repo_url}/v1/image/info?{url_params}"
+        logger.debug(f"Querying registry portal: {query_url}")
+        resp = await client.get(query_url)
         if resp.status != 200:
             try:
                 text = await resp.text()
@@ -75,6 +85,12 @@ async def resolve_package_url(repo_url: str,
         else:
             image_url = json_resp["http"]
         image_hash = json_resp["sha3"]
+        image_size = json_resp["size"]
+        logger.debug(f"Resolved image size: {sizeof_fmt(image_size)}")
+        logger.debug(f"Resolved image hash: {image_hash}")
+        logger.debug(f"Resolved image url: {image_url}")
+        # TODO: check if image_arch is ok
+        # image_arch = image_info["arch"]
 
         return f"hash:sha3:{image_hash}:{image_url}"
 
