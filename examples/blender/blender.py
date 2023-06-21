@@ -173,6 +173,7 @@ async def main(args):
         show_usage=args.show_usage,
     )
 
+
 if __name__ == "__main__":
     parser = build_parser("Render a Blender scene")
     parser.add_argument("--show-usage", action="store_true", help="show activity usage and cost")
@@ -194,7 +195,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--image-use-https",
         help="Whether to use https when resolving image url from Golem Registry",
-        action="store_true"
+        action="store_true",
     )
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     parser.set_defaults(log_file=f"blender-yapapi-{now}.log")

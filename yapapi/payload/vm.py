@@ -1,8 +1,6 @@
 import logging
 import sys
-
 from enum import Enum
-
 from typing import List, Optional
 
 from dataclasses import dataclass
@@ -157,8 +155,9 @@ class _VmPackage(Package):
 
     async def decorate_demand(self, demand: DemandBuilder):
         demand.ensure(str(self.constraints))
-        demand.add(VmRequest(package_url=self.image_url,
-                             package_format=VmPackageFormat.GVMKIT_SQUASH))
+        demand.add(
+            VmRequest(package_url=self.image_url, package_format=VmPackageFormat.GVMKIT_SQUASH)
+        )
 
 
 async def repo(
@@ -227,17 +226,18 @@ async def repo(
         raise ValueError("Either image_tag or image_hash must be provided")
     elif image_tag and image_url:
         raise ValueError(
-            "You cannot override image_url when using image_tag, use image_hash instead")
+            "You cannot override image_url when using image_tag, use image_hash instead"
+        )
     elif not image_url and image_hash:
         logger.info(f"Resolving using {repo_url} by image hash {image_hash}")
-        resolved_image_url = await resolve_package_url(repo_url,
-                                                       image_hash=image_hash,
-                                                       image_use_https=image_use_https)
+        resolved_image_url = await resolve_package_url(
+            repo_url, image_hash=image_hash, image_use_https=image_use_https
+        )
     elif not image_url and image_tag:
         logger.info(f"Resolving using {repo_url} by image tag {image_tag}")
-        resolved_image_url = await resolve_package_url(repo_url,
-                                                       image_tag=image_tag,
-                                                       image_use_https=image_use_https)
+        resolved_image_url = await resolve_package_url(
+            repo_url, image_tag=image_tag, image_use_https=image_use_https
+        )
     elif image_hash and image_url:
         logger.info(f"Checking if image url is correct for {image_url} and {image_hash}")
         resolved_image_url = await check_package_url(image_url, image_hash)

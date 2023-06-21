@@ -1,9 +1,11 @@
 import abc
-import aiohttp
-from dataclasses import dataclass
 import logging
 import os
 from typing import Optional
+
+import aiohttp
+from dataclasses import dataclass
+
 from yapapi.payload import Payload
 
 logger = logging.getLogger(__name__)
@@ -39,10 +41,12 @@ def sizeof_fmt(num, suffix="B"):
     return f"{num:.1f}Yi{suffix}"
 
 
-async def resolve_package_url(repo_url: str,
-                              image_tag: Optional[str] = None,
-                              image_hash: Optional[str] = None,
-                              image_use_https: bool = False) -> str:
+async def resolve_package_url(
+    repo_url: str,
+    image_tag: Optional[str] = None,
+    image_hash: Optional[str] = None,
+    image_use_https: bool = False,
+) -> str:
     async with aiohttp.ClientSession() as client:
         is_dev = os.getenv("GOLEM_DEV_MODE", False)
 
