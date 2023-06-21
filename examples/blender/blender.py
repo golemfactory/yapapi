@@ -131,9 +131,8 @@ async def start(subnet_tag, package, payment_driver=None, payment_network=None, 
         )
 
 
-async def main(args):
+async def create_package(args, default_image_tag):
     # Use golem/blender:latest image tag, you can overwrite this option with --image-tag or --image-hash
-    default_image_tag = "golem/blender:latest"
     if args.image_url and args.image_tag:
         raise ValueError("Only one of --image-url and --image-tag can be specified")
     if args.image_url and not args.image_hash:
@@ -160,6 +159,11 @@ async def main(args):
         min_cpu_threads=args.min_cpu_threads,
     )
 
+
+async def main(args):
+    # Create a package using options specified in the command line
+    package = await create_package(args, default_image_tag="golem/blender:latest")
+
     await start(
         subnet_tag=args.subnet_tag,
         package=package,
@@ -177,11 +181,24 @@ if __name__ == "__main__":
         default=1,
         help="require the provider nodes to have at least this number of available CPU threads",
     )
+    parser.add_argument(
+        "--image-tag", help="Image tag to use when resolving image url from Golem Registry"
+    )
+    parser.add_argument(
+        "--image-hash", help="Image hash to use when resolving image url from Golem Registry"
+    )
+    parser.add_argument(
+        "--image-url", help="Direct image url to use instead of resolving from Golem Registry"
+    )
+    parser.add_argument(
+        "--image-use-https", help="Whether to use https when resolving image url from Golem Registry",
+        action="store_true"
+    )
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     parser.set_defaults(log_file=f"blender-yapapi-{now}.log")
-    args = parser.parse_args()
+    cmd_args = parser.parse_args()
 
     run_golem_example(
-        main(args=args),
-        log_file=args.log_file,
+        main(args=cmd_args),
+        log_file=cmd_args.log_file,
     )
