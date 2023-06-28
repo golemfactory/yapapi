@@ -21,12 +21,8 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.dependencies]
 python = "^3.8"
 
-aiohttp = "^3.6"
-aiohttp-sse-client = "^0.1.7"
-dataclasses = { version = "^0.8", python = ">=3.6, <3.7" }
-more-itertools = "^8.6.0"
-urllib3 = "^1.25.9"
-typing-extensions = "^4.5.0"
+aiohttp = "^3.8"
+aiohttp-sse-client = "^0.2.1"
 
 async_exit_stack = "^1.0.1"
 jsonrpc-base = "^1.0.3"

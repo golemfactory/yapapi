@@ -7,14 +7,17 @@ import os
 import sys
 from asyncio import CancelledError
 from collections import defaultdict
+from contextlib import AsyncExitStack
 from copy import deepcopy
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import (
     AsyncContextManager,
+    AsyncGenerator,
     Awaitable,
     Callable,
     Dict,
+    Final,
     Iterator,
     List,
     Optional,
@@ -26,17 +29,10 @@ from typing import (
 
 import aiohttp
 from dataclasses import dataclass
-from typing_extensions import AsyncGenerator, Final
-
-from yapapi.config import ApiConfig
-
-if sys.version_info >= (3, 7):
-    from contextlib import AsyncExitStack
-else:
-    from async_exit_stack import AsyncExitStack
 
 from yapapi import events, props, rest
 from yapapi.agreements_pool import AgreementsPool
+from yapapi.config import ApiConfig
 from yapapi.ctx import WorkContext
 from yapapi.invoice_manager import InvoiceManager
 from yapapi.payload import Payload

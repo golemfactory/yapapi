@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import (
     TYPE_CHECKING,
     Any,
+    AsyncGenerator,
     AsyncIterator,
     Awaitable,
     Callable,
@@ -14,22 +15,14 @@ from typing import (
     List,
     Optional,
     Type,
+    TypedDict,
     TypeVar,
     Union,
 )
 
-from typing_extensions import AsyncGenerator
-
-from yapapi.config import ApiConfig
-from yapapi.utils import Deprecated, warn_deprecated
-
-if sys.version_info > (3, 8):
-    from typing import TypedDict
-else:
-    from typing_extensions import TypedDict
-
 import yapapi
 from yapapi import events
+from yapapi.config import ApiConfig
 from yapapi.ctx import WorkContext
 from yapapi.engine import _Engine
 from yapapi.event_dispatcher import AsyncEventDispatcher
@@ -41,6 +34,7 @@ from yapapi.props import com
 from yapapi.script import Script
 from yapapi.services import Cluster, ServiceType
 from yapapi.strategy import DecreaseScoreForUnconfirmedAgreement, LeastExpensiveLinearPayuMS
+from yapapi.utils import Deprecated, warn_deprecated
 
 if TYPE_CHECKING:
     from yapapi.strategy import BaseMarketStrategy

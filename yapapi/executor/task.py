@@ -2,12 +2,19 @@ import asyncio
 import itertools
 from datetime import datetime, timedelta, timezone
 from enum import Enum, auto
-from typing import Callable, ClassVar, Generic, Iterator, Optional, Set, Tuple, Type, TypeVar, Union
-
-try:
-    from typing import Protocol
-except ImportError:
-    from typing_extensions import Protocol  # type: ignore
+from typing import (
+    Callable,
+    ClassVar,
+    Generic,
+    Iterator,
+    Optional,
+    Protocol,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from yapapi import events
 

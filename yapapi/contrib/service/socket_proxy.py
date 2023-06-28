@@ -11,10 +11,9 @@ import abc
 import asyncio
 import itertools
 import logging
-from typing import Dict, Iterator, List
+from typing import Dict, Final, Iterator, List
 
 import aiohttp
-from typing_extensions import Final
 
 from yapapi.services import Cluster, Service
 

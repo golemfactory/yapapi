@@ -16,9 +16,12 @@ from typing import (
     Dict,
     Iterator,
     List,
+    Literal,
     Optional,
+    Protocol,
     Set,
     Type,
+    TypedDict,
     Union,
     cast,
 )
@@ -27,7 +30,6 @@ import jsonrpc_base
 import semantic_version
 from async_exit_stack import AsyncExitStack
 from dataclasses import dataclass
-from typing_extensions import Literal, Protocol, TypedDict
 
 from yapapi.storage import Content, Destination, Source, StorageProvider
 from yapapi.utils import strtobool

@@ -2,11 +2,20 @@ import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from types import TracebackType
-from typing import Any, AsyncIterator, Generator, Generic, Optional, Type, TypeVar
+from typing import (
+    Any,
+    AsyncContextManager,
+    AsyncIterator,
+    Awaitable,
+    Generator,
+    Generic,
+    Optional,
+    Type,
+    TypeVar,
+)
 
 import aiohttp
 from dataclasses import dataclass
-from typing_extensions import AsyncContextManager, Awaitable
 
 from ya_market import ApiClient, ApiException, RequestorApi, models
 
