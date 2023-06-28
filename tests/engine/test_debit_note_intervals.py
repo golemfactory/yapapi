@@ -1,6 +1,5 @@
 import functools
 import re
-import sys
 from datetime import datetime, timedelta
 from unittest import mock
 
@@ -164,7 +163,6 @@ def test_verify_debit_note_intervals(
     assert vpt_condition(engine._verify_payment_timeout(agreement, debit_note, duration))
 
 
-@pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "agreement_kwargs, debit_note_kwargs, created_at_cb, "

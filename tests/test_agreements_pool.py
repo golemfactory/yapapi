@@ -1,5 +1,4 @@
 import random
-import sys
 from operator import xor
 from unittest import mock
 
@@ -104,7 +103,6 @@ async def test_use_agreement_no_proposals():
     assert result is None
 
 
-@pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "multi_activity,simulate_race,event_emitted",

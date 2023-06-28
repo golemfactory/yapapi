@@ -40,14 +40,14 @@ class _PyField:
     def encode(self, value: str):
         def get_type_origin(t):
             if hasattr(typing, "get_origin"):
-                return typing.get_origin(t)  # type: ignore[attr-defined]
+                return typing.get_origin(t)
             else:
                 return getattr(t, "__origin__", None)
 
         def get_type_args(t):
             # >= py3.8
             if hasattr(typing, "get_args"):
-                return typing.get_args(t)  # type: ignore[attr-defined]
+                return typing.get_args(t)
             else:
                 return getattr(t, "__args__")
 

@@ -1,6 +1,5 @@
 import asyncio
 import itertools
-import sys
 from unittest import mock
 from unittest.mock import Mock, patch
 
@@ -82,7 +81,6 @@ class _BrokenService(Service):
     ],
 )
 @pytest.mark.asyncio
-@pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
 async def test_spawn_instances(kwargs, args, error, monkeypatch):
     def _get_new_engine(self):
         return mock.AsyncMock()

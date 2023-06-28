@@ -1,16 +1,12 @@
-import sys
 from unittest import mock
 
 import pytest
 from statemachine.exceptions import TransitionNotAllowed
 
+from tests.factories.network import NetworkFactory
 from yapapi.network import Network, NetworkError, NetworkState
 
-if sys.version_info >= (3, 8):
-    from tests.factories.network import NetworkFactory
 
-
-@pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
 class TestNetwork:
     def test_init(self):
         ip = "192.168.0.0"
