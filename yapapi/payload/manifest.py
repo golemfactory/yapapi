@@ -1,16 +1,9 @@
 import asyncio
 import re
-import sys
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
 from dataclasses import dataclass, field, fields
-
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
-
 from dateutil.tz import UTC
 
 from yapapi.payload import vm

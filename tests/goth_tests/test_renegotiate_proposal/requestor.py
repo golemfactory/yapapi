@@ -2,8 +2,7 @@
 import asyncio
 import datetime
 from asyncio import TimeoutError
-
-from typing_extensions import Final
+from typing import Final
 
 from yapapi import props as yp
 from yapapi.config import ApiConfig

@@ -13,12 +13,11 @@ import asyncio
 import logging
 import re
 import traceback
-from typing import Optional
+from typing import Final, Optional
 
 import aiohttp
 from aiohttp import client_ws, web
 from multidict import CIMultiDict
-from typing_extensions import Final
 
 from yapapi.services import Cluster, Service, ServiceState
 

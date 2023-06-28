@@ -21,12 +21,8 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.dependencies]
 python = "^3.8"
 
-aiohttp = "^3.6"
-aiohttp-sse-client = "^0.1.7"
-dataclasses = { version = "^0.8", python = ">=3.6, <3.7" }
-more-itertools = "^8.6.0"
-urllib3 = "^1.25.9"
-typing-extensions = "^4.5.0"
+aiohttp = "^3.8"
+aiohttp-sse-client = "^0.2.1"
 
 async_exit_stack = "^1.0.1"
 jsonrpc-base = "^1.0.3"
@@ -53,10 +49,6 @@ sphinx-rtd-theme = { version = "^1.0.0", optional = true}
 docs = ['sphinx', 'sphinx-autodoc-typehints', 'sphinx-rtd-theme']
 
 [tool.poetry.group.dev.dependencies]
-pip = [
-  { version = "*", python = ">=3.7" },
-  { version = "^21.0.0", python = ">=3.6.2, <3.7" },
-]
 black = "^23.1.0"
 factory-boy = "^3.2.0"
 isort = "^5.10.1"
@@ -71,7 +63,6 @@ autoflake = "^1"
 flake8 = "^5"
 flake8-docstrings = "^1.6"
 Flake8-pyproject = "^1.2.2"
-pyproject-autoflake = "^1.0.2" # TODO: Remove this after upgrading to Python 3.8+
 
 [tool.poe.tasks]
 checks = {sequence = ["checks_codestyle", "checks_typing", "checks_license"], help = "Run all available code checks"}
@@ -174,10 +165,6 @@ check_untyped_defs = true
 show_error_codes = true
 warn_unused_ignores = true
 
-[[tool.mypy.overrides]]  # TODO: Remove this after upgrading to Python 3.8+
-module = "yapapi.props.base"
-warn_unused_ignores = false
-
 [tool.isort]
 profile = "black"
 py_version = 36
@@ -187,7 +174,7 @@ line_length = 100
 
 [tool.black]
 line-length = 100
-target-version = ['py36']
+target-version = ['py38']
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

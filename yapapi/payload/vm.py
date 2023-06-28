@@ -1,17 +1,9 @@
 import logging
-import sys
 from enum import Enum
-from typing import List, Optional
+from typing import Final, List, Literal, Optional
 
 from dataclasses import dataclass
 from dns.exception import DNSException
-from typing_extensions import Final
-
-if sys.version_info > (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
-
 from srvresolver.srv_resolver import SRVRecord, SRVResolver
 
 from yapapi.payload.package import (
