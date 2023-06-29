@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, TypedDict, Union
 from urllib.parse import urlparse
 
 from dataclasses import dataclass
@@ -314,6 +314,50 @@ class Network:
             return next(self._hosts)  # type: ignore
         except StopIteration:
             raise NetworkError(f"No more addresses available in '{self._ip_network.with_netmask}'.")
+
+    def serialize(self) -> "NetworkSerialization":
+        """Provide a complete dictionary of values allowing reconstruction of a Network object."""
+        assert self._network_id
+        assert self.state
+
+        return {
+            "_network_id": self._network_id,  # noqa
+            "ip": self._ip_network.with_netmask,
+            "gateway": self.gateway,
+            "owner_id": self._owner_id,
+            "owner_ip": self.owner_ip,
+            "state": self.state.value,  # noqa
+            "nodes": {_id: n.ip for _id, n in self._nodes.items()},
+        }
+
+    @classmethod
+    def deserialize(
+        cls,
+        net_api: "yapapi.rest.net.Net",
+        obj_dict: "NetworkSerialization",
+    ) -> "Network":
+        network = cls(
+            net_api,
+            ip=obj_dict["ip"],
+            owner_id=obj_dict["owner_id"],
+            owner_ip=obj_dict["owner_ip"],
+            gateway=obj_dict.get("gateway"),
+        )
+        network._network_id = obj_dict["_network_id"]
+        network._state_machine.current_state_value = obj_dict["state"]
+        for _id, ip in obj_dict["nodes"].items():
+            network._nodes[_id] = Node(network=network, node_id=_id, ip=ip)
+        return network
+
+
+class NetworkSerialization(TypedDict):
+    _network_id: str
+    ip: str
+    gateway: Optional[str]
+    owner_id: str
+    owner_ip: str
+    state: str
+    nodes: Dict[str, str]
 
 
 class NetworkError(Exception):

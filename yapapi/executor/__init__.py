@@ -177,7 +177,7 @@ class Executor:
 
         work_queue = SmartQueue(input_tasks())
 
-        async def run_worker(work_context: WorkContext) -> None:
+        async def run_worker(work_context: WorkContext) -> bool:
             """Run an instance of `worker` for the particular work context."""
             agreement = work_context._agreement
             activity = work_context._activity
@@ -236,6 +236,8 @@ class Executor:
                     await self._engine.accept_payments_for_agreement(job.id, agreement.id)
                     if consumer.finished:
                         raise StopAsyncIteration()
+
+            return False
 
         async def worker_starter() -> None:
             while True:

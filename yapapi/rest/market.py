@@ -67,7 +67,9 @@ class AgreementDetails(object):
 class Agreement(object):
     """Mid-level interface to the REST's Agreement model."""
 
-    def __init__(self, api: RequestorApi, subscription: "Subscription", agreement_id: str):
+    def __init__(
+        self, api: RequestorApi, agreement_id: str, subscription: Optional["Subscription"] = None
+    ):
         self._api = api
         self._subscription = subscription
         self._id = agreement_id
@@ -186,7 +188,7 @@ class OfferProposal(object):
         )
         api: RequestorApi = self._subscription._api
         agreement_id = await api.create_agreement(proposal)
-        return Agreement(api, self._subscription, agreement_id)
+        return Agreement(api, agreement_id, self._subscription)
 
     def __str__(self):
         proposal = self._proposal.proposal

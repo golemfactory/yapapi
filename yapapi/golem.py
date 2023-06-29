@@ -32,7 +32,7 @@ from yapapi.network import Network
 from yapapi.payload import Payload
 from yapapi.props import com
 from yapapi.script import Script
-from yapapi.services import Cluster, ServiceType
+from yapapi.services import Cluster, ServiceSerialization, ServiceType
 from yapapi.strategy import DecreaseScoreForUnconfirmedAgreement, LeastExpensiveLinearPayuMS
 from yapapi.utils import Deprecated, warn_deprecated
 
@@ -279,12 +279,12 @@ class Golem:
             await self._stop_with_exc_info(*sys.exc_info())
             raise
 
-    async def stop(self) -> None:
+    async def stop(self, wait_for_payments: bool = True) -> None:
         """Stop the Golem engine after it was started in non-contextmanager mode.
 
         Details: :func:`Golem.start()`
         """
-        await self._stop_with_exc_info(None, None, None)
+        await self._stop_with_exc_info(None, None, None, wait_for_payments=wait_for_payments)
 
     async def __aenter__(self) -> "Golem":
         await self.start()
@@ -293,9 +293,11 @@ class Golem:
     async def __aexit__(self, *exc_info) -> Optional[bool]:
         return await self._stop_with_exc_info(*exc_info)
 
-    async def _stop_with_exc_info(self, *exc_info) -> Optional[bool]:
+    async def _stop_with_exc_info(
+        self, *exc_info, wait_for_payments: bool = True
+    ) -> Optional[bool]:
         async with self._engine_state_lock:
-            res = await self._engine.stop(*exc_info)
+            res = await self._engine.stop(*exc_info, wait_for_payments=wait_for_payments)
             await self._event_dispatcher.stop()
 
         #   Engine that was stopped is not usable anymore, there is no "full" cleanup.
@@ -372,6 +374,50 @@ class Golem:
         executor = Executor(_engine=self._engine, **kwargs)
         async for t in executor.submit(worker, data, job_id=job_id):
             yield t
+
+    async def _init_cluster(
+        self,
+        service_class: Type[ServiceType],
+        payload: Optional[Payload] = None,
+        expiration: Optional[datetime] = None,
+        network: Optional[Network] = None,
+    ) -> Cluster[ServiceType]:
+        payload = payload or await service_class.get_payload()
+
+        if not payload:
+            raise ValueError(
+                f"No payload returned from {service_class.__name__}.get_payload()"
+                " nor given in the `payload` argument."
+            )
+
+        return Cluster(
+            engine=self._engine,
+            service_class=service_class,
+            payload=payload,
+            expiration=expiration,
+            network=network,
+        )
+
+    async def resume_service(
+        self,
+        service_class: Type[ServiceType],
+        instances: List[ServiceSerialization],
+        payload: Optional[Payload] = None,
+        expiration: Optional[datetime] = None,
+        network: Optional[Network] = None,
+    ) -> Cluster[ServiceType]:
+        cluster = await self._init_cluster(
+            service_class=service_class,
+            payload=payload,
+            expiration=expiration,
+            network=network,
+        )
+
+        await self._engine.add_to_async_context(cluster)
+
+        cluster.resume_instances(instances)
+
+        return cluster
 
     async def run_service(
         self,
@@ -468,24 +514,15 @@ class Golem:
                         await asyncio.sleep(REFRESH_INTERVAL_SEC)
 
         """  # noqa: E501
-        payload = payload or await service_class.get_payload()
-
-        if not payload:
-            raise ValueError(
-                f"No payload returned from {service_class.__name__}.get_payload()"
-                " nor given in the `payload` argument."
-            )
-
-        if network_addresses and not network:
-            raise ValueError("`network_addresses` provided without a `network`.")
-
-        cluster = Cluster(
-            engine=self._engine,
+        cluster = await self._init_cluster(
             service_class=service_class,
             payload=payload,
             expiration=expiration,
             network=network,
         )
+
+        if network_addresses and not network:
+            raise ValueError("`network_addresses` provided without a `network`.")
 
         await self._engine.add_to_async_context(cluster)
         cluster.spawn_instances(num_instances, instance_params, network_addresses)
