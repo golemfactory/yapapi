@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "yapapi"
-version = "0.11.0"
+version = "0.12.0-dev"
 description = "High-level Python API for the New Golem"
 authors = ["GolemFactory <contact@golem.network>"]
 license = "LGPL-3.0-or-later"
