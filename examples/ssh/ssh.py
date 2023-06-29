@@ -12,7 +12,7 @@ from yapapi.payload import vm
 
 # the timeout after we commission our service instances
 # before we abort this script
-STARTING_TIMEOUT = timedelta(minutes=4)
+STARTING_TIMEOUT = timedelta(minutes=16)
 
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
@@ -39,7 +39,8 @@ class SshService(SocketProxyService):
     @staticmethod
     async def get_payload():
         return await vm.repo(
-            image_hash="1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
+            image_hash="ddd1c5cc168cd0f8dafedad3302b4e32bfbf90ea642cd0ad7017e203",
+            #image_hash="1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
             min_mem_gib=0.5,
             min_storage_gib=2.0,
             # we're adding an additional constraint to only select those nodes that
@@ -55,11 +56,13 @@ class SshService(SocketProxyService):
 
         password = "".join(random.choice(string.ascii_letters + string.digits) for _ in range(8))
 
-        script = self._ctx.new_script(timeout=timedelta(seconds=10))
-        script.run("/bin/bash", "-c", "syslogd")
+        script = self._ctx.new_script(timeout=timedelta(seconds=50))
+        #script.run("/bin/bash", "-c", "syslogd")
         script.run("/bin/bash", "-c", "ssh-keygen -A")
         script.run("/bin/bash", "-c", f'echo -e "{password}\n{password}" | passwd')
+        script.run("/bin/bash", "-c", "mkdir -p /run/sshd")
         script.run("/bin/bash", "-c", "/usr/sbin/sshd")
+
         yield script
 
         server = await self.proxy.run_server(self, self.remote_port)
@@ -72,7 +75,7 @@ class SshService(SocketProxyService):
         print(f"{TEXT_COLOR_RED}password: {password}{TEXT_COLOR_DEFAULT}")
 
 
-async def main(subnet_tag, payment_driver=None, payment_network=None, num_instances=2):
+async def main(subnet_tag, payment_driver=None, payment_network=None, num_instances=1):
     # By passing `event_consumer=log_summary()` we enable summary logging.
     # See the documentation of the `yapapi.log` module on how to set
     # the level of detail and format of the logged information.
