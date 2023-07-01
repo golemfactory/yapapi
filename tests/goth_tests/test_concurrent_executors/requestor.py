@@ -50,7 +50,7 @@ async def main():
             output = result.stdout.strip()
             task.accept_result(output)
 
-    async with Golem(budget=1.0, subnet_tag="goth") as golem:
+    async with Golem(budget=1.0, subnet_tag="goth", payment_network="rinkeby") as golem:
         # Construct a pipeline:
         #
         #   input_tasks

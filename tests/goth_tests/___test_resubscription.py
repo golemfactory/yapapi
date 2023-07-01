@@ -164,6 +164,7 @@ async def test_demand_resubscription(
         async with Golem(
             budget=10.0,
             event_consumer=monitor.add_event_sync,
+            payment_network="rinkeby",
         ) as golem:
             task: Task  # mypy needs this for some reason
             async for task in golem.execute_tasks(

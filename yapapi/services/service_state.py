@@ -45,6 +45,13 @@ class ServiceState(statemachine.StateMachine):
     """
     unresponsive = statemachine.State("unresponsive")
 
+    suspended = statemachine.State("suspended")
+    """This service instance has been suspended.
+
+    Its handlers should not be processed by the ServiceRunner anymore but no resultant changes
+    to the activity itself should be made.
+    """
+
     # transitions
     start: statemachine.Transition = pending.to(starting)
     ready: statemachine.Transition = starting.to(running)
@@ -64,6 +71,9 @@ class ServiceState(statemachine.StateMachine):
 
     error_or_stop = stop | terminate
     """transition performed on error or `ControlSignal.stop`"""
+
+    suspend: statemachine.Transition = suspended.from_(starting, running, stopping)
+    """transition performed on `ControlSignal.suspend`"""
 
     AVAILABLE = (starting, running, stopping)
     """A helper set of states in which the service instance is bound to an activity

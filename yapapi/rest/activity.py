@@ -40,6 +40,16 @@ class ActivityService(object):
         activity_id = await self._api.create_activity(agreement_id)
         return Activity(self._api, self._state, activity_id, stream_events)
 
+    async def use_activity(self, activity_id: str, stream_events: bool = False) -> "Activity":
+        """Instantiate an Activity object based on an existing activity_id.
+
+        :return: the object that represents the Activity
+                 and allows to query and control its state
+        :rtype: Activity
+        """
+        await self._state.get_activity_state(activity_id)
+        return Activity(self._api, self._state, activity_id, stream_events)
+
 
 class Activity(AsyncContextManager["Activity"]):
     """Mid-level wrapper for REST's Activity endpoint."""
@@ -82,6 +92,14 @@ class Activity(AsyncContextManager["Activity"]):
             return StreamingBatch(self, batch_id, len(script), deadline)
         return PollingBatch(self, batch_id, len(script), deadline)
 
+    async def destroy(self):
+        """Destroy the Activity and free the execution unit."""
+        try:
+            await self._api.destroy_activity(self._id)
+            _log.debug("Activity %s destroyed successfully", self._id)
+        except yexc.ApiException:
+            _log.debug("Got API Exception when destroying activity %s", self._id, exc_info=True)
+
     async def __aenter__(self) -> "Activity":
         return self
 
@@ -93,11 +111,7 @@ class Activity(AsyncContextManager["Activity"]):
             )
         else:
             _log.debug("Destroying activity %s", self._id)
-        try:
-            await self._api.destroy_activity(self._id)
-            _log.debug("Activity %s destroyed successfully", self._id)
-        except yexc.ApiException:
-            _log.debug("Got API Exception when destroying activity %s", self._id, exc_info=True)
+        await self.destroy()
 
 
 @dataclass
