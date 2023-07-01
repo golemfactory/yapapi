@@ -48,7 +48,7 @@ class ApiConfig:
     net_url: Optional[str] = field(default_factory=partial(os.getenv, "YAGNA_NET_URL"))
     activity_url: Optional[str] = field(default_factory=partial(os.getenv, "YAGNA_ACTIVITY_URL"))
 
-    repository_url: str = field(
+    repository_url: Optional[str] = field(
         default_factory=partial(
             os.getenv, "YAPAPI_REPOSITORY_URL", "https://registry.golem.network"
         )

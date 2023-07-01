@@ -229,11 +229,15 @@ async def repo(
             "You cannot override image_url when using image_tag, use image_hash instead"
         )
     elif not image_url and image_hash:
+        if not repo_url:
+            raise ValueError("Repo url is empty or not set")
         logger.info(f"Resolving using {repo_url} by image hash {image_hash}")
         resolved_image_url = await resolve_package_url(
             repo_url, image_hash=image_hash, image_use_https=image_use_https
         )
     elif not image_url and image_tag:
+        if not repo_url:
+            raise ValueError("Repo url is empty or not set")
         logger.info(f"Resolving using {repo_url} by image tag {image_tag}")
         resolved_image_url = await resolve_package_url(
             repo_url, image_tag=image_tag, image_use_https=image_use_https
