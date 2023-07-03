@@ -1,14 +1,9 @@
 import enum
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, Optional, Protocol, Type
 
 from dataclasses import dataclass, field
-
-try:
-    from typing import Protocol
-except ImportError:
-    from typing_extensions import Protocol  # type: ignore
 
 from ya_activity.models import ActivityState as yaa_ActivityState
 from ya_activity.models import ActivityUsage as yaa_ActivityUsage

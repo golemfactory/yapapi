@@ -1,5 +1,4 @@
 import json
-import sys
 from functools import partial
 from unittest import mock
 
@@ -9,7 +8,6 @@ from yapapi.ctx import WorkContext
 from yapapi.script import Script
 
 
-@pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
 class TestWorkContext:
     @pytest.fixture(autouse=True)
     def setUp(self):

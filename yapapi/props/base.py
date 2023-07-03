@@ -2,16 +2,9 @@ import abc
 import enum
 import inspect
 import json
-import sys
 import typing
-from typing import Any, Dict, List, Type, TypeVar, Union, cast
-
-if sys.version_info > (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
-
 from datetime import datetime, timezone
+from typing import Any, Dict, List, Literal, Type, TypeVar, Union, cast
 
 from dataclasses import MISSING, Field, dataclass, field, fields
 
@@ -47,14 +40,14 @@ class _PyField:
     def encode(self, value: str):
         def get_type_origin(t):
             if hasattr(typing, "get_origin"):
-                return typing.get_origin(t)  # type: ignore[attr-defined]
+                return typing.get_origin(t)
             else:
                 return getattr(t, "__origin__", None)
 
         def get_type_args(t):
             # >= py3.8
             if hasattr(typing, "get_args"):
-                return typing.get_args(t)  # type: ignore[attr-defined]
+                return typing.get_args(t)
             else:
                 return getattr(t, "__args__")
 

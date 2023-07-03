@@ -4,9 +4,11 @@ import sys
 from asyncio import CancelledError
 from datetime import datetime, timedelta, timezone
 from typing import (
+    AsyncGenerator,
     AsyncIterator,
     Awaitable,
     Callable,
+    Final,
     Iterable,
     List,
     Optional,
@@ -15,8 +17,6 @@ from typing import (
     Union,
     cast,
 )
-
-from typing_extensions import AsyncGenerator, Final
 
 import yapapi.utils
 from yapapi import events
