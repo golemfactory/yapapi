@@ -28,7 +28,7 @@ from yapapi.engine import _Engine
 from yapapi.event_dispatcher import AsyncEventDispatcher
 from yapapi.executor import Executor
 from yapapi.executor.task import Task
-from yapapi.network import Network
+from yapapi.network import Network, NetworkSerialization
 from yapapi.payload import Payload
 from yapapi.props import com
 from yapapi.script import Script
@@ -309,6 +309,14 @@ class Golem:
     def _get_new_engine(self):
         return _Engine(**self._engine_kwargs)
 
+    async def _get_identity(self):
+        """Get the identity (node id) of our requestor node."""
+
+        async with self._engine._root_api_session.get(
+            f"{self._engine._api_config.root_url}/me"
+        ) as resp:
+            return json.loads(await resp.text()).get("identity")
+
     async def execute_tasks(
         self,
         worker: Callable[
@@ -546,14 +554,33 @@ class Golem:
         :param mask: Optional netmask (only if not provided within the `ip` argument)
         :param gateway: Optional gateway address for the network
         """
-        async with self._engine._root_api_session.get(
-            f"{self._engine._api_config.root_url}/me"
-        ) as resp:
-            identity = json.loads(await resp.text()).get("identity")
 
         return await Network.create(
-            self._engine._net_api, ip, identity, owner_ip, mask=mask, gateway=gateway
+            self._engine._net_api,
+            ip,
+            await self._get_identity(),
+            owner_ip,
+            mask=mask,
+            gateway=gateway,
         )
+
+    async def resume_network(
+        self,
+        obj_dict: NetworkSerialization,
+    ) -> Network:
+        """Instantiate a `Network` object based on persisted data."""
+
+        if not obj_dict.get("owner_id"):
+            obj_dict["owner_id"] = await self._get_identity()
+
+        assert obj_dict["owner_id"], "Owner ID unset and couldn't be retrieved."
+
+        network = Network.deserialize(self._engine._net_api, obj_dict)
+
+        if network._owner_id not in network._nodes:
+            await network.add_owner_address(network.owner_ip)
+
+        return network
 
     @staticmethod
     def _default_event_consumer() -> Callable[[events.Event], None]:

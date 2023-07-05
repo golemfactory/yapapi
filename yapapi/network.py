@@ -336,17 +336,22 @@ class Network:
         net_api: "yapapi.rest.net.Net",
         obj_dict: "NetworkSerialization",
     ) -> "Network":
+        owner_ip = obj_dict["owner_ip"]
+
         network = cls(
             net_api,
             ip=obj_dict["ip"],
             owner_id=obj_dict["owner_id"],
-            owner_ip=obj_dict["owner_ip"],
+            owner_ip=owner_ip,
             gateway=obj_dict.get("gateway"),
         )
         network._network_id = obj_dict["_network_id"]
         network._state_machine.current_state_value = obj_dict["state"]
+        network._owner_ip = ip_address(owner_ip) if owner_ip else network._next_address()
+
         for _id, ip in obj_dict["nodes"].items():
             network._nodes[_id] = Node(network=network, node_id=_id, ip=ip)
+
         return network
 
 
@@ -355,8 +360,8 @@ class NetworkSerialization(TypedDict):
     ip: str
     gateway: Optional[str]
     owner_id: str
-    owner_ip: str
-    state: str
+    owner_ip: Optional[str]
+    state: Optional[str]
     nodes: Dict[str, str]
 
 
