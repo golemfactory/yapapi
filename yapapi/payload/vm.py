@@ -23,8 +23,9 @@ _DEFAULT_TIMEOUT_SECONDS: Final[int] = 10
 
 logger = logging.getLogger(__name__)
 
-VM_CAPS_VPN: str = "vpn"
-VM_CAPS_MANIFEST_SUPPORT: str = "manifest-support"
+VM_CAPS_VPN: Final[str] = "vpn"
+VM_CAPS_MANIFEST: Final[str] = "manifest-support"
+VM_CAPS_INET: Final[str] = "inet"
 
 VmCaps = Literal["vpn", "inet", "manifest-support"]
 
