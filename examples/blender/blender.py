@@ -110,7 +110,7 @@ async def main(
     timeout = timedelta(minutes=max(min(init_overhead + len(frames) * 2, max_timeout), min_timeout))
 
     async with Golem(
-        budget=10.0,
+        budget=1.0,
         subnet_tag=subnet_tag,
         payment_driver=payment_driver,
         payment_network=payment_network,

@@ -157,7 +157,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     golem = Golem(
-        budget=10,
+        budget=1,
         subnet_tag=args.subnet_tag,
         payment_driver=args.payment_driver,
         payment_network=args.payment_network,

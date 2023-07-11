@@ -46,12 +46,7 @@ class ApiCallService(Service):
         future_result = script.run(
             "/bin/sh",
             "-c",
-            f"GOLEM_PRICE=`curl -X 'GET' \
-                    'https://api.coingecko.com/api/v3/simple/price?ids=golem&vs_currencies=usd' \
-                    -H 'accept: application/json' | jq .golem.usd`; \
-                echo ---; \
-                echo \"Golem price: $GOLEM_PRICE USD\"; \
-                echo ---;",
+            f"/golem/entrypoints/entrypoint.sh 127.0.0.1 22235 22236 22237 0.5 10 0",
         )
         yield script
 

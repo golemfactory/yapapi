@@ -157,7 +157,7 @@ async def main(args):
     )
 
     async with Golem(
-        budget=10.0,
+        budget=1.0,
         subnet_tag=args.subnet_tag,
         payment_driver=args.payment_driver,
         payment_network=args.payment_network,
