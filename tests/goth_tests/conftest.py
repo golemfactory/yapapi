@@ -1,12 +1,11 @@
 import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
-import pytest
 from typing import List, cast
 
-from goth.configuration import Override
+import pytest
 
-from yapapi.payload import vm
+from goth.configuration import Override
 
 
 #  `pytest-rerunfailures` and `pytest-asyncio` don't work together
@@ -14,7 +13,7 @@ from yapapi.payload import vm
 #   The same problem occurs when `flaky` is used instead of `pytest-rerunfailures`.
 #   Here we have a patch that is quite ugly, but hopefully harmless.
 class LoopThatIsNeverClosed(asyncio.AbstractEventLoop):
-    """Just a loop, but if you try to use it after it was closed you use a fresh loop"""
+    """Just a loop, but if you try to use it after it was closed you use a fresh loop."""
 
     def __init__(self):
         self._loop = None
@@ -29,7 +28,7 @@ class LoopThatIsNeverClosed(asyncio.AbstractEventLoop):
 
 @pytest.fixture
 def event_loop():
-    """This overrides `pytest.asyncio` fixture"""
+    """Override `pytest.asyncio` fixture with never ending event loop."""
     loop = LoopThatIsNeverClosed()
     yield loop
     loop.close()
@@ -111,15 +110,3 @@ def log_dir() -> Path:
 @pytest.fixture(scope="session")
 def goth_config_path(request) -> Path:
     return request.config.option.config_path
-
-
-@pytest.fixture()
-def blender_vm_package():
-    async def coro():
-        return await vm.repo(
-            image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-            min_mem_gib=0.5,
-            min_storage_gib=2.0,
-        )
-
-    return coro()

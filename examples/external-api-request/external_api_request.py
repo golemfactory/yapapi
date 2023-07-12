@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import asyncio
 import base64
-from datetime import datetime
 import pathlib
 import sys
+from datetime import datetime
 
 from yapapi import Golem
 from yapapi.payload import vm
@@ -46,7 +46,12 @@ class ApiCallService(Service):
         future_result = script.run(
             "/bin/sh",
             "-c",
-            f"/golem/entrypoints/entrypoint.sh 127.0.0.1 22235 22236 22237 0.5 10 0",
+            "GOLEM_PRICE=`curl -X 'GET' \
+                    'https://api.coingecko.com/api/v3/simple/price?ids=golem&vs_currencies=usd' \
+                    -H 'accept: application/json' | jq .golem.usd`; \
+                echo ---; \
+                echo \"Golem price: $GOLEM_PRICE USD\"; \
+                echo ---;",
         )
         yield script
 

@@ -1,10 +1,12 @@
 import asyncio
 import itertools
-import pytest
 import sys
 from unittest import mock
 from unittest.mock import Mock, patch
 
+import pytest
+
+from tests.factories.golem import GolemFactory
 from yapapi import Golem
 from yapapi.services import Service, ServiceRunner
 
@@ -88,7 +90,7 @@ async def test_spawn_instances(kwargs, args, error, monkeypatch):
     monkeypatch.setattr(Golem, "_get_new_engine", _get_new_engine)
 
     with patch("yapapi.services.ServiceRunner.spawn_instance") as spawn_instance:
-        golem = Golem(budget=1)
+        golem = GolemFactory()
         try:
             await golem.run_service(
                 service_class=_TestService, payload=Mock(), network=Mock(), **kwargs

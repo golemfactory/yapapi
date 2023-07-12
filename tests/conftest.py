@@ -1,8 +1,9 @@
+import os
+
 import pytest
 
 
 def pytest_addoption(parser):
-
     parser.addoption("--ya-api-key", type=str, help="instance api key", dest="yaApiKey")
 
 
@@ -13,7 +14,8 @@ def dummy_yagna_engine(monkeypatch):
     So also e.g. `async with Golem(..., APP_KEY='FAKE_APP_KEY')`, or Golem.start().
 
     But first check if monkeypatches done here don't interefere with
-    the thing you want to test ofc."""
+    the thing you want to test ofc.
+    """
     from yapapi.engine import _Engine
     from yapapi.storage.gftp import GftpProvider
 
@@ -29,3 +31,19 @@ def dummy_yagna_engine(monkeypatch):
     monkeypatch.setattr(_Engine, "_create_allocations", _engine_create_allocations)
     monkeypatch.setattr(GftpProvider, "__aenter__", _gftp_aenter)
     monkeypatch.setattr(GftpProvider, "__aexit__", _gftp_aexit)
+
+
+@pytest.fixture
+def purge_yagna_os_env() -> None:
+    for key in [
+        "YAGNA_APPKEY",
+        "YAGNA_API_URL",
+        "YAGNA_MARKET_URL",
+        "YAGNA_PAYMENT_URL",
+        "YAGNA_NET_URL",
+        "YAGNA_ACTIVITY_URL",
+        "YAGNA_SUBNET",
+        "YAGNA_PAYMENT_DRIVER",
+        "YAGNA_PAYMENT_NETWORK",
+    ]:
+        os.environ.pop(key, None)

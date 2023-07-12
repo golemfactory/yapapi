@@ -1,20 +1,14 @@
-"""
-Golem File Transfer Storage Provider
-"""
+"""Golem File Transfer Storage Provider."""
 
-from async_exit_stack import AsyncExitStack  # type: ignore
 import asyncio
 import contextlib
-from dataclasses import dataclass
 import json
-import jsonrpc_base  # type: ignore
 import logging
 import os
-from os import PathLike
-from pathlib import Path
-import semantic_version  # type: ignore
 import sys
 import tempfile
+from os import PathLike
+from pathlib import Path
 from types import TracebackType
 from typing import (
     AsyncContextManager,
@@ -28,6 +22,11 @@ from typing import (
     Union,
     cast,
 )
+
+import jsonrpc_base
+import semantic_version
+from async_exit_stack import AsyncExitStack
+from dataclasses import dataclass
 from typing_extensions import Literal, Protocol, TypedDict
 
 from yapapi.storage import Content, Destination, Source, StorageProvider
@@ -53,38 +52,33 @@ class GftpDriver(Protocol):
     """Golem FTP service API."""
 
     async def version(self) -> str:
-        """Gets driver version."""
-        pass
+        """Get driver version."""
 
     async def publish(self, *, files: List[str]) -> List[PubLink]:
-        """Exposes local file as GFTP url.
+        """Expose local file as GFTP url.
 
         `files`
         :   local files to be exposed
 
         """
-        pass
 
     async def close(self, *, urls: List[str]) -> List[CommandStatus]:
-        """Stops exposing GFTP urls created by [publish(files=[..])](#publish)."""
-        pass
+        """Stop exposing GFTP urls created by [publish(files=[..])](#publish)."""
 
     async def receive(self, *, output_file: str) -> PubLink:
-        """Creates GFTP url for receiving file.
+        """Create GFTP url for receiving file.
 
         :  `output_file` -
         """
-        pass
 
     async def upload(self, *, file: str, url: str):
         pass
 
     async def shutdown(self) -> CommandStatus:
-        """Stops GFTP service.
+        """Stop GFTP service.
 
         After shutdown all generated urls will be unavailable.
         """
-        pass
 
 
 def service(debug=False) -> AsyncContextManager[GftpDriver]:
@@ -375,13 +369,11 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
         return await self.upload_file(file_name, _temporary=True)
 
     async def upload_file(self, path: os.PathLike, _temporary: bool = False) -> Source:
-
         path = Path(path)
         _logger.debug("Publishing file %s...", path)
         process = await self.__get_process()
 
         async with self._lock:
-
             links = await process.publish(files=[str(path)])
             assert len(links) == 1, "Invalid gftp publish response"
 
@@ -413,7 +405,6 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
         return source
 
     async def release_source(self, source: Source) -> None:
-
         if not isinstance(source, GftpSource):
             raise ValueError(f"Expected an instance of GftpSource, got {type(source)} instead")
 
@@ -421,7 +412,6 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
         _logger.debug("Releasing file %s with URL = %s ...", source.path, url)
 
         async with self._lock:
-
             if url not in self._published_sources:
                 raise ValueError(
                     f"Trying to release an unpublished URL {url}, path = {source.path}"
@@ -434,7 +424,6 @@ class GftpProvider(StorageProvider, AsyncContextManager[StorageProvider]):
             )
 
             if info.publish_count == 0:
-
                 _logger.debug("Unpublishing URL %s...", url)
                 if self._close_urls:
                     process = await self.__get_process()

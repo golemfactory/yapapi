@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-"""
-the requestor agent controlling and interacting with the "simple service"
-"""
+"""The requestor agent controlling and interacting with the "simple service"."""
 import asyncio
-from datetime import datetime, timedelta, timezone
 import pathlib
 import random
 import string
 import sys
+from datetime import datetime, timedelta, timezone
 
 from yapapi import Golem
 from yapapi.payload import vm
@@ -20,7 +18,6 @@ from utils import (
     TEXT_COLOR_CYAN,
     TEXT_COLOR_DEFAULT,
     TEXT_COLOR_MAGENTA,
-    TEXT_COLOR_RED,
     TEXT_COLOR_YELLOW,
     build_parser,
     format_usage,
@@ -55,7 +52,7 @@ class SimpleService(Service):
         )
 
     async def start(self):
-        """handler responsible for starting the service."""
+        """Handle starting the service."""
 
         # perform the initialization of the Service
         async for script in super().start():
@@ -148,7 +145,7 @@ async def main(
 
         def print_instances():
             print(
-                f"instances: "
+                "instances: "
                 + str(
                     [
                         f"{s.name}: {s.state.value}"

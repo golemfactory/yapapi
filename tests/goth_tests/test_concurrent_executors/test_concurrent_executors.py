@@ -3,8 +3,9 @@
 import logging
 import os
 from pathlib import Path
-import pytest
 from typing import List
+
+import pytest
 
 import goth.configuration
 from goth.runner import Runner
@@ -29,13 +30,11 @@ async def test_concurrent_executors(
     runner = Runner(base_log_dir=log_dir, compose_config=goth_config.compose_config)
 
     async with runner(goth_config.containers):
-
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
             str(Path(__file__).parent / "requestor.py"), env=os.environ
         ) as (_cmd_task, cmd_monitor, _process_monitor):
-
             # Wait for job ALEF summary
             await cmd_monitor.wait_for_pattern(".*ALEF.* Job finished", timeout=60)
             await cmd_monitor.wait_for_pattern(".*ALEF.* Negotiated 2 agreements", timeout=5)

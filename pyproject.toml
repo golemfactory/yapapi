@@ -1,12 +1,8 @@
-[build-system]
-requires = ["poetry_core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
-
 [tool.poetry]
 name = "yapapi"
-version = "0.10.0"
+version = "0.11.0-dev"
 description = "High-level Python API for the New Golem"
-authors = ["Przemysław K. Rekucki <przemyslaw.rekucki@golem.network>", "GolemFactory <contact@golem.network>"]
+authors = ["GolemFactory <contact@golem.network>"]
 license = "LGPL-3.0-or-later"
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -18,14 +14,22 @@ repository = "https://github.com/golemfactory/yapapi"
 documentation = "https://yapapi.readthedocs.io/en/stable/api.html"
 readme = "README.md"
 
+[build-system]
+requires = ["poetry_core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry.dependencies]
-python = "^3.6.2"
+python = "^3.8"
+
+setuptools = [
+  { version = "*", python = ">=3.8" },
+]
 aiohttp = "^3.6"
 aiohttp-sse-client = "^0.1.7"
-dataclasses = { version = "^0.8", python = ">=3.6, <3.7"}
+dataclasses = { version = "^0.8", python = ">=3.6, <3.7" }
 more-itertools = "^8.6.0"
 urllib3 = "^1.25.9"
-typing_extensions = "^3.10.0"
+typing-extensions = "^4.5.0"
 
 async_exit_stack = "^1.0.1"
 jsonrpc-base = "^1.0.3"
@@ -37,55 +41,77 @@ colorama = "^0.4.4"
 semantic-version = "^2.8"
 attrs = ">=19.3"
 
-# Adding `goth` to dependencies causes > 40 additional packages to be installed. Given
-# that dependency resolution in `poetry` is rather slow, we'd like to avoid installing
-# `goth` for example in a CI pipeline that only runs linters/unit tests, not integration
-# tests. Therefore we specify `goth` as an "extra" dependency, with `optional = "true"`.
-# It will be then installable with `poetry install -E integration-tests`.
-# Note that putting `goth` in `poetry.dev-dependencies` instead of `poetry.dependencies`
-# would not work: see https://github.com/python-poetry/poetry/issues/129.
-goth = { version = "^0.13", optional = true, python = "^3.8.0" }
-# goth = { git = "https://github.com/golemfactory/goth.git", branch = "master", optional = true, python = "^3.8.0", develop = true }
 Deprecated = "^1.2.12"
 python-statemachine = "^0.8.0"
-
-# goth tests
-pexpect = {version = "^4.8.0", optional = true}
 
 # Docs
 sphinx = { version = "^4.0.1", optional = true }
 sphinx-autodoc-typehints = { version = "^1.12.0", optional = true }
-sphinx-rtd-theme = { version = "^1.0.0", optional = true}
+sphinx-rtd-theme = { version = "^1.0.0", optional = true }
 
 [tool.poetry.extras]
-integration-tests = ['goth', 'pytest', 'pytest-asyncio', 'pexpect']
 docs = ['sphinx', 'sphinx-autodoc-typehints', 'sphinx-rtd-theme']
 
-[tool.poetry.dev-dependencies]
-black = "^21.7b0"
+[tool.poetry.group.dev.dependencies]
+pip = [
+  { version = "*", python = ">=3.7" },
+  { version = "^21.0.0", python = ">=3.6.2, <3.7" },
+]
+black = "^23.1.0"
 factory-boy = "^3.2.0"
 isort = "^5.10.1"
 liccheck = "^0.4.7"
-mypy = "^0.782"
+mypy = "^0.942"
 poethepoet = "^0.8.0"
 pytest = "^6.2"
 pytest-asyncio = "^0.14"
 pytest-cov = "^2.11"
 pytest-rerunfailures = "^10.1"
+autoflake = "^1"
+flake8 = "^5"
+flake8-docstrings = "^1.6"
+Flake8-pyproject = "^1.2.2"
+pyproject-autoflake = "^1.0.2" # TODO: Remove this after upgrading to Python 3.8+
 
-[tool.isort]
-profile = "black"
-force_sort_within_sections = true
-known_golem = "goth, ya_activity, ya_market, ya_net, ya_payment"
-sections = ["FUTURE","THIRDPARTY","GOLEM", "FIRSTPARTY","LOCALFOLDER"]
-default_section = "THIRDPARTY"  # STDLIB section will be cobined with THIRDPARTY section
+[tool.poe.tasks]
+checks = {sequence = ["checks_codestyle", "checks_typing", "checks_license"], help = "Run all available code checks"}
+checks_codestyle = {sequence = ["_checks_codestyle_flake8", "_checks_codestyle_isort", "_checks_codestyle_black"], help = "Run only code style checks"}
+_checks_codestyle_flake8 = "flake8 yapapi tests examples/*"
+_checks_codestyle_isort = "isort --check-only --diff ."
+_checks_codestyle_black = "black --check --diff ."
+checks_typing  = {cmd = "mypy .", help = "Run only code typing checks" }
+checks_license = {sequence = ["_checks_license_export", "_checks_license_verify"], help = "Run only license compatibility checks"}
+_checks_license_export = "poetry export -f requirements.txt -o .requirements.txt"
+_checks_license_verify = "liccheck -r .requirements.txt"
 
-[tool.black]
-line-length = 100
-target-version = ['py36']
+format = {sequence = ["_format_autoflake", "_format_isort", "_format_black"], help = "Run code auto formatting"}
+_format_autoflake = "pautoflake ."
+_format_isort = "isort ."
+_format_black = "black ."
 
-[tool.blacken-docs]
-line-length = 80
+tests_unit = {cmd = "pytest --cov=yapapi --cov-report html --cov-report term -sv --ignore tests/goth_tests", help = "Run only unit tests"}
+tests_integration_init = { sequence = ["_gothv_env", "_gothv_requirements", "_gothv_assets"], help="Initialize the integration test environment"}
+tests_integration = { cmd = ".envs/yapapi-goth/bin/python -m pytest -svx tests/goth_tests  --config-override docker-compose.build-environment.use-prerelease=false --config-path tests/goth_tests/assets/goth-config.yml --ssh-verify-connection --reruns 3 --only-rerun AssertionError --only-rerun TimeoutError --only-rerun goth.runner.exceptions.TemporalAssertionError --only-rerun urllib.error.URLError --only-rerun goth.runner.exceptions.CommandError", help = "Run the integration tests"}
+_gothv_env = "python -m venv .envs/yapapi-goth"
+_gothv_requirements = ".envs/yapapi-goth/bin/pip install -U --extra-index-url https://test.pypi.org/simple/ goth==0.14.1 pip pytest pytest-asyncio pytest-rerunfailures pexpect"
+_gothv_assets = ".envs/yapapi-goth/bin/python -m goth create-assets tests/goth_tests/assets"
+
+clean = {cmd = "rm -rf .coverage .requirements.txt dist md handbook build", help = "Clean all development related files" }
+clean_examples = {sequence = ["clean_examples_blender", "clean_examples_hello", "clean_examples_http_proxy", "clean_examples_simple_service", "clean_examples_ssh", "clean_examples_webapp", "clean_examples_yacat"], help = "Clean all example related files"}
+clean_examples_blender = {cmd = "rm -f examples/blender/*.png examples/blender/*.log", help = "Clean \"blender\" example related files"}
+clean_examples_hello = {cmd = "rm -f examples/hello-world/*.log", help = "Clean \"hello\" example related files"}
+clean_examples_http_proxy = {cmd = "rm -f examples/http-proxy/*.log", help = "Clean \"http_proxy\" example related files"}
+clean_examples_simple_service = {cmd = "rm -f examples/simple-service-poc/*.png examples/simple-service-poc/*.log", help= "Clean example \"simple_service\" related files"}
+clean_examples_ssh = {cmd = "rm -f examples/ssh/*.log", help = "Clean \"ssh\" example related files"}
+clean_examples_webapp = {cmd = "rm -f examples/webapp/*.log", help = "Clean \"webapp\" example related files"}
+clean_examples_yacat = {cmd = "rm -f examples/yacat/*.log", help = "Clean \"yacat\" example related files"}
+
+sphinx = {cmd = "sphinx-build docs/sphinx/ build -E", help = "Build Sphinx docs"}
+
+[tool.liccheck.authorized_packages]
+ya-client-activity = "0.1.0"
+ya-client-payment = "0.1.0"
+ya-market = "0.1.0"
 
 [tool.liccheck]
 authorized_licenses = [
@@ -95,42 +121,73 @@ authorized_licenses = [
   "apache 2",
   "apache",
   "Apache Software",
+  "Apache Software License",
   "MPL-2.0",
+  "Mozilla Public License 2.0 (MPL 2.0)",
   "MIT",
   "LGPL",
   "LGPL-3.0-or-later",
+  "GNU Lesser General Public License v3 or later (LGPLv3+)",
+  "GNU Lesser General Public License v3 (LGPLv3)",
   "Python Software Foundation",
   "ISC",
+  "ISC License (ISCL)",
 ]
 unauthorized_licenses = [
   "gpl v3"
 ]
 
-[tool.liccheck.authorized_packages]
-ya-client-activity = "0.1.0"
-ya-client-payment = "0.1.0"
-ya-market = "0.1.0"
+[tool.autoflake]
+recursive = true
+in-place = true
+remove-all-unused-imports = true
+ignore-init-module-imports = true
 
-[tool.poe.tasks]
-test = "pytest --cov=yapapi --ignore tests/goth_tests"
-goth-assets = "python -m goth create-assets tests/goth_tests/assets"
-#goth-tests = "pytest -svx tests/goth_tests  --config-override docker-compose.build-environment.use-prerelease=true --config-path tests/goth_tests/assets/goth-config-testing.yml --ssh-verify-connection --reruns 3 --only-rerun AssertionError --only-rerun TimeoutError --only-rerun goth.runner.exceptions.TemporalAssertionError --only-rerun urllib.error.URLError --only-rerun goth.runner.exceptions.CommandError"
-goth-tests = "pytest -svx tests/goth_tests  --config-override docker-compose.build-environment.use-prerelease=true --config-path tests/goth_tests/assets/goth-config-testing.yml --reruns 3 --only-rerun AssertionError --only-rerun TimeoutError --only-rerun goth.runner.exceptions.TemporalAssertionError --only-rerun urllib.error.URLError --only-rerun goth.runner.exceptions.CommandError"
-typecheck = "mypy --check-untyped-defs --no-implicit-optional ."
-_codestyle_isort = "isort --check-only --diff ."
-_codestyle_black = "black --check --diff ."
-codestyle = ["_codestyle_isort", "_codestyle_black"]
-_liccheck_export = "poetry export -f requirements.txt -o .requirements.txt"
-_liccheck_verify = "liccheck -r .requirements.txt"
-liccheck = ["_liccheck_export", "_liccheck_verify"]
-check = ["test", "typecheck", "codestyle", "liccheck"]
-clean = "rm -rf .coverage .requirements.txt dist md handbook build"
-clean_blender = "rm -f examples/blender/*.png examples/blender/*.log"
-clean_hello = "rm -f examples/hello-world/*.log"
-clean_http_proxy = "rm -f examples/http-proxy/*.log"
-clean_simple_service = "rm -f examples/simple-service-poc/*.png examples/simple-service-poc/*.log"
-clean_ssh = "rm -f examples/ssh/*.log"
-clean_webapp = "rm -f examples/webapp/*.log"
-clean_yacat = "rm -f examples/yacat/*.log"
-clean_examples = ["clean_blender", "clean_hello", "clean_http_proxy", "clean_simple_service", "clean_ssh", "clean_webapp", "clean_yacat"]
-sphinx = "sphinx-build docs/sphinx/ build -E"
+[tool.flake8]
+max-line-length = 100
+extend-ignore = [
+    "E203", # See https://github.com/PyCQA/pycodestyle/issues/373
+    "E231", # black ignores this rule when formatting
+    "D100", # TODO: To be fixed by #1087
+    "D101", # TODO: To be fixed by #1087
+    "D102", # TODO: To be fixed by #1087
+    "D103", # TODO: To be fixed by #1087
+    "D106", # TODO: To be fixed by #1087
+    "D105", # No docs for magic method
+    "D104", # No docs for public package
+    "D107", # No docs for __init__
+    "D202", # We prefer whitelines after docstrings
+]
+per-file-ignores = [
+    "examples/*:E402",
+]
+
+[tool.mypy]
+exclude = [
+    "^examples/",  # TODO: To be fixed by #1088
+    "^tests/",  # TODO: To be fixed by #1088
+]
+install_types = true
+non_interactive = true
+ignore_missing_imports = true
+check_untyped_defs = true
+show_error_codes = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]  # TODO: Remove this after upgrading to Python 3.8+
+module = "yapapi.props.base"
+warn_unused_ignores = false
+
+[tool.isort]
+profile = "black"
+py_version = 36
+known_golem = "goth, ya_activity, ya_market, ya_net, ya_payment"
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "GOLEM", "FIRSTPARTY", "LOCALFOLDER"]
+line_length = 100
+
+[tool.black]
+line-length = 100
+target-version = ['py36']
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

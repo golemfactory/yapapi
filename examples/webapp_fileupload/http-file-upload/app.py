@@ -1,15 +1,8 @@
 import argparse
-from flask import (
-    Flask,
-    Request,
-    redirect,
-    render_template,
-    request,
-    send_from_directory,
-    url_for,
-)
-from flask_sqlalchemy import SQLAlchemy
 from pathlib import Path
+
+from flask import Flask, Request, redirect, render_template, request, send_from_directory, url_for
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 

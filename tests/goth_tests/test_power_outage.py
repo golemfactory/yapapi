@@ -1,16 +1,15 @@
 import logging
 import os
 from pathlib import Path
-import pytest
 from typing import List
+
+import pytest
 
 from goth.assertions import EventStream
 from goth.configuration import Override, load_yaml
 from goth.runner import Runner
 from goth.runner.log import configure_logging
 from goth.runner.probe import ProviderProbe, RequestorProbe
-
-from yapapi.log import SummaryLogger
 
 from .assertions import assert_no_errors, assert_tasks_processed
 
@@ -44,7 +43,6 @@ async def assert_all_tasks_computed(output_lines: EventStream[str]):
 async def test_power_outage(
     project_dir: Path, log_dir: Path, goth_config_path: Path, config_overrides: List[Override]
 ) -> None:
-
     # This is the default configuration with 2 wasm/VM providers
     goth_config = load_yaml(goth_config_path, config_overrides)
 
@@ -58,15 +56,15 @@ async def test_power_outage(
     )
 
     async with runner(goth_config.containers):
-
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
         provider_1 = runner.get_probes(probe_type=ProviderProbe)[0]
 
         async with requestor.run_command_on_host(
-            f"{blender_path} --subnet-tag goth --min-cpu-threads 1",
+            "{} --subnet-tag goth --min-cpu-threads 1 --log-file {}".format(
+                blender_path, log_dir / "test_power_outage.log"
+            ),
             env=os.environ,
         ) as (_cmd_task, cmd_monitor, _process_monitor):
-
             # Add assertions to the command output monitor `cmd_monitor`:
             cmd_monitor.add_assertion(assert_no_errors)
             all_sent = cmd_monitor.add_assertion(assert_all_tasks_started)
@@ -101,8 +99,6 @@ async def test_power_outage(
             await cmd_monitor.wait_for_pattern(".*Unpaid agreements: .*")
             logger.info("Expected 1 unpaid agreement")
 
-            await cmd_monitor.wait_for_pattern(
-                f".*{SummaryLogger.GOLEM_SHUTDOWN_SUCCESSFUL_MESSAGE}", timeout=120
-            )
+            await cmd_monitor.wait_for_pattern(".*Golem engine has shut down", timeout=120)
 
             logger.info("Requestor script finished")
