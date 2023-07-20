@@ -76,10 +76,10 @@ async def main(subnet_tag, payment_driver=None, payment_network=None, num_instan
     # See the documentation of the `yapapi.log` module on how to set
     # the level of detail and format of the logged information.
     async with Golem(
-            budget=1.0,
-            subnet_tag=subnet_tag,
-            payment_driver=payment_driver,
-            payment_network=payment_network,
+        budget=1.0,
+        subnet_tag=subnet_tag,
+        payment_driver=payment_driver,
+        payment_network=payment_network,
     ) as golem:
         print_env_info(golem)
 
