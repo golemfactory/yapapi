@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import asyncio
 import pathlib
+import random
+import string
 import sys
 from datetime import datetime, timedelta
 
@@ -50,7 +52,7 @@ class SshService(SocketProxyService):
         async for script in super().start():
             yield script
 
-        password = "dupa"
+        password = "".join(random.choice(string.ascii_letters + string.digits) for _ in range(8))
 
         script = self._ctx.new_script(timeout=timedelta(seconds=10))
         script.run("/bin/bash", "-c", "syslogd")
@@ -74,10 +76,10 @@ async def main(subnet_tag, payment_driver=None, payment_network=None, num_instan
     # See the documentation of the `yapapi.log` module on how to set
     # the level of detail and format of the logged information.
     async with Golem(
-        budget=1.0,
-        subnet_tag=subnet_tag,
-        payment_driver=payment_driver,
-        payment_network=payment_network,
+            budget=1.0,
+            subnet_tag=subnet_tag,
+            payment_driver=payment_driver,
+            payment_network=payment_network,
     ) as golem:
         print_env_info(golem)
 
