@@ -1,3 +1,3 @@
 FROM alpine:latest
-VOLUME /golem/input /golem/output
+VOLUME /golem/input
 WORKDIR /golem/work
