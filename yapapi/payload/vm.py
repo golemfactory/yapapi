@@ -1,8 +1,9 @@
 import logging
 from enum import Enum
-from typing import Final, List, Literal, Optional
+from typing import List, Literal, Optional
 
 from dataclasses import dataclass
+
 from yapapi.config import ApiConfig
 from yapapi.payload.package import Package, check_package_url, resolve_package_url
 from yapapi.props import base as prop_base
