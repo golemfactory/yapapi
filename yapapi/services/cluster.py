@@ -1,15 +1,18 @@
 """Implementation of high-level services API."""
 import itertools
-import sys
+from contextlib import AsyncExitStack
 from datetime import datetime, timedelta, timezone
-from typing import AsyncContextManager, Dict, Generator, Generic, Iterable, List, Optional, Type
-
-if sys.version_info >= (3, 8):
-    from contextlib import AsyncExitStack
-    from typing import Final
-else:
-    from typing_extensions import Final
-    from async_exit_stack import AsyncExitStack
+from typing import (
+    AsyncContextManager,
+    Dict,
+    Final,
+    Generator,
+    Generic,
+    Iterable,
+    List,
+    Optional,
+    Type,
+)
 
 from yapapi.engine import Job, _Engine
 from yapapi.network import Network

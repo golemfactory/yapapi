@@ -1,15 +1,8 @@
 import logging
-import sys
 from enum import Enum
-from typing import List, Optional
+from typing import Final, List, Literal, Optional
 
 from dataclasses import dataclass
-
-if sys.version_info > (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
-
 from yapapi.config import ApiConfig
 from yapapi.payload.package import Package, check_package_url, resolve_package_url
 from yapapi.props import base as prop_base

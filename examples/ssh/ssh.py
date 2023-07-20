@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
 import pathlib
-import random
-import string
 import sys
 from datetime import datetime, timedelta
 
@@ -52,7 +50,7 @@ class SshService(SocketProxyService):
         async for script in super().start():
             yield script
 
-        password = "".join(random.choice(string.ascii_letters + string.digits) for _ in range(8))
+        password = "dupa"
 
         script = self._ctx.new_script(timeout=timedelta(seconds=10))
         script.run("/bin/bash", "-c", "syslogd")

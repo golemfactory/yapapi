@@ -8,7 +8,6 @@ from decimal import Decimal
 
 from yapapi import Golem
 from yapapi.contrib.service.http_proxy import HttpProxyService, LocalHttpProxy
-from yapapi.network import Network
 from yapapi.payload import vm
 from yapapi.props import com
 from yapapi.services import Service, ServiceState
@@ -227,13 +226,11 @@ async def main(subnet_tag, payment_driver, payment_network, port):
 
     print_env_info(golem)
 
-    network = Network.deserialize(golem._engine._net_api, network_serialized)
-
+    network = await golem.resume_network(network_serialized)
     db_cluster = await golem.resume_service(DbService, instances=db_serialized, network=network)
     web_cluster = await golem.resume_service(HttpService, instances=web_serialized, network=network)
 
-    print([i.state for i in web_cluster.instances])
-
+    raise_exception_if_still_starting(db_cluster)
     raise_exception_if_still_starting(web_cluster)
 
     proxy = LocalHttpProxy(web_cluster, port)

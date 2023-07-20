@@ -3,12 +3,21 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type
+from typing import (
+    Any,
+    AsyncContextManager,
+    AsyncIterable,
+    AsyncIterator,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Type,
+)
 
 from aiohttp import ClientPayloadError
 from aiohttp_sse_client.client import MessageEvent
 from dataclasses import dataclass
-from typing_extensions import AsyncContextManager, AsyncIterable
 
 from ya_activity import ApiClient, ApiException, RequestorControlApi, RequestorStateApi
 from ya_activity import exceptions as yexc

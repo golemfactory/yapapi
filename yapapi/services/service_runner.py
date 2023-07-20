@@ -4,11 +4,21 @@ import inspect
 import logging
 import sys
 from types import TracebackType
-from typing import TYPE_CHECKING, AsyncContextManager, Dict, List, Optional, Set, Tuple, Type, Union
+from typing import (
+    TYPE_CHECKING,
+    AsyncContextManager,
+    Dict,
+    Final,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+)
 
 import statemachine
 import statemachine.exceptions
-from typing_extensions import Final
 
 if TYPE_CHECKING:
     from yapapi.engine import Job
@@ -500,7 +510,11 @@ class ServiceRunner(AsyncContextManager):
             finally:
                 if service.state != ServiceState.suspended:
                     if network and service.network_node:
-                        await network.remove_node(work_context.provider_id)
+                        try:
+                            await network.remove_node(work_context.provider_id)
+                        except statemachine.exceptions.TransitionNotAllowed:
+                            # no need to remove the node if the network is not there
+                            pass
                         service._clear_network_node()
                     await self._job.engine.accept_payments_for_agreement(self._job.id, agreement.id)
                     await self._job.agreements_pool.release_agreement(

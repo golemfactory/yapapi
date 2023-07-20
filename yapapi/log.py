@@ -50,14 +50,9 @@ from asyncio import CancelledError, get_event_loop
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, Final, List, Optional, Set
 
 from dataclasses import dataclass
-
-if sys.version_info >= (3, 8):
-    from typing import Final
-else:
-    from typing_extensions import Final
 
 from yapapi import __version__ as yapapi_version
 from yapapi import events

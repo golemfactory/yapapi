@@ -1,5 +1,4 @@
 import asyncio
-import sys
 from typing import Optional
 from unittest import mock
 
@@ -21,7 +20,6 @@ def mock_service(init_state: Optional[State] = None):
     return service
 
 
-@pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
 @pytest.mark.asyncio
 async def test_ensure_alive_no_interval():
     with mock.patch("asyncio.Future", mock.AsyncMock()) as future:
@@ -31,7 +29,6 @@ async def test_ensure_alive_no_interval():
     future.assert_awaited()
 
 
-@pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
 @pytest.mark.parametrize(
     "service_state, side_effect, num_retries, expected_alive, expected_num_calls",
     (

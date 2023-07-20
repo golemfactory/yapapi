@@ -5,10 +5,9 @@ import logging
 from copy import deepcopy
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Dict, Optional
+from typing import Dict, Final, Optional
 
 from dataclasses import dataclass
-from typing_extensions import Final
 
 from yapapi import rest
 from yapapi.props import Activity
