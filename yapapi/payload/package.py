@@ -33,7 +33,7 @@ async def check_package_url(image_url: str, image_hash: str) -> str:
         return f"hash:sha3:{image_hash}:{image_url}"
 
 
-def sizeof_fmt(num, suffix="B"):
+def _sizeof_fmt(num, suffix="B"):
     for unit in ["", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"]:
         if abs(num) < 1024.0:
             return f"{num:3.2f}{unit}{suffix}"
@@ -47,30 +47,30 @@ async def resolve_package_url(
     image_hash: Optional[str] = None,
     image_use_https: bool = False,
 ) -> str:
+    params = {}
+
+    if image_tag:
+        params["tag"] = image_tag
+
+    if image_hash:
+        params["hash"] = image_hash
+
+    if not params:
+        raise PackageException("Neither image tag nor image hash specified")
+
+    if "tag" in params and "hash" in params:
+        raise PackageException("Both image tag and image hash specified")
+
+    if os.getenv("GOLEM_DEV_MODE", False):
+        # if dev, skip usage statistics, pass dev option for statistics
+        params["dev"] = "true"
+    else:
+        params["count"] = "true"
+
     async with aiohttp.ClientSession() as client:
-        is_dev = os.getenv("GOLEM_DEV_MODE", False)
-
-        if image_tag is None and image_hash is None:
-            raise PackageException("Neither image tag nor image hash specified")
-
-        if image_tag and image_hash:
-            raise PackageException("Both image tag and image hash specified")
-
-        if image_tag:
-            url_params = f"tag={image_tag}"
-        else:
-            url_params = f"hash={image_hash}"
-
-        if is_dev:
-            # if dev, skip usage statistics, pass dev option for statistics
-            url_params += "&dev=true"
-        else:
-            # resolved by yapapi, so count as used tag (for usage statistics)
-            url_params += "&count=true"
-
-        query_url = f"{repo_url}/v1/image/info?{url_params}"
-        logger.debug(f"Querying registry portal: {query_url}")
-        resp = await client.get(query_url)
+        url = f"{repo_url}/v1/image/info"
+        logger.info(f"Querying registry portal: url={url}, params={params}")
+        resp = await client.get(url, params=params)
         if resp.status != 200:
             try:
                 text = await resp.text()
@@ -80,17 +80,22 @@ async def resolve_package_url(
 
             logger.error(f"Failed to resolve image URL: {resp.status} {text}")
             raise Exception(f"Failed to resolve image URL: {resp.status} {text}")
-        json_resp = await resp.json()
-        if image_use_https:
-            image_url = json_resp["https"]
-        else:
-            image_url = json_resp["http"]
-        image_hash = json_resp["sha3"]
-        image_size = json_resp["size"]
-        logger.debug(f"Resolved image size: {sizeof_fmt(image_size)}")
-        logger.debug(f"Resolved image hash: {image_hash}")
-        logger.debug(f"Resolved image url: {image_url}")
-        # TODO: check if image_arch is ok
-        # image_arch = image_info["arch"]
 
-        return f"hash:sha3:{image_hash}:{image_url}"
+        json_resp = await resp.json()
+
+    if image_use_https:
+        image_url = json_resp["https"]
+    else:
+        image_url = json_resp["http"]
+    image_hash = json_resp["sha3"]
+    image_size = json_resp["size"]
+    logger.debug(
+        f"Resolved image: "
+        f"url={image_url}, "
+        f"size={_sizeof_fmt(image_size)}, "
+        f"hash={image_hash}"
+    )
+    # TODO: check if image_arch is ok
+    # image_arch = image_info["arch"]
+
+    return f"hash:sha3:{image_hash}:{image_url}"

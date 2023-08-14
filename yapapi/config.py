@@ -48,12 +48,6 @@ class ApiConfig:
     net_url: Optional[str] = field(default_factory=partial(os.getenv, "YAGNA_NET_URL"))
     activity_url: Optional[str] = field(default_factory=partial(os.getenv, "YAGNA_ACTIVITY_URL"))
 
-    repository_url: Optional[str] = field(
-        default_factory=partial(
-            os.getenv, "YAPAPI_REPOSITORY_URL", "https://registry.golem.network"
-        )
-    )
-
     def __post_init__(self):
         if self.app_key is None:
             raise MissingConfiguration(key="YAGNA_APPKEY", description="API authentication token")

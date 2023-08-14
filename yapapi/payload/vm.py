@@ -1,10 +1,9 @@
 import logging
 from enum import Enum
-from typing import List, Literal, Optional
+from typing import Final, List, Literal, Optional
 
 from dataclasses import dataclass
 
-from yapapi.config import ApiConfig
 from yapapi.payload.package import Package, check_package_url, resolve_package_url
 from yapapi.props import base as prop_base
 from yapapi.props import inf
@@ -12,6 +11,8 @@ from yapapi.props.builder import DemandBuilder, Model
 from yapapi.props.inf import INF_CORES, RUNTIME_VM, ExeUnitManifestRequest, ExeUnitRequest, InfBase
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_REPOSITORY_URL: Final[str] = "https://registry.golem.network"
 
 VM_CAPS_VPN: str = "vpn"
 VM_CAPS_MANIFEST_SUPPORT: str = "manifest-support"
@@ -144,7 +145,6 @@ class _VmPackage(Package):
     constraints: _VmConstraints
 
     async def resolve_url(self) -> str:
-        # trivial implementation - already resolved before creation of _VmPackage
         return self.image_url
 
     async def decorate_demand(self, demand: DemandBuilder):
@@ -160,6 +160,7 @@ async def repo(
     image_tag: Optional[str] = None,
     image_url: Optional[str] = None,
     image_use_https: bool = False,
+    repository_url: str = DEFAULT_REPOSITORY_URL,
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,
     min_cpu_threads: int = 1,
@@ -209,40 +210,45 @@ async def repo(
             min_mem_gib=0.5,
             # only run on provider nodes that have more than 2gb of storage space available
             min_storage_gib=2.0,
-            # only run on provider nodes which a certain number of CPU threads available
+            # only run on provider nodes with a certain number of CPU threads available
             min_cpu_threads=min_cpu_threads,
         )
 
     """
 
-    repo_url = ApiConfig().repository_url
-    if not image_tag and not image_hash:
-        raise ValueError("Either image_tag or image_hash must be provided")
-    elif image_tag and image_url:
-        raise ValueError(
-            "You cannot override image_url when using image_tag, use image_hash instead"
-        )
-    elif not image_url and image_hash:
-        if not repo_url:
-            raise ValueError("Repo url is empty or not set")
-        logger.info(f"Resolving using {repo_url} by image hash {image_hash}")
-        resolved_image_url = await resolve_package_url(
-            repo_url, image_hash=image_hash, image_use_https=image_use_https
-        )
-    elif not image_url and image_tag:
-        if not repo_url:
-            raise ValueError("Repo url is empty or not set")
-        logger.info(f"Resolving using {repo_url} by image tag {image_tag}")
-        resolved_image_url = await resolve_package_url(
-            repo_url, image_tag=image_tag, image_use_https=image_use_https
-        )
-    elif image_hash and image_url:
-        logger.info(f"Checking if image url is correct for {image_url} and {image_hash}")
+    if image_url:
+        if image_tag:
+            raise ValueError(
+                "An image_tag can only be used when resolving from Golem Registry, "
+                "not with a direct image_url."
+            )
+        if not image_hash:
+            raise ValueError("An image_hash is required when using a direct image_url.")
+        logger.debug(f"Verifying if {image_url} exists.")
         resolved_image_url = await check_package_url(image_url, image_hash)
     else:
-        raise ValueError("Invalid combination of arguments")
+        if image_hash and image_tag:
+            raise ValueError(
+                "Golem Registry images can be resolved by "
+                "either an image_hash or by an image_tag but not both."
+            )
+        if image_hash:
+            logger.debug(f"Resolving using image hash: {image_hash} on {repository_url}.")
+            resolved_image_url = await resolve_package_url(
+                repository_url, image_hash=image_hash, image_use_https=image_use_https
+            )
+        elif image_tag:
+            logger.debug(f"Resolving using image tag: {image_tag} on {repository_url}.")
+            resolved_image_url = await resolve_package_url(
+                repository_url, image_tag=image_tag, image_use_https=image_use_https
+            )
+        else:
+            raise ValueError(
+                "Either an image_hash or an image_tag is required "
+                "to resolve an image URL from the Golem Registry."
+            )
 
-    logger.info(f"Resolved image full link: {resolved_image_url}")
+    logger.debug(f"Resolved image: {resolved_image_url}")
 
     capabilities = capabilities or list()
     return _VmPackage(
