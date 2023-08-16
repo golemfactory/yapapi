@@ -48,7 +48,7 @@ async def _mock_response(*args, **kwargs):
             "http://image",
             False,
             None,
-            ValueError,
+            PackageException,
             "An image_hash is required when using a direct image_url",
         ),
         (
@@ -57,7 +57,7 @@ async def _mock_response(*args, **kwargs):
             "http://image",
             False,
             None,
-            ValueError,
+            PackageException,
             "An image_tag can only be used when resolving "
             "from Golem Registry, not with a direct image_url",
         ),

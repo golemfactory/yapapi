@@ -4,7 +4,7 @@ from typing import Final, List, Literal, Optional
 
 from dataclasses import dataclass
 
-from yapapi.payload.package import Package, check_package_url, resolve_package_url
+from yapapi.payload.package import Package, PackageException, check_package_url, resolve_package_url
 from yapapi.props import base as prop_base
 from yapapi.props import inf
 from yapapi.props.builder import DemandBuilder, Model
@@ -218,12 +218,12 @@ async def repo(
 
     if image_url:
         if image_tag:
-            raise ValueError(
+            raise PackageException(
                 "An image_tag can only be used when resolving from Golem Registry, "
                 "not with a direct image_url."
             )
         if not image_hash:
-            raise ValueError("An image_hash is required when using a direct image_url.")
+            raise PackageException("An image_hash is required when using a direct image_url.")
         logger.debug(f"Verifying if {image_url} exists.")
         resolved_image_url = await check_package_url(image_url, image_hash)
     else:
