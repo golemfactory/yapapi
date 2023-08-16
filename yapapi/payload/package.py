@@ -56,10 +56,16 @@ async def resolve_package_url(
         params["hash"] = image_hash
 
     if not params:
-        raise PackageException("Neither image tag nor image hash specified")
+        raise PackageException(
+            "Either an image_hash or an image_tag is required "
+            "to resolve an image URL from the Golem Registry."
+        )
 
     if "tag" in params and "hash" in params:
-        raise PackageException("Both image tag and image hash specified")
+        raise PackageException(
+            "Golem Registry images can be resolved by "
+            "either an image_hash or by an image_tag but not both."
+        )
 
     if os.getenv("GOLEM_DEV_MODE", False):
         # if dev, skip usage statistics, pass dev option for statistics
@@ -69,7 +75,7 @@ async def resolve_package_url(
 
     async with aiohttp.ClientSession() as client:
         url = f"{repo_url}/v1/image/info"
-        logger.info(f"Querying registry portal: url={url}, params={params}")
+        logger.debug(f"Querying registry portal: url={url}, params={params}")
         resp = await client.get(url, params=params)
         if resp.status != 200:
             try:

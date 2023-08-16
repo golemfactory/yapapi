@@ -227,26 +227,16 @@ async def repo(
         logger.debug(f"Verifying if {image_url} exists.")
         resolved_image_url = await check_package_url(image_url, image_hash)
     else:
-        if image_hash and image_tag:
-            raise ValueError(
-                "Golem Registry images can be resolved by "
-                "either an image_hash or by an image_tag but not both."
-            )
-        if image_hash:
-            logger.debug(f"Resolving using image hash: {image_hash} on {repository_url}.")
-            resolved_image_url = await resolve_package_url(
-                repository_url, image_hash=image_hash, image_use_https=image_use_https
-            )
-        elif image_tag:
-            logger.debug(f"Resolving using image tag: {image_tag} on {repository_url}.")
-            resolved_image_url = await resolve_package_url(
-                repository_url, image_tag=image_tag, image_use_https=image_use_https
-            )
-        else:
-            raise ValueError(
-                "Either an image_hash or an image_tag is required "
-                "to resolve an image URL from the Golem Registry."
-            )
+        logger.debug(
+            f"Resolving image on {repository_url}: "
+            f"image_hash={image_hash}, image_tag={image_tag}, image_use_https={image_use_https}."
+        )
+        resolved_image_url = await resolve_package_url(
+            repository_url,
+            image_hash=image_hash,
+            image_tag=image_tag,
+            image_use_https=image_use_https,
+        )
 
     logger.debug(f"Resolved image: {resolved_image_url}")
 

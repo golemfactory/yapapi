@@ -1,8 +1,9 @@
-from aiohttp import ClientResponse
-import pytest
 from unittest.mock import AsyncMock
 
+import pytest
+
 from yapapi.payload import vm
+from yapapi.payload.package import PackageException
 
 _MOCK_HTTP_ADDR = "http://test.address/"
 _MOCK_HTTPS_ADDR = "https://test.address/"
@@ -30,14 +31,14 @@ async def _mock_response(*args, **kwargs):
         (None, "testtag", None, False, f"hash:sha3:{_MOCK_SHA3}:{_MOCK_HTTP_ADDR}", None, ""),
         ("testhash", None, None, True, f"hash:sha3:{_MOCK_SHA3}:{_MOCK_HTTPS_ADDR}", None, ""),
         (None, "testtag", None, True, f"hash:sha3:{_MOCK_SHA3}:{_MOCK_HTTPS_ADDR}", None, ""),
-        ("testhash", None, "http://image", False, f"hash:sha3:testhash:http://image", None, ""),
+        ("testhash", None, "http://image", False, "hash:sha3:testhash:http://image", None, ""),
         (
             None,
             None,
             None,
             False,
             None,
-            ValueError,
+            PackageException,
             "Either an image_hash or an image_tag is required "
             "to resolve an image URL from the Golem Registry",
         ),
@@ -66,7 +67,7 @@ async def _mock_response(*args, **kwargs):
             None,
             False,
             None,
-            ValueError,
+            PackageException,
             "Golem Registry images can be resolved by either "
             "an image_hash or by an image_tag but not both",
         ),
