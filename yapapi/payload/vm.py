@@ -161,6 +161,7 @@ async def repo(
     image_url: Optional[str] = None,
     image_use_https: bool = False,
     repository_url: str = DEFAULT_REPOSITORY_URL,
+    dev_mode: bool = False,  # noqa
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,
     min_cpu_threads: int = 1,
@@ -173,6 +174,7 @@ async def repo(
     :param image_tag: Tag of the package to resolve from Golem Registry
     :param image_url: URL of the package's image
     :param image_use_https: whether to resolve to HTTPS or HTTP when using Golem Registry
+    :param repository_url: override the package repository location
     :param min_mem_gib: minimal memory required to execute application code
     :param min_storage_gib: minimal disk storage to execute tasks
     :param min_cpu_threads: minimal available logical CPU cores
@@ -236,6 +238,7 @@ async def repo(
             image_hash=image_hash,
             image_tag=image_tag,
             image_use_https=image_use_https,
+            dev_mode=dev_mode,
         )
 
     logger.debug(f"Resolved image: {resolved_image_url}")

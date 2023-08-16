@@ -1,6 +1,5 @@
 import abc
 import logging
-import os
 from typing import Optional
 
 import aiohttp
@@ -46,6 +45,7 @@ async def resolve_package_url(
     image_tag: Optional[str] = None,
     image_hash: Optional[str] = None,
     image_use_https: bool = False,
+    dev_mode: bool = False,
 ) -> str:
     params = {}
 
@@ -67,7 +67,7 @@ async def resolve_package_url(
             "either an image_hash or by an image_tag but not both."
         )
 
-    if os.getenv("GOLEM_DEV_MODE", False):
+    if dev_mode:
         # if dev, skip usage statistics, pass dev option for statistics
         params["dev"] = "true"
     else:
