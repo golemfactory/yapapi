@@ -81,7 +81,7 @@ _format_black = "black ."
 
 tests_unit = {cmd = "pytest --cov=yapapi --cov-report html --cov-report term -sv --ignore tests/goth_tests", help = "Run only unit tests"}
 tests_integration_init = { sequence = ["_gothv_env", "_gothv_requirements", "_gothv_assets"], help="Initialize the integration test environment"}
-tests_integration = { cmd = ".envs/yapapi-goth/bin/python -m pytest -svx tests/goth_tests  --config-override docker-compose.build-environment.use-prerelease=false --config-path tests/goth_tests/assets/goth-config.yml --ssh-verify-connection --reruns 3 --only-rerun AssertionError --only-rerun TimeoutError --only-rerun goth.runner.exceptions.TemporalAssertionError --only-rerun urllib.error.URLError --only-rerun goth.runner.exceptions.CommandError --only-rerun requests.exceptions.ConnectionError", help = "Run the integration tests"}
+tests_integration = { cmd = ".envs/yapapi-goth/bin/python -m pytest -svx tests/goth_tests --config-override docker-compose.build-environment.use-prerelease=false --config-path tests/goth_tests/assets/goth-config.yml --ssh-verify-connection --reruns 3 --only-rerun AssertionError --only-rerun TimeoutError --only-rerun goth.runner.exceptions.TemporalAssertionError --only-rerun urllib.error.URLError --only-rerun goth.runner.exceptions.CommandError --only-rerun requests.exceptions.ConnectionError --only-rerun OSError", help = "Run the integration tests"}
 _gothv_env = "python -m venv .envs/yapapi-goth"
 _gothv_requirements = ".envs/yapapi-goth/bin/pip install -U --extra-index-url https://test.pypi.org/simple/ goth==0.14.1 pip pytest pytest-asyncio pytest-rerunfailures pexpect"
 _gothv_assets = ".envs/yapapi-goth/bin/python -m goth create-assets tests/goth_tests/assets"
