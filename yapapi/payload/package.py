@@ -101,7 +101,5 @@ async def resolve_package_url(
         f"size={_sizeof_fmt(image_size)}, "
         f"hash={image_hash}"
     )
-    # TODO: check if image_arch is ok
-    # image_arch = image_info["arch"]
 
     return f"hash:sha3:{image_hash}:{image_url}"
