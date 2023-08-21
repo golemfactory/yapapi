@@ -297,7 +297,10 @@ class ServiceRunner(AsyncContextManager):
             ctx = instance.service._ctx
             assert ctx is not None  # This is None only while pending for the first time
             ctx.emit(
-                events.ServiceStateChanged, service=instance, old=prev_state, new=instance.state
+                events.ServiceStateChanged,
+                service=instance.service,
+                old=prev_state,
+                new=instance.state,
             )
 
         return instance.state != prev_state
