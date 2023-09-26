@@ -2,8 +2,8 @@ name: Goth nightly
 
 on:
   schedule:
-    # run this workflow every day at 1:00 AM UTC
-    - cron: '0 1 * * *'
+    # run this workflow every day at 23:00UTC
+    - cron: '0 23 * * *'
 
 jobs:
   prepare-matrix:
@@ -31,7 +31,7 @@ jobs:
         run: echo "matrix={\"include\":[{\"branch\":\"master\"},{\"branch\":\"${{ steps.latest-stable.outputs.branch }}\"}]}" >> $GITHUB_OUTPUT
 
   goth-tests:
-    runs-on: [goth, ubuntu-18.04]
+    runs-on: [goth2, ubuntu-22.04]
     needs: prepare-matrix
     strategy:
       matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix-json) }}
