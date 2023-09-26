@@ -40,21 +40,11 @@ jobs:
           poetry env use python3.9
           poetry install
 
-      - name: Disconnect Docker containers from default network
-        continue-on-error: true
-        # related to this issue: https://github.com/moby/moby/issues/23302
+      - name: Cleanup Docker
+        if: always()
         run: |
-          docker network inspect docker_default
-          sudo apt-get install -y jq
-          docker network inspect docker_default | jq ".[0].Containers | map(.Name)[]" | tee /dev/stderr | xargs --max-args 1 -- docker network disconnect -f docker_default
-
-      - name: Remove Docker containers
-        continue-on-error: true
-        run: docker rm -f $(docker ps -a -q)
-
-      - name: Restart Docker daemon
-        # related to this issue: https://github.com/moby/moby/issues/23302
-        run: sudo systemctl restart docker
+          c=$(docker ps -q) && [[ $c ]] && docker kill $c
+          docker system prune -af
 
       - name: Log in to GitHub Docker repository
         run: echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{github.actor}} --password-stdin
@@ -78,6 +68,12 @@ jobs:
       - name: Remove test logs
         if: always()
         run: rm -rf /tmp/goth-tests
+
+      - name: Cleanup Docker
+        if: always()
+        run: |
+          c=$(docker ps -q) && [[ $c ]] && docker kill $c
+          docker system prune -af
 
       # Only relevant for self-hosted runners
       - name: Remove poetry virtual env
