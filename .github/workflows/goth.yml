@@ -14,7 +14,7 @@ on:
 jobs:
   goth-tests:
     name: Run integration tests
-    runs-on: [ubuntu-22.04]
+    runs-on: [goth2]
     steps:
       - name: install docker-compose
         run: |
