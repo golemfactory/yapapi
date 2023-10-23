@@ -51,7 +51,7 @@ from yapapi.strategy import (
     BaseMarketStrategy,
 )
 
-DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "erc20").lower()
+DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "erc20next").lower()
 DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "goerli").lower()
 DEFAULT_SUBNET: Optional[str] = os.getenv("YAGNA_SUBNET", "public")
 
@@ -122,7 +122,7 @@ class _Engine:
         :param subnet_tag: use only providers in the subnet with the subnet_tag name.
             Uses `YAGNA_SUBNET` environment variable, defaults to `None`
         :param payment_driver: name of the payment driver to use. Uses `YAGNA_PAYMENT_DRIVER`
-            environment variable, defaults to `erc20`. Only payment platforms with
+            environment variable, defaults to `erc20next`. Only payment platforms with
             the specified driver will be used
         :param payment_network: name of the payment network to use. Uses `YAGNA_PAYMENT_NETWORK`
             environment variable, defaults to `goerli`. Only payment platforms with the specified

@@ -143,7 +143,7 @@ It's possible to set various elements of `yagna` configuration through environme
 * `YAGNA_APPKEY`, `yagna` app key to be used, e.g. `a70facb9501d4528a77f25574ab0f12b`
 * `YAGNA_MARKET_URL`, URL to `yagna` market API, e.g. `http://localhost:7500/market-api/v1`
 * `YAGNA_PAYMENT_NETWORK`, Ethereum network name for `yagna` to use, e.g. `rinkeby`
-* `YAGNA_PAYMENT_DRIVER`, payment driver name for `yagna` to use, e.g. `erc20`
+* `YAGNA_PAYMENT_DRIVER`, payment driver name for `yagna` to use, e.g. `erc20next`
 * `YAGNA_PAYMENT_URL`, URL to `yagna` payment API, e.g. `http://localhost:7500/payment-api/v1`
 * `YAGNA_NET_URL`, URL to `yagna` net APU, e.g. `http://localhost:7500/net-api/v1`
 * `YAGNA_SUBNET`, name of the `yagna` sub network to be used, e.g. `public`

@@ -113,7 +113,7 @@ class Golem:
         :param subnet_tag: use only providers in the subnet with the subnet_tag name.
             Uses `YAGNA_SUBNET` environment variable, defaults to `None`
         :param payment_driver: name of the payment driver to use. Uses `YAGNA_PAYMENT_DRIVER`
-            environment variable, defaults to `erc20`. Only payment platforms with
+            environment variable, defaults to `erc20next`. Only payment platforms with
             the specified driver will be used
         :param payment_network: name of the network to use. Uses `YAGNA_PAYMENT_NETWORK` environment
             variable, defaults to `goerli`. Only payment platforms with the specified
