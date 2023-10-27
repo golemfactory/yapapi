@@ -40,35 +40,15 @@ class AiRuntimeService(Service):
 
         # every `DATE_POLL_INTERVAL` write output of `date` to `DATE_OUTPUT_PATH`
         script = self._ctx.new_script()
-        script.run(
-            "Start",
-            cmd="--model none"
+        script.start(
+            "--model",
+            "dummy_model"
         )
         yield script
 
-    async def run(self):
-        # # Perform mock command on runtime to check if it works
-        # script = self._ctx.new_script()
-        # results = script.run("start", args="--mode none")
+    # async def run(self):
+    #    # TODO run AI tasks here
 
-        # yield script
-
-        # result = (await results).stdout.strip()
-        # print(f"{TEXT_COLOR_CYAN}{result}{TEXT_COLOR_DEFAULT}")
-
-        while True:
-            await asyncio.sleep(10)
-
-            raw_state = await self._ctx.get_raw_state()
-            usage = format_usage(await self._ctx.get_usage())
-            cost = await self._ctx.get_cost()
-            print(
-                f"{TEXT_COLOR_MAGENTA}"
-                f" --- {self.provider_name} STATE: {raw_state}\n"
-                f" --- {self.provider_name} USAGE: {usage}\n"
-                f" --- {self.provider_name}  COST: {cost}"
-                f"{TEXT_COLOR_DEFAULT}"
-            )
 
 async def main(subnet_tag, driver=None, network=None):
     async with Golem(
@@ -88,20 +68,6 @@ async def main(subnet_tag, driver=None, network=None):
         while True:
             await asyncio.sleep(3)
             print(f"instances: {instances()}")
-
-    #     cnt = 0
-    #     while cnt < 10:
-    #         print(f"instances: {instances()}")
-    #         await asyncio.sleep(3)
-
-    #     cluster.stop()
-
-    #     cnt = 0
-    #     while cnt < 10 and any(s.is_available for s in cluster.instances):
-    #         print(f"instances: {instances()}")
-    #         await asyncio.sleep(1)
-
-    # print(f"instances: {instances()}")
 
 if __name__ == "__main__":
     parser = build_parser("Run AI runtime task")
