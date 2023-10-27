@@ -34,10 +34,22 @@ class AiRuntimeService(Service):
     async def get_payload():
         return AiPayload()
 
+    async def start(self):
+        # async for script in super().start():
+        #     yield script
+
+        # every `DATE_POLL_INTERVAL` write output of `date` to `DATE_OUTPUT_PATH`
+        script = self._ctx.new_script()
+        script.run(
+            "Start",
+            cmd="--model none"
+        )
+        yield script
+
     async def run(self):
-        # Perform mock command on runtime to check if it works
+        # # Perform mock command on runtime to check if it works
         # script = self._ctx.new_script()
-        # results = script.run("test")
+        # results = script.run("start", args="--mode none")
 
         # yield script
 
@@ -67,24 +79,29 @@ async def main(subnet_tag, driver=None, network=None):
     ) as golem:
         cluster = await golem.run_service(
             AiRuntimeService,
+            num_instances=1,
         )
 
         def instances():
             return [f"{s.provider_name}: {s.state.value}" for s in cluster.instances]
 
-        cnt = 0
-        while cnt < 10:
-            print(f"instances: {instances()}")
+        while True:
             await asyncio.sleep(3)
-
-        cluster.stop()
-
-        cnt = 0
-        while cnt < 10 and any(s.is_available for s in cluster.instances):
             print(f"instances: {instances()}")
-            await asyncio.sleep(1)
 
-    print(f"instances: {instances()}")
+    #     cnt = 0
+    #     while cnt < 10:
+    #         print(f"instances: {instances()}")
+    #         await asyncio.sleep(3)
+
+    #     cluster.stop()
+
+    #     cnt = 0
+    #     while cnt < 10 and any(s.is_available for s in cluster.instances):
+    #         print(f"instances: {instances()}")
+    #         await asyncio.sleep(1)
+
+    # print(f"instances: {instances()}")
 
 if __name__ == "__main__":
     parser = build_parser("Run AI runtime task")
