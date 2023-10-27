@@ -24,8 +24,8 @@ CAPABILITIES = "golem.runtime.capabilities"
 class AiPayload(Payload):
 
     runtime: str = constraint(inf.INF_RUNTIME_NAME, default=RUNTIME_NAME)
-    min_mem_gib: float = constraint(inf.INF_MEM, operator=">=", default=4)
-    min_storage_gib: float = constraint(inf.INF_STORAGE, operator=">=", default=512)
+    # min_mem_gib: float = constraint(inf.INF_MEM, operator=">=", default=4)
+    # min_storage_gib: float = constraint(inf.INF_STORAGE, operator=">=", default=512)
     capabilities: str = constraint(CAPABILITIES, default="dummy")
 
 
@@ -34,10 +34,33 @@ class AiRuntimeService(Service):
     async def get_payload():
         return AiPayload()
 
+    async def run(self):
+        # Perform mock command on runtime to check if it works
+        # script = self._ctx.new_script()
+        # results = script.run("test")
+
+        # yield script
+
+        # result = (await results).stdout.strip()
+        # print(f"{TEXT_COLOR_CYAN}{result}{TEXT_COLOR_DEFAULT}")
+
+        while True:
+            await asyncio.sleep(10)
+
+            raw_state = await self._ctx.get_raw_state()
+            usage = format_usage(await self._ctx.get_usage())
+            cost = await self._ctx.get_cost()
+            print(
+                f"{TEXT_COLOR_MAGENTA}"
+                f" --- {self.provider_name} STATE: {raw_state}\n"
+                f" --- {self.provider_name} USAGE: {usage}\n"
+                f" --- {self.provider_name}  COST: {cost}"
+                f"{TEXT_COLOR_DEFAULT}"
+            )
 
 async def main(subnet_tag, driver=None, network=None):
     async with Golem(
-        budget=10.0,
+        budget=100.0,
         subnet_tag=subnet_tag,
         payment_driver=driver,
         payment_network=network,
