@@ -17,7 +17,7 @@ from examples.utils import (
     TEXT_COLOR_DEFAULT, TEXT_COLOR_MAGENTA, format_usage,
 )
 
-RUNTIME_NAME = "ai"
+RUNTIME_NAME = "ai-dummy"
 CAPABILITIES = "golem.runtime.capabilities"
 
 @dataclass
