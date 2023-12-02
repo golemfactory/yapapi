@@ -216,7 +216,7 @@ class Service:
         check the `Default implementation` section for more details.
 
         As a handler implementing the `work generator pattern
-        <https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern>`_,
+        <https://docs.golem.network/docs/creators/python/guides/application-fundamentals#work-generator-pattern-and-work-context>`_,
         it's expected to be a generator that yields :class:`~yapapi.script.Script` (generated using
         the service's instance of the :class:`~yapapi.WorkContext` - :attr:`self._ctx`) that are
         then dispatched to the activity by the engine.
@@ -287,7 +287,7 @@ class Service:
         Should contain any operations needed to ensure continuous operation of a service.
 
         As a handler implementing the `work generator pattern
-        <https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern>`_,
+        <https://docs.golem.network/docs/creators/python/guides/application-fundamentals#work-generator-pattern-and-work-context>`_,
         it's expected to be a generator that yields :class:`~yapapi.script.Script` (generated using
         the service's instance of the :class:`~yapapi.WorkContext` - :attr:`self._ctx`) that are
         then dispatched to the activity by the engine.
@@ -332,7 +332,7 @@ class Service:
         and gracefully shut-down - e.g. that its final state is retrieved.
 
         As a handler implementing the `work generator pattern
-        <https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals/hl-api-work-generator-pattern>`_,
+        <https://docs.golem.network/docs/creators/python/guides/application-fundamentals#work-generator-pattern-and-work-context>`_,
         it's expected to be a generator that yields :class:`~yapapi.script.Script` (generated using
         the service's instance of the :class:`~yapapi.WorkContext` - :attr:`self._ctx`) that are
         then dispatched to the activity by the engine.

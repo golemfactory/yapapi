@@ -15,7 +15,7 @@
 
 ## Golem application development
 
-For a detailed introduction to using Golem and yapapi to run your tasks on Golem and a guide to Golem Network application development in general, [please consult our handbook](https://handbook.golem.network/requestor-tutorials/flash-tutorial-of-requestor-development).
+For a detailed introduction to using Golem and yapapi to run your tasks on Golem and a guide to Golem Network application development in general, [please consult our docs](https://docs.golem.network/docs/quickstarts/python-quickstart).
 
 ### Installation
 
@@ -125,13 +125,12 @@ poetry run poe clean
 
 * [Golem](https://golem.network), a global, open-source, decentralized supercomputer that anyone can access.
 * Learn what you need to know to set-up your Golem requestor node:
-  * [Requestor development: a quick primer](https://handbook.golem.network/requestor-tutorials/flash-tutorial-of-requestor-development)
-  * [Run first task on Golem](https://handbook.golem.network/requestor-tutorials/flash-tutorial-of-requestor-development/run-first-task-on-golem)
-* Have a look at the most important concepts behind any Golem application: [Golem application fundamentals](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals)
-* Learn about preparing your own Docker-like images for the [VM runtime](https://handbook.golem.network/requestor-tutorials/vm-runtime)
+* [Requestor development: a quickstart](https://docs.golem.network/docs/quickstarts/python-quickstart)
+* Have a look at the most important concepts behind any Golem application: [Golem application fundamentals](https://docs.golem.network/docs/creators/python/guides/application-fundamentals)
+* Learn about preparing your own Docker-like images for the [VM runtime](https://docs.golem.network/docs/creators/python/examples/tools/converting-docker-image-to-golem-format)
 * Write your own app with yapapi:
-  * [Task Model development](https://handbook.golem.network/requestor-tutorials/task-processing-development)
-  * [Service Model development](https://handbook.golem.network/requestor-tutorials/service-development)
+  * [Task Model development](https://docs.golem.network/docs/creators/python/guides/task-model)
+  * [Service Model development](https://docs.golem.network/docs/creators/python/guides/service-model)
 
 ## Environment variables
 
