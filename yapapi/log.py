@@ -165,6 +165,7 @@ event_type_to_string = {
     events.CommandStdOut: "Command stdout",
     events.CommandStdErr: "Command stderr",
     events.CommandExecuted: "Script command executed",
+    events.CommandProgress: "Script command progress update",
     events.GettingResults: "Getting script results",
     events.ScriptFinished: "Script finished",
     events.TaskAccepted: "Task accepted",

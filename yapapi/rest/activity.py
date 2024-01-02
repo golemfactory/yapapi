@@ -283,8 +283,7 @@ class PollingBatch(Batch):
                 results = await self._get_results(timeout=min(timeout, 5))
 
             any_new: bool = False
-            results = results[last_idx:]
-            for result in results:
+            for result in results[last_idx:]:
                 any_new = True
                 assert last_idx == result.index, f"Expected {last_idx}, got {result.index}"
 
@@ -300,6 +299,18 @@ class PollingBatch(Batch):
                 last_idx = result.index + 1
                 if result.is_batch_finished:
                     break
+
+            current_idx = last_idx - 1
+            if current_idx >= 0:
+                current = results[current_idx]
+
+                if current.message is not None:
+                    kwargs = dict(
+                        cmd_idx=current.index,
+                        message=current.message,
+                    )
+                    yield events.CommandProgress, kwargs
+
             if not any_new:
                 delay = min(3, max(0, self.seconds_left()))
                 await asyncio.sleep(delay)
