@@ -521,9 +521,11 @@ class CommandStdOut(CommandEvent):
 class CommandStdErr(CommandEvent):
     output: str
 
+
 @attr.s(auto_attribs=True, repr=False)
 class CommandProgress(CommandEvent):
     message: str
+
 
 @attr.s(auto_attribs=True, repr=False)
 class TaskAccepted(TaskEvent):
