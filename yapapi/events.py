@@ -524,7 +524,10 @@ class CommandStdErr(CommandEvent):
 
 @attr.s(auto_attribs=True, repr=False)
 class CommandProgress(CommandEvent):
-    message: str
+    step: Tuple[int, int]
+    message: Optional[str]
+    progress: Tuple[int, Optional[int]]
+    unit: Optional[str]
 
 
 @attr.s(auto_attribs=True, repr=False)

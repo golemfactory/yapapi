@@ -13,7 +13,6 @@ from yapapi.storage import DOWNLOAD_BYTES_LIMIT_DEFAULT, Destination, Source, St
 if TYPE_CHECKING:
     from yapapi.script import Script
 
-
 # For example: { "start": { "args": [] } }
 BatchCommand = Dict[str, Dict[str, Union[str, List[str]]]]
 
@@ -92,11 +91,18 @@ class Terminate(Command):
         return self._make_batch_command("terminate")
 
 
+class ProgressArgs:
+    """Interval represented as human-readable duration string (examples: '5s' '10min')"""
+    update_interval: Optional[str]
+    update_step: Optional[int]
+
+
 class _SendContent(Command, abc.ABC):
-    def __init__(self, dst_path: str):
+    def __init__(self, dst_path: str, progress_args: Optional[ProgressArgs] = None):
         super().__init__()
         self._dst_path = dst_path
         self._src: Optional[Source] = None
+        self._progress = progress_args
 
     @abc.abstractmethod
     async def _do_upload(self, storage: StorageProvider) -> Source:
@@ -105,7 +111,7 @@ class _SendContent(Command, abc.ABC):
     def evaluate(self):
         assert self._src
         return self._make_batch_command(
-            "transfer", _from=self._src.download_url, _to=f"container:{self._dst_path}"
+            "transfer", _from=self._src.download_url, _to=f"container:{self._dst_path}", _progress={}
         )
 
     async def before(self):
@@ -173,12 +179,12 @@ class Run(Command):
     """Command which schedules running a shell command on a provider."""
 
     def __init__(
-        self,
-        cmd: str,
-        *args: str,
-        env: Optional[Dict[str, str]] = None,
-        stderr: CaptureContext = CaptureContext.build(mode="stream"),
-        stdout: CaptureContext = CaptureContext.build(mode="stream"),
+            self,
+            cmd: str,
+            *args: str,
+            env: Optional[Dict[str, str]] = None,
+            stderr: CaptureContext = CaptureContext.build(mode="stream"),
+            stdout: CaptureContext = CaptureContext.build(mode="stream"),
     ):
         """Create a new Run command.
 
@@ -210,8 +216,8 @@ StorageEvent = Union[DownloadStarted, DownloadFinished]
 
 class _ReceiveContent(Command, abc.ABC):
     def __init__(
-        self,
-        src_path: str,
+            self,
+            src_path: str,
     ):
         super().__init__()
         self._src_path: str = src_path
@@ -242,9 +248,9 @@ class DownloadFile(_ReceiveContent):
     """Command which schedules downloading a file from a provider."""
 
     def __init__(
-        self,
-        src_path: str,
-        dst_path: str,
+            self,
+            src_path: str,
+            dst_path: str,
     ):
         """Create a new DownloadFile command.
 
@@ -270,10 +276,10 @@ class DownloadBytes(_ReceiveContent):
     """Command which schedules downloading a file from a provider as bytes."""
 
     def __init__(
-        self,
-        src_path: str,
-        on_download: Callable[[bytes], Awaitable],
-        limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
+            self,
+            src_path: str,
+            on_download: Callable[[bytes], Awaitable],
+            limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
     ):
         """Create a new DownloadBytes command.
 
@@ -298,10 +304,10 @@ class DownloadJson(DownloadBytes):
     """Command which schedules downloading a file from a provider as JSON data."""
 
     def __init__(
-        self,
-        src_path: str,
-        on_download: Callable[[Any], Awaitable],
-        limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
+            self,
+            src_path: str,
+            on_download: Callable[[Any], Awaitable],
+            limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
     ):
         """Create a new DownloadJson command.
 
@@ -314,3 +320,35 @@ class DownloadJson(DownloadBytes):
     @staticmethod
     async def __on_json_download(on_download: Callable[[bytes], Awaitable], content: bytes):
         await on_download(json.loads(content))
+
+
+class InternetSource(Source):
+    def __init__(self, url: str):
+        self._url = url
+
+    @property
+    def download_url(self) -> str:
+        return self._url
+
+    async def content_length(self) -> int:
+        return 0
+
+
+class UploadFileFromInternet(_SendContent):
+    def __init__(self, src_url: str, dst_path: str, progress_args: Optional[ProgressArgs] = None):
+        """Create a new UploadFileFromInternet command.
+
+        :param src_url: remote (internet) source url
+        :param dst_path: remote (provider) destination path
+        """
+        super().__init__(dst_path, progress_args=progress_args)
+        self._src_url = src_url
+
+    async def _do_upload(self, storage: StorageProvider) -> Source:
+        return InternetSource(self._src_url)
+
+    async def after(self) -> None:
+        pass
+
+    def __repr__(self):
+        return f"{super().__repr__()} src={self._src_url}"

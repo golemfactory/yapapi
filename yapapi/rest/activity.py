@@ -300,17 +300,6 @@ class PollingBatch(Batch):
                 if result.is_batch_finished:
                     break
 
-            current_idx = last_idx - 1
-            if current_idx >= 0:
-                current = results[current_idx]
-
-                if current.message is not None:
-                    kwargs = dict(
-                        cmd_idx=current.index,
-                        message=current.message,
-                    )
-                    yield events.CommandProgress, kwargs
-
             if not any_new:
                 delay = min(3, max(0, self.seconds_left()))
                 await asyncio.sleep(delay)
@@ -393,6 +382,13 @@ def _message_event_to_event_data(msg_event: MessageEvent) -> CommandEventData:
     elif evt_kind == "stderr":
         evt_cls = events.CommandStdErr
         kwargs["output"] = str(evt_data) or ""
+
+    elif evt_kind == "progress":
+        evt_cls = events.CommandProgress
+        kwargs["step"] = evt_data.get("step")
+        kwargs["message"] = evt_data.get("message")
+        kwargs["progress"] = evt_data.get("progress")
+        kwargs["unit"] = evt_data.get("unit")
 
     else:
         raise RuntimeError(f"Unsupported runtime event: {evt_kind}")

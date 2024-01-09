@@ -19,7 +19,7 @@ from yapapi.script.command import (
     SendFile,
     SendJson,
     Start,
-    Terminate,
+    Terminate, UploadFileFromInternet, ProgressArgs,
 )
 from yapapi.storage import DOWNLOAD_BYTES_LIMIT_DEFAULT
 
@@ -223,3 +223,12 @@ class Script:
         :param dst_path: remote (provider) destination path
         """
         return self.add(SendJson(data, dst_path))
+
+    def upload_from_url(self, src_url: str, dst_path: str, progress_args: Optional[ProgressArgs] = None) -> Awaitable[CommandExecuted]:
+        """Schedule sending a file to the provider.
+
+        :param src_url: remote (internet) source url
+        :param dst_path: remote (provider) destination path
+        :param progress_args: Enables progress events
+        """
+        return self.add(UploadFileFromInternet(src_url, dst_path, progress_args=progress_args))
