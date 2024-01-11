@@ -4,6 +4,7 @@ import pathlib
 import sys
 import json
 from dataclasses import dataclass
+from alive_progress import alive_bar
 
 from yapapi.payload import Payload, vm
 from yapapi.props import inf
@@ -36,17 +37,31 @@ RUNTIME_NAME = "ai"
 CAPABILITIES = "golem.runtime.capabilities"
 
 
-def progress_event_handler(event: "yapapi.events.CommandProgress"):
-    if event.progress is not None:
-        progress = event.progress
+class ProgressDisplayer:
+    def __init__(self):
+        self._transfers_bars = {}
+        self._transfers_ctx = {}
 
-        percent = 0.0
-        if progress[1] is None:
-            percent = "unknown"
-        else:
-            percent = 100.0 * progress[0] / progress[1]
+    def __enter__(self):
+        pass
 
-        print(f"Transfer progress: {percent}% ({progress[0]} {event['unit']} / {progress[1]} {event['unit']})")
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        for key, bar in self._transfers_ctx:
+            bar.__exit__(exc_type, exc_val, exc_tb)
+
+    def progress_bar(self, event: "yapapi.events.CommandProgress"):
+        if event.progress is not None:
+            progress = event.progress
+
+            if progress[1] is not None:
+                if self._transfers_ctx.get(event.script_id) is None:
+                    bar = alive_bar(total=progress[1], manual=True, title="Uploading file", unit=event.unit)
+                    bar_ctx = bar.__enter__()
+                    self._transfers_bars[event.script_id] = bar
+                    self._transfers_ctx[event.script_id] = bar_ctx
+
+                bar = self._transfers_ctx.get(event.script_id)
+                bar(progress[0] / progress[1])
 
 
 @dataclass
@@ -76,16 +91,17 @@ class ExampleService(Service):
             yield script
 
     async def run(self):
-        script = self._ctx.new_script(timeout=None)
-
         progress = ProgressArgs()
+        script = self._ctx.new_script(timeout=None)
         script.upload_from_url(
             "hash:sha3:92180a67d096be309c5e6a7146d89aac4ef900e2bf48a52ea569df7d:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true",
             "/golem/resource/model-big", progress_args=progress)
+        yield script
+
+        script = self._ctx.new_script(timeout=None)
         script.upload_from_url(
             "hash:sha3:0b682cf78786b04dc108ff0b254db1511ef820105129ad021d2e123a7b975e7c:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true",
             "/golem/resource/model-small", progress_args=progress)
-
         yield script
 
 
@@ -97,19 +113,19 @@ async def main(subnet_tag, driver=None, network=None):
             payment_network=network,
             stream_output=True,
     ) as golem:
+        bar = ProgressDisplayer()
         cluster = await golem.run_service(
             ExampleService,
             num_instances=1,
         )
 
+        def progress_event_handler(event: "yapapi.events.CommandProgress"):
+            bar.progress_bar(event)
+
         golem.add_event_consumer(progress_event_handler, ["CommandProgress"])
 
-        def instances():
-            return [f"{s.provider_name}: {s.state.value}" for s in cluster.instances]
-
         while True:
-            await asyncio.sleep(3)
-            print(f"instances: {instances()}")
+            await asyncio.sleep(8)
 
 
 if __name__ == "__main__":
