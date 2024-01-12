@@ -37,10 +37,12 @@ class Command(abc.ABC):
     def __init__(self):
         self._result: asyncio.Future = asyncio.get_event_loop().create_future()
         self._script: Optional["Script"] = None
+        self._index: int = None
 
-    def _set_script(self, script: "Script") -> None:
+    def _set_script(self, script: "Script", index: int) -> None:
         assert self._script is None, f"Command {self} already belongs to a script {self._script}"
         self._script = script
+        self._index = index
 
     def emit(self, event_class: Type[CommandEventType], **kwargs) -> CommandEventType:
         if self._script is None:
@@ -334,7 +336,7 @@ class InternetSource(Source):
         return 0
 
 
-class UploadFileFromInternet(_SendContent):
+class DownloadFileFromInternet(_SendContent):
     def __init__(self, src_url: str, dst_path: str, progress_args: Optional[ProgressArgs] = None):
         """Create a new UploadFileFromInternet command.
 

@@ -32,6 +32,10 @@ from utils import (
 )
 
 
+def command_key(event: "yapapi.events.CommandProgress") -> str:
+    return f"{event.script_id}#{event.command._index}"
+
+
 class ProgressDisplayer:
     def __init__(self):
         self._transfers_bars = {}
@@ -49,7 +53,8 @@ class ProgressDisplayer:
             progress = event.progress
 
             if progress[1] is not None:
-                if self._transfers_ctx.get(event.script_id) is None:
+                key = command_key(event)
+                if self._transfers_ctx.get(key) is None:
                     bar = alive_bar(total=progress[1], manual=True, title="Progress", unit=event.unit, scale=True,
                                     dual_line=True)
                     bar_ctx = bar.__enter__()
@@ -61,22 +66,24 @@ class ProgressDisplayer:
                     elif isinstance(event.command, yapapi.script.command._ReceiveContent):
                         bar_ctx.text = f"Downloading file: {event.command._src_path} -> {event.command._dst_path}"
 
-                    self._transfers_bars[event.script_id] = bar
-                    self._transfers_ctx[event.script_id] = bar_ctx
+                    self._transfers_bars[key] = bar
+                    self._transfers_ctx[key] = bar_ctx
 
-                bar = self._transfers_ctx.get(event.script_id)
+                bar = self._transfers_ctx.get(key)
                 bar(progress[0] / progress[1])
 
     def executed(self, event: "yapapi.events.CommandExecuted"):
-        if self._transfers_ctx.get(event.script_id) is not None:
-            bar_obj = self._transfers_bars.get(event.script_id)
-            bar = self._transfers_ctx.get(event.script_id)
+        key = command_key(event)
+        if self._transfers_ctx.get(key) is not None:
+            bar_obj = self._transfers_bars.get(key)
+            bar = self._transfers_ctx.get(key)
 
             bar(1.0)
             bar_obj.__exit__(None, None, None)
 
-            self._transfers_bars.pop(event.script_id)
-            self._transfers_ctx.pop(event.script_id)
+            self._transfers_bars.pop(key)
+            self._transfers_ctx.pop(key)
+
 
 @dataclass
 class ExamplePayload(_VmPackage):
@@ -104,29 +111,27 @@ class ExampleService(Service):
         progress = ProgressArgs()
 
         script = self._ctx.new_script(timeout=None)
-        script.upload_from_url(
+        script.download_from_url(
             "https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true",
             "/golem/resource/model-small", progress_args=progress)
-        yield script
-
-        script = self._ctx.new_script(timeout=None)
         script.upload_bytes(
             os.urandom(40 * 1024 * 1024),
             "/golem/resource/bytes.bin", progress_args=progress)
-        yield script
-
-        script = self._ctx.new_script(timeout=None)
         script.download_file(
             "/golem/resource/bytes.bin", "download.bin", progress_args=progress)
-        yield script
 
         # script = self._ctx.new_script(timeout=None)
         # script.upload_from_url(
         #     "https://registry.golem.network/v1/image/download?tag=golem/ray-on-golem:0.6.1-py3.10.13-ray2.7.1&https=true",
         #     "/golem/resource/model-big", progress_args=progress)
-        # yield script
 
-        self.cluster.stop()
+        yield script
+
+        os.remove("download.bin")
+        await self.cluster.terminate()
+
+
+shutdown = False
 
 
 async def main(subnet_tag, driver=None, network=None):
@@ -137,6 +142,8 @@ async def main(subnet_tag, driver=None, network=None):
             payment_network=network,
             stream_output=True,
     ) as golem:
+        global shutdown
+
         bar = ProgressDisplayer()
         cluster = await golem.run_service(
             ExampleService,
@@ -147,7 +154,9 @@ async def main(subnet_tag, driver=None, network=None):
             bar.progress_bar(event)
 
         def on_shutdown(_event: "yapapi.events.ServiceFinished"):
+            global shutdown
             bar.exit()
+            shutdown = True
 
         def on_command_executed(event: "yapapi.events.CommandExecuted"):
             bar.executed(event)
@@ -156,8 +165,8 @@ async def main(subnet_tag, driver=None, network=None):
         golem.add_event_consumer(on_shutdown, ["ServiceFinished"])
         golem.add_event_consumer(on_command_executed, ["CommandExecuted"])
 
-        while True:
-            await asyncio.sleep(8)
+        while not shutdown:
+            await asyncio.sleep(1)
 
 
 if __name__ == "__main__":

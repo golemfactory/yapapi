@@ -19,7 +19,7 @@ from yapapi.script.command import (
     SendFile,
     SendJson,
     Start,
-    Terminate, UploadFileFromInternet, ProgressArgs,
+    Terminate, DownloadFileFromInternet, ProgressArgs,
 )
 from yapapi.storage import DOWNLOAD_BYTES_LIMIT_DEFAULT
 
@@ -125,7 +125,7 @@ class Script:
     def add(self, cmd: Command) -> Awaitable[CommandExecuted]:
         """Add a :class:`yapapi.script.command.Command` to the :class:`Script`."""
         self._commands.append(cmd)
-        cmd._set_script(self)
+        cmd._set_script(self, len(self._commands) - 1)
         return cmd._result
 
     def deploy(self, **kwargs: dict) -> Awaitable[CommandExecuted]:
@@ -226,11 +226,11 @@ class Script:
         """
         return self.add(SendJson(data, dst_path))
 
-    def upload_from_url(self, src_url: str, dst_path: str, progress_args: Optional[ProgressArgs] = None) -> Awaitable[CommandExecuted]:
+    def download_from_url(self, src_url: str, dst_path: str, progress_args: Optional[ProgressArgs] = None) -> Awaitable[CommandExecuted]:
         """Schedule sending a file to the provider.
 
         :param src_url: remote (internet) source url
         :param dst_path: remote (provider) destination path
         :param progress_args: Enables progress events
         """
-        return self.add(UploadFileFromInternet(src_url, dst_path, progress_args=progress_args))
+        return self.add(DownloadFileFromInternet(src_url, dst_path, progress_args=progress_args))
