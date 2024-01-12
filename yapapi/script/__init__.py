@@ -169,6 +169,7 @@ class Script:
         src_path: str,
         on_download: Callable[[bytes], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
+        **kwargs
     ) -> Awaitable[CommandExecuted]:
         """Schedule downloading a remote file from the provider as bytes.
 
@@ -178,7 +179,7 @@ class Script:
         """
         return self.add(DownloadBytes(src_path, on_download, limit))
 
-    def download_file(self, src_path: str, dst_path: str) -> Awaitable[CommandExecuted]:
+    def download_file(self, src_path: str, dst_path: str, **kwargs) -> Awaitable[CommandExecuted]:
         """Schedule downloading a remote file from the provider.
 
         :param src_path: remote (provider) source path
@@ -191,6 +192,7 @@ class Script:
         src_path: str,
         on_download: Callable[[Any], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
+        **kwargs
     ) -> Awaitable[CommandExecuted]:
         """Schedule downloading a remote file from the provider as JSON.
 
@@ -200,7 +202,7 @@ class Script:
         """
         return self.add(DownloadJson(src_path, on_download, limit))
 
-    def upload_bytes(self, data: bytes, dst_path: str) -> Awaitable[CommandExecuted]:
+    def upload_bytes(self, data: bytes, dst_path: str, **kwargs) -> Awaitable[CommandExecuted]:
         """Schedule sending bytes data to the provider.
 
         :param data: bytes to send
@@ -208,7 +210,7 @@ class Script:
         """
         return self.add(SendBytes(data, dst_path))
 
-    def upload_file(self, src_path: str, dst_path: str) -> Awaitable[CommandExecuted]:
+    def upload_file(self, src_path: str, dst_path: str, **kwargs) -> Awaitable[CommandExecuted]:
         """Schedule sending a file to the provider.
 
         :param src_path: local (requestor) source path
@@ -216,7 +218,7 @@ class Script:
         """
         return self.add(SendFile(src_path, dst_path))
 
-    def upload_json(self, data: dict, dst_path: str) -> Awaitable[CommandExecuted]:
+    def upload_json(self, data: dict, dst_path: str, **kwargs) -> Awaitable[CommandExecuted]:
         """Schedule sending JSON data to the provider.
 
         :param data: dictionary representing JSON data to send

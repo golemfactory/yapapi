@@ -227,7 +227,7 @@ class _ReceiveContent(Command, abc.ABC):
     def evaluate(self):
         assert self._dst_slot
         return self._make_batch_command(
-            "transfer", _from=f"container:{self._src_path}", to=self._dst_slot.upload_url
+            "transfer", _from=f"container:{self._src_path}", to=self._dst_slot.upload_url, _progress={}
         )
 
     async def before(self):

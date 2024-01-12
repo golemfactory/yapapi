@@ -2,12 +2,14 @@
 
 import pathlib
 import sys
+import os
 import json
 from dataclasses import dataclass
 from alive_progress import alive_bar
 
+import yapapi.script.command
 from yapapi.payload import Payload, vm
-from yapapi.props import inf
+from yapapi.payload.vm import _VmPackage
 from yapapi.props.base import constraint, prop
 from yapapi.script import ProgressArgs
 from yapapi.services import Service
@@ -23,18 +25,11 @@ examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
 from utils import (
-    TEXT_COLOR_CYAN,
-    TEXT_COLOR_DEFAULT,
-    TEXT_COLOR_MAGENTA,
-    TEXT_COLOR_YELLOW,
     build_parser,
     format_usage,
     print_env_info,
     run_golem_example,
 )
-
-RUNTIME_NAME = "ai"
-CAPABILITIES = "golem.runtime.capabilities"
 
 
 class ProgressDisplayer:
@@ -47,6 +42,9 @@ class ProgressDisplayer:
             bar.__exit__(None, None, None)
 
     def progress_bar(self, event: "yapapi.events.CommandProgress"):
+        if event.message is not None:
+            print(f"{event.message}")
+
         if event.progress is not None:
             progress = event.progress
 
@@ -55,7 +53,13 @@ class ProgressDisplayer:
                     bar = alive_bar(total=progress[1], manual=True, title="Progress", unit=event.unit, scale=True,
                                     dual_line=True)
                     bar_ctx = bar.__enter__()
-                    bar_ctx.text = f"Uploading file: {event.command._src_url} -> {event.command._dst_path}"
+
+                    if isinstance(event.command, yapapi.script.command.Deploy):
+                        bar_ctx.text = f"Deploying image"
+                    elif isinstance(event.command, yapapi.script.command._SendContent):
+                        bar_ctx.text = f"Uploading file: {event.command._src.download_url} -> {event.command._dst_path}"
+                    elif isinstance(event.command, yapapi.script.command._ReceiveContent):
+                        bar_ctx.text = f"Downloading file: {event.command._src_path} -> {event.command._dst_path}"
 
                     self._transfers_bars[event.script_id] = bar
                     self._transfers_ctx[event.script_id] = bar_ctx
@@ -74,32 +78,27 @@ class ProgressDisplayer:
             self._transfers_bars.pop(event.script_id)
             self._transfers_ctx.pop(event.script_id)
 
-
 @dataclass
-class ExamplePayload(Payload):
-    image_url: str = prop("golem.!exp.ai.v1.srv.comp.ai.model")
-    image_fmt: str = prop("golem.!exp.ai.v1.srv.comp.ai.model-format", default="safetensors")
-
-    runtime: str = constraint(inf.INF_RUNTIME_NAME, default=RUNTIME_NAME)
-    capabilities: str = constraint(CAPABILITIES, default="dummy")
+class ExamplePayload(_VmPackage):
+    progress_capability: bool = constraint("golem.activity.caps.transfer.report-progress", operator="=", default=True)
 
 
 class ExampleService(Service):
-    # @staticmethod
-    # async def get_payload():
-    #     return ExamplePayload(image_url="hash:sha3:0b682cf78786b04dc108ff0b254db1511ef820105129ad021d2e123a7b975e7c:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true")
-
     @staticmethod
     async def get_payload():
-        return await vm.repo(
+        package = await vm.repo(
             image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
             min_mem_gib=0.5,
-            min_storage_gib=2.0,
+            min_storage_gib=10.0,
         )
+        return ExamplePayload(image_url=package.image_url, constraints=package.constraints, progress_capability=True)
 
     async def start(self):
-        async for script in super().start():
-            yield script
+        script = self._ctx.new_script(timeout=None)
+        script.deploy(progress={})
+        script.start()
+
+        yield script
 
     async def run(self):
         progress = ProgressArgs()
@@ -111,10 +110,23 @@ class ExampleService(Service):
         yield script
 
         script = self._ctx.new_script(timeout=None)
-        script.upload_from_url(
-            "https://registry.golem.network/v1/image/download?tag=golem/ray-on-golem:0.6.1-py3.10.13-ray2.7.1&https=true",
-            "/golem/resource/model-big", progress_args=progress)
+        script.upload_bytes(
+            os.urandom(40 * 1024 * 1024),
+            "/golem/resource/bytes.bin", progress_args=progress)
         yield script
+
+        script = self._ctx.new_script(timeout=None)
+        script.download_file(
+            "/golem/resource/bytes.bin", "download.bin", progress_args=progress)
+        yield script
+
+        # script = self._ctx.new_script(timeout=None)
+        # script.upload_from_url(
+        #     "https://registry.golem.network/v1/image/download?tag=golem/ray-on-golem:0.6.1-py3.10.13-ray2.7.1&https=true",
+        #     "/golem/resource/model-big", progress_args=progress)
+        # yield script
+
+        self.cluster.stop()
 
 
 async def main(subnet_tag, driver=None, network=None):
