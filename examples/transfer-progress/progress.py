@@ -119,12 +119,6 @@ class ExampleService(Service):
             "/golem/resource/bytes.bin", progress_args=progress)
         script.download_file(
             "/golem/resource/bytes.bin", "download.bin", progress_args=progress)
-
-        # script = self._ctx.new_script(timeout=None)
-        # script.upload_from_url(
-        #     "https://registry.golem.network/v1/image/download?tag=golem/ray-on-golem:0.6.1-py3.10.13-ray2.7.1&https=true",
-        #     "/golem/resource/model-big", progress_args=progress)
-
         yield script
 
         os.remove("download.bin")
