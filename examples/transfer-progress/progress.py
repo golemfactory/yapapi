@@ -42,12 +42,9 @@ class ProgressDisplayer:
         self._transfers_bars = {}
         self._transfers_ctx = {}
 
-    def __enter__(self):
-        pass
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def exit(self):
         for key, bar in self._transfers_ctx:
-            bar.__exit__(exc_type, exc_val, exc_tb)
+            bar.__exit__(None, None, None)
 
     def progress_bar(self, event: "yapapi.events.CommandProgress"):
         if event.progress is not None:
@@ -55,13 +52,27 @@ class ProgressDisplayer:
 
             if progress[1] is not None:
                 if self._transfers_ctx.get(event.script_id) is None:
-                    bar = alive_bar(total=progress[1], manual=True, title="Uploading file", unit=event.unit)
+                    bar = alive_bar(total=progress[1], manual=True, title="Progress", unit=event.unit, scale=True,
+                                    dual_line=True)
                     bar_ctx = bar.__enter__()
+                    bar_ctx.text = f"Uploading file: {event.command._src_url} -> {event.command._dst_path}"
+
                     self._transfers_bars[event.script_id] = bar
                     self._transfers_ctx[event.script_id] = bar_ctx
 
                 bar = self._transfers_ctx.get(event.script_id)
                 bar(progress[0] / progress[1])
+
+    def executed(self, event: "yapapi.events.CommandExecuted"):
+        if self._transfers_ctx.get(event.script_id) is not None:
+            bar_obj = self._transfers_bars.get(event.script_id)
+            bar = self._transfers_ctx.get(event.script_id)
+
+            bar(1.0)
+            bar_obj.__exit__(None, None, None)
+
+            self._transfers_bars.pop(event.script_id)
+            self._transfers_ctx.pop(event.script_id)
 
 
 @dataclass
@@ -92,16 +103,17 @@ class ExampleService(Service):
 
     async def run(self):
         progress = ProgressArgs()
+
         script = self._ctx.new_script(timeout=None)
         script.upload_from_url(
-            "hash:sha3:92180a67d096be309c5e6a7146d89aac4ef900e2bf48a52ea569df7d:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true",
-            "/golem/resource/model-big", progress_args=progress)
+            "https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true",
+            "/golem/resource/model-small", progress_args=progress)
         yield script
 
         script = self._ctx.new_script(timeout=None)
         script.upload_from_url(
-            "hash:sha3:0b682cf78786b04dc108ff0b254db1511ef820105129ad021d2e123a7b975e7c:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true",
-            "/golem/resource/model-small", progress_args=progress)
+            "https://registry.golem.network/v1/image/download?tag=golem/ray-on-golem:0.6.1-py3.10.13-ray2.7.1&https=true",
+            "/golem/resource/model-big", progress_args=progress)
         yield script
 
 
@@ -122,7 +134,15 @@ async def main(subnet_tag, driver=None, network=None):
         def progress_event_handler(event: "yapapi.events.CommandProgress"):
             bar.progress_bar(event)
 
+        def on_shutdown(_event: "yapapi.events.ServiceFinished"):
+            bar.exit()
+
+        def on_command_executed(event: "yapapi.events.CommandExecuted"):
+            bar.executed(event)
+
         golem.add_event_consumer(progress_event_handler, ["CommandProgress"])
+        golem.add_event_consumer(on_shutdown, ["ServiceFinished"])
+        golem.add_event_consumer(on_command_executed, ["CommandExecuted"])
 
         while True:
             await asyncio.sleep(8)
