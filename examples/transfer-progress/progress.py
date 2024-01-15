@@ -107,7 +107,7 @@ class ExampleService(Service):
         yield script
 
     async def run(self):
-        progress = ProgressArgs()
+        progress = ProgressArgs(updateInterval="5s")
 
         script = self._ctx.new_script(timeout=None)
         script.download_from_url(

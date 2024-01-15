@@ -62,8 +62,8 @@ class Command(abc.ABC):
 @attr.s(auto_attribs=True, repr=False)
 class ProgressArgs:
     """Interval represented as human-readable duration string (examples: '5s' '10min')"""
-    update_interval: Optional[str] = attr.field(init=False, default=None)
-    update_step: Optional[int] = attr.field(init=False, default=None)
+    updateInterval: Optional[str] = attr.field(default=None)
+    updateStep: Optional[int] = attr.field(default=None)
 
 
 class Deploy(Command):
