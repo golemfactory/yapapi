@@ -3,14 +3,13 @@
 import pathlib
 import sys
 import os
-import json
 from dataclasses import dataclass
 from alive_progress import alive_bar
 
 import yapapi.script.command
-from yapapi.payload import Payload, vm
+from yapapi.payload import vm
 from yapapi.payload.vm import _VmPackage
-from yapapi.props.base import constraint, prop
+from yapapi.props.base import constraint
 from yapapi.script import ProgressArgs
 from yapapi.services import Service
 

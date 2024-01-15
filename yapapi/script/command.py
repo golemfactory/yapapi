@@ -5,6 +5,7 @@ from functools import partial
 from os import PathLike
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Optional, Type, Union
+import attr
 
 from yapapi.events import CommandEventType, DownloadFinished, DownloadStarted
 from yapapi.script.capture import CaptureContext
@@ -58,18 +59,27 @@ class Command(abc.ABC):
         return f"{self.__class__.__name__}"
 
 
+@attr.s(auto_attribs=True, repr=False)
+class ProgressArgs:
+    """Interval represented as human-readable duration string (examples: '5s' '10min')"""
+    update_interval: Optional[str] = attr.field(init=False, default=None)
+    update_step: Optional[int] = attr.field(init=False, default=None)
+
+
 class Deploy(Command):
     """Command which deploys a given runtime on the provider."""
 
-    def __init__(self, **kwargs: dict):
+    def __init__(self, progress_args: Optional[ProgressArgs] = None, **kwargs):
         super().__init__()
         self.kwargs = kwargs
+        self._progress = progress_args
 
     def __repr__(self):
         return f"{super().__repr__()} {self.kwargs}"
 
     def evaluate(self):
-        return self._make_batch_command("deploy", **self.kwargs)
+        kwargs = dict(self.kwargs, progress=attr.asdict(self._progress)) if self._progress else self.kwargs
+        return self._make_batch_command("deploy", **kwargs)
 
 
 class Start(Command):
@@ -93,12 +103,6 @@ class Terminate(Command):
         return self._make_batch_command("terminate")
 
 
-class ProgressArgs:
-    """Interval represented as human-readable duration string (examples: '5s' '10min')"""
-    update_interval: Optional[str]
-    update_step: Optional[int]
-
-
 class _SendContent(Command, abc.ABC):
     def __init__(self, dst_path: str, progress_args: Optional[ProgressArgs] = None):
         super().__init__()
@@ -112,8 +116,10 @@ class _SendContent(Command, abc.ABC):
 
     def evaluate(self):
         assert self._src
+
+        kwargs = {"progress": attr.asdict(self._progress)} if self._progress else {}
         return self._make_batch_command(
-            "transfer", _from=self._src.download_url, _to=f"container:{self._dst_path}", _progress={}
+            "transfer", _from=self._src.download_url, _to=f"container:{self._dst_path}", **kwargs
         )
 
     async def before(self):
@@ -130,13 +136,13 @@ class _SendContent(Command, abc.ABC):
 class SendBytes(_SendContent):
     """Command which schedules sending bytes data to a provider."""
 
-    def __init__(self, data: bytes, dst_path: str):
+    def __init__(self, data: bytes, dst_path: str, progress_args: Optional[ProgressArgs] = None):
         """Create a new SendBytes command.
 
         :param data: bytes to send
         :param dst_path: remote (provider) destination path
         """
-        super().__init__(dst_path)
+        super().__init__(dst_path, progress_args=progress_args)
         self._data: Optional[bytes] = data
 
     async def _do_upload(self, storage: StorageProvider) -> Source:
@@ -149,25 +155,25 @@ class SendBytes(_SendContent):
 class SendJson(SendBytes):
     """Command which schedules sending JSON data to a provider."""
 
-    def __init__(self, data: dict, dst_path: str):
+    def __init__(self, data: dict, dst_path: str, progress_args: Optional[ProgressArgs] = None):
         """Create a new SendJson command.
 
         :param data: dictionary representing JSON data to send
         :param dst_path: remote (provider) destination path
         """
-        super().__init__(json.dumps(data).encode(encoding="utf-8"), dst_path)
+        super().__init__(json.dumps(data).encode(encoding="utf-8"), dst_path, progress_args=progress_args)
 
 
 class SendFile(_SendContent):
     """Command which schedules sending a file to a provider."""
 
-    def __init__(self, src_path: str, dst_path: str):
+    def __init__(self, src_path: str, dst_path: str, progress_args: Optional[ProgressArgs] = None):
         """Create a new SendFile command.
 
         :param src_path: local (requestor) source path
         :param dst_path: remote (provider) destination path
         """
-        super(SendFile, self).__init__(dst_path)
+        super(SendFile, self).__init__(dst_path, progress_args=progress_args)
         self._src_path = Path(src_path)
 
     async def _do_upload(self, storage: StorageProvider) -> Source:
@@ -220,16 +226,20 @@ class _ReceiveContent(Command, abc.ABC):
     def __init__(
             self,
             src_path: str,
+            progress_args: Optional[ProgressArgs] = None
     ):
         super().__init__()
         self._src_path: str = src_path
         self._dst_slot: Optional[Destination] = None
         self._dst_path: Optional[PathLike] = None
+        self._progress = progress_args
 
     def evaluate(self):
         assert self._dst_slot
+
+        kwargs = {"progress": attr.asdict(self._progress)} if self._progress else {}
         return self._make_batch_command(
-            "transfer", _from=f"container:{self._src_path}", to=self._dst_slot.upload_url, _progress={}
+            "transfer", _from=f"container:{self._src_path}", to=self._dst_slot.upload_url, **kwargs
         )
 
     async def before(self):
@@ -253,13 +263,14 @@ class DownloadFile(_ReceiveContent):
             self,
             src_path: str,
             dst_path: str,
+            progress_args: Optional[ProgressArgs] = None,
     ):
         """Create a new DownloadFile command.
 
         :param src_path: remote (provider) source path
         :param dst_path: local (requestor) destination path
         """
-        super().__init__(src_path)
+        super().__init__(src_path, progress_args=progress_args)
         self._dst_path = Path(dst_path)
 
     async def after(self) -> None:
@@ -282,6 +293,7 @@ class DownloadBytes(_ReceiveContent):
             src_path: str,
             on_download: Callable[[bytes], Awaitable],
             limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
+            progress_args: Optional[ProgressArgs] = None,
     ):
         """Create a new DownloadBytes command.
 
@@ -289,7 +301,7 @@ class DownloadBytes(_ReceiveContent):
         :param on_download: the callable to run on the received data
         :param limit: limit of bytes to be downloaded (expected size)
         """
-        super().__init__(src_path)
+        super().__init__(src_path, progress_args=progress_args)
         self._on_download = on_download
         self._limit = limit
 
@@ -310,6 +322,7 @@ class DownloadJson(DownloadBytes):
             src_path: str,
             on_download: Callable[[Any], Awaitable],
             limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
+            progress_args: Optional[ProgressArgs] = None,
     ):
         """Create a new DownloadJson command.
 
@@ -317,7 +330,7 @@ class DownloadJson(DownloadBytes):
         :param on_download: the callable to run on the received data
         :param limit: limit of bytes to be downloaded (expected size)
         """
-        super().__init__(src_path, partial(self.__on_json_download, on_download), limit)
+        super().__init__(src_path, partial(self.__on_json_download, on_download), limit, progress_args=progress_args)
 
     @staticmethod
     async def __on_json_download(on_download: Callable[[bytes], Awaitable], content: bytes):

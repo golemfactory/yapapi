@@ -177,7 +177,7 @@ class Script:
         :param on_download: the callable to run on the received data
         :param limit: limit of bytes to be downloaded (expected size)
         """
-        return self.add(DownloadBytes(src_path, on_download, limit))
+        return self.add(DownloadBytes(src_path, on_download, limit, **kwargs))
 
     def download_file(self, src_path: str, dst_path: str, **kwargs) -> Awaitable[CommandExecuted]:
         """Schedule downloading a remote file from the provider.
@@ -185,7 +185,7 @@ class Script:
         :param src_path: remote (provider) source path
         :param dst_path: local (requestor) destination path
         """
-        return self.add(DownloadFile(src_path, dst_path))
+        return self.add(DownloadFile(src_path, dst_path, **kwargs))
 
     def download_json(
         self,
@@ -200,7 +200,7 @@ class Script:
         :param on_download: the callable to run on the received data
         :param limit: limit of bytes to be downloaded (expected size)
         """
-        return self.add(DownloadJson(src_path, on_download, limit))
+        return self.add(DownloadJson(src_path, on_download, limit, **kwargs))
 
     def upload_bytes(self, data: bytes, dst_path: str, **kwargs) -> Awaitable[CommandExecuted]:
         """Schedule sending bytes data to the provider.
@@ -208,7 +208,7 @@ class Script:
         :param data: bytes to send
         :param dst_path: remote (provider) destination path
         """
-        return self.add(SendBytes(data, dst_path))
+        return self.add(SendBytes(data, dst_path, **kwargs))
 
     def upload_file(self, src_path: str, dst_path: str, **kwargs) -> Awaitable[CommandExecuted]:
         """Schedule sending a file to the provider.
@@ -216,7 +216,7 @@ class Script:
         :param src_path: local (requestor) source path
         :param dst_path: remote (provider) destination path
         """
-        return self.add(SendFile(src_path, dst_path))
+        return self.add(SendFile(src_path, dst_path, **kwargs))
 
     def upload_json(self, data: dict, dst_path: str, **kwargs) -> Awaitable[CommandExecuted]:
         """Schedule sending JSON data to the provider.
@@ -224,7 +224,7 @@ class Script:
         :param data: dictionary representing JSON data to send
         :param dst_path: remote (provider) destination path
         """
-        return self.add(SendJson(data, dst_path))
+        return self.add(SendJson(data, dst_path, **kwargs))
 
     def download_from_url(self, src_url: str, dst_path: str, progress_args: Optional[ProgressArgs] = None) -> Awaitable[CommandExecuted]:
         """Schedule sending a file to the provider.
