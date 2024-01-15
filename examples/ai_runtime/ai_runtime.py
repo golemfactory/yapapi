@@ -206,7 +206,7 @@ async def trigger(activity: RequestorControlApi, token, prompt, output_file):
             # print(line)
             response = json.loads(line)
             image = Image.open(io.BytesIO(base64.b64decode(response['images'][0])))
-            image.save('output.png')
+            image.save(output_file)
 
 
 async def main(subnet_tag, driver=None, network=None):
@@ -239,9 +239,11 @@ async def main(subnet_tag, driver=None, network=None):
                         )
 
         print('Starting')
+        print('Please input your prompt:')
+        prompt = input()
         await asyncio.sleep(3)
         await get_image(
-            'Renaissance-style portrait of an astronaut in space, detailed starry background, reflective helmet.',
+            prompt,
             'output.png'
         )
         print('Done')
