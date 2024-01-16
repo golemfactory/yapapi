@@ -1,34 +1,26 @@
 #!/usr/bin/env python3
 
+import asyncio
+import os
 import pathlib
 import sys
-import os
-from dataclasses import dataclass
+from datetime import datetime
+
 from alive_progress import alive_bar
+from dataclasses import dataclass
 
 import yapapi.script.command
+from yapapi import Golem
 from yapapi.payload import vm
 from yapapi.payload.vm import _VmPackage
 from yapapi.props.base import constraint
 from yapapi.script import ProgressArgs
 from yapapi.services import Service
 
-import asyncio
-from datetime import datetime
-
-import colorama  # type: ignore
-
-from yapapi import Golem
-
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 
-from utils import (
-    build_parser,
-    format_usage,
-    print_env_info,
-    run_golem_example,
-)
+from utils import build_parser, run_golem_example
 
 
 def command_key(event: "yapapi.events.CommandProgress") -> str:
@@ -48,28 +40,38 @@ class ProgressDisplayer:
         if event.message is not None:
             print(f"{event.message}")
 
-        if event.progress is not None:
+        if event.progress is not None and event.progress[1] is not None:
             progress = event.progress
+            key = command_key(event)
 
-            if progress[1] is not None:
-                key = command_key(event)
-                if self._transfers_ctx.get(key) is None:
-                    bar = alive_bar(total=progress[1], manual=True, title="Progress", unit=event.unit, scale=True,
-                                    dual_line=True)
-                    bar_ctx = bar.__enter__()
+            if self._transfers_ctx.get(key) is None:
+                self.create_progress_bar(event)
 
-                    if isinstance(event.command, yapapi.script.command.Deploy):
-                        bar_ctx.text = f"Deploying image"
-                    elif isinstance(event.command, yapapi.script.command._SendContent):
-                        bar_ctx.text = f"Uploading file: {event.command._src.download_url} -> {event.command._dst_path}"
-                    elif isinstance(event.command, yapapi.script.command._ReceiveContent):
-                        bar_ctx.text = f"Downloading file: {event.command._src_path} -> {event.command._dst_path}"
+            bar = self._transfers_ctx.get(key)
+            bar(progress[0] / progress[1])
 
-                    self._transfers_bars[key] = bar
-                    self._transfers_ctx[key] = bar_ctx
+    def create_progress_bar(self, event: "yapapi.events.CommandProgress"):
+        key = command_key(event)
+        bar = alive_bar(
+            total=event.progress[1],
+            manual=True,
+            title="Progress",
+            unit=event.unit,
+            scale=True,
+            dual_line=True,
+        )
+        bar_ctx = bar.__enter__()
 
-                bar = self._transfers_ctx.get(key)
-                bar(progress[0] / progress[1])
+        command = event.command
+        if isinstance(command, yapapi.script.command.Deploy):
+            bar_ctx.text = "Deploying image"
+        elif isinstance(command, yapapi.script.command._SendContent):
+            bar_ctx.text = f"Uploading file: {command._src.download_url} -> {command._dst_path}"
+        elif isinstance(command, yapapi.script.command._ReceiveContent):
+            bar_ctx.text = f"Downloading file: {command._src_path} -> {command._dst_path}"
+
+        self._transfers_bars[key] = bar
+        self._transfers_ctx[key] = bar_ctx
 
     def executed(self, event: "yapapi.events.CommandExecuted"):
         key = command_key(event)
@@ -86,7 +88,9 @@ class ProgressDisplayer:
 
 @dataclass
 class ExamplePayload(_VmPackage):
-    progress_capability: bool = constraint("golem.activity.caps.transfer.report-progress", operator="=", default=True)
+    progress_capability: bool = constraint(
+        "golem.activity.caps.transfer.report-progress", operator="=", default=True
+    )
 
 
 class ExampleService(Service):
@@ -97,11 +101,13 @@ class ExampleService(Service):
             min_mem_gib=0.5,
             min_storage_gib=10.0,
         )
-        return ExamplePayload(image_url=package.image_url, constraints=package.constraints, progress_capability=True)
+        return ExamplePayload(
+            image_url=package.image_url, constraints=package.constraints, progress_capability=True
+        )
 
     async def start(self):
         script = self._ctx.new_script(timeout=None)
-        script.deploy(progress={})
+        script.deploy(progress_args=ProgressArgs(updateInterval="300ms"))
         script.start()
 
         yield script
@@ -111,13 +117,14 @@ class ExampleService(Service):
 
         script = self._ctx.new_script(timeout=None)
         script.download_from_url(
-            "https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true",
-            "/golem/resource/model-small", progress_args=progress)
+            "https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors",
+            "/golem/resource/model-small",
+            progress_args=progress,
+        )
         script.upload_bytes(
-            os.urandom(40 * 1024 * 1024),
-            "/golem/resource/bytes.bin", progress_args=progress)
-        script.download_file(
-            "/golem/resource/bytes.bin", "download.bin", progress_args=progress)
+            os.urandom(40 * 1024 * 1024), "/golem/resource/bytes.bin", progress_args=progress
+        )
+        script.download_file("/golem/resource/bytes.bin", "download.bin", progress_args=progress)
         yield script
 
         os.remove("download.bin")
@@ -129,16 +136,16 @@ shutdown = False
 
 async def main(subnet_tag, driver=None, network=None):
     async with Golem(
-            budget=50.0,
-            subnet_tag=subnet_tag,
-            payment_driver=driver,
-            payment_network=network,
-            stream_output=True,
+        budget=50.0,
+        subnet_tag=subnet_tag,
+        payment_driver=driver,
+        payment_network=network,
+        stream_output=True,
     ) as golem:
         global shutdown
 
         bar = ProgressDisplayer()
-        cluster = await golem.run_service(
+        await golem.run_service(
             ExampleService,
             num_instances=1,
         )

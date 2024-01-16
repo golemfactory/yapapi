@@ -64,6 +64,7 @@ autoflake = "^1"
 flake8 = "^5"
 flake8-docstrings = "^1.6"
 Flake8-pyproject = "^1.2.2"
+pyproject-autoflake = "^1.0.2"
 
 
 [tool.poe.tasks]

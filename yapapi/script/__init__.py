@@ -13,13 +13,15 @@ from yapapi.script.command import (
     Deploy,
     DownloadBytes,
     DownloadFile,
+    DownloadFileFromInternet,
     DownloadJson,
+    ProgressArgs,
     Run,
     SendBytes,
     SendFile,
     SendJson,
     Start,
-    Terminate, DownloadFileFromInternet, ProgressArgs,
+    Terminate,
 )
 from yapapi.storage import DOWNLOAD_BYTES_LIMIT_DEFAULT
 
@@ -128,9 +130,11 @@ class Script:
         cmd._set_script(self, len(self._commands) - 1)
         return cmd._result
 
-    def deploy(self, **kwargs: dict) -> Awaitable[CommandExecuted]:
+    def deploy(
+        self, progress_args: Optional[ProgressArgs] = None, **kwargs: dict
+    ) -> Awaitable[CommandExecuted]:
         """Schedule a :class:`Deploy` command on the provider."""
-        return self.add(Deploy(**kwargs))
+        return self.add(Deploy(progress_args=progress_args, **kwargs))
 
     def start(self, *args: str) -> Awaitable[CommandExecuted]:
         """Schedule a :class:`Start` command on the provider."""
@@ -169,7 +173,7 @@ class Script:
         src_path: str,
         on_download: Callable[[bytes], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
-        **kwargs
+        **kwargs,
     ) -> Awaitable[CommandExecuted]:
         """Schedule downloading a remote file from the provider as bytes.
 
@@ -192,7 +196,7 @@ class Script:
         src_path: str,
         on_download: Callable[[Any], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
-        **kwargs
+        **kwargs,
     ) -> Awaitable[CommandExecuted]:
         """Schedule downloading a remote file from the provider as JSON.
 
@@ -226,7 +230,9 @@ class Script:
         """
         return self.add(SendJson(data, dst_path, **kwargs))
 
-    def download_from_url(self, src_url: str, dst_path: str, progress_args: Optional[ProgressArgs] = None) -> Awaitable[CommandExecuted]:
+    def download_from_url(
+        self, src_url: str, dst_path: str, progress_args: Optional[ProgressArgs] = None
+    ) -> Awaitable[CommandExecuted]:
         """Schedule sending a file to the provider.
 
         :param src_url: remote (internet) source url
