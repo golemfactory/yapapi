@@ -88,7 +88,10 @@ class ProgressDisplayer:
 
 @dataclass
 class ExamplePayload(_VmPackage):
-    progress_capability: bool = constraint(
+    deploy_progress_capability: bool = constraint(
+        "golem.activity.caps.deploy.report-progress", operator="=", default=True
+    )
+    transfer_progress_capability: bool = constraint(
         "golem.activity.caps.transfer.report-progress", operator="=", default=True
     )
 
@@ -102,7 +105,10 @@ class ExampleService(Service):
             min_storage_gib=10.0,
         )
         return ExamplePayload(
-            image_url=package.image_url, constraints=package.constraints, progress_capability=True
+            image_url=package.image_url,
+            constraints=package.constraints,
+            deploy_progress_capability=True,
+            transfer_progress_capability=True,
         )
 
     async def start(self):
