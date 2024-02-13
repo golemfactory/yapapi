@@ -118,6 +118,7 @@ Events inheritance tree
                             CommandStdOut
                             CommandStdErr
                             CommandExecuted
+                            CommandProgress
                             DownloadStarted
                             DownloadFinished
                         GettingResults
