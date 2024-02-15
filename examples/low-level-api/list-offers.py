@@ -21,15 +21,18 @@ async def list_offers(conf: Configuration, subnet_tag: str):
     async with conf.market() as client:
         market_api = Market(client)
         dbuild = DemandBuilder()
-        dbuild.add(yp.NodeInfo(name="some scanning node", subnet_tag=subnet_tag))
+        dbuild.add(yp.NodeInfo(name="some scanning node", subnet_tag="public"))
         dbuild.add(yp.Activity(expiration=datetime.now(timezone.utc)))
+        # dbuild.ensure("(golem.node.net.is-public=true)")
+        # dbuild.ensure("(golem.runtime.name=vm)")
+        # dbuild.ensure("(golem.com.payment.platform.erc20-goerli-tglm.address=*)")
 
         async with market_api.subscribe(dbuild.properties, dbuild.constraints) as subscription:
             async for event in subscription.events():
-                print(f"Offer: {event.id}")
-                print(f"from {event.issuer}")
-                print(f"props {json.dumps(event.props, indent=4)}")
-                print("\n\n")
+
+                props = {k: v for k, v in event.props.items() if k in ['golem.com.usage.vector', "golem.runtime.name"]}
+                # props = event.props
+                print(f"{json.dumps(props)}")
         print("done")
 
 
@@ -42,13 +45,13 @@ def main():
 
     enable_default_logger()
     try:
-        asyncio.get_event_loop().run_until_complete(
+        asyncio.run(
             asyncio.wait_for(
                 list_offers(
                     Configuration(api_config=ApiConfig()),  # YAGNA_APPKEY will be loaded from env
                     subnet_tag=subnet,
                 ),
-                timeout=4,
+                timeout=600,
             )
         )
     except TimeoutError:

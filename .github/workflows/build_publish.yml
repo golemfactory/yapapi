@@ -15,7 +15,7 @@ jobs:
         with:
           python-version: '3.9'
       - uses: Gr1N/setup-poetry@v8
-      - run: poetry install
+      - run: poetry install --no-ansi
       - run: poetry run poe tests_unit
       - run: poetry run poe checks_codestyle
       - run: poetry run poe checks_typing

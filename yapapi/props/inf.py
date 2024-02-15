@@ -15,7 +15,7 @@ INF_THREADS: str = "golem.inf.cpu.threads"
 TRANSFER_CAPS: str = "golem.activity.caps.transfer.protocol"
 INF_RUNTIME_NAME = "golem.runtime.name"
 
-RUNTIME_VM = "vm"
+RUNTIME_VM = "vm-nvidia"
 
 
 @dataclass
