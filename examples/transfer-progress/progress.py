@@ -5,15 +5,18 @@ import os
 import pathlib
 import sys
 from datetime import datetime
+from typing import List
 
 from alive_progress import alive_bar
 from dataclasses import dataclass
 
 import yapapi.script.command
 from yapapi import Golem
-from yapapi.payload import vm
-from yapapi.payload.vm import _VmPackage
+from yapapi.payload import vm, Payload
+from yapapi.payload.vm import _VmPackage, VmRequest, VmPackageFormat
+from yapapi.props import inf
 from yapapi.props.base import constraint
+from yapapi.props.builder import DemandBuilder
 from yapapi.script import ProgressArgs
 from yapapi.services import Service
 
@@ -87,28 +90,49 @@ class ProgressDisplayer:
 
 
 @dataclass
-class ExamplePayload(_VmPackage):
-    deploy_progress_capability: bool = constraint(
-        "golem.activity.caps.deploy.report-progress", operator="=", default=True
+class ExamplePayload(Payload):
+    image_url: str
+    min_mem_gib: float = constraint(inf.INF_MEM, operator=">=")
+    min_storage_gib: float = constraint(inf.INF_STORAGE, operator=">=")
+    min_cpu_threads: int = constraint(inf.INF_THREADS, operator=">=")
+
+    capabilities: List[vm.VmCaps] = constraint(
+        "golem.runtime.capabilities", operator="=", default_factory=list
     )
-    transfer_progress_capability: bool = constraint(
-        "golem.activity.caps.transfer.report-progress", operator="=", default=True
+
+    runtime: str = constraint(inf.INF_RUNTIME_NAME, operator="=", default=vm.RUNTIME_VM)
+
+    # Constraints can't be bool, because python serializes bool to `True` and market matcher
+    # expects `true`.
+    deploy_progress_capability: str = constraint(
+        "golem.activity.caps.deploy.report-progress", operator="=", default="true"
     )
+    transfer_progress_capability: str = constraint(
+        "golem.activity.caps.transfer.report-progress", operator="=", default="true"
+    )
+
+    async def decorate_demand(self, demand: DemandBuilder):
+        await super().decorate_demand(demand)
+        demand.add(
+            VmRequest(package_url=self.image_url, package_format=VmPackageFormat.GVMKIT_SQUASH)
+        )
 
 
 class ExampleService(Service):
     @staticmethod
     async def get_payload():
-        package = await vm.repo(
+        package: _VmPackage = await vm.repo(
             image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
             min_mem_gib=0.5,
             min_storage_gib=10.0,
         )
         return ExamplePayload(
             image_url=package.image_url,
-            constraints=package.constraints,
-            deploy_progress_capability=True,
-            transfer_progress_capability=True,
+            min_mem_gib=package.constraints.min_mem_gib,
+            min_storage_gib=package.constraints.min_storage_gib,
+            min_cpu_threads=package.constraints.min_cpu_threads,
+            capabilities=package.constraints.capabilities,
+            runtime=package.constraints.runtime,
         )
 
     async def start(self):
@@ -142,11 +166,11 @@ shutdown = False
 
 async def main(subnet_tag, driver=None, network=None):
     async with Golem(
-        budget=50.0,
-        subnet_tag=subnet_tag,
-        payment_driver=driver,
-        payment_network=network,
-        stream_output=True,
+            budget=50.0,
+            subnet_tag=subnet_tag,
+            payment_driver=driver,
+            payment_network=network,
+            stream_output=True,
     ) as golem:
         global shutdown
 
