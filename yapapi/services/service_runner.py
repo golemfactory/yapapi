@@ -201,7 +201,6 @@ class ServiceRunner(AsyncContextManager):
             self._state.stop()
         except statemachine.exceptions.TransitionNotAllowed:
             """The ServiceRunner is not running,"""
-            pass
 
         logger.debug("%s is shutting down... state: %s", self, self.state)
 
