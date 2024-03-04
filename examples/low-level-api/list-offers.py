@@ -21,7 +21,7 @@ async def list_offers(conf: Configuration, subnet_tag: str):
     async with conf.market() as client:
         market_api = Market(client)
         dbuild = DemandBuilder()
-        dbuild.add(yp.NodeInfo(name="some scanning node", subnet_tag="public"))
+        dbuild.add(yp.NodeInfo(name="some scanning node", subnet_tag=subnet_tag))
         dbuild.add(yp.Activity(expiration=datetime.now(timezone.utc)))
         # dbuild.ensure("(golem.node.net.is-public=true)")
         # dbuild.ensure("(golem.runtime.name=vm)")
@@ -30,8 +30,8 @@ async def list_offers(conf: Configuration, subnet_tag: str):
         async with market_api.subscribe(dbuild.properties, dbuild.constraints) as subscription:
             async for event in subscription.events():
 
-                props = {k: v for k, v in event.props.items() if k in ['golem.com.usage.vector', "golem.runtime.name"]}
-                # props = event.props
+                props = {k: v for k, v in event.props.items() if k in ['golem.node.id.name', 'golem.com.usage.vector', "golem.runtime.name"]}
+                props = event.props
                 print(f"{json.dumps(props)}")
         print("done")
 
