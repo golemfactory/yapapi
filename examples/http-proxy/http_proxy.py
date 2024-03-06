@@ -7,9 +7,12 @@ import sys
 from datetime import datetime, timedelta, timezone
 
 from yapapi import Golem
-from yapapi.contrib.service.http_proxy import HttpProxyService, LocalHttpProxy
+# from yapapi.contrib.service.http_proxy import HttpProxyService, LocalHttpProxy
+from yapapi.contrib.service.socket_proxy import SocketProxyService, SocketProxy
 from yapapi.payload import vm
 from yapapi.services import ServiceState
+
+import aiohttp
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
@@ -31,7 +34,48 @@ STARTING_TIMEOUT = timedelta(minutes=4)
 EXPIRATION_MARGIN = timedelta(minutes=5)
 
 
-class HttpService(HttpProxyService):
+class ServiceBad(SocketProxyService):
+    remote_ports = [80]
+
+    @staticmethod
+    async def get_payload():
+        return await vm.repo(
+            image_tag="blueshade/test:echo",
+            capabilities=[vm.VM_CAPS_VPN],
+        )
+
+    async def start(self):
+        # perform the initialization of the Service
+        # (which includes sending the network details within the `deploy` command)
+        async for script in super().start():
+            yield script
+
+        # start the remote HTTP server and give it some content to serve in the `index.html`
+        script = self._ctx.new_script(timeout=timedelta(minutes=1))
+        # script.run("/bin/sh", "-c", "/docker-entrypoint.sh nginx") # > out 2> err")
+        script.run("/docker-entrypoint.sh", "nginx") # > out 2> err")
+
+        yield script
+        #
+        # await asyncio.sleep(10)
+        #
+        # script = self._ctx.new_script(timeout=timedelta(minutes=1))
+        # out = script.run("/bin/cat", "out")
+        # err = script.run("/bin/cat", "err")
+        # ps = script.run("/bin/ps", "aux")
+        # netstat = script.run("/bin/sh", "-c", "/bin/netstat -tap")
+        # yield script
+        #
+        # print("------------------------------------------------ bad out", (await out).stdout)
+        # print("------------------------------------------------ bad err", (await err).stdout)
+        # print("------------------------------------------------ bad ps", (await ps).stdout)
+        # print("------------------------------------------------ bad netstat", (await netstat).stdout)
+
+
+
+class ServiceGood(SocketProxyService):
+    remote_ports = [80]
+
     @staticmethod
     async def get_payload():
         return await vm.repo(
@@ -61,18 +105,6 @@ class HttpService(HttpProxyService):
         script.run("/usr/sbin/nginx"),
         yield script
 
-    async def shutdown(self):
-        # grab the remote HTTP server's logs on shutdown
-        # we don't need to display them in any way since the result of those commands
-        # is written into the example's logfile alongside all other results
-
-        script = self._ctx.new_script()
-        script.run("/bin/cat", "/var/log/nginx/access.log")
-        script.run("/bin/cat", "/var/log/nginx/error.log")
-        yield script
-
-    # we don't need to implement `run` since, after the service is started,
-    # all communication is performed through the VPN
 
 
 # ######## Main application code which spawns the Golem service and the local HTTP server
@@ -90,8 +122,8 @@ async def main(subnet_tag, payment_driver, payment_network, num_instances, port,
         commissioning_time = datetime.now()
 
         network = await golem.create_network("192.168.0.1/24")
-        cluster = await golem.run_service(
-            HttpService,
+        cluster_good = await golem.run_service(
+            ServiceGood,
             network=network,
             num_instances=num_instances,
             expiration=datetime.now(timezone.utc)
@@ -99,7 +131,17 @@ async def main(subnet_tag, payment_driver, payment_network, num_instances, port,
             + EXPIRATION_MARGIN
             + timedelta(seconds=running_time),
         )
-        instances = cluster.instances
+        cluster_bad = await golem.run_service(
+            ServiceBad,
+            network=network,
+            num_instances=num_instances,
+            expiration=datetime.now(timezone.utc)
+            + STARTING_TIMEOUT
+            + EXPIRATION_MARGIN
+            + timedelta(seconds=running_time),
+        )
+
+        instances = cluster_good.instances + cluster_bad.instances
 
         def still_starting():
             return any(i.state in (ServiceState.pending, ServiceState.starting) for i in instances)
@@ -117,13 +159,32 @@ async def main(subnet_tag, payment_driver, payment_network, num_instances, port,
 
         # service instances started, start the local HTTP server
 
-        proxy = LocalHttpProxy(cluster, port)
-        await proxy.run()
+        # proxy = LocalHttpProxy(cluster, port)
+        # await proxy.run()
+
+        proxy_good = SocketProxy([port])
+        await proxy_good.run(cluster_good)
 
         print(
             f"{TEXT_COLOR_CYAN}Local HTTP server listening on:\n"
             f"http://localhost:{port}{TEXT_COLOR_DEFAULT}"
         )
+
+        proxy_bad = SocketProxy([port + 1])
+        await proxy_bad.run(cluster_bad)
+
+        print(
+            f"{TEXT_COLOR_CYAN}Local HTTP server listening on:\n"
+            f"http://localhost:{port + 1}{TEXT_COLOR_DEFAULT}"
+        )
+
+        await asyncio.sleep(3)
+
+        async with aiohttp.request("get", f"http://localhost:{port}") as response:
+            print("--------------------- response good: ", await response.text())
+
+        async with aiohttp.request("get", f"http://localhost:{port + 1}") as response:
+            print("--------------------- response bad: ", await response.text())
 
         # wait until Ctrl-C
 
@@ -138,10 +199,13 @@ async def main(subnet_tag, payment_driver, payment_network, num_instances, port,
 
         # perform the shutdown of the local http server and the service cluster
 
-        await proxy.stop()
+        await proxy_good.stop()
+        await proxy_bad.stop()
+
         print(f"{TEXT_COLOR_CYAN}HTTP server stopped{TEXT_COLOR_DEFAULT}")
 
-        cluster.stop()
+        cluster_good.stop()
+        cluster_bad.stop()
 
         cnt = 0
         while cnt < 3 and any(s.is_available for s in instances):
@@ -157,7 +221,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num-instances",
         type=int,
-        default=2,
+        default=1,
         help="The number of instances of the http service to spawn",
     )
     parser.add_argument(
