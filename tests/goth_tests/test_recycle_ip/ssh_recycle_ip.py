@@ -59,7 +59,7 @@ async def main():
     async with Golem(
         budget=1.0,
         subnet_tag="goth",
-        payment_network="rinkeby",
+        payment_network="holesky",
     ) as golem:
         network = await golem.create_network("192.168.0.1/24")
         proxy = SocketProxy(ports=[2222])
