@@ -60,8 +60,7 @@ async def test_power_outage(
         provider_1 = runner.get_probes(probe_type=ProviderProbe)[0]
 
         async with requestor.run_command_on_host(
-            "{} --subnet-tag goth --min-cpu-threads 1 "
-            "--payment-network rinkeby --log-file {}".format(
+            "{} --subnet-tag goth --min-cpu-threads 1 --log-file {}".format(
                 blender_path, log_dir / "test_power_outage.log"
             ),
             env=os.environ,

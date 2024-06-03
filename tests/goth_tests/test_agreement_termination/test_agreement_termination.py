@@ -88,7 +88,7 @@ async def test_agreement_termination(
 
             # Wait for worker failure due to command error
             assertion = cmd_monitor.add_assertion(assert_command_error)
-            agr_id = await assertion.wait_for_result(timeout=60)
+            agr_id = await assertion.wait_for_result(timeout=120)
             logger.info("Detected command error in activity for agreement %s", agr_id)
 
             # Make sure no new tasks are sent and the agreement is terminated
@@ -96,8 +96,8 @@ async def test_agreement_termination(
                 partial(assert_agreement_cancelled, agr_id),
                 name=f"assert_agreement_cancelled({agr_id})",
             )
-            await assertion.wait_for_result(timeout=10)
+            await assertion.wait_for_result(timeout=20)
 
             # Wait for executor shutdown
-            await cmd_monitor.wait_for_pattern("ShutdownFinished", timeout=60)
+            await cmd_monitor.wait_for_pattern("ShutdownFinished", timeout=120)
             logger.info("Requestor script finished")

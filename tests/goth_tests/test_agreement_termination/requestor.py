@@ -43,7 +43,7 @@ async def main():
                 yield script
             else:
                 # Simulate some work
-                script.run("/bin/sleep", "5")
+                script.run("/bin/sleep", "1")
                 yield script
 
             task.accept_result()
@@ -51,7 +51,7 @@ async def main():
     async with Golem(
         budget=10.0,
         subnet_tag="goth",
-        payment_network="rinkeby",
+        payment_network="holesky",
     ) as golem:
         tasks = [Task(data=n) for n in range(6)]
         async for task in golem.execute_tasks(
