@@ -43,7 +43,7 @@ async def main():
                 yield script
             else:
                 # Simulate some work
-                script.run("/bin/sleep", "5")
+                script.run("/bin/sleep", "1")
                 yield script
 
             task.accept_result()
