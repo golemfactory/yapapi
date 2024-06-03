@@ -1,4 +1,5 @@
 """Utility functions and classes used within yapapi."""
+
 import asyncio
 import enum
 import functools

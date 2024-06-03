@@ -4,6 +4,7 @@ Market strategy wrapper that enables easy exclusion of offers from certain provi
 a simple boolean condition, while preserving correct scoring of the remaining offers by the
 base strategy.
 """
+
 import inspect
 from typing import Awaitable, Callable, Union
 

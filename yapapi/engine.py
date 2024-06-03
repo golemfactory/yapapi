@@ -143,9 +143,11 @@ class _Engine:
         self._payment_token: str = (
             payment_token.lower()
             if payment_token
-            else MAINNET_TOKEN_NAME
-            if self._payment_network in MAINNET_NETWORKS
-            else TESTNET_TOKEN_NAME
+            else (
+                MAINNET_TOKEN_NAME
+                if self._payment_network in MAINNET_NETWORKS
+                else TESTNET_TOKEN_NAME
+            )
         )
         self._stream_output = stream_output
 

@@ -8,6 +8,7 @@ For usage in a complete requestor agent app, see the
 `webapp <https://github.com/golemfactory/yapapi/tree/master/examples/webapp>`_ examples in the
 yapapi repository.
 """
+
 import abc
 import asyncio
 import logging

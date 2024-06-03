@@ -1,4 +1,5 @@
 """Payment-related properties."""
+
 import abc
 import enum
 from typing import Any, Dict, List

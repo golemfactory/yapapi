@@ -1,4 +1,5 @@
 """Utilities for yapapi example scripts."""
+
 import argparse
 import asyncio
 import tempfile

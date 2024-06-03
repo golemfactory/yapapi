@@ -1,4 +1,5 @@
 """Unit tests for the `yapapi.log` module."""
+
 import logging
 import os
 import sys

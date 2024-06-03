@@ -1,4 +1,5 @@
 """A goth test scenario for multi-activity agreements."""
+
 import logging
 import os
 import re

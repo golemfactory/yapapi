@@ -1,4 +1,5 @@
 """An integration test scenario that runs the `scan` example."""
+
 import asyncio
 import logging
 import os

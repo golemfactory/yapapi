@@ -1,4 +1,5 @@
 """An integration test scenario that runs the Simple Service example requestor app."""
+
 import logging
 import os
 import time

@@ -436,13 +436,15 @@ class Service:
             "activity_id": self._ctx._activity.id if self._ctx else None,
             "agreement_id": self._ctx._agreement.id if self._ctx else None,
             "state": self.state.value,
-            "network_node": {
-                "network_id": self._network_node.network.network_id,
-                "node_id": self._network_node.node_id,
-                "ip": self._network_node.ip,
-            }
-            if self._network_node
-            else None,
+            "network_node": (
+                {
+                    "network_id": self._network_node.network.network_id,
+                    "node_id": self._network_node.node_id,
+                    "ip": self._network_node.ip,
+                }
+                if self._network_node
+                else None
+            ),
         }
 
 

@@ -34,8 +34,9 @@ TaskEvents = Union[events.TaskAccepted, events.TaskRejected]
 
 
 class TaskEmitter(Protocol):
-    def __call__(self, event_class: Type[events.TaskEventType], **kwargs) -> events.TaskEventType:
-        ...
+    def __call__(
+        self, event_class: Type[events.TaskEventType], **kwargs
+    ) -> events.TaskEventType: ...
 
 
 class Task(Generic[TaskData, TaskResult]):
