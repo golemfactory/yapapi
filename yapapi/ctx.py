@@ -28,8 +28,7 @@ class ExecOptions:
 
 
 class WorkContextEmitter(Protocol):
-    def __call__(self, event_class: Type[ActivityEventType], **kwargs) -> ActivityEventType:
-        ...
+    def __call__(self, event_class: Type[ActivityEventType], **kwargs) -> ActivityEventType: ...
 
 
 class WorkContext:

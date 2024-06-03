@@ -1,4 +1,5 @@
 """An implementation of the new Golem's task executor."""
+
 import asyncio
 import sys
 from asyncio import CancelledError

@@ -1,4 +1,5 @@
 """Utilities for yapapi example scripts."""
+
 import argparse
 import asyncio
 import tempfile
@@ -34,7 +35,7 @@ def build_parser(description: str) -> argparse.ArgumentParser:
         "--payment-driver", "--driver", help="Payment driver name, for example `erc20`"
     )
     parser.add_argument(
-        "--payment-network", "--network", help="Payment network name, for example `goerli`"
+        "--payment-network", "--network", help="Payment network name, for example `holesky`"
     )
     parser.add_argument("--subnet-tag", help="Subnet name, for example `public`")
     parser.add_argument(

@@ -61,7 +61,7 @@ class DemandBuilder:
     def add(self, m: Model):
         """Add properties from the specified model to this demand definition."""
         kv = m.property_keys()
-        base = asdict(m)
+        base = asdict(m)  # type: ignore [call-overload]
 
         for name in kv.names():
             prop_id = kv.__dict__[name]

@@ -14,7 +14,7 @@ class PackageException(Exception):
     """Exception raised on any problems related to the package repository."""
 
 
-@dataclass  # type: ignore  # mypy issue #5374
+@dataclass
 class Package(Payload):
     """Description of a task package (e.g. a VM image) deployed on the provider nodes."""
 

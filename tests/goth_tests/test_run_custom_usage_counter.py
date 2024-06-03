@@ -1,4 +1,5 @@
 """An integration test scenario that runs custom usage counter example requestor app."""
+
 import logging
 import os
 import re

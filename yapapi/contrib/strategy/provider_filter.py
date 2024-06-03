@@ -4,6 +4,7 @@ Market strategy wrapper that enables easy exclusion of offers from certain provi
 a simple boolean condition, while preserving correct scoring of the remaining offers by the
 base strategy.
 """
+
 import inspect
 from typing import Awaitable, Callable, Union
 
@@ -71,7 +72,7 @@ class ProviderFilter(WrappingMarketStrategy):
 
     async def score_offer(self, offer: OfferProposal) -> float:
         if inspect.iscoroutinefunction(self._is_allowed):
-            allowed = await self._is_allowed(offer.issuer)  # type: ignore
+            allowed = await self._is_allowed(offer.issuer)
         else:
             allowed = self._is_allowed(offer.issuer)
 

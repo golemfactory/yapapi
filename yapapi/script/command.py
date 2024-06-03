@@ -19,6 +19,7 @@ BatchCommand = Dict[str, Dict[str, Union[str, List[str]]]]
 
 
 class Command(abc.ABC):
+    @abc.abstractmethod
     def evaluate(self) -> BatchCommand:
         """Evaluate and serialize this command."""
 

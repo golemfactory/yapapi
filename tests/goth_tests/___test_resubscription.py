@@ -1,4 +1,5 @@
 """Test if subscription expiration is handled correctly by Golem."""
+
 import logging
 import os
 import time

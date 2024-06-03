@@ -6,6 +6,7 @@ property would be that if the requestor script prints a line containing
 the string "Agreement confirmed by provider P", for any name P, then
 eventually it will also print a line containing "Accepted invoice from P".
 """
+
 import logging
 import re
 from typing import Set

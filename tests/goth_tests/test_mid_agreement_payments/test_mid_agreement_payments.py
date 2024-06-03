@@ -1,4 +1,5 @@
 """A goth test scenario for mid-agreement payments."""
+
 import logging
 import os
 import re

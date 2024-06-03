@@ -1,4 +1,5 @@
 """Unit tests for `yapapi.engine` module."""
+
 from unittest.mock import Mock
 
 import pytest

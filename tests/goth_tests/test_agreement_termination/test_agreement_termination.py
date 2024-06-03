@@ -1,4 +1,5 @@
 """A goth test scenario for agreement termination."""
+
 import logging
 import os
 import re

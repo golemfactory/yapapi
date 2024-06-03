@@ -99,7 +99,7 @@ class Model(abc.ABC):
         """
         return [
             f
-            for f in fields(cls)
+            for f in fields(cls)  # type: ignore [arg-type]
             if PROP_KEY in f.metadata
             and f.metadata.get(PROP_MODEL_FIELD_TYPE, ModelFieldType.property)
             == ModelFieldType.property
@@ -110,7 +110,7 @@ class Model(abc.ABC):
         """Return a list of constraint fields of a Model."""
         return [
             f
-            for f in fields(cls)
+            for f in fields(cls)  # type: ignore [arg-type]
             if PROP_KEY in f.metadata
             and f.metadata.get(PROP_MODEL_FIELD_TYPE, None) == ModelFieldType.constraint
         ]
@@ -279,7 +279,7 @@ def constraint_model_serialize(m: Model) -> List[str]:
     """
     return [
         constraint_to_str(getattr(m, f.name), f)
-        for f in fields(type(m))
+        for f in fields(type(m))  # type: ignore [arg-type]
         if f.metadata.get(PROP_MODEL_FIELD_TYPE, "") == ModelFieldType.constraint
     ]
 

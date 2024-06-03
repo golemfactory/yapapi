@@ -7,6 +7,7 @@ For usage in a complete requestor agent app, see the
 `ssh <https://github.com/golemfactory/yapapi/tree/master/examples/ssh>`_ example in the
 yapapi repository.
 """
+
 import abc
 import asyncio
 import itertools
