@@ -37,7 +37,7 @@ class AsyncWrapper(AsyncContextManager):
     _task: Optional[asyncio.Task]
 
     def __init__(self, wrapped: Callable):
-        self._wrapped = wrapped  # type: ignore  # suppress mypy issue #708
+        self._wrapped = wrapped
         self._args_buffer = asyncio.Queue()
         self._loop = asyncio.get_event_loop()
         self._task = None

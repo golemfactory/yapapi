@@ -30,7 +30,7 @@ class Counter(enum.Enum):
     UNKNOWN = ""
 
 
-@dataclass(frozen=True)  # type: ignore  # mypy doesn't allow abstract methods in dataclasses
+@dataclass(frozen=True)
 class Com(Model):
     """Base model representing the payment model used."""
 

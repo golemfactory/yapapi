@@ -317,7 +317,7 @@ class TaskEvent(ActivityEvent, abc.ABC):
         return self.task.id
 
     @property
-    def task_data(self) -> "yapapi.executor.task.TaskData":
+    def task_data(self):
         return self.task.data
 
 
@@ -525,7 +525,7 @@ class CommandStdErr(CommandEvent):
 @attr.s(auto_attribs=True, repr=False)
 class TaskAccepted(TaskEvent):
     @property
-    def result(self) -> "yapapi.executor.task.TaskResult":
+    def result(self):
         assert self.task._result is not None
         return self.task._result
 

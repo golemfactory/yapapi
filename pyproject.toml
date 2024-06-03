@@ -52,7 +52,7 @@ black = "^23.1.0"
 factory-boy = "^3.2.0"
 isort = "^5.10.1"
 liccheck = "^0.4.7"
-mypy = "^0.942"
+mypy = "^1.10.0"
 poethepoet = "^0.8.0"
 pytest = "^6.2"
 pytest-asyncio = "^0.14"
@@ -62,6 +62,7 @@ autoflake = "^1"
 flake8 = "^5"
 flake8-docstrings = "^1.6"
 Flake8-pyproject = "^1.2.2"
+
 
 [tool.poe.tasks]
 checks = {sequence = ["checks_codestyle", "checks_typing", "checks_license"], help = "Run all available code checks"}

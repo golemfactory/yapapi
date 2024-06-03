@@ -15,14 +15,14 @@ class Aliased:
 
     @classmethod
     def _to_aliased_dict(cls, values: dict):
-        for f in fields(cls):
+        for f in fields(cls):  # type: ignore [arg-type]
             alias = f.metadata.get("alias")
             if alias and f.name in values:
                 values[alias] = values.pop(f.name)
 
     @classmethod
     def _from_aliased_dict(cls, values: dict):
-        for f in fields(cls):
+        for f in fields(cls):  # type: ignore [arg-type]
             alias = f.metadata.get("alias")
             if alias and alias in values:
                 values[f.name] = values.pop(alias)
@@ -329,7 +329,7 @@ class Manifest(Aliased):
 
     @classmethod
     async def generate(
-        cls, image_hash: str = None, outbound_urls: List[str] = None, **kwargs
+        cls, image_hash: Optional[str] = None, outbound_urls: Optional[List[str]] = None, **kwargs
     ) -> "Manifest":
         if image_hash is not None:
             kwargs["payload.0.hash"] = image_hash
