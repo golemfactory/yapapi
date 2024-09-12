@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from utils import build_parser, run_golem_example
 import asyncio
 import os
 import pathlib
@@ -12,8 +13,8 @@ from dataclasses import dataclass
 
 import yapapi.script.command
 from yapapi import Golem
-from yapapi.payload import vm, Payload
-from yapapi.payload.vm import _VmPackage, VmRequest, VmPackageFormat
+from yapapi.payload import Payload, vm
+from yapapi.payload.vm import VmPackageFormat, VmRequest, _VmPackage
 from yapapi.props import inf
 from yapapi.props.base import constraint
 from yapapi.props.builder import DemandBuilder
@@ -22,8 +23,6 @@ from yapapi.services import Service
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
-
-from utils import build_parser, run_golem_example
 
 
 def command_key(event: "yapapi.events.CommandProgress") -> str:
@@ -100,7 +99,8 @@ class ExamplePayload(Payload):
         "golem.runtime.capabilities", operator="=", default_factory=list
     )
 
-    runtime: str = constraint(inf.INF_RUNTIME_NAME, operator="=", default=vm.RUNTIME_VM)
+    runtime: str = constraint(inf.INF_RUNTIME_NAME,
+                              operator="=", default=vm.RUNTIME_VM)
 
     # Constraints can't be bool, because python serializes bool to `True` and market matcher
     # expects `true`.
@@ -114,7 +114,8 @@ class ExamplePayload(Payload):
     async def decorate_demand(self, demand: DemandBuilder):
         await super().decorate_demand(demand)
         demand.add(
-            VmRequest(package_url=self.image_url, package_format=VmPackageFormat.GVMKIT_SQUASH)
+            VmRequest(package_url=self.image_url,
+                      package_format=VmPackageFormat.GVMKIT_SQUASH)
         )
 
 
@@ -154,7 +155,8 @@ class ExampleService(Service):
         script.upload_bytes(
             os.urandom(40 * 1024 * 1024), "/golem/resource/bytes.bin", progress_args=progress
         )
-        script.download_file("/golem/resource/bytes.bin", "download.bin", progress_args=progress)
+        script.download_file("/golem/resource/bytes.bin",
+                             "download.bin", progress_args=progress)
         yield script
 
         os.remove("download.bin")
