@@ -118,6 +118,7 @@ Events inheritance tree
                             CommandStdOut
                             CommandStdErr
                             CommandExecuted
+                            CommandProgress
                             DownloadStarted
                             DownloadFinished
                         GettingResults
@@ -520,6 +521,14 @@ class CommandStdOut(CommandEvent):
 @attr.s(auto_attribs=True, repr=False)
 class CommandStdErr(CommandEvent):
     output: str
+
+
+@attr.s(auto_attribs=True, repr=False)
+class CommandProgress(CommandEvent):
+    step: Tuple[int, int]
+    message: Optional[str]
+    progress: Tuple[int, Optional[int]]
+    unit: Optional[str]
 
 
 @attr.s(auto_attribs=True, repr=False)
