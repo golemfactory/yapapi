@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-from utils import build_parser, run_golem_example
 import asyncio
 import os
 import pathlib
@@ -10,6 +9,7 @@ from typing import List
 
 from alive_progress import alive_bar
 from dataclasses import dataclass
+from utils import build_parser, run_golem_example
 
 import yapapi.script.command
 from yapapi import Golem
@@ -99,8 +99,7 @@ class ExamplePayload(Payload):
         "golem.runtime.capabilities", operator="=", default_factory=list
     )
 
-    runtime: str = constraint(inf.INF_RUNTIME_NAME,
-                              operator="=", default=vm.RUNTIME_VM)
+    runtime: str = constraint(inf.INF_RUNTIME_NAME, operator="=", default=vm.RUNTIME_VM)
 
     # Constraints can't be bool, because python serializes bool to `True` and market matcher
     # expects `true`.
@@ -114,8 +113,7 @@ class ExamplePayload(Payload):
     async def decorate_demand(self, demand: DemandBuilder):
         await super().decorate_demand(demand)
         demand.add(
-            VmRequest(package_url=self.image_url,
-                      package_format=VmPackageFormat.GVMKIT_SQUASH)
+            VmRequest(package_url=self.image_url, package_format=VmPackageFormat.GVMKIT_SQUASH)
         )
 
 
@@ -155,8 +153,7 @@ class ExampleService(Service):
         script.upload_bytes(
             os.urandom(40 * 1024 * 1024), "/golem/resource/bytes.bin", progress_args=progress
         )
-        script.download_file("/golem/resource/bytes.bin",
-                             "download.bin", progress_args=progress)
+        script.download_file("/golem/resource/bytes.bin", "download.bin", progress_args=progress)
         yield script
 
         os.remove("download.bin")
@@ -168,11 +165,11 @@ shutdown = False
 
 async def main(subnet_tag, driver=None, network=None):
     async with Golem(
-            budget=50.0,
-            subnet_tag=subnet_tag,
-            payment_driver=driver,
-            payment_network=network,
-            stream_output=True,
+        budget=50.0,
+        subnet_tag=subnet_tag,
+        payment_driver=driver,
+        payment_network=network,
+        stream_output=True,
     ) as golem:
         global shutdown
 
