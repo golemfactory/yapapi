@@ -81,15 +81,14 @@ def run_golem_example(example_main, log_file=None):
     try:
         loop.run_until_complete(task)
     except NoPaymentAccountError as e:
-        handbook_url = (
-            "https://handbook.golem.network/requestor-tutorials/"
-            "flash-tutorial-of-requestor-development"
+        docs_url = (
+            "https://docs.golem.network/docs/creators/python/quickstarts/run-first-task-on-golem"
         )
         print(
             f"{TEXT_COLOR_RED}"
             f"No payment account initialized for driver `{e.required_driver}` "
             f"and network `{e.required_network}`.\n\n"
-            f"See {handbook_url} on how to initialize payment accounts for a requestor node."
+            f"See {docs_url} on how to initialize payment accounts for a requestor node."
             f"{TEXT_COLOR_DEFAULT}"
         )
     except KeyboardInterrupt:

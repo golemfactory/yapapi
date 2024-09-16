@@ -6,6 +6,6 @@ Golem Python API Reference
 
     api
 
-    Golem Handbook <https://handbook.golem.network/>
+    Golem Docs <https://docs.golem.network/>
     Github <https://github.com/golemfactory/yapapi>
     Pypi <https://pypi.org/project/yapapi/>
