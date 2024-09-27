@@ -220,11 +220,11 @@ class Run(Command):
     def evaluate(self):
         capture = {"stdout": self.stdout.to_dict(), "stderr": self.stderr.to_dict()}
         return self._make_batch_command(
-            "run", entry_point=self.cmd, args=self.args, capture=capture
+            "run", entry_point=self.cmd, args=self.args, env=self.env, capture=capture
         )
 
     def __repr__(self):
-        return f"{super().__repr__()} {self.cmd} {self.args}"
+        return f"{super().__repr__()} {self.cmd} {self.args} {self.env}"
 
 
 StorageEvent = Union[DownloadStarted, DownloadFinished]
