@@ -100,7 +100,7 @@ async def manifest(
     Build a reference to application payload.
 
     :param manifest: base64 encoded Computation Payload Manifest
-        https://handbook.golem.network/requestor-tutorials/vm-runtime/computation-payload-manifest
+        https://docs.golem.network/docs/golem/payload-manifest#computation-payload-manifest
     :param manifest_sig: an optional signature of base64 encoded Computation Payload Manifest
     :param manifest_sig_algorithm: an optional signature algorithm, e.g. "sha256"
     :param manifest_cert: an optional base64 encoded public certificate (DER or PEM) matching key
