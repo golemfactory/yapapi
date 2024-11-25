@@ -1,3 +1,4 @@
+import json
 import logging
 from enum import Enum
 from typing import Final, List, Literal, Optional
@@ -44,10 +45,15 @@ class VmManifestRequest(ExeUnitManifestRequest):
     package_format: VmPackageFormat = prop_base.prop(
         "golem.srv.comp.vm.package_format", default=VmPackageFormat.GVMKIT_SQUASH
     )
-    # Update type hint to match the expected type
     node_descriptor: Optional[str] = prop_base.prop(
         "golem.srv.comp.vm.node_descriptor", default=None
     )
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Convert dict to string if needed
+        if isinstance(kwargs.get("node_descriptor"), dict):
+            self.node_descriptor = json.dumps(kwargs["node_descriptor"])
 
 
 @dataclass(frozen=True)

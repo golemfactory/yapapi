@@ -128,7 +128,12 @@ class Model(abc.ABC):
         field_map = dict(
             (
                 f.metadata[PROP_KEY],
-                _PyField(name=f.name, type=f.type, required=f.default is MISSING),
+                _PyField(
+                    name=f.name,
+                    # Convert the type to Type[Any]
+                    type=typing.cast(Type[Any], f.type),
+                    required=f.default is MISSING,
+                )
             )
             for f in cls.property_fields()
         )
