@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-from utils import build_parser, print_env_info, run_golem_example
 import asyncio
 import base64
-from datetime import datetime
+import json
 import pathlib
 import sys
-import json
+from datetime import datetime
+
+from utils import build_parser, print_env_info, run_golem_example
 
 from yapapi import Golem
 from yapapi.payload import vm
