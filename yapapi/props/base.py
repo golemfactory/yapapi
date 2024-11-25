@@ -133,7 +133,7 @@ class Model(abc.ABC):
                     # Convert the type to Type[Any]
                     type=typing.cast(Type[Any], f.type),
                     required=f.default is MISSING,
-                )
+                ),
             )
             for f in cls.property_fields()
         )
