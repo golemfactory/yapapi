@@ -41,22 +41,19 @@ as an argument to `log_summary`:
     )
 ```
 """
-from asyncio import CancelledError, get_event_loop
-from collections import Counter, defaultdict
-from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from decimal import Decimal
+
 import inspect
 import logging
 import os
 import sys
 import time
-from typing import Any, Callable, Dict, List, Optional, Set
+from asyncio import CancelledError, get_event_loop
+from collections import Counter, defaultdict
+from datetime import datetime, timedelta
+from decimal import Decimal
+from typing import Any, Callable, Dict, Final, List, Optional, Set
 
-if sys.version_info >= (3, 8):
-    from typing import Final
-else:
-    from typing_extensions import Final
+from dataclasses import dataclass
 
 from yapapi import __version__ as yapapi_version
 from yapapi import events
@@ -168,6 +165,7 @@ event_type_to_string = {
     events.CommandStdOut: "Command stdout",
     events.CommandStdErr: "Command stderr",
     events.CommandExecuted: "Script command executed",
+    events.CommandProgress: "Script command progress update",
     events.GettingResults: "Getting script results",
     events.ScriptFinished: "Script finished",
     events.TaskAccepted: "Task accepted",
@@ -442,12 +440,12 @@ class SummaryLogger:
             else:
                 msg = (
                     f"{offers_collected} {'offer has' if offers_collected == 1 else 'offers have'} "
-                    f"been collected from the market, but no provider has responded for "
+                    "been collected from the market, but no provider has responded for "
                     f"{self.time_waiting_for_proposals.seconds}s."
                 )
             msg += (
-                f" Make sure you're using the latest released versions of yagna and yapapi,"
-                f" and the correct subnet. "
+                " Make sure you're using the latest released versions of yagna and yapapi, and the"
+                " correct subnet. "
             )
             self.logger.warning(msg)
 
@@ -464,7 +462,6 @@ class SummaryLogger:
             )
 
         elif isinstance(event, events.AgreementConfirmed):
-
             self.logger.info(
                 "Agreement confirmed by provider '%s'",
                 self.agreement_provider_info[event.agr_id].name,

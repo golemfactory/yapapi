@@ -6,6 +6,7 @@ property would be that if the requestor script prints a line containing
 the string "Agreement confirmed by provider P", for any name P, then
 eventually it will also print a line containing "Accepted invoice from P".
 """
+
 import logging
 import re
 from typing import Set
@@ -24,14 +25,14 @@ async def assert_no_errors(output_lines: EventStream[str]):
 
 async def assert_all_invoices_accepted(output_lines: EventStream[str]):
     """Assert that an invoice is accepted for every provider that confirmed an agreement."""
-    unpaid_agreement_providers = set()
+    unpaid_agreement_providers = list()
 
     async for line in output_lines:
         m = re.search("Agreement confirmed by provider '([^']*)'", line)
         if m:
             prov_name = m.group(1)
             logger.debug("assert_all_invoices_accepted: adding provider '%s'", prov_name)
-            unpaid_agreement_providers.add(prov_name)
+            unpaid_agreement_providers.append(prov_name)
         m = re.search("Accepted invoice from '([^']*)'", line)
         if m:
             prov_name = m.group(1)

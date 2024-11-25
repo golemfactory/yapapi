@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
+import argparse
 import asyncio
-from datetime import timedelta
 import logging
+from datetime import timedelta
 from typing import AsyncIterable, List
 
 from yapapi import Golem, Task, WorkContext
@@ -41,6 +42,7 @@ async def main():
         strategy=ShortDebitNoteIntervalAndPaymentTimeout(),
         subnet_tag="goth",
         event_consumer=log_event_repr,
+        payment_network="holesky",
     ) as golem:
         logger = logging.getLogger("yapapi")
         logger.handlers[0].setLevel(logging.DEBUG)
@@ -51,7 +53,13 @@ async def main():
 
 
 if __name__ == "__main__":
-    enable_default_logger(log_file="mid_agreement_payments.log")
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--log-file",
+        default=str("mid_agreement_payments.log"),
+    )
+    args = parser.parse_args()
+    enable_default_logger(log_file=args.log_file)
 
     loop = asyncio.get_event_loop()
     task = loop.create_task(main())

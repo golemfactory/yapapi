@@ -2,17 +2,11 @@ import abc
 import enum
 import inspect
 import json
-import sys
 import typing
-from typing import Any, Dict, List, Type, TypeVar, Union, cast
-
-if sys.version_info > (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Literal, Type, TypeVar, Union, cast
 
 from dataclasses import MISSING, Field, dataclass, field, fields
-from datetime import datetime, timezone
 
 Props = Dict[str, str]
 
@@ -45,16 +39,15 @@ class _PyField:
 
     def encode(self, value: str):
         def get_type_origin(t):
-            # type: ignore
             if hasattr(typing, "get_origin"):
-                return typing.get_origin(t)  # type: ignore
+                return typing.get_origin(t)
             else:
                 return getattr(t, "__origin__", None)
 
         def get_type_args(t):
             # >= py3.8
             if hasattr(typing, "get_args"):
-                return typing.get_args(t)  # type: ignore
+                return typing.get_args(t)
             else:
                 return getattr(t, "__args__")
 
@@ -106,7 +99,7 @@ class Model(abc.ABC):
         """
         return [
             f
-            for f in fields(cls)
+            for f in fields(cls)  # type: ignore [arg-type]
             if PROP_KEY in f.metadata
             and f.metadata.get(PROP_MODEL_FIELD_TYPE, ModelFieldType.property)
             == ModelFieldType.property
@@ -114,12 +107,10 @@ class Model(abc.ABC):
 
     @classmethod
     def constraint_fields(cls) -> typing.List[Field]:
-        """
-        Return a list of constraint fields of a Model.
-        """
+        """Return a list of constraint fields of a Model."""
         return [
             f
-            for f in fields(cls)
+            for f in fields(cls)  # type: ignore [arg-type]
             if PROP_KEY in f.metadata
             and f.metadata.get(PROP_MODEL_FIELD_TYPE, None) == ModelFieldType.constraint
         ]
@@ -162,8 +153,7 @@ class Model(abc.ABC):
 
     @classmethod
     def property_keys(cls):
-        """
-        :return: a mapping between the model's field names and the property keys
+        """Return a mapping between the model's field names and the property keys.
 
         example:
         ```python
@@ -208,10 +198,10 @@ class ModelFieldType(enum.Enum):
 def constraint(
     key: str, operator: ConstraintOperator = "=", default=MISSING, default_factory=MISSING
 ):
-    """
-    Return a constraint-type dataclass field for a Model.
+    """Return a constraint-type dataclass field for a Model.
 
-    :param key: the key of the property on which the constraint is made - e.g. "golem.srv.comp.task_package"
+    :param key: the key of the property on which the constraint is made - e.g.
+        "golem.srv.comp.task_package"
     :param operator: constraint's operator, one of: "=", ">=", "<="
     :param default: the default value for the constraint
 
@@ -229,7 +219,8 @@ def constraint(
     ['(baz<=100)']
     ```
     """
-    return field(  # type: ignore  # the default / default_factory exception is resolved by the `field` function
+    # the default / default_factory exception is resolved by the `field` function
+    return field(  # type: ignore
         default=default,
         default_factory=default_factory,
         metadata={
@@ -288,7 +279,7 @@ def constraint_model_serialize(m: Model) -> List[str]:
     """
     return [
         constraint_to_str(getattr(m, f.name), f)
-        for f in fields(type(m))
+        for f in fields(type(m))  # type: ignore [arg-type]
         if f.metadata.get(PROP_MODEL_FIELD_TYPE, "") == ModelFieldType.constraint
     ]
 
@@ -310,7 +301,9 @@ def join_str_constraints(constraints: List[str], operator: ConstraintGroupOperat
     example:
     ```python
     >>> from dataclasses import dataclass
-    >>> from yapapi.props.base import Model, constraint, constraint_model_serialize, join_str_constraints
+    >>> from yapapi.props.base import (
+    >>>     Model, constraint, constraint_model_serialize, join_str_constraints
+    >>> )
     >>>
     >>> @dataclass
     ... class Foo(Model):

@@ -1,12 +1,15 @@
 """An implementation of the new Golem's task executor."""
+
 import asyncio
+import sys
 from asyncio import CancelledError
 from datetime import datetime, timedelta, timezone
-import sys
 from typing import (
+    AsyncGenerator,
     AsyncIterator,
     Awaitable,
     Callable,
+    Final,
     Iterable,
     List,
     Optional,
@@ -15,15 +18,14 @@ from typing import (
     Union,
     cast,
 )
-from typing_extensions import AsyncGenerator, Final
 
+import yapapi.utils
 from yapapi import events
 from yapapi.ctx import WorkContext
 from yapapi.engine import Job, _Engine
 from yapapi.payload import Payload
 from yapapi.script import Script
 from yapapi.script.command import Deploy, Start
-import yapapi.utils
 
 from ._smartq import SmartQueue
 from .task import Task, TaskStatus
@@ -157,11 +159,10 @@ class Executor:
         workers: Set[asyncio.Task],
         job: Job,
     ) -> AsyncGenerator[Task[D, R], None]:
-
         done_queue: asyncio.Queue[Task[D, R]] = asyncio.Queue()
 
         def on_task_done(task: Task[D, R], status: TaskStatus) -> None:
-            """Callback run when `task` is accepted or rejected."""
+            """Execute callback when `task` is accepted or rejected."""
             if status == TaskStatus.ACCEPTED:
                 done_queue.put_nowait(task)
 
@@ -177,14 +178,13 @@ class Executor:
 
         work_queue = SmartQueue(input_tasks())
 
-        async def run_worker(work_context: WorkContext) -> None:
+        async def run_worker(work_context: WorkContext) -> bool:
             """Run an instance of `worker` for the particular work context."""
             agreement = work_context._agreement
             activity = work_context._activity
 
             with work_queue.new_consumer() as consumer:
                 try:
-
                     # the `task_generator` here is passed as the `tasks` argument to the user's
                     # `worker` function
                     #
@@ -230,13 +230,15 @@ class Executor:
                         pass
                     work_context.emit(events.WorkerFinished)
                 except Exception as e:
-                    work_context.emit(events.WorkerFinished, exc_info=sys.exc_info())  # type: ignore
+                    work_context.emit(events.WorkerFinished, exc_info=sys.exc_info())
                     await task_gen.athrow(type(e), e)
                     raise
                 finally:
                     await self._engine.accept_payments_for_agreement(job.id, agreement.id)
                     if consumer.finished:
                         raise StopAsyncIteration()
+
+            return False
 
         async def worker_starter() -> None:
             while True:
@@ -277,7 +279,6 @@ class Executor:
 
         try:
             while wait_until_done in services or not done_queue.empty():
-
                 now = datetime.now(timezone.utc)
                 if now > job.expiration_time:
                     raise TimeoutError(f"Job timed out after {self._timeout}")
@@ -323,7 +324,6 @@ class Executor:
                 raise
 
         finally:
-
             await work_queue.close()
 
             # Importing this at the beginning would cause circular dependencies

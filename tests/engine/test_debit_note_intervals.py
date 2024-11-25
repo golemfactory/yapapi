@@ -1,9 +1,9 @@
-from datetime import datetime, timedelta
 import functools
-import pytest
 import re
-import sys
+from datetime import datetime, timedelta
 from unittest import mock
+
+import pytest
 
 from tests.factories.rest.market import AgreementFactory
 from tests.factories.rest.payment import DebitNoteFactory
@@ -163,7 +163,6 @@ def test_verify_debit_note_intervals(
     assert vpt_condition(engine._verify_payment_timeout(agreement, debit_note, duration))
 
 
-@pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "agreement_kwargs, debit_note_kwargs, created_at_cb, "
@@ -179,7 +178,8 @@ def test_verify_debit_note_intervals(
         ({}, {}, lambda: None, 0, 0, False, False),
         # payable debit note received even though mid-agrement payment have not been negotiated
         ({}, {"_base__payment_due_date": True}, datetime.now, 0, 0, False, True),
-        # more than one debit note received before the agreed-upon interval elapsed, we only allow one
+        # more than one debit note received before the agreed-upon interval elapsed,
+        # we only allow one
         (
             {"details___ref__demand__properties": {PROP_DEBIT_NOTE_INTERVAL_SEC: 100}},
             {},

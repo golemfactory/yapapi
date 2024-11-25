@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 import asyncio
-from asyncio import TimeoutError
 import datetime
-from typing_extensions import Final
+from asyncio import TimeoutError
+from typing import Final
 
-import ya_market
-
-from examples import utils
 from yapapi import props as yp
 from yapapi.config import ApiConfig
 from yapapi.log import enable_default_logger
@@ -15,7 +12,8 @@ from yapapi.rest import Configuration, Market
 from yapapi.rest.market import OfferProposal
 
 DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: Final[str] = "golem.com.payment.debit-notes.accept-timeout?"
-# TODO: Investigate number of offers per provider (https://github.com/golemfactory/yapapi/issues/754)
+# TODO: Investigate number of offers per provider
+#  (https://github.com/golemfactory/yapapi/issues/754)
 PROPOSALS_LIMIT: Final[int] = 6
 
 
@@ -27,7 +25,7 @@ async def _respond(proposal: OfferProposal, dbuild) -> str:
 
 
 async def renegotiate_offers(conf: Configuration, subnet_tag: str):
-    """Rejects every proposal & then renegotiates it"""
+    """Reject every proposal & then renegotiates it."""
     async with conf.market() as client:
         market_api = Market(client)
         dbuild = DemandBuilder()
@@ -51,7 +49,7 @@ async def renegotiate_offers(conf: Configuration, subnet_tag: str):
                 print(f"[{node_name}] prev_proposal_id: {prev_proposal_id}")
                 if not event.is_draft:
                     if proposals > PROPOSALS_LIMIT:
-                        print(f"[node_name] Skipping additional proposal")
+                        print("[node_name] Skipping additional proposal")
                         break
                     await _respond(event, dbuild)
                     proposals += 1
@@ -60,7 +58,8 @@ async def renegotiate_offers(conf: Configuration, subnet_tag: str):
                     continue
 
                 print(
-                    f"[{node_name}] Offer: {proposal_id} from {event.issuer} is_draft: {event.is_draft}"
+                    f"[{node_name}] Offer: {proposal_id} from {event.issuer}"
+                    f" is_draft: {event.is_draft}"
                 )
                 if prev_proposal_id not in rejected_proposals:
                     await event.reject()

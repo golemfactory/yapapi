@@ -1,6 +1,4 @@
-"""
-TCP socket proxy
-^^^^^^^^^^^^^^^^
+"""TCP socket proxy.
 
 A local proxy that facilitates connections to any VPN-enabled TCP services launched on Golem
 providers using yapapi's Services API.
@@ -9,13 +7,14 @@ For usage in a complete requestor agent app, see the
 `ssh <https://github.com/golemfactory/yapapi/tree/master/examples/ssh>`_ example in the
 yapapi repository.
 """
+
 import abc
-import aiohttp
 import asyncio
 import itertools
 import logging
-from typing import Dict, Iterator, List, Optional
-from typing_extensions import Final
+from typing import Dict, Final, Iterator, List
+
+import aiohttp
 
 from yapapi.services import Cluster, Service
 
@@ -34,13 +33,14 @@ connection_ids: Iterator[int] = itertools.count(1)
 
 
 class SocketProxyService(Service, abc.ABC):
-    """
-    Base class for services connected to the :class:`~SocketProxy`.
+    """Base class for services connected to the :class:`~SocketProxy`.
+
     Implements the interface required by the `SocketProxy`.
     """
 
     remote_ports: List[int]
-    """List of remote ports to open the proxies for when using `SocketProxy.`:meth:`~SocketProxy.run`."""
+    """List of remote ports to open the proxies for when using \
+    `SocketProxy.`:meth:`~SocketProxy.run`."""
 
 
 class ProxyConnection:
@@ -199,14 +199,14 @@ class ProxyServer:
 
     @property
     def app_key(self):
-        """The application key used to authorize access to `yagna`'s REST API."""
+        """Return the application key used to authorize access to `yagna`'s REST API."""
         return (
             self.service.cluster.service_runner._job.engine._api_config.app_key  # type: ignore[union-attr]  # noqa
         )
 
     @property
     def instance_ws(self):
-        """The websocket URI for the specific remote port of the Service."""
+        """Return the websocket URI for the specific remote port of the Service."""
         return self.service.network_node.get_websocket_uri(self.remote_port)  # type: ignore[union-attr]  # noqa
 
     async def handler(
@@ -223,7 +223,7 @@ class ProxyServer:
         Preferred usage is through `:meth:`~SocketProxy.run_server`.
         """
         server = await asyncio.start_server(self.handler, self.local_address, self.local_port)
-        addrs = ", ".join(str(sock.getsockname()) for sock in server.sockets)  # type: ignore  # noqa
+        addrs = ", ".join(str(sock.getsockname()) for sock in server.sockets)
         logger.info("Listening on: %s, forwarding to: %s", addrs, self.instance_ws)
 
         try:

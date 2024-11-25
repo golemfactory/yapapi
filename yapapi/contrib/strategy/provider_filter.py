@@ -1,11 +1,10 @@
-"""
-Provider Filter
-^^^^^^^^^^^^^^^
+"""Provider Filter.
 
 Market strategy wrapper that enables easy exclusion of offers from certain providers using
 a simple boolean condition, while preserving correct scoring of the remaining offers by the
 base strategy.
 """
+
 import inspect
 from typing import Awaitable, Callable, Union
 
@@ -19,12 +18,13 @@ IsAllowedType = Union[
 
 
 class ProviderFilter(WrappingMarketStrategy):
-    """ProviderFilter - extend a market strategy with a layer that excludes offers from certain issuers
+    """ProviderFilter - extend a market strategy with a layer that excludes offers from certain \
+    issuers.
 
     :param base_strategy: a market strategy that will be used to score offers from allowed providers
-    :param is_allowed: a callable that accepts provider_id as an argument and returns either a boolean,
-        or a boolean-returning awaitable, determining if offers from this provider should be considered
-        (that is: scored by the `base_strategy`)
+    :param is_allowed: a callable that accepts provider_id as an argument and returns either a 
+        boolean, or a boolean-returning awaitable, determining if offers from this provider should 
+        be considered (that is: scored by the `base_strategy`)
 
     Example 1. Block selected providers::
 
@@ -64,7 +64,7 @@ class ProviderFilter(WrappingMarketStrategy):
 
         #   NOTE: this will currently work only for **new** offers from the provider, because old offers are already
         #   scored, this should improve in https://github.com/golemfactory/yapapi/issues/820
-    """
+    """  # noqa: 501
 
     def __init__(self, base_strategy: BaseMarketStrategy, is_allowed: IsAllowedType):
         super().__init__(base_strategy)
@@ -72,7 +72,7 @@ class ProviderFilter(WrappingMarketStrategy):
 
     async def score_offer(self, offer: OfferProposal) -> float:
         if inspect.iscoroutinefunction(self._is_allowed):
-            allowed = await self._is_allowed(offer.issuer)  # type: ignore
+            allowed = await self._is_allowed(offer.issuer)
         else:
             allowed = self._is_allowed(offer.issuer)
 

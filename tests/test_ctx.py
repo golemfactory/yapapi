@@ -1,15 +1,13 @@
-import factory
-from functools import partial
 import json
-import pytest
-import sys
+from functools import partial
 from unittest import mock
+
+import pytest
 
 from yapapi.ctx import WorkContext
 from yapapi.script import Script
 
 
-@pytest.mark.skipif(sys.version_info < (3, 8), reason="AsyncMock requires python 3.8+")
 class TestWorkContext:
     @pytest.fixture(autouse=True)
     def setUp(self):

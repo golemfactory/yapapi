@@ -42,7 +42,8 @@ from yapapi.events import (
             ServiceFinished(
                 job="a-job", agreement="an-agr", activity="an-act", service="a-service"
             ),
-            "ServiceFinished(job='a-job', agreement='an-agr', activity='an-act', service='a-service')",
+            "ServiceFinished(job='a-job', agreement='an-agr', activity='an-act',"
+            " service='a-service')",
         ),
         (
             ScriptSent(job="a-job", agreement="an-agr", activity="an-act", script="a-script"),

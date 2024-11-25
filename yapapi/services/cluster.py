@@ -1,10 +1,12 @@
 """Implementation of high-level services API."""
-from datetime import datetime, timedelta, timezone
+
 import itertools
-import sys
+from contextlib import AsyncExitStack
+from datetime import datetime, timedelta, timezone
 from typing import (
     AsyncContextManager,
     Dict,
+    Final,
     Generator,
     Generic,
     Iterable,
@@ -13,18 +15,11 @@ from typing import (
     Type,
 )
 
-if sys.version_info >= (3, 8):
-    from contextlib import AsyncExitStack
-    from typing import Final
-else:
-    from typing_extensions import Final
-    from async_exit_stack import AsyncExitStack  # type: ignore
-
 from yapapi.engine import Job, _Engine
 from yapapi.network import Network
 from yapapi.payload import Payload
 
-from .service import ServiceType
+from .service import ServiceSerialization, ServiceType
 from .service_runner import ServiceRunner
 
 DEFAULT_SERVICE_EXPIRATION: Final[timedelta] = timedelta(minutes=180)
@@ -44,7 +39,8 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
         """Initialize this Cluster.
 
         :param engine: an engine for running service instance
-        :param service_class: a subclass of :class:`~yapapi.services.Service` that represents the service to be run
+        :param service_class: a subclass of :class:`~yapapi.services.Service` that represents the
+            service to be run
         :param payload: definition of service runtime for this Cluster
         :param expiration: a date before which all agreements related to running services
             in this Cluster should be terminated
@@ -68,17 +64,24 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
         await self._terminate(exc_type, exc_val, exc_tb)
 
     async def terminate(self):
-        """Signal the whole :class:`Cluster` and the underlying :class:`~yapapi.service.ServiceRunner` to stop."""
+        """Signal the whole :class:`Cluster` and the underlying \
+        :class:`~yapapi.service.ServiceRunner` to stop."""
         await self._terminate(None, None, None)
 
     def stop(self):
-        """Stop all services in this :class:`Cluster`"""
+        """Stop all services in this :class:`Cluster`."""
         for instance in self.instances:
             self.stop_instance(instance)
 
+    def suspend(self):
+        """Suspend all services in this :class:`Cluster`."""
+        self.service_runner.suspend()
+        for instance in self.instances:
+            self.suspend_instance(instance)
+
     async def _terminate(self, exc_type, exc_val, exc_tb):
-        #   NOTE: this might be called more then once (e.g. by `terminate()` followed by `__aexit__`),
-        #   but it's harmless, so we don't care
+        # NOTE: this might be called more then once (e.g. by `terminate()` followed by `__aexit__`),
+        #  but it's harmless, so we don't care
         self.stop()
         await self._stack.__aexit__(exc_type, exc_val, exc_tb)
 
@@ -88,7 +91,8 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
 
     @property
     def expiration(self) -> datetime:
-        """Return the expiration datetime for agreements related to services in this :class:`Cluster`."""
+        """Return the expiration datetime for agreements related to services in this \
+        :class:`Cluster`."""
         return self.service_runner._job.expiration_time
 
     @property
@@ -103,7 +107,8 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
 
     @property
     def network(self) -> Optional[Network]:
-        """Return the :class:`~yapapi.network.Network` record associated with the VPN used by this :class:`Cluster`."""
+        """Return the :class:`~yapapi.network.Network` record associated with the VPN used by this \
+        :class:`Cluster`."""
         return self._network
 
     def __repr__(self):
@@ -118,8 +123,12 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
         return self.service_runner.instances.copy()
 
     def stop_instance(self, service: ServiceType):
-        """Stop the specific :class:`Service` instance belonging to this :class:`Cluster`."""
+        """Stop the specific :class:`Service` instance."""
         self.service_runner.stop_instance(service)
+
+    def suspend_instance(self, service: ServiceType):
+        """Suspend the specific :class:`Service` instance."""
+        self.service_runner.suspend_instance(service)
 
     def spawn_instances(
         self,
@@ -157,8 +166,21 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
             if network_addresses is not None and len(network_addresses) > ix:
                 network_address = network_addresses[ix]
 
-            service = self.service_class(**single_instance_params)  # type: ignore
+            service = self.service_class(**single_instance_params)
             self.service_runner.add_instance(service, self.network, network_address)
+            service._set_cluster(self)
+
+    def resume_instances(self, serialized_instances: List[ServiceSerialization]):
+        for service_obj in serialized_instances:
+            service = self.service_class(**service_obj.get("params", dict()))
+            self.service_runner.add_existing_instance(
+                service,
+                service_obj["state"],
+                service_obj.get("agreement_id"),
+                service_obj.get("activity_id"),
+                self.network,
+                service_obj.get("network_node", dict()),
+            )
             service._set_cluster(self)
 
     def _resolve_instance_params(
@@ -183,5 +205,9 @@ class Cluster(AsyncContextManager, Generic[ServiceType]):
                             f"`instance_params` iterable depleted after {i} spawned instances."
                         )
 
-    def _default_expiration(self):
+    @staticmethod
+    def _default_expiration():
         return datetime.now(timezone.utc) + DEFAULT_SERVICE_EXPIRATION
+
+    def serialize_instances(self) -> List[ServiceSerialization]:
+        return [i.serialize() for i in self.instances]

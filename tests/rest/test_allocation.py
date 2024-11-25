@@ -1,4 +1,5 @@
 from decimal import Decimal
+
 import pytest
 
 from yapapi.config import ApiConfig
@@ -15,7 +16,6 @@ async def yapapi_payment(request):
 @pytest.mark.skipif("not config.getvalue('yaApiKey')")
 @pytest.mark.asyncio
 async def test_allocation(yapapi_payment: Payment):
-
     async for a in yapapi_payment.allocations():
         print("a=", a)
 

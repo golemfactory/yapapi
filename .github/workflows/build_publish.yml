@@ -13,15 +13,13 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: '3.9'
       - uses: Gr1N/setup-poetry@v8
-        with:
-          poetry-version: 1.2.2
       - run: poetry install
-      - run: poetry run poe test
-      - run: poetry run poe typecheck
-      - run: poetry run poe codestyle
-      - run: poetry run poe liccheck
+      - run: poetry run poe tests_unit
+      - run: poetry run poe checks_codestyle
+      - run: poetry run poe checks_typing
+      - run: poetry run poe checks_license
 
   build:
     needs: [test]
@@ -32,10 +30,8 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: '3.9'
       - uses: Gr1N/setup-poetry@v8
-        with:
-          poetry-version: 1.2.2
       - name: Get git release tag
         run: echo "git-release-tag=yapapi $(git describe --tags)" >> $GITHUB_OUTPUT
         id: git_describe
@@ -65,10 +61,8 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: '3.9'
       - uses: Gr1N/setup-poetry@v8
-        with:
-          poetry-version: 1.2.2
       - name: Retrieve the built package
         uses: actions/download-artifact@v2
         with:
@@ -89,10 +83,8 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: '3.9'
       - uses: Gr1N/setup-poetry@v8
-        with:
-          poetry-version: 1.2.2
       - name: Retrieve the built package
         uses: actions/download-artifact@v2
         with:

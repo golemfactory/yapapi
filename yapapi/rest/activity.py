@@ -1,13 +1,23 @@
 import abc
-from aiohttp import ClientPayloadError
-from aiohttp_sse_client.client import MessageEvent  # type: ignore
 import asyncio
-from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
 import json
 import logging
-from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type
-from typing_extensions import AsyncContextManager, AsyncIterable
+from datetime import datetime, timedelta, timezone
+from typing import (
+    Any,
+    AsyncContextManager,
+    AsyncIterable,
+    AsyncIterator,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Type,
+)
+
+from aiohttp import ClientPayloadError
+from aiohttp_sse_client.client import MessageEvent
+from dataclasses import dataclass
 
 from ya_activity import ApiClient, ApiException, RequestorControlApi, RequestorStateApi
 from ya_activity import exceptions as yexc
@@ -39,9 +49,19 @@ class ActivityService(object):
         activity_id = await self._api.create_activity(agreement_id)
         return Activity(self._api, self._state, activity_id, stream_events)
 
+    async def use_activity(self, activity_id: str, stream_events: bool = False) -> "Activity":
+        """Instantiate an Activity object based on an existing activity_id.
+
+        :return: the object that represents the Activity
+                 and allows to query and control its state
+        :rtype: Activity
+        """
+        await self._state.get_activity_state(activity_id)
+        return Activity(self._api, self._state, activity_id, stream_events)
+
 
 class Activity(AsyncContextManager["Activity"]):
-    """Mid-level wrapper for REST's Activity endpoint"""
+    """Mid-level wrapper for REST's Activity endpoint."""
 
     def __init__(
         self,
@@ -81,6 +101,14 @@ class Activity(AsyncContextManager["Activity"]):
             return StreamingBatch(self, batch_id, len(script), deadline)
         return PollingBatch(self, batch_id, len(script), deadline)
 
+    async def destroy(self):
+        """Destroy the Activity and free the execution unit."""
+        try:
+            await self._api.destroy_activity(self._id)
+            _log.debug("Activity %s destroyed successfully", self._id)
+        except yexc.ApiException:
+            _log.debug("Got API Exception when destroying activity %s", self._id, exc_info=True)
+
     async def __aenter__(self) -> "Activity":
         return self
 
@@ -92,11 +120,7 @@ class Activity(AsyncContextManager["Activity"]):
             )
         else:
             _log.debug("Destroying activity %s", self._id)
-        try:
-            await self._api.destroy_activity(self._id)
-            _log.debug("Activity %s destroyed successfully", self._id)
-        except yexc.ApiException:
-            _log.debug("Got API Exception when destroying activity %s", self._id, exc_info=True)
+        await self.destroy()
 
 
 @dataclass
@@ -259,8 +283,7 @@ class PollingBatch(Batch):
                 results = await self._get_results(timeout=min(timeout, 5))
 
             any_new: bool = False
-            results = results[last_idx:]
-            for result in results:
+            for result in results[last_idx:]:
                 any_new = True
                 assert last_idx == result.index, f"Expected {last_idx}, got {result.index}"
 
@@ -276,6 +299,7 @@ class PollingBatch(Batch):
                 last_idx = result.index + 1
                 if result.is_batch_finished:
                     break
+
             if not any_new:
                 delay = min(3, max(0, self.seconds_left()))
                 await asyncio.sleep(delay)
@@ -285,7 +309,7 @@ class StreamingBatch(Batch):
     """A `Batch` implementation that uses event streaming to return command status."""
 
     async def __aiter__(self) -> AsyncIterator[CommandEventData]:
-        from aiohttp_sse_client import client as sse_client  # type: ignore
+        from aiohttp_sse_client import client as sse_client
 
         api_client = self._activity._api.api_client
         host = api_client.configuration.host
@@ -327,7 +351,7 @@ class StreamingBatch(Batch):
 
 
 def _message_event_to_event_data(msg_event: MessageEvent) -> CommandEventData:
-    """Convert a `MessageEvent` to a matching events.Event subclass and it's kwargs"""
+    """Convert a `MessageEvent` to a matching events.Event subclass and it's kwargs."""
 
     if msg_event.type != "runtime":
         raise RuntimeError(f"Unsupported event: {msg_event.type}")
@@ -358,6 +382,13 @@ def _message_event_to_event_data(msg_event: MessageEvent) -> CommandEventData:
     elif evt_kind == "stderr":
         evt_cls = events.CommandStdErr
         kwargs["output"] = str(evt_data) or ""
+
+    elif evt_kind == "progress":
+        evt_cls = events.CommandProgress
+        kwargs["step"] = evt_data.get("step")
+        kwargs["message"] = evt_data.get("message")
+        kwargs["progress"] = evt_data.get("progress")
+        kwargs["unit"] = evt_data.get("unit")
 
     else:
         raise RuntimeError(f"Unsupported runtime event: {evt_kind}")

@@ -1,13 +1,23 @@
-import aiohttp
 import asyncio
-from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
 import logging
+from datetime import datetime, timedelta, timezone
 from types import TracebackType
-from typing import Any, AsyncIterator, Generator, Generic, Optional, Type, TypeVar
-from typing_extensions import AsyncContextManager, Awaitable
+from typing import (
+    Any,
+    AsyncContextManager,
+    AsyncIterator,
+    Awaitable,
+    Generator,
+    Generic,
+    Optional,
+    Type,
+    TypeVar,
+)
 
-from ya_market import ApiClient, ApiException, RequestorApi, models  # type: ignore
+import aiohttp
+from dataclasses import dataclass
+
+from ya_market import ApiClient, ApiException, RequestorApi, models
 
 from ..props import Model, NodeInfo
 from .common import SuppressedExceptions, is_intermittent_error
@@ -57,7 +67,9 @@ class AgreementDetails(object):
 class Agreement(object):
     """Mid-level interface to the REST's Agreement model."""
 
-    def __init__(self, api: RequestorApi, subscription: "Subscription", agreement_id: str):
+    def __init__(
+        self, api: RequestorApi, agreement_id: str, subscription: Optional["Subscription"] = None
+    ):
         self._api = api
         self._subscription = subscription
         self._id = agreement_id
@@ -176,7 +188,7 @@ class OfferProposal(object):
         )
         api: RequestorApi = self._subscription._api
         agreement_id = await api.create_agreement(proposal)
-        return Agreement(api, self._subscription, agreement_id)
+        return Agreement(api, agreement_id, self._subscription)
 
     def __str__(self):
         proposal = self._proposal.proposal
@@ -217,9 +229,7 @@ class Subscription(object):
 
     @property
     def details(self) -> models.Demand:
-        """
-        :return: the Demand for which the Subscription has been registered.
-        """
+        """Return the Demand for which the Subscription has been registered."""
         assert self._details is not None, "expected details on list object"
         return self._details
 
@@ -232,7 +242,6 @@ class Subscription(object):
     async def events(self) -> AsyncIterator[OfferProposal]:
         """Yield counter-proposals based on the incoming, matching Offers."""
         while self._open:
-
             proposals = []
             try:
                 async with SuppressedExceptions(is_intermittent_error):
@@ -292,9 +301,8 @@ class Market(object):
         self._api: RequestorApi = RequestorApi(api_client)
 
     def subscribe(self, props: dict, constraints: str) -> AsyncResource[Subscription]:
-        """
-        Create a subscription for a demand specified by the supplied properties and constraints.
-        """
+        """Create a subscription for a demand specified by the supplied properties and \
+        constraints."""
         request = models.DemandOfferBase(properties=props, constraints=constraints)
 
         async def create() -> Subscription:

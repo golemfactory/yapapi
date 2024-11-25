@@ -1,24 +1,20 @@
 import asyncio
+import itertools
 from datetime import datetime, timedelta, timezone
 from enum import Enum, auto
-import itertools
 from typing import (
     Callable,
     ClassVar,
     Generic,
     Iterator,
     Optional,
+    Protocol,
     Set,
     Tuple,
     Type,
     TypeVar,
     Union,
 )
-
-try:
-    from typing import Protocol
-except ImportError:
-    from typing_extensions import Protocol  # type: ignore
 
 from yapapi import events
 
@@ -38,8 +34,9 @@ TaskEvents = Union[events.TaskAccepted, events.TaskRejected]
 
 
 class TaskEmitter(Protocol):
-    def __call__(self, event_class: Type[events.TaskEventType], **kwargs) -> events.TaskEventType:
-        ...
+    def __call__(
+        self, event_class: Type[events.TaskEventType], **kwargs
+    ) -> events.TaskEventType: ...
 
 
 class Task(Generic[TaskData, TaskResult]):

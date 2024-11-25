@@ -8,22 +8,23 @@ from .base import BaseMarketStrategy
 
 
 class WrappingMarketStrategy(BaseMarketStrategy, abc.ABC):
-    """
-    Helper abstract class which allows other/user defined strategies to wrap some other strategies,
-    without overriding the attributes (e.g. defaults) defined on the derived-from strategy.
+    """Helper abstract class which allows other/user defined strategies to wrap some other \
+    strategies, without overriding the attributes (e.g. defaults) defined on the derived-from \
+    strategy.
 
     WrappingMarketStrategy classes are unusable on their own and always have to wrap some base
     strategy.
 
-    By default all attributes and method calls are forwarded to the `base_strategy`.
+    By default, all attributes and method calls are forwarded to the `base_strategy`.
     """
 
     base_strategy: BaseMarketStrategy
     """base strategy wrapped by this wrapper."""
 
     def __init__(self, base_strategy: BaseMarketStrategy):
-        """
-        :param base_strategy: the base strategy around which this strategy is wrapped
+        """Initialize instance.
+
+        :param base_strategy: the base strategy around which this strategy is wrapped.
         """
         self.base_strategy = base_strategy
 

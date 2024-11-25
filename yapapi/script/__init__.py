@@ -1,17 +1,7 @@
+import itertools
 from asyncio import InvalidStateError
 from datetime import timedelta
-import itertools
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Type,
-)
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, Iterator, List, Optional, Type
 
 import yapapi
 from yapapi.events import CommandEvent, CommandExecuted, ScriptEventType
@@ -23,7 +13,9 @@ from yapapi.script.command import (
     Deploy,
     DownloadBytes,
     DownloadFile,
+    DownloadFileFromInternet,
     DownloadJson,
+    ProgressArgs,
     Run,
     SendBytes,
     SendFile,
@@ -43,10 +35,10 @@ script_ids: Iterator[int] = itertools.count(1)
 class Script:
     """Represents a series of commands to be executed on a provider node.
 
-    New commands are added to the script either through its :func:`add` method or by calling one of the
-    convenience methods provided (for example: :func:`run` or :func:`upload_json`).
-    Adding a new command *does not* result in it being immediately executed. Once ready, a :class:`Script`
-    instance is meant to be yielded from a worker function (work generator pattern).
+    New commands are added to the script either through its :func:`add` method or by calling one of
+    the convenience methods provided (for example: :func:`run` or :func:`upload_json`).
+    Adding a new command *does not* result in it being immediately executed. Once ready, a
+    :class:`Script` instance is meant to be yielded from a worker function (work generator pattern).
     Commands will be run in the order in which they were added to the script.
     """
 
@@ -56,14 +48,14 @@ class Script:
         timeout: Optional[timedelta] = None,
         wait_for_results: bool = True,
     ):
-        """Initialize a :class:`Script`
+        """Initialize a :class:`Script`.
 
-        :param context: A :class:`yapapi.WorkContext` that will be used to evaluate the script (i.e. to send
-            commands to the provider)
+        :param context: A :class:`yapapi.WorkContext` that will be used to evaluate the script (i.e.
+            to send commands to the provider)
         :param timeout: Time after which this script's execution should be forcefully interrupted.
             The default value is `None` which means there's no timeout set.
-        :param wait_for_results: Whether this script's execution should block until its results are available.
-            The default value is `True`.
+        :param wait_for_results: Whether this script's execution should block until its results are
+            available. The default value is `True`.
         """
         self.timeout = timeout
         self.wait_for_results = wait_for_results
@@ -83,9 +75,9 @@ class Script:
     def process_batch_event(
         self, event_class: Type[CommandEvent], event_kwargs: Dict[str, Any]
     ) -> CommandEvent:
-        """Event emiting and special events.CommandExecuted logic"""
+        """Event emitting and special events.CommandExecuted logic."""
         command = self._commands[event_kwargs["cmd_idx"]]
-        del event_kwargs["cmd_idx"]
+        event_kwargs = {key: val for key, val in event_kwargs.items() if key != "cmd_idx"}
         event = command.emit(event_class, **event_kwargs)
 
         if isinstance(event, CommandExecuted):
@@ -97,7 +89,10 @@ class Script:
 
     @property
     def results(self) -> List[CommandExecuted]:
-        """List of all results of the script commands. Available only after the script execution finished."""
+        """Return list of all results of the script commands.
+
+        Available only after the script execution finished.
+        """
         try:
             return [command._result.result() for command in self._commands]
         except InvalidStateError:
@@ -120,24 +115,26 @@ class Script:
         return batch
 
     async def _after(self):
-        """Hook which is executed after the script has been run on the provider."""
+        """Execute "after" hooks after the script has been run on the provider."""
         for cmd in self._commands:
             await cmd.after()
 
     async def _before(self):
-        """Hook which is executed before the script is evaluated and sent to the provider."""
+        """Execute "before" hooks before the script is evaluated and sent to the provider."""
         for cmd in self._commands:
             await cmd.before()
 
     def add(self, cmd: Command) -> Awaitable[CommandExecuted]:
-        """Add a :class:`yapapi.script.command.Command` to the :class:`Script`"""
+        """Add a :class:`yapapi.script.command.Command` to the :class:`Script`."""
         self._commands.append(cmd)
-        cmd._set_script(self)
+        cmd._set_script(self, len(self._commands) - 1)
         return cmd._result
 
-    def deploy(self, **kwargs: dict) -> Awaitable[CommandExecuted]:
+    def deploy(
+        self, progress_args: Optional[ProgressArgs] = None, **kwargs: dict
+    ) -> Awaitable[CommandExecuted]:
         """Schedule a :class:`Deploy` command on the provider."""
-        return self.add(Deploy(**kwargs))
+        return self.add(Deploy(progress_args=progress_args, **kwargs))
 
     def start(self, *args: str) -> Awaitable[CommandExecuted]:
         """Schedule a :class:`Start` command on the provider."""
@@ -176,6 +173,7 @@ class Script:
         src_path: str,
         on_download: Callable[[bytes], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
+        **kwargs,
     ) -> Awaitable[CommandExecuted]:
         """Schedule downloading a remote file from the provider as bytes.
 
@@ -183,21 +181,22 @@ class Script:
         :param on_download: the callable to run on the received data
         :param limit: limit of bytes to be downloaded (expected size)
         """
-        return self.add(DownloadBytes(src_path, on_download, limit))
+        return self.add(DownloadBytes(src_path, on_download, limit, **kwargs))
 
-    def download_file(self, src_path: str, dst_path: str) -> Awaitable[CommandExecuted]:
+    def download_file(self, src_path: str, dst_path: str, **kwargs) -> Awaitable[CommandExecuted]:
         """Schedule downloading a remote file from the provider.
 
         :param src_path: remote (provider) source path
         :param dst_path: local (requestor) destination path
         """
-        return self.add(DownloadFile(src_path, dst_path))
+        return self.add(DownloadFile(src_path, dst_path, **kwargs))
 
     def download_json(
         self,
         src_path: str,
         on_download: Callable[[Any], Awaitable],
         limit: int = DOWNLOAD_BYTES_LIMIT_DEFAULT,
+        **kwargs,
     ) -> Awaitable[CommandExecuted]:
         """Schedule downloading a remote file from the provider as JSON.
 
@@ -205,28 +204,39 @@ class Script:
         :param on_download: the callable to run on the received data
         :param limit: limit of bytes to be downloaded (expected size)
         """
-        return self.add(DownloadJson(src_path, on_download, limit))
+        return self.add(DownloadJson(src_path, on_download, limit, **kwargs))
 
-    def upload_bytes(self, data: bytes, dst_path: str) -> Awaitable[CommandExecuted]:
+    def upload_bytes(self, data: bytes, dst_path: str, **kwargs) -> Awaitable[CommandExecuted]:
         """Schedule sending bytes data to the provider.
 
         :param data: bytes to send
         :param dst_path: remote (provider) destination path
         """
-        return self.add(SendBytes(data, dst_path))
+        return self.add(SendBytes(data, dst_path, **kwargs))
 
-    def upload_file(self, src_path: str, dst_path: str) -> Awaitable[CommandExecuted]:
+    def upload_file(self, src_path: str, dst_path: str, **kwargs) -> Awaitable[CommandExecuted]:
         """Schedule sending a file to the provider.
 
         :param src_path: local (requestor) source path
         :param dst_path: remote (provider) destination path
         """
-        return self.add(SendFile(src_path, dst_path))
+        return self.add(SendFile(src_path, dst_path, **kwargs))
 
-    def upload_json(self, data: dict, dst_path: str) -> Awaitable[CommandExecuted]:
+    def upload_json(self, data: dict, dst_path: str, **kwargs) -> Awaitable[CommandExecuted]:
         """Schedule sending JSON data to the provider.
 
         :param data: dictionary representing JSON data to send
         :param dst_path: remote (provider) destination path
         """
-        return self.add(SendJson(data, dst_path))
+        return self.add(SendJson(data, dst_path, **kwargs))
+
+    def download_from_url(
+        self, src_url: str, dst_path: str, progress_args: Optional[ProgressArgs] = None
+    ) -> Awaitable[CommandExecuted]:
+        """Schedule sending a file to the provider.
+
+        :param src_url: remote (internet) source url
+        :param dst_path: remote (provider) destination path
+        :param progress_args: Enables progress events
+        """
+        return self.add(DownloadFileFromInternet(src_url, dst_path, progress_args=progress_args))

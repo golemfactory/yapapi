@@ -1,40 +1,18 @@
-from dataclasses import dataclass
-from dns.exception import DNSException
-from enum import Enum
 import logging
-import sys
-from typing import List, Optional
-from typing_extensions import Final
+from enum import Enum
+from typing import Final, List, Literal, Optional
 
-if sys.version_info > (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
+from dataclasses import dataclass
 
-from srvresolver.srv_resolver import SRVRecord, SRVResolver  # type: ignore
-
-from yapapi.payload.package import (
-    Package,
-    PackageException,
-    resolve_package_repo_url,
-    resolve_package_url,
-)
+from yapapi.payload.package import Package, PackageException, check_package_url, resolve_package_url
 from yapapi.props import base as prop_base
 from yapapi.props import inf
 from yapapi.props.builder import DemandBuilder, Model
-from yapapi.props.inf import (
-    INF_CORES,
-    RUNTIME_VM,
-    ExeUnitManifestRequest,
-    ExeUnitRequest,
-    InfBase,
-)
-
-_DEFAULT_REPO_SRV: Final[str] = "_girepo._tcp.dev.golem.network"
-_FALLBACK_REPO_URL: Final[str] = "http://girepo.dev.golem.network:8000"
-_DEFAULT_TIMEOUT_SECONDS: Final[int] = 10
+from yapapi.props.inf import INF_CORES, RUNTIME_VM, ExeUnitManifestRequest, ExeUnitRequest, InfBase
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_REPOSITORY_URL: Final[str] = "https://registry.golem.network"
 
 VM_CAPS_VPN: str = "vpn"
 VM_CAPS_MANIFEST_SUPPORT: str = "manifest-support"
@@ -124,10 +102,12 @@ async def manifest(
     """
     Build a reference to application payload.
 
-    :param manifest: base64 encoded Computation Payload Manifest https://handbook.golem.network/requestor-tutorials/vm-runtime/computation-payload-manifest
+    :param manifest: base64 encoded Computation Payload Manifest
+        https://handbook.golem.network/requestor-tutorials/vm-runtime/computation-payload-manifest
     :param manifest_sig: an optional signature of base64 encoded Computation Payload Manifest
     :param manifest_sig_algorithm: an optional signature algorithm, e.g. "sha256"
-    :param manifest_cert: an optional base64 encoded public certificate (DER or PEM) matching key used to generate signature
+    :param manifest_cert: an optional base64 encoded public certificate (DER or PEM) matching key
+        used to generate signature
     :param min_mem_gib: minimal memory required to execute application code
     :param min_storage_gib: minimal disk storage to execute tasks
     :param min_cpu_threads: minimal available logical CPU cores
@@ -165,26 +145,27 @@ async def manifest(
 
 @dataclass
 class _VmPackage(Package):
-    repo_url: str
-    image_hash: str
-    image_url: Optional[str]
+    image_url: str
     constraints: _VmConstraints
 
     async def resolve_url(self) -> str:
-        if not self.image_url:
-            return await resolve_package_repo_url(self.repo_url, self.image_hash)
-        return await resolve_package_url(self.image_url, self.image_hash)
+        return self.image_url
 
     async def decorate_demand(self, demand: DemandBuilder):
-        image_url = await self.resolve_url()
         demand.ensure(str(self.constraints))
-        demand.add(VmRequest(package_url=image_url, package_format=VmPackageFormat.GVMKIT_SQUASH))
+        demand.add(
+            VmRequest(package_url=self.image_url, package_format=VmPackageFormat.GVMKIT_SQUASH)
+        )
 
 
 async def repo(
     *,
-    image_hash: str,
+    image_hash: Optional[str] = None,
+    image_tag: Optional[str] = None,
     image_url: Optional[str] = None,
+    image_use_https: bool = False,
+    repository_url: str = DEFAULT_REPOSITORY_URL,
+    dev_mode: bool = False,  # noqa
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,
     min_cpu_threads: int = 1,
@@ -194,7 +175,10 @@ async def repo(
     Build a reference to application package.
 
     :param image_hash: hash of the package's image
+    :param image_tag: Tag of the package to resolve from Golem Registry
     :param image_url: URL of the package's image
+    :param image_use_https: whether to resolve to HTTPS or HTTP when using Golem Registry
+    :param repository_url: override the package repository location
     :param min_mem_gib: minimal memory required to execute application code
     :param min_storage_gib: minimal disk storage to execute tasks
     :param min_cpu_threads: minimal available logical CPU cores
@@ -209,7 +193,8 @@ async def repo(
             image_hash="d646d7b93083d817846c2ae5c62c72ca0507782385a2e29291a3d376",
         )
 
-    example usage with an explicit GVMI image URL (useful to host images outside the Golem repository)::
+    example usage with an explicit GVMI image URL (useful to host images outside the Golem
+    repository)::
 
         package = await vm.repo(
             # we still need to provide the image's hash because
@@ -231,45 +216,39 @@ async def repo(
             min_mem_gib=0.5,
             # only run on provider nodes that have more than 2gb of storage space available
             min_storage_gib=2.0,
-            # only run on provider nodes which a certain number of CPU threads available
+            # only run on provider nodes with a certain number of CPU threads available
             min_cpu_threads=min_cpu_threads,
         )
 
     """
+
+    if image_url:
+        if image_tag:
+            raise PackageException(
+                "An image_tag can only be used when resolving from Golem Registry, "
+                "not with a direct image_url."
+            )
+        if not image_hash:
+            raise PackageException("An image_hash is required when using a direct image_url.")
+        logger.debug(f"Verifying if {image_url} exists.")
+        resolved_image_url = await check_package_url(image_url, image_hash)
+    else:
+        logger.debug(
+            f"Resolving image on {repository_url}: "
+            f"image_hash={image_hash}, image_tag={image_tag}, image_use_https={image_use_https}."
+        )
+        resolved_image_url = await resolve_package_url(
+            repository_url,
+            image_hash=image_hash,
+            image_tag=image_tag,
+            image_use_https=image_use_https,
+            dev_mode=dev_mode,
+        )
+
+    logger.debug(f"Resolved image: {resolved_image_url}")
+
     capabilities = capabilities or list()
     return _VmPackage(
-        repo_url=resolve_repo_srv(_DEFAULT_REPO_SRV),
-        image_hash=image_hash,
-        image_url=image_url,
+        image_url=resolved_image_url,
         constraints=_VmConstraints(min_mem_gib, min_storage_gib, min_cpu_threads, capabilities),
     )
-
-
-def resolve_repo_srv(
-    repo_srv: str, fallback_url=_FALLBACK_REPO_URL, timeout=_DEFAULT_TIMEOUT_SECONDS
-) -> str:
-    """
-    Get the url of the package repository based on its SRV record address.
-
-    :param repo_srv: the SRV domain name
-    :param fallback_url: temporary hardcoded fallback url in case there's a problem resolving SRV
-    :param timeout: socket connection timeout in seconds
-    :return: the url of the package repository containing the port
-    :raises: PackageException if no valid service could be reached
-    """
-    try:
-        try:
-            srv: Optional[SRVRecord] = SRVResolver.resolve_random(repo_srv, timeout=timeout)
-        except DNSException as e:
-            raise PackageException(f"Could not resolve Golem package repository address [{e}].")
-
-        if not srv:
-            raise PackageException("Golem package repository is currently unavailable.")
-    except Exception as e:
-        # this is a temporary fallback for a problem resolving the SRV record
-        logger.warning(
-            "Problem resolving %s, falling back to %s, exception: %s", repo_srv, fallback_url, e
-        )
-        return fallback_url
-
-    return f"http://{srv.host}:{srv.port}"

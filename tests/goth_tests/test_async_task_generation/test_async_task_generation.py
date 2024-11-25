@@ -1,8 +1,9 @@
 import logging
 import os
 from pathlib import Path
-import pytest
 from typing import List
+
+import pytest
 
 import goth.configuration
 from goth.runner import Runner
@@ -31,7 +32,6 @@ async def test_async_task_generation(
     runner = Runner(base_log_dir=log_dir, compose_config=goth_config.compose_config)
 
     async with runner(goth_config.containers):
-
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(

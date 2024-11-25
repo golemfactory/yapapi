@@ -1,10 +1,12 @@
 """Payment-related properties."""
+
 import abc
-from dataclasses import dataclass, field
 import enum
 from typing import Any, Dict, List
 
-from .base import Model, Props, as_list
+from dataclasses import dataclass, field
+
+from .base import Model, Props
 
 SCHEME: str = "golem.com.scheme"
 PRICE_MODEL: str = "golem.com.pricing.model"
@@ -29,7 +31,7 @@ class Counter(enum.Enum):
     UNKNOWN = ""
 
 
-@dataclass(frozen=True)  # type: ignore  # mypy doesn't allow abstract methods in dataclasses
+@dataclass(frozen=True)
 class Com(Model):
     """Base model representing the payment model used."""
 
@@ -38,7 +40,8 @@ class Com(Model):
 
     @abc.abstractmethod
     def calculate_cost(self, usage: List) -> float:
-        """Calculate the cost by applying the provided usage vector to the underlying pricing model."""
+        """Calculate the cost by applying the provided usage vector to the underlying pricing \
+        model."""
 
     @abc.abstractmethod
     def usage_as_dict(self, usage: List) -> Dict:

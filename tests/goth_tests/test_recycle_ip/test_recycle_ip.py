@@ -1,29 +1,28 @@
 """An integration test scenario that runs the SSH example requestor app."""
+
 import asyncio
 import logging
 import os
-from pathlib import Path
-import pexpect
-import pytest
 import re
 import signal
-import sys
-import time
+from pathlib import Path
 from typing import List
+
+import pexpect
+import pytest
 
 from goth.configuration import Override, load_yaml
 from goth.runner import Runner
 from goth.runner.log import configure_logging
 from goth.runner.probe import RequestorProbe
 
-from goth_tests.assertions import assert_all_invoices_accepted, assert_no_errors  # isort:skip
+from tests.goth_tests.assertions import assert_all_invoices_accepted, assert_no_errors  # isort:skip
 
 logger = logging.getLogger("goth.test.recycle_ips")
 
 SUBNET_TAG = "goth"
 
 
-@pytest.mark.skip  # TODO: https://github.com/golemfactory/yagna/issues/2387
 @pytest.mark.asyncio
 async def test_recycle_ip(
     log_dir: Path,
@@ -32,7 +31,6 @@ async def test_recycle_ip(
     config_overrides: List[Override],
     ssh_verify_connection: bool,
 ) -> None:
-
     if ssh_verify_connection:
         ssh_check = pexpect.spawn("/usr/bin/which ssh")
         exit_code = ssh_check.wait()
@@ -60,7 +58,6 @@ async def test_recycle_ip(
     )
 
     async with runner(goth_config.containers):
-
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(

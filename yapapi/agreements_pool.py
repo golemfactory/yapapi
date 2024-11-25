@@ -1,21 +1,22 @@
-import aiohttp
 import asyncio
-from dataclasses import dataclass
 import datetime
 import logging
 import random
 import sys
 from typing import Callable, Dict, NamedTuple, Optional
 
+import aiohttp
+from dataclasses import dataclass
+
 from yapapi import events
 from yapapi.props import Activity, NodeInfo
-from yapapi.rest.market import Agreement, AgreementDetails, ApiException, OfferProposal
+from yapapi.rest.market import Agreement, AgreementDetails, ApiException, Market, OfferProposal
 
 logger = logging.getLogger(__name__)
 
 
 class _BufferedProposal(NamedTuple):
-    """Providers' proposal with additional local metadata"""
+    """Providers' proposal with additional local metadata."""
 
     ts: datetime.datetime
     score: float
@@ -24,7 +25,7 @@ class _BufferedProposal(NamedTuple):
 
 @dataclass
 class BufferedAgreement:
-    """Confirmed agreement with additional local metadata"""
+    """Confirmed agreement with additional local metadata."""
 
     agreement: Agreement
     agreement_details: AgreementDetails
@@ -35,12 +36,13 @@ class BufferedAgreement:
 
 
 class AgreementsPool:
-    """Manages proposals and agreements pool"""
+    """Manages proposals and agreements pool."""
 
     def __init__(
         self,
         emitter: Callable[..., events.Event],
         offer_recycler: Callable[[OfferProposal], None],
+        market_api: Market,
     ):
         self.emitter = emitter
         self.offer_recycler = offer_recycler
@@ -48,9 +50,10 @@ class AgreementsPool:
         self._agreements: Dict[str, BufferedAgreement] = {}  # agreement_id -> Agreement
         self._lock = asyncio.Lock()
         self.confirmed = 0
+        self._market_api = market_api
 
     async def cycle(self):
-        """Performs cyclic tasks.
+        """Perform cyclic tasks.
 
         Should be called regularly.
         """
@@ -66,25 +69,33 @@ class AgreementsPool:
                 )
 
     async def add_proposal(self, score: float, proposal: OfferProposal) -> None:
-        """Adds providers' proposal to the pool of available proposals"""
+        """Add providers' proposal to the pool of available proposals."""
         async with self._lock:
             self._offer_buffer[proposal.issuer] = _BufferedProposal(
                 datetime.datetime.now(), score, proposal
             )
 
     async def use_agreement(
-        self, cbk: Callable[[Agreement], asyncio.Task]
+        self, cbk: Callable[[Agreement], asyncio.Task], agreement_id: Optional[str] = None
     ) -> Optional[asyncio.Task]:
         """Get an agreement and start the `cbk()` task within it."""
         async with self._lock:
-            agreement = await self._get_agreement()
+            if not agreement_id:
+                agreement = await self._get_agreement()
+            else:
+                agreement = await self._fetch_existing_agreement(agreement_id)
+
             if agreement is None:
                 return None
+
             task = cbk(agreement)
-            await self._set_worker(agreement.id, task)
+            self._set_worker(agreement.id, task)
+
+            logger.debug("Using agreement: %s, worker task: %s", agreement, task)
+
             return task
 
-    async def _set_worker(self, agreement_id: str, task: asyncio.Task) -> None:
+    def _set_worker(self, agreement_id: str, task: asyncio.Task) -> None:
         try:
             buffered_agreement = self._agreements[agreement_id]
         except KeyError:
@@ -92,8 +103,48 @@ class AgreementsPool:
         assert buffered_agreement.worker_task is None
         buffered_agreement.worker_task = task
 
+    async def _prepare_agreement(
+        self,
+        agreement: Agreement,
+        proposal: Optional[OfferProposal] = None,
+        requires_confirmation: bool = True,
+    ) -> Optional[Agreement]:
+        try:
+            agreement_details = await agreement.get_details()
+            provider_activity = agreement_details.provider_view.extract(Activity)
+            requestor_activity = agreement_details.requestor_view.extract(Activity)
+            node_info = agreement_details.provider_view.extract(NodeInfo)
+            logger.debug("New agreement. id: %s, provider: %s", agreement.id, node_info)
+            self.emitter(events.AgreementCreated, agreement=agreement)
+        except (ApiException, asyncio.TimeoutError, aiohttp.ClientOSError):
+            logger.debug("Cannot get agreement details. id: %s", agreement.id, exc_info=True)
+            self.emitter(events.AgreementRejected, agreement=agreement)
+            if proposal:
+                self.offer_recycler(proposal)
+            return None
+        if requires_confirmation and not await agreement.confirm():
+            self.emitter(events.AgreementRejected, agreement=agreement)
+            if proposal:
+                self.offer_recycler(proposal)
+            return None
+        self._agreements[agreement.id] = BufferedAgreement(
+            agreement=agreement,
+            agreement_details=agreement_details,
+            worker_task=None,
+            has_multi_activity=bool(
+                provider_activity.multi_activity and requestor_activity.multi_activity
+            ),
+        )
+        self.emitter(events.AgreementConfirmed, agreement=agreement)
+        self.confirmed += 1
+        return agreement
+
+    async def _fetch_existing_agreement(self, agreement_id) -> Optional[Agreement]:
+        agreement = Agreement(self._market_api._api, agreement_id)
+        return await self._prepare_agreement(agreement, requires_confirmation=False)
+
     async def _get_agreement(self) -> Optional[Agreement]:
-        """Returns an Agreement
+        """Return an Agreement.
 
         Firstly it tries to reuse agreement from a pool of available agreements
         (no active worker_task). If that fails it tries to convert offer into agreement.
@@ -126,36 +177,11 @@ class AgreementsPool:
             exc_info = (type(e), e, sys.exc_info()[2])
             emit(events.ProposalFailed, proposal=offer.proposal, exc_info=exc_info)
             raise
-        try:
-            agreement_details = await agreement.get_details()
-            provider_activity = agreement_details.provider_view.extract(Activity)
-            requestor_activity = agreement_details.requestor_view.extract(Activity)
-            node_info = agreement_details.provider_view.extract(NodeInfo)
-            logger.debug("New agreement. id: %s, provider: %s", agreement.id, node_info)
-            emit(events.AgreementCreated, agreement=agreement)
-        except (ApiException, asyncio.TimeoutError, aiohttp.ClientOSError):
-            logger.debug("Cannot get agreement details. id: %s", agreement.id, exc_info=True)
-            emit(events.AgreementRejected, agreement=agreement)
-            self.offer_recycler(offer.proposal)
-            return None
-        if not await agreement.confirm():
-            emit(events.AgreementRejected, agreement=agreement)
-            self.offer_recycler(offer.proposal)
-            return None
-        self._agreements[agreement.id] = BufferedAgreement(
-            agreement=agreement,
-            agreement_details=agreement_details,
-            worker_task=None,
-            has_multi_activity=bool(
-                provider_activity.multi_activity and requestor_activity.multi_activity
-            ),
-        )
-        emit(events.AgreementConfirmed, agreement=agreement)
-        self.confirmed += 1
-        return agreement
+
+        return await self._prepare_agreement(agreement, offer.proposal)
 
     async def release_agreement(self, agreement_id: str, allow_reuse: bool = True) -> None:
-        """Marks agreement as unused.
+        """Mark agreement as unused.
 
         If the agreement supports multiple activities and `allow_reuse` is set then
         it will be returned to the pool and will be available for reuse.
@@ -166,6 +192,7 @@ class AgreementsPool:
                 buffered_agreement = self._agreements[agreement_id]
             except KeyError:
                 return
+            logger.debug("Releasing agreement: %s", buffered_agreement)
             buffered_agreement.worker_task = None
             # Check whether agreement can be reused
             if not allow_reuse or not buffered_agreement.has_multi_activity:
@@ -225,7 +252,7 @@ class AgreementsPool:
                 await self._terminate_agreement(agreement_id, reason)
 
     async def on_agreement_terminated(self, agr_id: str, reason: dict) -> None:
-        """Reacts to agreement termination event
+        """React to agreement termination event.
 
         Should be called when AgreementTerminated event is received.
         """

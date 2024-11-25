@@ -1,21 +1,23 @@
-import aiohttp
 import asyncio
-from asyncio import CancelledError
-from collections import defaultdict
 import contextlib
-from copy import deepcopy
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from decimal import Decimal
 import itertools
+import json
 import logging
 import os
 import sys
+from asyncio import CancelledError
+from collections import defaultdict
+from contextlib import AsyncExitStack
+from copy import deepcopy
+from datetime import datetime, timezone
+from decimal import Decimal
 from typing import (
     AsyncContextManager,
+    AsyncGenerator,
     Awaitable,
     Callable,
     Dict,
+    Final,
     Iterator,
     List,
     Optional,
@@ -24,17 +26,13 @@ from typing import (
     Union,
     cast,
 )
-from typing_extensions import AsyncGenerator, Final
 
-from yapapi.config import ApiConfig
-
-if sys.version_info >= (3, 7):
-    from contextlib import AsyncExitStack
-else:
-    from async_exit_stack import AsyncExitStack  # type: ignore
+import aiohttp
+from dataclasses import dataclass
 
 from yapapi import events, props, rest
 from yapapi.agreements_pool import AgreementsPool
+from yapapi.config import ApiConfig
 from yapapi.ctx import WorkContext
 from yapapi.invoice_manager import InvoiceManager
 from yapapi.payload import Payload
@@ -58,6 +56,10 @@ DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "holesky").lower()
 DEFAULT_SUBNET: Optional[str] = os.getenv("YAGNA_SUBNET", "public")
 
 MAX_CONCURRENTLY_PROCESSED_DEBIT_NOTES: Final[int] = 10
+
+MAINNET_NETWORKS: Set[str] = {"mainnet", "polygon"}
+MAINNET_TOKEN_NAME: str = "glm"
+TESTNET_TOKEN_NAME: str = "tglm"
 
 logger = logging.getLogger("yapapi.executor")
 
@@ -105,6 +107,7 @@ class _Engine:
         subnet_tag: Optional[str] = None,
         payment_driver: Optional[str] = None,
         payment_network: Optional[str] = None,
+        payment_token: Optional[str] = None,
         stream_output: bool = False,
         api_config: ApiConfig,
     ):
@@ -113,7 +116,8 @@ class _Engine:
         :param budget: maximum budget for payments
         :param strategy: market strategy used to select providers from the market
             (e.g. LeastExpensiveLinearPayuMS or DummyMS)
-        :param event_consumer: callable that will be directly executed on every Event this Engine creates.
+        :param event_consumer: callable that will be directly executed on every Event this Engine
+            creates.
             NOTE: it is expected to be fast or async - if not, it will block the _Engine.
         :param subnet_tag: use only providers in the subnet with the subnet_tag name.
             Uses `YAGNA_SUBNET` environment variable, defaults to `None`
@@ -136,6 +140,15 @@ class _Engine:
         self._subnet: Optional[str] = subnet_tag or DEFAULT_SUBNET
         self._payment_driver: str = payment_driver.lower() if payment_driver else DEFAULT_DRIVER
         self._payment_network: str = payment_network.lower() if payment_network else DEFAULT_NETWORK
+        self._payment_token: str = (
+            payment_token.lower()
+            if payment_token
+            else (
+                MAINNET_TOKEN_NAME
+                if self._payment_network in MAINNET_NETWORKS
+                else TESTNET_TOKEN_NAME
+            )
+        )
         self._stream_output = stream_output
 
         # a set of `Job` instances used to track jobs - computations or services - started
@@ -150,6 +163,7 @@ class _Engine:
         self._num_payable_debit_notes: Dict[ActivityId, int] = defaultdict(int)
         self._activity_created_at: Dict[ActivityId, datetime] = dict()
         self._payment_closing: bool = False
+        self._await_payments: bool = True
 
         self._process_invoices_job: Optional[asyncio.Task] = None
 
@@ -214,13 +228,14 @@ class _Engine:
     def _emit_event(self, event: events.Event) -> None:
         self._event_consumer(event)
 
-    async def stop(self, *exc_info) -> Optional[bool]:
+    async def stop(self, *exc_info, wait_for_payments: bool = True) -> Optional[bool]:
         """Stop the engine.
 
         This *must* be called at the end of the work, by the Engine user.
         """
+        self._await_payments = wait_for_payments
         if exc_info[0] is not None:
-            self.emit(events.ExecutionInterrupted, exc_info=exc_info)  # type: ignore
+            self.emit(events.ExecutionInterrupted, exc_info=exc_info)
         return await self._stack.__aexit__(None, None, None)
 
     async def start(self):
@@ -288,6 +303,7 @@ class _Engine:
 
         # Some generators created by `execute_tasks` may still have elements;
         # if we don't close them now, their jobs will never be marked as finished.
+
         for gen in self._generators:
             await gen.aclose()
 
@@ -305,8 +321,7 @@ class _Engine:
 
         # Wait for some time for invoices for unpaid agreements,
         # then cancel the invoices service
-        if self._process_invoices_job:
-
+        if self._process_invoices_job and self._await_payments:
             unpaid_agreements = self._invoice_manager.payable_unpaid_agreement_ids
             if unpaid_agreements:
                 logger.info(
@@ -333,40 +348,26 @@ class _Engine:
         except Exception:
             logger.debug("Got error when waiting for services to finish", exc_info=True)
 
+    async def _id(self) -> str:
+        async with self._root_api_session.get(f"{self._api_config.root_url}/me") as resp:
+            return json.loads(await resp.text()).get("identity")
+
     async def _create_allocations(self) -> rest.payment.MarketDecoration:
-
         if not self._budget_allocations:
-            async for account in self._payment_api.accounts():
-                driver = account.driver.lower()
-                network = account.network.lower()
-                if (driver, network) != (self._payment_driver, self._payment_network):
-                    logger.debug(
-                        "Not using payment platform `%s`, platform's driver/network "
-                        "`%s`/`%s` is different than requested driver/network `%s`/`%s`",
-                        account.platform,
-                        driver,
-                        network,
-                        self._payment_driver,
-                        self._payment_network,
+            platform = f"{self._payment_driver}-{self._payment_network}-{self._payment_token}"
+            address = await self._id()
+            allocation = cast(
+                rest.payment.Allocation,
+                await self._stack.enter_async_context(
+                    self._payment_api.new_allocation(
+                        self._budget_amount,
+                        payment_platform=platform,
+                        payment_address=address,
                     )
-                    continue
-                logger.debug("Creating allocation using payment platform `%s`", account.platform)
-                allocation = cast(
-                    rest.payment.Allocation,
-                    await self._stack.enter_async_context(
-                        self._payment_api.new_allocation(
-                            self._budget_amount,
-                            payment_platform=account.platform,
-                            payment_address=account.address,
-                            #   TODO what do to with this?
-                            #   expires=self._expires + CFG_INVOICE_TIMEOUT,
-                        )
-                    ),
-                )
-                self._budget_allocations.append(allocation)
-
-            if not self._budget_allocations:
-                raise NoPaymentAccountError(self._payment_driver, self._payment_network)
+                ),
+            )
+            logger.debug("Creating allocation using payment platform `%s`", platform)
+            self._budget_allocations.append(allocation)
 
         allocation_ids = [allocation.id for allocation in self._budget_allocations]
         return await self._payment_api.decorate_demand(allocation_ids)
@@ -381,16 +382,19 @@ class _Engine:
                 if allocation.payment_address == item.payer_addr
                 and allocation.payment_platform == item.payment_platform
             )
-        except:
+        except Exception:
             raise ValueError(f"No allocation for {item.payment_platform} {item.payer_addr}.")
 
     async def _process_invoices(self) -> None:
         """Process incoming invoices."""
+
         invoice_manager = self._invoice_manager
         async for invoice in self._payment_api.incoming_invoices():
             invoice_manager.add_invoice(invoice)
             await self._agreement_payment_attempt(invoice.agreement_id)
-            if self._payment_closing and not invoice_manager.has_payable_unpaid_agreements:
+            if self._payment_closing and not (
+                self._await_payments and invoice_manager.has_payable_unpaid_agreements
+            ):
                 break
 
     async def accept_payments_for_agreement(self, job_id: str, agreement_id: str) -> None:
@@ -415,15 +419,17 @@ class _Engine:
     ) -> Optional[Dict[str, str]]:
         freq_descr = f"{num_notes} notes/{duration}s"
         logger.debug(
-            f"{'Payable Debit notes' if payable else 'Debit notes'} for activity {activity_id}: {freq_descr}"
+            f"{'Payable Debit notes' if payable else 'Debit notes'} for activity"
+            f" {activity_id}: {freq_descr}"
         )
         if duration + DEBIT_NOTE_INTERVAL_GRACE_PERIOD < (num_notes - 1) * interval:
             payable_str = "payable " if payable else ""
             reason = {
-                "message": f"Too many {payable_str}debit notes: {freq_descr} (activity: {activity_id})",
-                "golem.requestor.code": "TooManyPayableDebitNotes"
-                if payable
-                else "TooManyDebitNotes",
+                "message": f"Too many {payable_str}debit notes: {freq_descr} "
+                f"(activity: {activity_id})",
+                "golem.requestor.code": (
+                    "TooManyPayableDebitNotes" if payable else "TooManyDebitNotes"
+                ),
             }
             logger.error(
                 f"Too many {payable_str}debit notes received. %s, activity: %s",
@@ -586,7 +592,9 @@ class _Engine:
                 raise
             except Exception:
                 job.emit(
-                    events.PaymentFailed, agreement=agreement, exc_info=sys.exc_info()  # type: ignore
+                    events.PaymentFailed,
+                    agreement=agreement,
+                    exc_info=sys.exc_info(),
                 )
 
     def accept_debit_notes_for_agreement(self, job_id: str, agreement_id: str) -> None:
@@ -601,7 +609,7 @@ class _Engine:
     def finalize_job(self, job: "Job"):
         """Mark a job as finished."""
         job.finished.set()
-        job.emit(events.JobFinished, exc_info=job._exc_info)  # type: ignore
+        job.emit(events.JobFinished, exc_info=job._exc_info)
 
     def register_generator(self, generator: AsyncGenerator) -> None:
         """Register a generator with this engine."""
@@ -625,22 +633,47 @@ class _Engine:
             agreement_id, stream_events=self._stream_output
         )
 
+    async def fetch_activity(self, activity_id: str) -> Activity:
+        """Create an activity for given `agreement_id`."""
+        return await self._activity_api.use_activity(activity_id, stream_events=self._stream_output)
+
     async def start_worker(
         self,
         job: "Job",
-        run_worker: Callable[[WorkContext], Awaitable],
+        run_worker: Callable[[WorkContext], Awaitable[bool]],
         on_agreement_ready: Optional[Callable[[Agreement], None]] = None,
+        existing_agreement_id: Optional[str] = None,
+        existing_activity_id: Optional[str] = None,
     ) -> Optional[asyncio.Task]:
+        """Start a single worker (activity) within a Job.
+
+        :param job: :class:`Job` within which the worker is launched.
+        :param run_worker: an async function which receives the work context and performs
+            any neccessary operations on it. If the function returns `True`, the activity
+            respective :class:`WorkContext` won't be terminated after the worker finishes.
+        :param on_agreement_ready: an optional callable to be called when the agreement is
+            created or initialized
+        :param existing_agreement_id: optional identifier of an existing agreement.
+            if given, the engine will attempt to use this agreement to launch the activity,
+            instead of signing a new one.
+        :param existing_activity_id: optional identifier of an existing activity.
+            if given, the engine won't launch a new activity and will try to reuse an existing one
+            instead.
+        """
+
         loop = asyncio.get_event_loop()
 
         async def worker_task(agreement: Agreement):
-            """A coroutine run by every worker task.
+            """Run `run_worker` in a `WorkContext` for activity from given `Agreement`.
 
-            It creates an Activity for a given Agreement, then creates a WorkContext for this Activity
-            and then executes `run_worker` with this WorkContext.
+            It creates an Activity for a given Agreement, then creates a WorkContext for this
+            Activity and then executes `run_worker` with this WorkContext.
             """
             if on_agreement_ready:
                 on_agreement_ready(agreement)
+
+            logger.debug("Starting worker task on agreement %s", agreement)
+
             self._all_agreements[agreement.id] = agreement
             self._invoice_manager.add_agreement(job, agreement)
 
@@ -649,9 +682,18 @@ class _Engine:
             activity_start_time = datetime.now()
 
             try:
-                activity = await self.create_activity(agreement.id)
-            except Exception:
-                job.emit(events.ActivityCreateFailed, agreement=agreement, exc_info=sys.exc_info())  # type: ignore
+                if existing_activity_id:
+                    activity = await self.fetch_activity(existing_activity_id)
+                else:
+                    activity = await self.create_activity(agreement.id)
+            except Exception as e:
+                logger.error(
+                    "Activity init failed with error: %s. agreement: %s, existing activity id: %s",
+                    e,
+                    agreement.id,
+                    existing_activity_id,
+                )
+                job.emit(events.ActivityCreateFailed, agreement=agreement, exc_info=sys.exc_info())
                 raise
 
             work_context = WorkContext(activity, agreement, self.storage_manager, emitter=job.emit)
@@ -659,15 +701,34 @@ class _Engine:
 
             self._activity_created_at[activity.id] = activity_start_time
 
-            async with activity:
+            allow_agreement_reuse = True
+            keep_activity = False
+
+            try:
                 self.accept_debit_notes_for_agreement(job.id, agreement.id)
-                await run_worker(work_context)
+                keep_activity = await run_worker(work_context)
+            except Exception:
+                logger.debug(
+                    "Error while working on activity %s : [%s]",
+                    activity.id,
+                    sys.exc_info(),
+                )
+                allow_agreement_reuse = False
+            finally:
+                logger.debug("Finished working with activity %s", activity.id)
+
+            if not keep_activity:
+                await activity.destroy()
                 # Providers may issue debit notes after activity ends.
                 # This will prevent terminating agreements when this happens.
                 self._activity_created_at.pop(activity.id, None)
 
+                # and release the agreement
+                await job.agreements_pool.release_agreement(agreement.id, allow_agreement_reuse)
+
         return await job.agreements_pool.use_agreement(
-            lambda agreement: loop.create_task(worker_task(agreement))
+            lambda agreement: loop.create_task(worker_task(agreement)),
+            agreement_id=existing_agreement_id,
         )
 
     async def process_batches(
@@ -690,7 +751,8 @@ class _Engine:
                 await script._before()
                 batch: List[BatchCommand] = script._evaluate()
                 remote = await activity.send(batch, deadline=batch_deadline)
-            except Exception:
+            except Exception as e:
+                logger.error("Error executing script %s: %s(%s).", script, type(e), str(e))
                 script = await batch_generator.athrow(*sys.exc_info())
                 continue
 
@@ -734,15 +796,20 @@ class _Engine:
                 script = await batch_generator.asend(future_results)
 
     def recycle_offer(self, offer: OfferProposal) -> None:
-        """This offer was already processed, but something happened and we should treat it as a fresh one.
+        """Mark given offer as a fresh one, regardless of its previous processing.
+
+        This offer was already processed, but something happened and we should treat it as a
+        fresh one.
 
         Currently this "something" is always "we couldn't confirm the agreement with the provider",
         but someday this might be useful also in other scenarios.
 
         Purpose:
-        *   we want to rescore the offer (score might change because of the event that caused recycling)
-        *   if this is a draft offer (and in the current usecase it always is), we want to return to the
-            negotiations and get a new draft - e.g. because this draft already has an Agreement
+        *   we want to rescore the offer (score might change because of the event that caused
+            recycling)
+        *   if this is a draft offer (and in the current usecase it always is), we want to return
+            to the negotiations and get a new draft - e.g. because this draft already has an
+            Agreement
 
         We don't care which Job initiated recycling - it should be recycled by all unfinished Jobs.
         """
@@ -810,7 +877,9 @@ class Job:
         self.expiration_time: datetime = expiration_time
         self.payload: Payload = payload
 
-        self.agreements_pool = AgreementsPool(self.emit, self.engine.recycle_offer)
+        self.agreements_pool = AgreementsPool(
+            self.emit, self.engine.recycle_offer, market_api=self.engine._market_api
+        )
         self.finished = asyncio.Event()
 
         self._demand_builder: Optional[DemandBuilder] = None
@@ -932,7 +1001,9 @@ class Job:
                     raise
                 except Exception:
                     with contextlib.suppress(Exception):
-                        self.emit(events.ProposalFailed, proposal=proposal_, exc_info=sys.exc_info())  # type: ignore
+                        self.emit(
+                            events.ProposalFailed, proposal=proposal_, exc_info=sys.exc_info()
+                        )
                 finally:
                     semaphore.release()
 

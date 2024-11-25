@@ -1,10 +1,12 @@
 """Utilities for yapapi example scripts."""
+
 import argparse
 import asyncio
-import colorama  # type: ignore
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-import tempfile
+
+import colorama  # type: ignore
 
 from yapapi import Golem, NoPaymentAccountError
 from yapapi import __version__ as yapapi_version
@@ -33,7 +35,7 @@ def build_parser(description: str) -> argparse.ArgumentParser:
         "--payment-driver", "--driver", help="Payment driver name, for example `erc20`"
     )
     parser.add_argument(
-        "--payment-network", "--network", help="Payment network name, for example `rinkeby`"
+        "--payment-network", "--network", help="Payment network name, for example `holesky`"
     )
     parser.add_argument("--subnet-tag", help="Subnet name, for example `public`")
     parser.add_argument(

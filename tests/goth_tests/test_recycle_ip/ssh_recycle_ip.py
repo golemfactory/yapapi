@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import asyncio
-from datetime import timedelta
 import random
 import string
+from datetime import timedelta
 
 from yapapi import Golem
 from yapapi.contrib.service.socket_proxy import SocketProxy, SocketProxyService
@@ -59,6 +59,7 @@ async def main():
     async with Golem(
         budget=1.0,
         subnet_tag="goth",
+        payment_network="holesky",
     ) as golem:
         network = await golem.create_network("192.168.0.1/24")
         proxy = SocketProxy(ports=[2222])

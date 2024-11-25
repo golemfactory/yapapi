@@ -1,5 +1,5 @@
-from attr import asdict
 import pytest
+from attr import asdict
 
 from yapapi import Golem, events
 

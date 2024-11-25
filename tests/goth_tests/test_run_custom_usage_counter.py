@@ -1,10 +1,12 @@
 """An integration test scenario that runs custom usage counter example requestor app."""
+
 import logging
 import os
-from pathlib import Path
-import pytest
 import re
+from pathlib import Path
 from typing import List
+
+import pytest
 
 from goth.assertions import EventStream
 from goth.configuration import Override, load_yaml
@@ -30,7 +32,7 @@ async def assert_counter_not_decremented(output_lines: EventStream[str]):
             value = float(m.group(1))
             logger.info(f"Custom usage counter value: {value}")
             if value < last_value:
-                raise AssertionError(f"Current custom usage counter was decremented.")
+                raise AssertionError("Current custom usage counter was decremented.")
             last_value = value
 
 
@@ -69,7 +71,6 @@ async def test_run_custom_usage_counter(
     goth_config_path: Path,
     config_overrides: List[Override],
 ) -> None:
-
     configure_logging(log_dir)
 
     # This is the default configuration with 2 wasm/VM providers
@@ -82,14 +83,12 @@ async def test_run_custom_usage_counter(
     )
 
     async with runner(goth_config.containers):
-
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
             f"{requestor_path} --running-time {RUNNING_TIME} --subnet-tag {SUBNET_TAG}",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor, _process_monitor):
-
             cmd_monitor.add_assertion(assert_no_errors)
             cmd_monitor.add_assertion(assert_all_invoices_accepted)
 
@@ -97,4 +96,4 @@ async def test_run_custom_usage_counter(
             cmd_monitor.add_assertion(assert_counter_not_decremented)
 
             await cmd_monitor.wait_for_pattern(".*All jobs have finished", timeout=300)
-            logger.info(f"Requestor script finished")
+            logger.info("Requestor script finished")

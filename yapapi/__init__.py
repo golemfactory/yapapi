@@ -1,9 +1,11 @@
 """Golem Python API."""
+
 import asyncio
-from pathlib import Path
-from pkg_resources import get_distribution
 import sys
+from pathlib import Path
+
 import toml
+from pkg_resources import get_distribution
 
 from yapapi.ctx import ExecOptions, WorkContext
 from yapapi.engine import NoPaymentAccountError
@@ -12,9 +14,7 @@ from yapapi.golem import Golem
 
 
 def get_version() -> str:
-    """
-    :return: the version of the yapapi library package
-    """
+    """Return the version of the yapapi library package."""
     pyproject_path = Path(__file__).parents[1] / "pyproject.toml"
     if pyproject_path.exists():
         with open(pyproject_path) as f:
@@ -26,8 +26,7 @@ def get_version() -> str:
 
 
 def windows_event_loop_fix():
-    """
-    Set up asyncio to use ProactorEventLoop implementation for new event loops on Windows.
+    """Set up asyncio to use ProactorEventLoop implementation for new event loops on Windows.
 
     This work-around is only needed for Python 3.6 and 3.7.
     With Python 3.8, `ProactorEventLoop` is already the default on Windows.
@@ -38,11 +37,11 @@ def windows_event_loop_fix():
         class _WindowsEventPolicy(asyncio.events.BaseDefaultEventLoopPolicy):
             _loop_factory = asyncio.windows_events.ProactorEventLoop
 
-        asyncio.set_event_loop_policy(_WindowsEventPolicy())  # type: ignore
+        asyncio.set_event_loop_policy(_WindowsEventPolicy())
 
 
 __version__: str = get_version()
-__all__ = [
+__all__ = (
     "Executor",
     "props",
     "rest",
@@ -53,4 +52,4 @@ __all__ = [
     "ExecOptions",
     "Golem",
     "NoPaymentAccountError",
-]
+)

@@ -1,11 +1,13 @@
 """A goth test scenario for agreement termination."""
-from functools import partial
+
 import logging
 import os
-from pathlib import Path
-import pytest
 import re
+from functools import partial
+from pathlib import Path
 from typing import List
+
+import pytest
 
 from goth.configuration import Override, load_yaml
 from goth.runner import Runner
@@ -63,7 +65,6 @@ async def test_agreement_termination(
     goth_config_path: Path,
     config_overrides: List[Override],
 ) -> None:
-
     # This is the default configuration with 2 wasm/VM providers
     goth_config = load_yaml(goth_config_path, config_overrides)
     test_script_path = str(Path(__file__).parent / "requestor.py")
@@ -76,7 +77,6 @@ async def test_agreement_termination(
     )
 
     async with runner(goth_config.containers):
-
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(test_script_path, env=os.environ) as (
@@ -84,12 +84,11 @@ async def test_agreement_termination(
             cmd_monitor,
             _process_monitor,
         ):
-
             cmd_monitor.add_assertion(assert_all_tasks_computed)
 
             # Wait for worker failure due to command error
             assertion = cmd_monitor.add_assertion(assert_command_error)
-            agr_id = await assertion.wait_for_result(timeout=60)
+            agr_id = await assertion.wait_for_result(timeout=120)
             logger.info("Detected command error in activity for agreement %s", agr_id)
 
             # Make sure no new tasks are sent and the agreement is terminated
@@ -97,8 +96,8 @@ async def test_agreement_termination(
                 partial(assert_agreement_cancelled, agr_id),
                 name=f"assert_agreement_cancelled({agr_id})",
             )
-            await assertion.wait_for_result(timeout=10)
+            await assertion.wait_for_result(timeout=20)
 
             # Wait for executor shutdown
-            await cmd_monitor.wait_for_pattern("ShutdownFinished", timeout=60)
+            await cmd_monitor.wait_for_pattern("ShutdownFinished", timeout=120)
             logger.info("Requestor script finished")

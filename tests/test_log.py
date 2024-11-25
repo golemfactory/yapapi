@@ -1,4 +1,5 @@
 """Unit tests for the `yapapi.log` module."""
+
 import logging
 import os
 import sys
@@ -40,7 +41,7 @@ def test_log_event_emit_traceback():
 
     try:
         raise Exception("Hello!")
-    except:
+    except Exception:
         log_event(JobFinished(exc_info=sys.exc_info(), job="42"))
 
 
@@ -49,7 +50,7 @@ def test_log_event_repr_emit_traceback():
 
     try:
         raise Exception("Hello!")
-    except:
+    except Exception:
         log_event_repr(JobFinished(exc_info=sys.exc_info(), job="42"))
 
 
