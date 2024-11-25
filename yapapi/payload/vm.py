@@ -42,18 +42,16 @@ class VmRequest(ExeUnitRequest):
 
 @dataclass
 class VmManifestRequest(ExeUnitManifestRequest):
-    package_format: VmPackageFormat = prop_base.prop(
-        "golem.srv.comp.vm.package_format", default=VmPackageFormat.GVMKIT_SQUASH
-    )
+    """
+    Remove package_format from here since it's already defined in ExeUnitManifestRequest
+    """
+
     node_descriptor: Optional[str] = prop_base.prop(
-        "golem.srv.comp.vm.node_descriptor", default=None
+        "golem.!exp.gap-31.v0.node.descriptor", default=None
     )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # Convert dict to string if needed
-        if isinstance(kwargs.get("node_descriptor"), dict):
-            self.node_descriptor = json.dumps(kwargs["node_descriptor"])
 
 
 @dataclass(frozen=True)
@@ -99,6 +97,7 @@ class _VmManifestPackage(Package):
 
 
 async def manifest(
+    *,
     manifest: str,
     manifest_sig: Optional[str] = None,
     manifest_sig_algorithm: Optional[str] = None,
@@ -140,6 +139,7 @@ async def manifest(
             capabilities = ["manifest-support", "inet"],
         )
     """
+
     capabilities = capabilities or list()
     constraints = _VmConstraints(min_mem_gib, min_storage_gib, min_cpu_threads, capabilities)
 

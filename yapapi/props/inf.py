@@ -38,6 +38,12 @@ class ExeUnitRequest(Model):
     package_url: str = prop("golem.srv.comp.task_package")
 
 
+@deprecated(version="0.6.0", reason="this is part of yapapi.payload.vm now")
+class VmPackageFormat(Enum):
+    UNKNOWN = None
+    GVMKIT_SQUASH = "gvmkit-squash"
+
+
 @dataclass
 class ExeUnitManifestRequest(Model):
     manifest: str = prop("golem.srv.comp.payload")
@@ -46,13 +52,12 @@ class ExeUnitManifestRequest(Model):
         "golem.srv.comp.payload.sig.algorithm", default=None
     )
     manifest_cert: Optional[str] = prop("golem.srv.comp.payload.cert", default=None)
-    node_descriptor: Optional[str] = prop("golem.!exp.gap-31.v0.node.descriptor", default=None)
-
-
-@deprecated(version="0.6.0", reason="this is part of yapapi.payload.vm now")
-class VmPackageFormat(Enum):
-    UNKNOWN = None
-    GVMKIT_SQUASH = "gvmkit-squash"
+    package_format: VmPackageFormat = prop(
+        "golem.srv.comp.vm.package_format", default=VmPackageFormat.GVMKIT_SQUASH
+    )
+    node_descriptor: Optional[dict] = prop(  # Change type to dict
+        "golem.!exp.gap-31.v0.node.descriptor", default=None
+    )
 
 
 @deprecated(version="0.6.0", reason="this is part of yapapi.payload.vm now")
