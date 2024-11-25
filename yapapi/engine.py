@@ -54,7 +54,7 @@ from yapapi.strategy import (
 )
 
 DEFAULT_DRIVER: str = os.getenv("YAGNA_PAYMENT_DRIVER", "erc20").lower()
-DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "rinkeby").lower()
+DEFAULT_NETWORK: str = os.getenv("YAGNA_PAYMENT_NETWORK", "holesky").lower()
 DEFAULT_SUBNET: Optional[str] = os.getenv("YAGNA_SUBNET", "public")
 
 MAX_CONCURRENTLY_PROCESSED_DEBIT_NOTES: Final[int] = 10
@@ -121,7 +121,7 @@ class _Engine:
             environment variable, defaults to `erc20`. Only payment platforms with
             the specified driver will be used
         :param payment_network: name of the payment network to use. Uses `YAGNA_PAYMENT_NETWORK`
-            environment variable, defaults to `rinkeby`. Only payment platforms with the specified
+            environment variable, defaults to `holesky`. Only payment platforms with the specified
             network will be used
         :param stream_output: stream computation output from providers
         :param api_config: configuration of yagna low level api
