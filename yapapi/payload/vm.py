@@ -44,6 +44,7 @@ class VmManifestRequest(ExeUnitManifestRequest):
     package_format: VmPackageFormat = prop_base.prop(
         "golem.srv.comp.vm.package_format", default=VmPackageFormat.GVMKIT_SQUASH
     )
+    # Update type hint to match the expected type
     node_descriptor: Optional[str] = prop_base.prop(
         "golem.srv.comp.vm.node_descriptor", default=None
     )

@@ -34,7 +34,7 @@ def _find_enum(enum_type: Type[enum.Enum], val: str) -> Any:
 @dataclass(frozen=True)
 class _PyField:
     name: str
-    type: type
+    type: Type[Any]
     required: bool
 
     def encode(self, value: str):
@@ -45,7 +45,6 @@ class _PyField:
                 return getattr(t, "__origin__", None)
 
         def get_type_args(t):
-            # >= py3.8
             if hasattr(typing, "get_args"):
                 return typing.get_args(t)
             else:
@@ -53,7 +52,6 @@ class _PyField:
 
         if get_type_origin(self.type) == Union:
             if datetime in get_type_args(self.type):
-                # TODO: fix this.
                 return self.name, datetime.fromtimestamp(int(float(value) * 0.001), timezone.utc)
             return self.name, value
         if inspect.isclass(self.type) and issubclass(self.type, enum.Enum):
