@@ -1,8 +1,7 @@
 """Infrastructural properties."""
 
-from typing import Any, Dict
 from enum import Enum
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from dataclasses import dataclass
 from deprecated import deprecated
@@ -48,13 +47,11 @@ class VmPackageFormat(Enum):
 @dataclass
 class ExeUnitManifestRequest(Model):
     manifest: str = prop("golem.srv.comp.payload")
-    manifest_sig: Optional[str] = prop(
-        "golem.srv.comp.payload.sig", default=None)
+    manifest_sig: Optional[str] = prop("golem.srv.comp.payload.sig", default=None)
     manifest_sig_algorithm: Optional[str] = prop(
         "golem.srv.comp.payload.sig.algorithm", default=None
     )
-    manifest_cert: Optional[str] = prop(
-        "golem.srv.comp.payload.cert", default=None)
+    manifest_cert: Optional[str] = prop("golem.srv.comp.payload.cert", default=None)
     package_format: VmPackageFormat = prop(
         "golem.srv.comp.vm.package_format", default=VmPackageFormat.GVMKIT_SQUASH
     )
