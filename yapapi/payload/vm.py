@@ -156,30 +156,30 @@ async def manifest(
     There are two approaches to handle outbound network access in Golem:
 
     1. Recommended: Partner Scheme (using node_descriptor)
-        Uses a signed node descriptor along with a manifest to grant access to either whitelisted
-        domains or unrestricted access. Providers only need to trust the certificate once.
+       Uses a signed node descriptor along with a manifest to grant access to either whitelisted
+       domains or unrestricted access. Providers only need to trust the certificate once.
 
-        example usage::
+       example usage::
 
-            package = await vm.manifest(
-                manifest = open("manifest_partner_unrestricted.json", "rb").read(),
-                node_descriptor = json.loads(open("node-descriptor.signed.json", "r").read()),
-                capabilities = ["inet"],
-            )
+           package = await vm.manifest(
+               manifest = open("manifest_partner_unrestricted.json", "rb").read(),
+               node_descriptor = json.loads(open("node-descriptor.signed.json", "r").read()),
+               capabilities = ["inet"],
+           )
 
     2. Alternative: Pure Manifest Scheme
-        Requires providers to manually trust each domain listed in the manifest. More complex to set up
-        and maintain.
+       Requires providers to manually trust each domain listed in the manifest. More complex to set up
+       and maintain.
 
-        example usage::
+       example usage::
 
-            package = await vm.manifest(
-                manifest = open("manifest_whitelist.json", "rb").read(),
-                manifest_sig = open("manifest.json.sha256.sig", "rb").read(),
-                manifest_sig_algorithm = "sha256",
-                manifest_cert = open("cert.der", "rb").read(),
-                capabilities = ["inet", "manifest-support"],
-            )
+           package = await vm.manifest(
+               manifest = open("manifest_whitelist.json", "rb").read(),
+               manifest_sig = open("manifest.json.sha256.sig", "rb").read(),
+               manifest_sig_algorithm = "sha256",
+               manifest_cert = open("cert.der", "rb").read(),
+               capabilities = ["inet", "manifest-support"],
+           )
 
     For more information about outbound access schemes, see:
     https://handbook.golem.network/requestor-tutorials/vm-runtime/accessing-internet
