@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import asyncio
-import base64
 import pathlib
 import sys
 from datetime import datetime
