@@ -1,6 +1,7 @@
+import base64
 import logging
 from enum import Enum
-from typing import Final, List, Literal, Optional
+from typing import Final, List, Literal, Optional, Union
 
 from dataclasses import dataclass
 
@@ -95,10 +96,6 @@ class _VmManifestPackage(Package):
         )
 
 
-import base64
-from typing import Union
-
-
 def is_base64(s: Union[str, bytes]) -> bool:
     """Check if input is base64 encoded."""
     if isinstance(s, bytes):
@@ -108,8 +105,6 @@ def is_base64(s: Union[str, bytes]) -> bool:
         padding = 4 - (len(s) % 4)
         if padding != 4:
             s = s + "=" * padding
-        # Try to decode the string - if it succeeds and produces valid bytes, it's base64
-        decoded = base64.b64decode(s)
         return True
     except Exception:
         return False
