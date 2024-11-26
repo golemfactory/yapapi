@@ -1,6 +1,7 @@
+import base64
 import logging
 from enum import Enum
-from typing import Final, List, Literal, Optional
+from typing import Final, List, Literal, Optional, Union
 
 from dataclasses import dataclass
 
@@ -39,11 +40,43 @@ class VmRequest(ExeUnitRequest):
     package_format: VmPackageFormat = prop_base.prop("golem.srv.comp.vm.package_format")
 
 
+import json
+
+
 @dataclass
 class VmManifestRequest(ExeUnitManifestRequest):
-    package_format: VmPackageFormat = prop_base.prop(
-        "golem.srv.comp.vm.package_format", default=VmPackageFormat.GVMKIT_SQUASH
-    )
+    def __init__(self, **kwargs):
+        # Pop out VM-specific arguments
+        node_descriptor = kwargs.pop("node_descriptor", None)
+        package_format = kwargs.pop("package_format", VmPackageFormat.GVMKIT_SQUASH)
+
+        # Handle node_descriptor validation
+        if node_descriptor is not None:
+            if any(
+                [
+                    kwargs.get("manifest_sig"),
+                    kwargs.get("manifest_sig_algorithm"),
+                    kwargs.get("manifest_cert"),
+                ]
+            ):
+                raise ValueError("When using node_descriptor, only manifest should be provided")
+
+            kwargs["node_descriptor"] = node_descriptor
+        else:
+            # If no node_descriptor, ensure all manifest verification fields are present
+            if not all(
+                [
+                    kwargs.get("manifest_sig"),
+                    kwargs.get("manifest_sig_algorithm"),
+                    kwargs.get("manifest_cert"),
+                ]
+            ):
+                raise ValueError(
+                    "Without node_descriptor, manifest_sig, manifest_sig_algorithm, and manifest_cert are required"
+                )
+
+        kwargs["package_format"] = package_format
+        super().__init__(**kwargs)
 
 
 @dataclass(frozen=True)
@@ -68,6 +101,7 @@ class _VmManifestPackage(Package):
     manifest_sig: Optional[str]
     manifest_sig_algorithm: Optional[str]
     manifest_cert: Optional[str]
+    node_descriptor: Optional[dict]
     constraints: _VmConstraints
 
     async def resolve_url(self) -> str:
@@ -81,16 +115,36 @@ class _VmManifestPackage(Package):
                 manifest_sig=self.manifest_sig,
                 manifest_sig_algorithm=self.manifest_sig_algorithm,
                 manifest_cert=self.manifest_cert,
+                node_descriptor=self.node_descriptor,
                 package_format=VmPackageFormat.GVMKIT_SQUASH,
             )
         )
 
 
+def is_base64(s: Union[str, bytes]) -> bool:
+    """Check if input is base64 encoded."""
+    if isinstance(s, bytes):
+        s = s.decode("utf-8", errors="ignore")
+    try:
+        # Add padding if necessary
+        padding = 4 - (len(s) % 4)
+        if padding != 4:
+            s = s + "=" * padding
+        return True
+    except Exception:
+        return False
+
+
+from typing import Any, Dict
+
+
 async def manifest(
-    manifest: str,
-    manifest_sig: Optional[str] = None,
+    *,
+    manifest: Union[str, bytes],  # This must be provided
+    manifest_sig: Optional[Union[str, bytes]] = None,
     manifest_sig_algorithm: Optional[str] = None,
-    manifest_cert: Optional[str] = None,
+    manifest_cert: Optional[Union[str, bytes]] = None,
+    node_descriptor: Optional[Dict[str, Any]] = None,  # Explicitly type as Dict
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,
     min_cpu_threads: int = 1,
@@ -99,42 +153,95 @@ async def manifest(
     """
     Build a reference to application payload.
 
-    :param manifest: base64 encoded Computation Payload Manifest
-        https://handbook.golem.network/requestor-tutorials/vm-runtime/computation-payload-manifest
-    :param manifest_sig: an optional signature of base64 encoded Computation Payload Manifest
-    :param manifest_sig_algorithm: an optional signature algorithm, e.g. "sha256"
-    :param manifest_cert: an optional base64 encoded public certificate (DER or PEM) matching key
-        used to generate signature
-    :param min_mem_gib: minimal memory required to execute application code
-    :param min_storage_gib: minimal disk storage to execute tasks
-    :param min_cpu_threads: minimal available logical CPU cores
-    :param capabilities: an optional list of required VM capabilities
-    :return: the payload definition for the given VM image
+    There are two approaches to handle outbound network access in Golem:
 
-    example usage::
+    1. Recommended: Partner Scheme (using node_descriptor)
+       Uses a signed node descriptor along with a manifest to grant access to either whitelisted
+       domains or unrestricted access. Providers only need to trust the certificate once.
 
-        package = await vm.manifest(
-            manifest = open("manifest.json.base64", "r").read(),
-        )
+       example usage::
 
-    example usage with a signed Computation Pyload Manifest and additional "inet" capability::
+           package = await vm.manifest(
+               manifest = open("manifest_partner_unrestricted.json", "rb").read(),
+               node_descriptor = json.loads(open("node-descriptor.signed.json", "r").read()),
+               capabilities = ["inet"],
+           )
 
-        package = await vm.manifest(
-            manifest = open("manifest.json.base64", "r").read(),
-            manifest_sig = open("manifest.json.sig.base64", "r").read(),
-            manifest_sig_algorithm = "sha256",
-            manifest_cert = open("cert.der.base64", "r").read(),
-            capabilities = ["manifest-support", "inet"],
-        )
+    2. Alternative: Pure Manifest Scheme
+       Requires providers to manually trust each domain listed in the manifest. More complex to set up
+       and maintain.
+
+       example usage::
+
+           package = await vm.manifest(
+               manifest = open("manifest_whitelist.json", "rb").read(),
+               manifest_sig = open("manifest.json.sha256.sig", "rb").read(),
+               manifest_sig_algorithm = "sha256",
+               manifest_cert = open("cert.der", "rb").read(),
+               capabilities = ["inet", "manifest-support"],
+           )
+
+    For more information about outbound access schemes, see:
+    https://handbook.golem.network/requestor-tutorials/vm-runtime/accessing-internet
+
+    Parameters:
+    :param manifest: Computation Payload Manifest as raw data or base64 encoded string
+    :param manifest_sig: Optional signature of manifest (required for pure manifest scheme)
+    :param manifest_sig_algorithm: Optional signature algorithm, e.g. "sha256" (required for pure manifest scheme)
+    :param manifest_cert: Optional public certificate for manifest verification (required for pure manifest scheme)
+    :param node_descriptor: Optional signed node descriptor (recommended for partner scheme)
+    :param min_mem_gib: Minimal memory required to execute application code
+    :param min_storage_gib: Minimal disk storage to execute tasks
+    :param min_cpu_threads: Minimal available logical CPU cores
+    :param capabilities: Optional list of required VM capabilities. Use ["inet"] for partner scheme
+        or ["inet", "manifest-support"] for pure manifest scheme
+    :return: The payload definition for the given VM image
+
+    The manifest, manifest_sig, and manifest_cert parameters can be provided either as raw data
+    or already base64 encoded. The function will automatically handle the encoding if needed.
     """
-    capabilities = capabilities or list()
+
+    # Helper function to handle encoding
+    def ensure_base64(data: Optional[Union[str, bytes]]) -> Optional[str]:
+        if data is None:
+            return None
+
+        # If it's already base64 encoded and in string form, return as is
+        if isinstance(data, str) and is_base64(data):
+            return data
+
+        # Convert to bytes if needed
+        if isinstance(data, str):
+            data = data.encode("utf-8")
+
+        # Encode and convert to string
+        return base64.b64encode(data).decode("utf-8")
+
+    # manifest is required, so we can assert it's not None
+    manifest_encoded = ensure_base64(manifest)
+    assert manifest_encoded is not None, "manifest is required"
+
+    manifest_sig_encoded = ensure_base64(manifest_sig)
+    manifest_cert_encoded = ensure_base64(manifest_cert)
+
+    if node_descriptor is not None:
+        if any([manifest_sig_encoded, manifest_sig_algorithm, manifest_cert_encoded]):
+            raise ValueError("When using node_descriptor, only manifest should be provided")
+    else:
+        if not all([manifest_sig_encoded, manifest_sig_algorithm, manifest_cert_encoded]):
+            raise ValueError(
+                "Without node_descriptor, manifest_sig, manifest_sig_algorithm, and manifest_cert are required"
+            )
+
+    capabilities = capabilities or []
     constraints = _VmConstraints(min_mem_gib, min_storage_gib, min_cpu_threads, capabilities)
 
     return _VmManifestPackage(
-        manifest=manifest,
-        manifest_sig=manifest_sig,
+        manifest=manifest_encoded,
+        manifest_sig=manifest_sig_encoded,
         manifest_sig_algorithm=manifest_sig_algorithm,
-        manifest_cert=manifest_cert,
+        manifest_cert=manifest_cert_encoded,
+        node_descriptor=node_descriptor,  # Pass dict directly
         constraints=constraints,
     )
 

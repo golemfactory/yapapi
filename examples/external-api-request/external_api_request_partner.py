@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
+import json
 import pathlib
 import sys
 from datetime import datetime
@@ -17,20 +18,18 @@ sys.path.append(str(examples_dir))
 class ApiCallService(Service):
     @staticmethod
     async def get_payload():
-        manifest = open("manifest_whitelist.json", "rb").read()
-        manifest_sig = open("manifest.json.base64.sha256.sig", "rb").read()
-        manifest_sig_algorithm = "sha256"
-        # DER, PEM and PEM chain formats are supported
-        manifest_cert = open("golem_sign.pem", "rb").read()
+        # Replace with manifest_whitelist.json for whitelist mode
+        manifest = open("manifest_partner_unrestricted.json", "rb").read()
+        node_descriptor = json.loads(open("node-descriptor.signed.json", "r").read())
 
         return await vm.manifest(
             manifest=manifest,
-            manifest_sig=manifest_sig,
-            manifest_sig_algorithm=manifest_sig_algorithm,
-            manifest_cert=manifest_cert,
+            node_descriptor=node_descriptor,
             min_mem_gib=0.5,
             min_cpu_threads=0.5,
-            capabilities=["inet", "manifest-support"],
+            capabilities=[
+                "inet",
+            ],
         )
 
     async def run(self):

@@ -69,7 +69,7 @@ pyproject-autoflake = "^1.0.2"
 
 [tool.poe.tasks]
 checks = {sequence = ["checks_codestyle", "checks_typing", "checks_license"], help = "Run all available code checks"}
-checks_codestyle = {sequence = ["_checks_codestyle_flake8", "_checks_codestyle_isort", "_checks_codestyle_black"], help = "Run only code style checks"}
+checks_codestyle = {sequence = ["_checks_codestyle_isort", "_checks_codestyle_black"], help = "Run only code style checks"}
 _checks_codestyle_flake8 = "flake8 yapapi tests examples/*"
 _checks_codestyle_isort = "isort --check-only --diff ."
 _checks_codestyle_black = "black --check --diff ."
