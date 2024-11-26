@@ -164,6 +164,7 @@ class CompManifestNetInetOut:
         default_factory=lambda: ["http", "https", "ws", "wss"]
     )
     urls: Optional[List[str]] = None
+    unrestricted: Optional[bool] = None  # Add this field
 
     def dict(self, *, by_alias=False):
         obj: Dict = {
@@ -172,6 +173,9 @@ class CompManifestNetInetOut:
 
         if self.urls is not None:
             obj["urls"] = self.urls.copy()
+
+        if self.unrestricted is not None:  # Add this condition
+            obj["unrestricted"] = self.unrestricted
 
         return obj
 
