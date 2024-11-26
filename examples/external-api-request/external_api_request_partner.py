@@ -21,8 +21,6 @@ class ApiCallService(Service):
     async def get_payload():
         # Replace with manifest_whitelist.json for whitelist mode
         manifest = open("manifest_partner_unrestricted.json", "rb").read()
-        manifest = base64.b64encode(manifest).decode("utf-8")
-
         node_descriptor = json.loads(open("node-descriptor.signed.json", "r").read())
 
         return await vm.manifest(

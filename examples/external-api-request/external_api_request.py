@@ -19,16 +19,10 @@ class ApiCallService(Service):
     @staticmethod
     async def get_payload():
         manifest = open("manifest_whitelist.json", "rb").read()
-        manifest = base64.b64encode(manifest).decode("utf-8")
-
         manifest_sig = open("manifest.json.base64.sha256.sig", "rb").read()
-        manifest_sig = base64.b64encode(manifest_sig).decode("utf-8")
-
         manifest_sig_algorithm = "sha256"
-
         # DER, PEM and PEM chain formats are supported
         manifest_cert = open("golem_sign.pem", "rb").read()
-        manifest_cert = base64.b64encode(manifest_cert).decode("utf-8")
 
         return await vm.manifest(
             manifest=manifest,
