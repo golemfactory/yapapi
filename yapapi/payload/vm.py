@@ -40,17 +40,42 @@ class VmRequest(ExeUnitRequest):
     package_format: VmPackageFormat = prop_base.prop("golem.srv.comp.vm.package_format")
 
 
+import json
+
+
 @dataclass
 class VmManifestRequest(ExeUnitManifestRequest):
-    """
-    Remove package_format from here since it's already defined in ExeUnitManifestRequest
-    """
-
-    node_descriptor: Optional[str] = prop_base.prop(
-        "golem.!exp.gap-31.v0.node.descriptor", default=None
-    )
-
     def __init__(self, **kwargs):
+        # Pop out VM-specific arguments
+        node_descriptor = kwargs.pop("node_descriptor", None)
+        package_format = kwargs.pop("package_format", VmPackageFormat.GVMKIT_SQUASH)
+
+        # Handle node_descriptor validation
+        if node_descriptor is not None:
+            if any(
+                [
+                    kwargs.get("manifest_sig"),
+                    kwargs.get("manifest_sig_algorithm"),
+                    kwargs.get("manifest_cert"),
+                ]
+            ):
+                raise ValueError("When using node_descriptor, only manifest should be provided")
+
+            kwargs["node_descriptor"] = node_descriptor
+        else:
+            # If no node_descriptor, ensure all manifest verification fields are present
+            if not all(
+                [
+                    kwargs.get("manifest_sig"),
+                    kwargs.get("manifest_sig_algorithm"),
+                    kwargs.get("manifest_cert"),
+                ]
+            ):
+                raise ValueError(
+                    "Without node_descriptor, manifest_sig, manifest_sig_algorithm, and manifest_cert are required"
+                )
+
+        kwargs["package_format"] = package_format
         super().__init__(**kwargs)
 
 
@@ -110,13 +135,16 @@ def is_base64(s: Union[str, bytes]) -> bool:
         return False
 
 
+from typing import Any, Dict
+
+
 async def manifest(
     *,
-    manifest: Union[str, bytes],
+    manifest: Union[str, bytes],  # This must be provided
     manifest_sig: Optional[Union[str, bytes]] = None,
     manifest_sig_algorithm: Optional[str] = None,
     manifest_cert: Optional[Union[str, bytes]] = None,
-    node_descriptor: Optional[dict] = None,
+    node_descriptor: Optional[Dict[str, Any]] = None,  # Explicitly type as Dict
     min_mem_gib: float = 0.5,
     min_storage_gib: float = 2.0,
     min_cpu_threads: int = 1,
@@ -189,12 +217,23 @@ async def manifest(
         # Encode and convert to string
         return base64.b64encode(data).decode("utf-8")
 
-    # Encode all inputs
+    # manifest is required, so we can assert it's not None
     manifest_encoded = ensure_base64(manifest)
+    assert manifest_encoded is not None, "manifest is required"
+
     manifest_sig_encoded = ensure_base64(manifest_sig)
     manifest_cert_encoded = ensure_base64(manifest_cert)
 
-    capabilities = capabilities or list()
+    if node_descriptor is not None:
+        if any([manifest_sig_encoded, manifest_sig_algorithm, manifest_cert_encoded]):
+            raise ValueError("When using node_descriptor, only manifest should be provided")
+    else:
+        if not all([manifest_sig_encoded, manifest_sig_algorithm, manifest_cert_encoded]):
+            raise ValueError(
+                "Without node_descriptor, manifest_sig, manifest_sig_algorithm, and manifest_cert are required"
+            )
+
+    capabilities = capabilities or []
     constraints = _VmConstraints(min_mem_gib, min_storage_gib, min_cpu_threads, capabilities)
 
     return _VmManifestPackage(
@@ -202,7 +241,7 @@ async def manifest(
         manifest_sig=manifest_sig_encoded,
         manifest_sig_algorithm=manifest_sig_algorithm,
         manifest_cert=manifest_cert_encoded,
-        node_descriptor=node_descriptor,
+        node_descriptor=node_descriptor,  # Pass dict directly
         constraints=constraints,
     )
 
