@@ -19,9 +19,9 @@ requires = ["poetry_core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
 
-aiohttp = "^3.8"
+aiohttp = "^3.12.5"
 aiohttp-sse-client = "^0.2.1"
 
 async_exit_stack = "^1.0.1"
