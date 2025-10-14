@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "yapapi"
-version = "0.13.1"
+version = "0.14.0"
 description = "High-level Python API for the New Golem"
 authors = ["GolemFactory <contact@golem.network>"]
 license = "LGPL-3.0-or-later"
@@ -177,7 +177,6 @@ line_length = 100
 
 [tool.black]
 line-length = 100
-target-version = ['py38']
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
