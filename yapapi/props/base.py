@@ -223,7 +223,7 @@ def constraint(
     ```
     """
     # the default / default_factory exception is resolved by the `field` function
-    return field(  # type: ignore
+    return field(
         default=default,
         default_factory=default_factory,
         metadata={
