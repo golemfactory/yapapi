@@ -148,55 +148,55 @@ async def manifest(
     capabilities: Optional[List[VmCaps]] = None,
 ) -> Package:
     """
-Build a reference to application payload.
+    Build a reference to application payload.
 
-There are two approaches to handle outbound network access in Golem:
+    There are two approaches to handle outbound network access in Golem:
 
-1. Recommended: Partner Scheme (using node_descriptor)
-   Uses a signed node descriptor along with a manifest to grant access to either whitelisted
-   domains or unrestricted access. Providers only need to trust the certificate once.
+    1. Recommended: Partner Scheme (using node_descriptor)
+       Uses a signed node descriptor along with a manifest to grant access to either whitelisted
+       domains or unrestricted access. Providers only need to trust the certificate once.
 
-   example usage::
+       example usage::
 
-       package = await vm.manifest(
-           manifest = open("manifest_partner_unrestricted.json", "rb").read(),
-           node_descriptor = json.loads(open("node-descriptor.signed.json", "r").read()),
-           capabilities = ["inet"],
-       )
+           package = await vm.manifest(
+               manifest = open("manifest_partner_unrestricted.json", "rb").read(),
+               node_descriptor = json.loads(open("node-descriptor.signed.json", "r").read()),
+               capabilities = ["inet"],
+           )
 
-2. Alternative: Pure Manifest Scheme
-   Requires providers to manually trust each domain listed in the manifest. More complex to set up
-   and maintain.
+    2. Alternative: Pure Manifest Scheme
+       Requires providers to manually trust each domain listed in the manifest. More complex to set up
+       and maintain.
 
-   example usage::
+       example usage::
 
-       package = await vm.manifest(
-           manifest = open("manifest_whitelist.json", "rb").read(),
-           manifest_sig = open("manifest.json.sha256.sig", "rb").read(),
-           manifest_sig_algorithm = "sha256",
-           manifest_cert = open("cert.der", "rb").read(),
-           capabilities = ["inet", "manifest-support"],
-       )
+           package = await vm.manifest(
+               manifest = open("manifest_whitelist.json", "rb").read(),
+               manifest_sig = open("manifest.json.sha256.sig", "rb").read(),
+               manifest_sig_algorithm = "sha256",
+               manifest_cert = open("cert.der", "rb").read(),
+               capabilities = ["inet", "manifest-support"],
+           )
 
-For more information about outbound access schemes, see:
-https://handbook.golem.network/requestor-tutorials/vm-runtime/accessing-internet
+    For more information about outbound access schemes, see:
+    https://handbook.golem.network/requestor-tutorials/vm-runtime/accessing-internet
 
-Parameters:
-:param manifest: Computation Payload Manifest as raw data or base64 encoded string
-:param manifest_sig: Optional signature of manifest (required for pure manifest scheme)
-:param manifest_sig_algorithm: Optional signature algorithm, e.g. "sha256" (required for pure manifest scheme)
-:param manifest_cert: Optional public certificate for manifest verification (required for pure manifest scheme)
-:param node_descriptor: Optional signed node descriptor (recommended for partner scheme)
-:param min_mem_gib: Minimal memory required to execute application code
-:param min_storage_gib: Minimal disk storage to execute tasks
-:param min_cpu_threads: Minimal available logical CPU cores
-:param capabilities: Optional list of required VM capabilities. Use ["inet"] for partner scheme
-    or ["inet", "manifest-support"] for pure manifest scheme
-:return: The payload definition for the given VM image
+    Parameters:
+    :param manifest: Computation Payload Manifest as raw data or base64 encoded string
+    :param manifest_sig: Optional signature of manifest (required for pure manifest scheme)
+    :param manifest_sig_algorithm: Optional signature algorithm, e.g. "sha256" (required for pure manifest scheme)
+    :param manifest_cert: Optional public certificate for manifest verification (required for pure manifest scheme)
+    :param node_descriptor: Optional signed node descriptor (recommended for partner scheme)
+    :param min_mem_gib: Minimal memory required to execute application code
+    :param min_storage_gib: Minimal disk storage to execute tasks
+    :param min_cpu_threads: Minimal available logical CPU cores
+    :param capabilities: Optional list of required VM capabilities. Use ["inet"] for partner scheme
+        or ["inet", "manifest-support"] for pure manifest scheme
+    :return: The payload definition for the given VM image
 
-The manifest, manifest_sig, and manifest_cert parameters can be provided either as raw data
-or already base64 encoded. The function will automatically handle the encoding if needed.
-    """
+    The manifest, manifest_sig, and manifest_cert parameters can be provided either as raw data
+    or already base64 encoded. The function will automatically handle the encoding if needed.
+"""
 
     # Helper function to handle encoding
     def ensure_base64(data: Optional[Union[str, bytes]]) -> Optional[str]:
