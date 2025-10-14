@@ -52,14 +52,14 @@ jobs:
       - name: Configure python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.14'
+          python-version: '3.13'
 
       - name: Install and configure Poetry
         run: python -m pip install -U pip setuptools poetry==2.2.1
 
       - name: Install dependencies
         run: |
-          poetry env use python3.14
+          poetry env use python3.13
           poetry install
 
       - name: Disconnect Docker containers from default network
