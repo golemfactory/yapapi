@@ -40,9 +40,6 @@ class VmRequest(ExeUnitRequest):
     package_format: VmPackageFormat = prop_base.prop("golem.srv.comp.vm.package_format")
 
 
-import json
-
-
 @dataclass
 class VmManifestRequest(ExeUnitManifestRequest):
     def __init__(self, **kwargs):
