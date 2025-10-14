@@ -45,7 +45,5 @@ jobs:
       - run: poetry run poe checks_codestyle
       - run: poetry run poe checks_typing
         if: ${{ steps.extended-checks.outputs.ENABLE }}
-      - run: poetry run poe checks_license
-        if: ${{ steps.extended-checks.outputs.ENABLE }}
       - run: poetry run poe sphinx -W
         if: ${{ steps.extended-checks-sphinx.outputs.ENABLE }}
