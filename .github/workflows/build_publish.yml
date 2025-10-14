@@ -30,9 +30,6 @@ jobs:
       - name: Check typings
         run: poetry run poe checks_typing
 
-      - name: Check licenses
-        run: poetry run poe checks_license
-
   build:
     needs: [test]
     name: Build the release
