@@ -196,7 +196,8 @@ async def manifest(
 
     The manifest, manifest_sig, and manifest_cert parameters can be provided either as raw data
     or already base64 encoded. The function will automatically handle the encoding if needed.
-"""
+
+    """
 
     # Helper function to handle encoding
     def ensure_base64(data: Optional[Union[str, bytes]]) -> Optional[str]:
