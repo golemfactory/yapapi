@@ -150,6 +150,7 @@ async def manifest(
     """
     Build a reference to application payload.
 
+
     There are two approaches to handle outbound network access in Golem:
 
     1. Recommended: Partner Scheme (using node_descriptor)
