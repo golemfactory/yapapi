@@ -32,7 +32,7 @@ jobs:
         name: Enable extended checks
         id: extended-checks
       - run: echo "ENABLE=1" >> $GITHUB_OUTPUT
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9' }}
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         name: Enable sphinx check
         id: extended-checks-sphinx
 
