@@ -51,7 +51,7 @@ async def main():
     async with Golem(
         budget=10.0,
         subnet_tag="goth",
-        payment_network="holesky",
+        payment_network="hoodi",
     ) as golem:
         tasks = [Task(data=n) for n in range(6)]
         async for task in golem.execute_tasks(
