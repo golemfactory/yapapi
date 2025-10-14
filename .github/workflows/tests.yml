@@ -22,10 +22,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: Gr1N/setup-poetry@v8
+
+      - name: Install Poetry
+        run: curl -sSL https://install.python-poetry.org | python3 - --version 2.2.1
 
       - run: echo "ENABLE=1"  >> $GITHUB_OUTPUT
         if: ${{ matrix.os == 'ubuntu-latest' }}
