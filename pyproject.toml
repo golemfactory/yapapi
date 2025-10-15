@@ -27,7 +27,7 @@ aiohttp-sse-client = "^0.2.1"
 async_exit_stack = "^1.0.1"
 jsonrpc-base = "^1.0.3"
 
-ya-aioclient = "^0.6.4"
+ya-aioclient = { git = "https://github.com/golemfactory/ya_tmp_pyapi.git", rev = "f3a5ce8fbbb2bb795119daa87f246051a9990be6" }
 toml = "^0.10.1"
 colorama = "^0.4.4"
 semantic-version = "^2.8"
