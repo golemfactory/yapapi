@@ -40,9 +40,6 @@ class VmRequest(ExeUnitRequest):
     package_format: VmPackageFormat = prop_base.prop("golem.srv.comp.vm.package_format")
 
 
-import json
-
-
 @dataclass
 class VmManifestRequest(ExeUnitManifestRequest):
     def __init__(self, **kwargs):
@@ -159,44 +156,60 @@ async def manifest(
        Uses a signed node descriptor along with a manifest to grant access to either whitelisted
        domains or unrestricted access. Providers only need to trust the certificate once.
 
-       example usage::
+       Example usage::
 
            package = await vm.manifest(
-               manifest = open("manifest_partner_unrestricted.json", "rb").read(),
-               node_descriptor = json.loads(open("node-descriptor.signed.json", "r").read()),
-               capabilities = ["inet"],
+               manifest=open("manifest_partner_unrestricted.json", "rb").read(),
+               node_descriptor=json.loads(open("node-descriptor.signed.json", "r").read()),
+               capabilities=["inet"],
            )
 
     2. Alternative: Pure Manifest Scheme
        Requires providers to manually trust each domain listed in the manifest. More complex to set up
        and maintain.
 
-       example usage::
+       Example usage::
 
            package = await vm.manifest(
-               manifest = open("manifest_whitelist.json", "rb").read(),
-               manifest_sig = open("manifest.json.sha256.sig", "rb").read(),
-               manifest_sig_algorithm = "sha256",
-               manifest_cert = open("cert.der", "rb").read(),
-               capabilities = ["inet", "manifest-support"],
+               manifest=open("manifest_whitelist.json", "rb").read(),
+               manifest_sig=open("manifest.json.sha256.sig", "rb").read(),
+               manifest_sig_algorithm="sha256",
+               manifest_cert=open("cert.der", "rb").read(),
+               capabilities=["inet", "manifest-support"],
            )
 
     For more information about outbound access schemes, see:
     https://handbook.golem.network/requestor-tutorials/vm-runtime/accessing-internet
 
-    Parameters:
-    :param manifest: Computation Payload Manifest as raw data or base64 encoded string
-    :param manifest_sig: Optional signature of manifest (required for pure manifest scheme)
-    :param manifest_sig_algorithm: Optional signature algorithm, e.g. "sha256" (required for pure manifest scheme)
-    :param manifest_cert: Optional public certificate for manifest verification (required for pure manifest scheme)
-    :param node_descriptor: Optional signed node descriptor (recommended for partner scheme)
-    :param min_mem_gib: Minimal memory required to execute application code
-    :param min_storage_gib: Minimal disk storage to execute tasks
-    :param min_cpu_threads: Minimal available logical CPU cores
-    :param capabilities: Optional list of required VM capabilities. Use ["inet"] for partner scheme
-        or ["inet", "manifest-support"] for pure manifest scheme
-    :return: The payload definition for the given VM image
+    Parameters
+    ----------
+    manifest : Union[str, bytes]
+        Computation Payload Manifest as raw data or base64 encoded string.
+    manifest_sig : Optional[Union[str, bytes]]
+        Optional signature of manifest (required for pure manifest scheme).
+    manifest_sig_algorithm : Optional[str]
+        Optional signature algorithm, e.g. "sha256" (required for pure manifest scheme).
+    manifest_cert : Optional[Union[str, bytes]]
+        Optional public certificate for manifest verification (required for pure manifest scheme).
+    node_descriptor : Optional[Dict[str, Any]]
+        Optional signed node descriptor (recommended for partner scheme).
+    min_mem_gib : float
+        Minimal memory required to execute application code.
+    min_storage_gib : float
+        Minimal disk storage to execute tasks.
+    min_cpu_threads : int
+        Minimal available logical CPU cores.
+    capabilities : Optional[List[VmCaps]]
+        Optional list of required VM capabilities. Use ["inet"] for partner scheme
+        or ["inet", "manifest-support"] for pure manifest scheme.
 
+    Returns
+    -------
+    Package
+        The payload definition for the given VM image.
+
+    Notes
+    -----
     The manifest, manifest_sig, and manifest_cert parameters can be provided either as raw data
     or already base64 encoded. The function will automatically handle the encoding if needed.
     """

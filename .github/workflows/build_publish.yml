@@ -10,16 +10,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v6
         with:
-          python-version: '3.9'
-      - uses: Gr1N/setup-poetry@v8
-      - run: poetry install
-      - run: poetry run poe tests_unit
-      - run: poetry run poe checks_codestyle
-      - run: poetry run poe checks_typing
-      - run: poetry run poe checks_license
+          python-version: '3.13'
+
+      - name: Install Poetry
+        run: curl -sSL https://install.python-poetry.org | python3 - --version 2.2.1
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Unit tests
+        run: poetry run poe tests_unit
+
+      - name: Code style, typing and license checks
+        run: poetry run poe checks_codestyle
+
+      - name: Check typings
+        run: poetry run poe checks_typing
 
   build:
     needs: [test]
@@ -27,24 +36,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v6
         with:
-          python-version: '3.9'
-      - uses: Gr1N/setup-poetry@v8
+          python-version: '3.13'
+
+      - name: Install Poetry
+        run: curl -sSL https://install.python-poetry.org | python3 - --version 2.2.1
+
       - name: Get git release tag
         run: echo "git-release-tag=yapapi $(git describe --tags)" >> $GITHUB_OUTPUT
         id: git_describe
+
       - name: Get package version
         run: echo "poetry-version=$(poetry version)" >> $GITHUB_OUTPUT
         id: poetry_version
+
       - name: Fail on version mismatch
         run: exit 1
         if:
           ${{ steps.git_describe.outputs.git-release-tag !=
           steps.poetry_version.outputs.poetry-version }}
+
       - name: Build the release
         run: poetry build
+
       - name: Store the built package
         uses: actions/upload-artifact@v4
         with:
@@ -58,16 +75,21 @@ jobs:
     if: ${{ github.event.action == 'prereleased' }}
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v6
         with:
-          python-version: '3.9'
-      - uses: Gr1N/setup-poetry@v8
+          python-version: '3.13'
+
+      - name: Install Poetry
+        run: curl -sSL https://install.python-poetry.org | python3 - --version 2.2.1
+
       - name: Retrieve the built package
         uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist
+
       - name: Publish to pypi
         run: |
           poetry config repositories.testpypi https://test.pypi.org/legacy/
@@ -80,11 +102,15 @@ jobs:
     if: ${{ github.event.action == 'released' }}
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v6
         with:
-          python-version: '3.9'
-      - uses: Gr1N/setup-poetry@v8
+          python-version: '3.13'
+
+      - name: Install Poetry
+        run: curl -sSL https://install.python-poetry.org | python3 - --version 2.2.1
+
       - name: Retrieve the built package
         uses: actions/download-artifact@v4
         with:

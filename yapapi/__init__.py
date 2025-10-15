@@ -2,10 +2,10 @@
 
 import asyncio
 import sys
+from importlib.metadata import version
 from pathlib import Path
 
 import toml
-from pkg_resources import get_distribution
 
 from yapapi.ctx import ExecOptions, WorkContext
 from yapapi.engine import NoPaymentAccountError
@@ -22,7 +22,7 @@ def get_version() -> str:
 
         return pyproject["tool"]["poetry"]["version"]
 
-    return get_distribution("yapapi").version
+    return version("yapapi")
 
 
 def windows_event_loop_fix():

@@ -1,3 +1,4 @@
+import os
 import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
@@ -100,10 +101,22 @@ def project_dir() -> Path:
 
 @pytest.fixture(scope="session")
 def log_dir() -> Path:
-    base_dir = Path("/", "tmp", "goth-tests")
-    date_str = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S%z")
+    """Fixture providing unique directory for logs from a test run."""
+    base_dir = Path("logs")
+    date_str = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
     log_dir = base_dir / f"goth_{date_str}"
-    log_dir.mkdir(parents=True)
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create symlink to latest on Linux
+    if os.name != "nt":
+        latest_link = base_dir / "latest"
+        try:
+            if latest_link.is_symlink() or latest_link.exists():
+                latest_link.unlink()
+            latest_link.symlink_to(f"goth_{date_str}", target_is_directory=True)
+        except OSError as e:
+            print(f"Warning: could not create symlink {latest_link} -> {log_dir}: {e}")
+
     return log_dir
 
 
