@@ -48,6 +48,7 @@ async def assert_all_tasks_computed(stream):
     remaining_ids = {1, 2, 3, 4, 5, 6}
 
     async for line in stream:
+        logger.log(logging.INFO, line)
         m = re.search(r"TaskAccepted\(.*task=Task\(id=([0-9]+)", line)
         if m:
             task_id = int(m.group(1))
