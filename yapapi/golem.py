@@ -192,7 +192,7 @@ class Golem:
 
     @staticmethod
     def _parse_event_cls_or_name(
-        event_cls_or_name: Union[Type[events.Event], str]
+        event_cls_or_name: Union[Type[events.Event], str],
     ) -> Type[events.Event]:
         if isinstance(event_cls_or_name, type):
             return event_cls_or_name
